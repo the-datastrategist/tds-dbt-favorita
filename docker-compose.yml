@@ -1,0 +1,40 @@
+services:
+  ml-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tds-favorita:latest
+    container_name: tds-favorita
+    volumes:
+      - .:/app
+      # Mount Google Cloud credentials (keep path relative to project root for Docker)
+      - ./credentials/tds-favorita-b72f306edf29.json:/app/credentials/tds-favorita-b72f306edf29.json:ro
+      # Kaggle API credentials for scripts/load_favorita_to_gcs.py (~/.kaggle/kaggle.json)
+      - ${KAGGLE_CONFIG_DIR:-${HOME}/.kaggle}:/root/.kaggle:ro
+    environment:
+      - PYTHONPATH=/app
+      - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/tds-favorita-b72f306edf29.json
+      - GOOGLE_REGION=${GOOGLE_REGION:-us-central1}
+      - BQ_DATASET=${BQ_DATASET:-favorita}
+      - BQ_RAW_DATASET=${BQ_RAW_DATASET:-raw_favorita}
+      - BQ_LOCATION=${BQ_LOCATION:-US}
+      - DBT_PROFILES_DIR=/app/dbt/profiles
+      - DBT_DATASET=${DBT_DATASET:-favorita}
+      - DBT_TARGET=${DBT_TARGET:-dev}
+      - VERTEX_AI_PROJECT_ID=${VERTEX_AI_PROJECT_ID:-${GOOGLE_PROJECT_ID}}
+      - VERTEX_AI_REGION=${VERTEX_AI_REGION:-${GOOGLE_REGION:-us-central1}}
+      - VERTEX_AI_STAGING_BUCKET=${VERTEX_AI_STAGING_BUCKET}
+      - VERTEX_AI_MODEL_BUCKET=${VERTEX_AI_MODEL_BUCKET}
+      - GCS_RAW_DATA_BUCKET=${GCS_RAW_DATA_BUCKET}
+      - KAGGLE_API_TOKEN=${KAGGLE_API_TOKEN}
+    working_dir: /app
+    command: bash
+    stdin_open: true
+    tty: true
+    networks:
+      - ml-network
+
+networks:
+  ml-network:
+    driver: bridge
