@@ -34,11 +34,11 @@ lock: ## Lock dependencies
 # --- CODE QUALITY COMMANDS ---
 
 format: ## Format code with black and isort
-	poetry run black vertex tests
-	poetry run isort vertex tests
+	poetry run black vertex
+	poetry run isort vertex
 
 lint: ## Lint code with flake8
-	poetry run flake8 vertex tests
+	poetry run flake8 vertex
 
 type-check: ## Type check with mypy
 	poetry run mypy vertex

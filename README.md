@@ -32,8 +32,8 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 ├── vertex/                # Vertex AI model code
 │   ├── models/            # Training and prediction scripts
 │   ├── utils/             # Utilities (data loading, Vertex helpers)
+│   ├── tests/             # Python test suite (pytest)
 │   └── config/            # Model configuration files
-├── tests/                 # Python test suite (pytest)
 ├── .github/workflows/     # CI and GitHub Pages (dbt docs)
 ├── Dockerfile             # Docker image definition
 ├── docker-compose.yml     # Docker Compose configuration
@@ -252,7 +252,7 @@ Pull requests and pushes to `main` / `master` run [`.github/workflows/ci.yml`](.
 
 | Job | What it checks |
 |-----|----------------|
-| **python** | `flake8` on `vertex/` and `tests/`, then `pytest` |
+| **python** | `flake8` on `vertex/`, then `pytest` |
 | **dbt** | `dbt deps`, `dbt parse`, `dbt compile`, and `dbt docs generate` (no warehouse connection) |
 
 Warehouse-backed checks (`dbt run`, `dbt test`) are run locally or in your GCP environment after `make dbt-debug`. To mirror CI locally without Docker:
@@ -262,7 +262,7 @@ poetry install
 export GOOGLE_PROJECT_ID=ci-placeholder DBT_DATASET=favorita BQ_RAW_DATASET=raw_favorita DBT_PROFILES_DIR=dbt/profiles
 echo '{}' > /tmp/ci-service-account.json
 export GOOGLE_APPLICATION_CREDENTIALS=/tmp/ci-service-account.json
-poetry run flake8 vertex tests
+poetry run flake8 vertex
 poetry run pytest
 poetry run dbt deps --project-dir dbt
 poetry run dbt parse --project-dir dbt
@@ -338,7 +338,7 @@ Key environment variables (see `env.example` for full list):
 
 ### Testing
 
-Tests are located in `tests/`. Run with:
+Tests are located in `vertex/tests/`. Run with:
 ```bash
 poetry run pytest
 ```

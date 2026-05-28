@@ -36,7 +36,7 @@ jobs:
         run: poetry install --no-interaction --no-ansi
 
       - name: Lint
-        run: poetry run flake8 vertex tests
+        run: poetry run flake8 vertex
 
       - name: Unit tests
         run: poetry run pytest

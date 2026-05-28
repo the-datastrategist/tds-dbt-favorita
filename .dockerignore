@@ -9,7 +9,7 @@
 docs/
 
 # Tests
-tests/
+vertex/tests/
 .pytest_cache/
 htmlcov/
 .coverage
