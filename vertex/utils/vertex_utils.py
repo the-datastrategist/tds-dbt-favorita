@@ -68,7 +68,9 @@ class VertexModelSaver:
         gcs_model_path = config.get("inputs", {}).get("gcs_model_path", "gs://models/")
         if not gcs_model_path.endswith("/"):
             gcs_model_path += "/"
-        self.model_artifact_uri = f"{gcs_model_path}{self.model_name}.joblib"
+        # Use a directory URI for Model.upload; the model file is stored inside it
+        self.model_artifact_uri = f"{gcs_model_path}{self.model_name}/"
+        self.model_artifact_filename = "model.joblib"
 
     def save_model(self):
         # Create tmp directory if it doesn't exist
@@ -80,16 +82,17 @@ class VertexModelSaver:
         # Save model to local
         joblib.dump(self.model, local_path)
 
-        # Save model to GCS
-        gcs_path = self.model_artifact_uri
-        bucket_name, *blob_path_parts = gcs_path.replace("gs://", "").split("/", 1)
-        blob_path = blob_path_parts[0] if blob_path_parts else f"{self.model_name}.joblib"
+        # Upload model file into a GCS directory so artifact_uri is a valid directory
+        gcs_dir = self.model_artifact_uri
+        bucket_name, *blob_dir_parts = gcs_dir.replace("gs://", "").split("/", 1)
+        blob_dir = blob_dir_parts[0] if blob_dir_parts else ""
+        blob_path = f"{blob_dir}{self.model_artifact_filename}"
         
         client = storage.Client()
         bucket = client.bucket(bucket_name)
         blob = bucket.blob(blob_path)
         blob.upload_from_filename(local_path)
-        print(f"Model uploaded to GCS: {self.model_artifact_uri}")
+        print(f"Model uploaded to GCS: {self.model_artifact_uri}{self.model_artifact_filename}")
 
         # Register model in Vertex AI
         self.logger = VertexModelLogger(config=self.config, saver=self)
