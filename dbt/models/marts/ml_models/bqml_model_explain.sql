@@ -39,7 +39,7 @@ FROM (
     {%- set include_in_forecast = model_config.include_in_forecast if 'include_in_forecast' in model_config else true -%}
     {%- if include_in_forecast -%}
       {%- set model_name = model_config.model_name -%}
-      {%- set predict_ref = model_config.predict_ref if 'predict_ref' in model_config else 'ml_train_input_daily' -%}
+      {%- set predict_ref = model_config.predict_ref if 'predict_ref' in model_config else 'int_train_input_daily' -%}
       {%- set prediction_features = get_bqml_prediction_features(model_config) -%}
       {%- set label_cols = model_config.input_label_cols if 'input_label_cols' in model_config else [] -%}
       {%- set label_alias = label_cols[0] if label_cols | length > 0 else 'sales_company' -%}

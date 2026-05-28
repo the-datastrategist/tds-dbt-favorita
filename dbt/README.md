@@ -19,8 +19,8 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 ├── dbt/                    # dbt models and configurations
 │   ├── models/
 │   │   ├── staging/       # Staging models
-│   │   ├── intermediate/  # Intermediate transformations
-│   │   └── marts/         # Final models and ML training inputs
+│   │   ├── intermediate/  # ML training feature sets (int_train_input_*)
+│   │   └── marts/         # Final models and BQML outputs
 │   │       └── ml_models/ # BigQuery ML models
 │   ├── macros/            # dbt macros for BigQuery ML
 │   └── profiles/          # dbt profiles configuration
@@ -152,7 +152,7 @@ make dbt-predict        # models tagged predict
 make dbt-test
 
 # Single model
-make dbt-run-model MODEL=ml_train_input_daily
+make dbt-run-model MODEL=int_train_input_daily
 
 # Extra dbt flags
 make dbt-run ARGS="--select stg_favorita_train"
@@ -220,7 +220,7 @@ make test-integration
 
 2. **Prepare training data with dbt**
    ```bash
-   make dbt-run-model MODEL=ml_train_input_daily
+   make dbt-run-model MODEL=int_train_input_daily
    ```
 
 3. **Train and run BQML models**
@@ -235,7 +235,7 @@ make test-integration
 
 2. **Prepare features in BigQuery** (if needed)
    ```bash
-   make dbt-run-model MODEL=ml_train_input_daily
+   make dbt-run-model MODEL=int_train_input_daily
    ```
 
 3. **Train and predict**
