@@ -1,4 +1,10 @@
-{{ config(**staging_date_partition_config(unique_key=['store_nbr', 'date'])) }}
+{{ config(
+    materialized='incremental',
+    unique_key=['store_nbr', 'date'],
+    partition_by={'field': 'date', 'data_type': 'date'},
+    incremental_strategy='insert_overwrite',
+    tags=['staging']
+) }}
 
 with
 

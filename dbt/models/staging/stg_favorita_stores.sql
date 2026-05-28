@@ -1,4 +1,7 @@
-{{ config(**staging_dimension_config(unique_key='store_nbr')) }}
+{{ config(
+    materialized='table',
+    tags=['staging']
+) }}
 
 select *
 from {{ source('favorita_raw', 'raw_favorita_stores') }}

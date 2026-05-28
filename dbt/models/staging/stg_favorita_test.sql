@@ -1,4 +1,10 @@
-{{ config(**staging_date_partition_config(unique_key='id')) }}
+{{ config(
+    materialized='incremental',
+    unique_key='id',
+    partition_by={'field': 'date', 'data_type': 'date'},
+    incremental_strategy='insert_overwrite',
+    tags=['staging']
+) }}
 
 with
 
@@ -32,9 +38,7 @@ test_dates as (
     ) as bounds
         on d.date between bounds.start_date and bounds.end_date
     where true
-    {% if is_incremental() %}
-        and d.date > (select coalesce(max(date), date('1900-01-01')) from {{ this }})
-    {% endif %}
+    {{ filter_incremental_by_date('d.date') }}
 )
 
 select
