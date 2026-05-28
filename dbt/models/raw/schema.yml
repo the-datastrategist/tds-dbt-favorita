@@ -44,3 +44,11 @@ sources:
         description: >
           - The test data, having the same features as the training data. You will predict the target sales for the dates in this file.
           - The dates in the test data are for the 15 days after the last date in the training data.
+
+      - name: raw_favorita_items
+        description: >
+          Product metadata: item identifiers and attributes (e.g. family, class) for items sold at Favorita stores.
+
+      - name: raw_favorita_sample_submission
+        description: >
+          Competition submission template with id and sales columns for the Favorita forecasting leaderboard.

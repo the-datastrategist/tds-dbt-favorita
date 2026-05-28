@@ -1,0 +1,241 @@
+name: 'tds_favorita'
+version: '1.0.0'
+config-version: 2
+
+profile: 'tds_favorita'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  tds_favorita:
+    +materialized: view
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: table
+    marts:
+      +materialized: table
+      ml_models:
+        +materialized: view
+        +tags: ['ml', 'bqml']
+        +enabled: true
+
+vars:
+  # Project-level variables can be set here
+  project_id: "{{ env_var('GOOGLE_PROJECT_ID') }}"
+  dataset: "{{ env_var('DBT_DATASET', 'favorita') }}"
+
+  feature_sets:
+    datetime: []
+    holiday: []
+    demographic: []
+
+  model_configs:
+
+    - model_name: bqml_sales_forecast
+      version: v1.0
+      lifecycle: prod
+      metric: sales_company
+      interval: day
+      include_in_run: true
+      include_in_forecast: true
+      model_type: BOOSTED_TREE_REGRESSOR
+      input_label_cols:
+        - sales_company
+      max_iterations: 50
+      learn_rate: 0.1
+      max_tree_depth: 6
+      l1_reg: 0.1
+      l2_reg: 0.1
+      early_stop: true
+      feature_columns:
+        - day_of_month
+        - day_of_week
+        - iso_week_of_year
+        - month
+        - quarter
+        - year
+        - week_of_month
+        - iso_year
+        - iso_week
+        - day_name
+        - month_name
+        - sales_company_l3d
+        - sales_company_l7d
+        - sales_company_l14d
+        - sales_company_l28d
+        - sales_company_l30d
+        - sales_company_l60d
+        - sales_company_l90d
+        - avg_sales_company_l3d
+        - avg_sales_company_l7d
+        - avg_sales_company_l14d
+        - avg_sales_company_l28d
+        - avg_sales_company_l30d
+        - avg_sales_company_l60d
+        - avg_sales_company_l90d
+        - avg_sales_company_l180d
+        - avg_sales_company_l270d
+        - avg_sales_company_l360d
+        - stddev_sales_company_l3d
+        - stddev_sales_company_l7d
+        - stddev_sales_company_l14d
+        - stddev_sales_company_l28d
+        - stddev_sales_company_l30d
+        - stddev_sales_company_l60d
+        - stddev_sales_company_l90d
+        - stddev_sales_company_l180d
+        - stddev_sales_company_l270d
+        - stddev_sales_company_l360d
+        - sales_company_p1d
+        - sales_company_p3d
+        - sales_company_p7d
+        - sales_company_p14d
+        - sales_company_p28d
+        - sales_company_p30d
+        - sales_company_p60d
+        - sales_company_p90d
+        - avg_sales_company_l1d_l3d_pct_diff
+        - avg_sales_company_l1d_l7d_pct_diff
+        - avg_sales_company_l1d_l14d_pct_diff
+        - avg_sales_company_l1d_l28d_pct_diff
+        - avg_sales_company_l3d_l7d_pct_diff
+        - avg_sales_company_l3d_l14d_pct_diff
+        - avg_sales_company_l3d_l28d_pct_diff
+        - avg_sales_company_l7d_l14d_pct_diff
+        - avg_sales_company_l7d_l28d_pct_diff
+        - avg_sales_company_l7d_l30d_pct_diff
+        - avg_sales_company_l7d_l60d_pct_diff
+        - avg_sales_company_l7d_l90d_pct_diff
+        - avg_sales_company_l7d_l180d_pct_diff
+        - avg_sales_company_l7d_l360d_pct_diff
+        - sales_company_l1d_p1d_pct_diff
+        - sales_company_l3d_p3d_pct_diff
+        - sales_company_l7d_p7d_pct_diff
+        - sales_company_l14d_p14d_pct_diff
+        - sales_company_l28d_p28d_pct_diff
+        - sales_company_l30d_p30d_pct_diff
+        - sales_company_l60d_p60d_pct_diff
+        - sales_company_l90d_p90d_pct_diff
+
+
+    - model_name: revenue_by_hour_random_forest_mape
+      version: v1.1
+      lifecycle: prod
+      metric: revenue
+      interval: day
+      include_in_run: false
+      include_in_forecast: false
+      model_type: BOOSTED_TREE_REGRESSOR
+      input_label_cols:
+        - target_revenue
+      booster_type: GBTREE
+      num_parallel_tree: 100
+      max_iterations: 1
+      max_tree_depth: 6
+      learn_rate: 1.0
+      subsample: 0.8  # 0.7–0.9
+      colsample_bytree: 0.8  # 0.7–0.9
+      colsample_bylevel: 0.8
+      colsample_bynode: 0.7
+      tree_method: HIST
+      early_stop: false
+      min_tree_child_weight: 10
+      min_split_loss: 0.1  # 0–0.2
+      l1_reg: 0.0
+      l2_reg: 2.0
+      enable_global_explain: true
+      approx_global_feature_contrib: true
+      data_split_method: SEQ
+      data_split_column: order_date_hour
+      data_split_eval_fraction: 0.2
+      feature_set_groups:
+        - datetime
+        - holiday
+        - demographic
+      feature_set_columns:
+        - day_of_month
+        - day_of_week
+        - iso_week_of_year
+        - month
+        - quarter
+        - year
+        - week_of_month
+        - iso_year
+        - iso_week
+        - day_name
+        - month_name
+        - sales_company_l3d
+        - sales_company_l7d
+        - sales_company_l14d
+        - sales_company_l28d
+        - sales_company_l30d
+        - sales_company_l60d
+        - sales_company_l90d
+        - avg_sales_company_l3d
+        - avg_sales_company_l7d
+        - avg_sales_company_l14d
+        - avg_sales_company_l28d
+        - avg_sales_company_l30d
+        - avg_sales_company_l60d
+        - avg_sales_company_l90d
+        - avg_sales_company_l180d
+        - avg_sales_company_l270d
+        - avg_sales_company_l360d
+        - stddev_sales_company_l3d
+        - stddev_sales_company_l7d
+        - stddev_sales_company_l14d
+        - stddev_sales_company_l28d
+        - stddev_sales_company_l30d
+        - stddev_sales_company_l60d
+        - stddev_sales_company_l90d
+        - stddev_sales_company_l180d
+        - stddev_sales_company_l270d
+        - stddev_sales_company_l360d
+        - sales_company_p1d
+        - sales_company_p3d
+        - sales_company_p7d
+        - sales_company_p14d
+        - sales_company_p28d
+        - sales_company_p30d
+        - sales_company_p60d
+        - sales_company_p90d
+        - avg_sales_company_l1d_l3d_pct_diff
+        - avg_sales_company_l1d_l7d_pct_diff
+        - avg_sales_company_l1d_l14d_pct_diff
+        - avg_sales_company_l1d_l28d_pct_diff
+        - avg_sales_company_l3d_l7d_pct_diff
+        - avg_sales_company_l3d_l14d_pct_diff
+        - avg_sales_company_l3d_l28d_pct_diff
+        - avg_sales_company_l7d_l14d_pct_diff
+        - avg_sales_company_l7d_l28d_pct_diff
+        - avg_sales_company_l7d_l30d_pct_diff
+        - avg_sales_company_l7d_l60d_pct_diff
+        - avg_sales_company_l7d_l90d_pct_diff
+        - avg_sales_company_l7d_l180d_pct_diff
+        - avg_sales_company_l7d_l360d_pct_diff
+        - sales_company_l1d_p1d_pct_diff
+        - sales_company_l3d_p3d_pct_diff
+        - sales_company_l7d_p7d_pct_diff
+        - sales_company_l14d_p14d_pct_diff
+        - sales_company_l28d_p28d_pct_diff
+        - sales_company_l30d_p30d_pct_diff
+        - sales_company_l60d_p60d_pct_diff
+        - sales_company_l90d_p90d_pct_diff
+
+
+on-run-start:
+  - "{{ log('Starting dbt run', info=True) }}"
+
+on-run-end:
+  - "{{ log('dbt run completed', info=True) }}"

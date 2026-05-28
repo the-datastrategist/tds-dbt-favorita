@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: favorita
+    schema: "{{ env_var('DBT_DATASET') }}"
+    tables:
+      - name: favorita_store_holiday_events
+        description: >
+          Tracks the holiday events for a given date and store.

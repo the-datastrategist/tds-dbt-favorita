@@ -1,0 +1,19 @@
+tds_favorita:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: "{{ env_var('GOOGLE_PROJECT_ID') }}"
+      dataset: "{{ env_var('DBT_DATASET', 'favorita') }}"
+      threads: 4
+      location: "{{ env_var('BQ_LOCATION', 'US') }}"
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+    prod:
+      type: bigquery
+      method: service-account
+      project: "{{ env_var('GOOGLE_PROJECT_ID') }}"
+      dataset: favorita
+      threads: 4
+      location: "{{ env_var('BQ_LOCATION', 'US') }}"
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"

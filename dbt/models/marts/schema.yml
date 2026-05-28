@@ -1,0 +1,389 @@
+version: 2
+
+sources:
+  - name: favorita_metrics
+    schema: "{{ env_var('DBT_DATASET') }}"
+    tables:
+      - name: favorita_train_company_daily_sales_metrics
+        description: >
+          Sales metrics (i.e. sales and its transformed features) at the company level.
+
+      - name: favorita_train_store_daily_sales_metrics
+        description: >
+          Sales metrics (i.e. sales and its transformed features) at the store level.
+
+models:
+  - name: favorita_train_company_daily_sales_features
+    description: >
+      Feature set engineered from daily sales data at the company level. Includes lag features,
+      rolling averages, and other temporal transformations for use in forecasting.
+    columns:
+    - name: date
+      description: date the sales occured
+    - name: product_id
+      description: product identifier
+    - name: day_of_month
+      description: Day of the month the sales occurred
+    - name: day_of_week
+      description: Day of the week the sales occurred (0 = Monday)
+    - name: iso_week_of_year
+      description: Year the sales occurred
+    - name: month
+      description: Day of the month the sales occurred
+    - name: quarter
+      description: Quarter feature
+    - name: year
+      description: Year the sales occurred
+    - name: week_of_month
+      description: Day of the month the sales occurred
+    - name: iso_year
+      description: Year the sales occurred
+    - name: iso_week
+      description: Iso week feature
+    - name: day_name
+      description: Day name feature
+    - name: month_name
+      description: Day of the month the sales occurred
+    - name: product_family
+      description: the category of a given product
+    - name: sales_company_l14d
+      description: total company sales for the past 14 days
+    - name: avg_sales_company_l3d
+      description: average daily company sales for the past 14 days
+    - name: stddev_sales_company_l3d
+      description: Stddev sales company l3d feature
+    - name: sales_company_p1d
+      description: Sales company p1d feature
+    - name: avg_sales_company_l1d_l3d_pct_diff
+      description: Average sales over a time window for avg
+    - name: sales_company_l1d_p1d_pct_diff
+      description: Sales company l1d p1d pct diff feature
+
+  - name: favorita_train_store_daily_sales_features
+    description: >
+      Feature set engineered from daily sales data at the store level. Captures store-specific
+      trends, seasonal effects, and lagged performance metrics.
+    columns:
+    - name: date
+      description: date the sales occured
+    - name: store_nbr
+      description: store identifier
+    - name: product_id
+      description: product identifier
+    - name: day_of_month
+      description: Day of the month the sales occurred
+    - name: day_of_week
+      description: Day of the week the sales occurred (0 = Monday)
+    - name: iso_week_of_year
+      description: Year the sales occurred
+    - name: month
+      description: Day of the month the sales occurred
+    - name: quarter
+      description: Quarter feature
+    - name: year
+      description: Year the sales occurred
+    - name: week_of_month
+      description: Day of the month the sales occurred
+    - name: iso_year
+      description: Year the sales occurred
+    - name: iso_week
+      description: Iso week feature
+    - name: day_name
+      description: Day name feature
+    - name: month_name
+      description: Day of the month the sales occurred
+    - name: product_family
+      description: the category of a given product
+    - name: avg_sales_store_dow_l14d
+      description: daily average store sales for a given day of week over the last 14 days; for instance,
+        if the given date is a Sundays, it will take the average sales of the last two Sundays.
+    - name: avg_sales_store_l1d_l3d_pct_diff
+      description: '% difference in average daily sales for the last day versus the last 3 days'
+    - name: avg_sales_store_l3d_l7d_pct_diff
+      description: '% difference in average daily sales for the last 3 days versus the last 7 days'
+    - name: avg_sales_store_l7d_l14d_pct_diff
+      description: Average sales over a time window for avg
+    - name: sales_store_l3d_p3d_pct_diff
+      description: '% difference in average daily sales for the last 3 days versus the previous 3 days'
+    - name: avg_sales_store_dow_l14d_pct_diff
+      description: Average sales over a time window for avg
+
+  - name: favorita_train_store_product_family_daily_sales_features
+    description: >
+      Feature set for daily sales by store and product family. Useful for capturing localized demand
+      patterns and product group behavior over time.
+    columns:
+    - name: date
+      description: date the sales occured
+    - name: store_nbr
+      description: store identifier
+    - name: product_id
+      description: product identifier
+    - name: day_of_month
+      description: Day of the month the sales occurred
+    - name: day_of_week
+      description: Day of the week the sales occurred (0 = Monday)
+    - name: iso_week_of_year
+      description: Year the sales occurred
+    - name: month
+      description: Day of the month the sales occurred
+    - name: quarter
+      description: Quarter feature
+    - name: year
+      description: Year the sales occurred
+    - name: week_of_month
+      description: Day of the month the sales occurred
+    - name: iso_year
+      description: Year the sales occurred
+    - name: iso_week
+      description: Iso week feature
+    - name: day_name
+      description: Day name feature
+    - name: month_name
+      description: Day of the month the sales occurred
+    - name: sales_store_family
+      description: Sales store family feature
+    - name: sales_store_family_on_promotion
+      description: Sales store family on promotion feature
+    - name: pct_sales_store_family_on_promotion
+      description: Pct sales store family on promotion feature
+    - name: sales_store_family_l1d
+      description: Sales store family l1d feature
+    - name: avg_sales_store_family_l3d
+      description: average daily unit sales over the last 3 days for a given store-product family combination
+    - name: stddev_sales_store_family_l3d
+      description: Stddev sales store family l3d feature
+    - name: sales_store_family_p1d
+      description: Sales store family p1d feature
+
+
+  - name: favorita_train_store_product_daily_sales_features
+    description: >
+      Detailed feature set combining store and product level daily sales. Used for granular forecasting
+      and modeling inventory demand at the SKU level.
+    columns:
+    - name: date
+      description: date the sales occured
+    - name: store_nbr
+      description: store identifier
+    - name: product_id
+      description: product identifier
+    - name: day_of_month
+      description: Day of the month the sales occurred
+    - name: day_of_week
+      description: Day of the week the sales occurred (0 = Monday)
+    - name: iso_week_of_year
+      description: Year the sales occurred
+    - name: month
+      description: Day of the month the sales occurred
+    - name: quarter
+      description: Quarter feature
+    - name: year
+      description: Year the sales occurred
+    - name: week_of_month
+      description: Day of the month the sales occurred
+    - name: iso_year
+      description: Year the sales occurred
+    - name: iso_week
+      description: Iso week feature
+    - name: day_name
+      description: Day name feature
+    - name: month_name
+      description: Day of the month the sales occurred
+    - name: sales_store_product
+      description: daily unit sales for a given store-product combination
+    - name: sales_store_product_on_promotion
+      description: unit sales of products that were on promotion for a given store-product combination
+    - name: pct_sales_store_product_on_promotion
+      description: percentage of unit sales that were on promotion for a given store-product combination
+    - name: avg_sales_store_product_l3d
+      description: average daily unit sales over the last 3 days for a given store-product combination
+    - name: stddev_sales_store_product_l3d
+      description: standard deviation in daily unit sales over the last 3 days for a given store-product
+        combination
+    - name: sales_store_product_p3d
+      description: total unit sales for a given store-product combination over the previous 3 day period
+        (i.e. 4 - 6 days ago, inclusive)
+    - name: products_store_family
+      description: Products store family feature
+    - name: products_store_family_on_promotion
+      description: Products store family on promotion feature
+    - name: pct_products_store_family_on_promotion
+      description: Pct products store family on promotion feature
+    - name: stddev_pct_products_store_on_promotion_l3d
+      description: standard deviation in the percentage of products on promotion over the last 3 days for
+        a given store-product combination
+
+  - name: ml_train_input_daily
+    description: >
+      Company-level daily training features and labels for forecasting models.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['date']
+    columns:
+      - name: date
+        description: Date of the sales label.
+        tests:
+          - not_null
+      - name: feature_as_of_date
+        description: Date that feature windows are calculated as of.
+        tests:
+          - not_null
+      - name: sales_company_l1d
+        description: Label column representing daily company sales.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: ml_train_input_store_daily
+    description: >
+      Store-level daily training features and labels for forecasting models.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['date', 'store_nbr']
+    columns:
+      - name: date
+        description: Date of the sales label.
+        tests:
+          - not_null
+      - name: store_nbr
+        description: Store identifier.
+        tests:
+          - not_null
+      - name: feature_as_of_date
+        description: Date that feature windows are calculated as of.
+        tests:
+          - not_null
+      - name: sales_store_l1d
+        description: Label column representing daily store sales.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: ml_train_input_store_product_daily
+    description: >
+      Store-product daily training features and labels for forecasting models.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['date', 'store_nbr', 'product_id']
+    columns:
+      - name: date
+        description: Date of the sales label.
+        tests:
+          - not_null
+      - name: store_nbr
+        description: Store identifier.
+        tests:
+          - not_null
+      - name: product_id
+        description: Product identifier.
+        tests:
+          - not_null
+      - name: feature_as_of_date
+        description: Date that feature windows are calculated as of.
+        tests:
+          - not_null
+      - name: sales_store_product_l1d
+        description: Label column representing daily store-product sales.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: ml_train_input_store_product_family_daily
+    description: >
+      Store-product-family daily training features and labels for forecasting models.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['date', 'store_nbr', 'product_family']
+    columns:
+      - name: date
+        description: Date of the sales label.
+        tests:
+          - not_null
+      - name: store_nbr
+        description: Store identifier.
+        tests:
+          - not_null
+      - name: product_family
+        description: Product family identifier.
+        tests:
+          - not_null
+      - name: feature_as_of_date
+        description: Date that feature windows are calculated as of.
+        tests:
+          - not_null
+      - name: sales_store_family_l1d
+        description: Label column representing daily store-product-family sales.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: bqml_model_predict
+    description: >
+      Prediction outputs from BigQuery ML models.
+    columns:
+      - name: unique_id
+        description: Unique identifier for each model prediction run and date.
+        tests:
+          - not_null
+          - unique
+      - name: run_date
+        description: Date the prediction job was executed.
+        tests:
+          - not_null
+      - name: model_name
+        description: BigQuery ML model name used for prediction.
+        tests:
+          - not_null
+      - name: model_version
+        description: Model version string from model configuration.
+      - name: lifecycle
+        description: Lifecycle status from model configuration (e.g., dev, prod).
+
+  - name: bqml_model_evaluate
+    description: >
+      Evaluation metrics generated by BigQuery ML models.
+    columns:
+      - name: unique_id
+        description: Unique identifier for each model evaluation run.
+        tests:
+          - not_null
+          - unique
+      - name: run_date
+        description: Date the evaluation job was executed.
+        tests:
+          - not_null
+      - name: model_name
+        description: BigQuery ML model name used for evaluation.
+        tests:
+          - not_null
+      - name: model_version
+        description: Model version string from model configuration.
+      - name: lifecycle
+        description: Lifecycle status from model configuration (e.g., dev, prod).
+
+  - name: bqml_model_explain
+    description: >
+      Feature attribution outputs from BigQuery ML explainable predictions.
+    columns:
+      - name: unique_id
+        description: Unique identifier for each model explain run and date.
+        tests:
+          - not_null
+          - unique
+      - name: run_date
+        description: Date the explain job was executed.
+        tests:
+          - not_null
+      - name: model_name
+        description: BigQuery ML model name used for explanation.
+        tests:
+          - not_null
+      - name: model_version
+        description: Model version string from model configuration.
+      - name: lifecycle
+        description: Lifecycle status from model configuration (e.g., dev, prod).
