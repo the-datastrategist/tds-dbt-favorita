@@ -6,7 +6,8 @@ models:
       One row per calendar day from the first training date through the last test date.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: ['date']
+          arguments:
+            combination_of_columns: ['date']
     columns:
       - name: date
         description: Calendar date within the train-through-test range.
@@ -19,7 +20,8 @@ models:
       Store metadata (city, state, type, cluster). One row per store; no date dimension.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: ['store_nbr']
+          arguments:
+            combination_of_columns: ['store_nbr']
     columns:
       - name: store_nbr
         description: Store identifier.
@@ -32,7 +34,8 @@ models:
       Staged holiday and event calendar with surrogate key and date parts.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: ['id']
+          arguments:
+            combination_of_columns: ['id']
     columns:
       - name: id
         description: Surrogate key for date, locale, type, description, and transferred flag.
@@ -49,7 +52,8 @@ models:
       Daily oil price aligned to the project date spine (includes train and test periods).
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: ['date']
+          arguments:
+            combination_of_columns: ['date']
     columns:
       - name: date
         description: Calendar date.
@@ -62,7 +66,8 @@ models:
       Staged training sales at store-product-day grain, enriched with product family.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: ['date', 'store_nbr', 'product_id']
+          arguments:
+            combination_of_columns: ['date', 'store_nbr', 'product_id']
     columns:
       - name: id
         description: Surrogate key for date, store, and product.
@@ -87,7 +92,8 @@ models:
       Staged test-period grid at store-product-day grain for forecasting features.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: ['date', 'store_nbr', 'product_id']
+          arguments:
+            combination_of_columns: ['date', 'store_nbr', 'product_id']
     columns:
       - name: id
         description: Surrogate key for date, store, and product.
@@ -112,7 +118,8 @@ models:
       Store-level transaction counts by date (cross join of date spine and stores).
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: ['date', 'store_nbr']
+          arguments:
+            combination_of_columns: ['date', 'store_nbr']
     columns:
       - name: id
         description: Surrogate key for date and store.
@@ -133,7 +140,8 @@ models:
       Holiday events expanded to each store (locale and state matching rules).
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: ['store_nbr', 'date']
+          arguments:
+            combination_of_columns: ['store_nbr', 'date']
     columns:
       - name: store_nbr
         description: Store identifier.

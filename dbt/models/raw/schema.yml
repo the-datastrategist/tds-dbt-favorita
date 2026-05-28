@@ -2,8 +2,8 @@ version: 2
 
 sources:
   - name: favorita_raw
-    database: tds-favorita
-    schema: raw_favorita
+    database: "{{ env_var('GOOGLE_PROJECT_ID') }}"
+    schema: "{{ env_var('BQ_RAW_DATASET', 'raw_favorita') }}"
     tables:
       - name: raw_favorita_transactions
         description: >

@@ -1,17 +1,5 @@
 version: 2
 
-sources:
-  - name: favorita_metrics
-    schema: "{{ env_var('DBT_DATASET') }}"
-    tables:
-      - name: favorita_train_company_daily_sales_metrics
-        description: >
-          Sales metrics (i.e. sales and its transformed features) at the company level.
-
-      - name: favorita_train_store_daily_sales_metrics
-        description: >
-          Sales metrics (i.e. sales and its transformed features) at the store level.
-
 models:
   - name: bqml_model_train
     description: >
@@ -27,16 +15,16 @@ models:
     columns:
       - name: unique_id
         description: Unique identifier for each model prediction run and date.
-        tests:
+        data_tests:
           - not_null
           - unique
       - name: run_date
         description: Date the prediction job was executed.
-        tests:
+        data_tests:
           - not_null
       - name: model_name
         description: BigQuery ML model name used for prediction.
-        tests:
+        data_tests:
           - not_null
       - name: model_version
         description: Model version string from model configuration.
@@ -50,16 +38,16 @@ models:
     columns:
       - name: unique_id
         description: Unique identifier for each model evaluation run.
-        tests:
+        data_tests:
           - not_null
           - unique
       - name: run_date
         description: Date the evaluation job was executed.
-        tests:
+        data_tests:
           - not_null
       - name: model_name
         description: BigQuery ML model name used for evaluation.
-        tests:
+        data_tests:
           - not_null
       - name: model_version
         description: Model version string from model configuration.
@@ -73,16 +61,16 @@ models:
     columns:
       - name: unique_id
         description: Unique identifier for each model explain run and date.
-        tests:
+        data_tests:
           - not_null
           - unique
       - name: run_date
         description: Date the explain job was executed.
-        tests:
+        data_tests:
           - not_null
       - name: model_name
         description: BigQuery ML model name used for explanation.
-        tests:
+        data_tests:
           - not_null
       - name: model_version
         description: Model version string from model configuration.

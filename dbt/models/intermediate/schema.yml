@@ -1,118 +1,118 @@
 version: 2
 
-sources:
-  - name: favorita
-    schema: "{{ env_var('DBT_DATASET') }}"
-    tables:
-      - name: favorita_store_holiday_events
-        description: >
-          Tracks the holiday events for a given date and store.
-
 models:
   - name: int_train_input_daily
     description: >
       Company-level daily training features and labels for forecasting models.
-    tests:
+    data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: ['date']
+          arguments:
+            combination_of_columns: ['date']
     columns:
       - name: date
         description: Date of the sales label.
-        tests:
+        data_tests:
           - not_null
       - name: feature_as_of_date
         description: Date that feature windows are calculated as of.
-        tests:
+        data_tests:
           - not_null
       - name: sales_company_l1d
         description: Label column representing daily company sales.
-        tests:
+        data_tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
+              arguments:
+                min_value: 0
 
   - name: int_train_input_store_daily
     description: >
       Store-level daily training features and labels for forecasting models.
-    tests:
+    data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: ['date', 'store_nbr']
+          arguments:
+            combination_of_columns: ['date', 'store_nbr']
     columns:
       - name: date
         description: Date of the sales label.
-        tests:
+        data_tests:
           - not_null
       - name: store_nbr
         description: Store identifier.
-        tests:
+        data_tests:
           - not_null
       - name: feature_as_of_date
         description: Date that feature windows are calculated as of.
-        tests:
+        data_tests:
           - not_null
       - name: sales_store_l1d
         description: Label column representing daily store sales.
-        tests:
+        data_tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
+              arguments:
+                min_value: 0
 
   - name: int_train_input_store_product_daily
     description: >
       Store-product daily training features and labels for forecasting models.
-    tests:
+    data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: ['date', 'store_nbr', 'product_id']
+          arguments:
+            combination_of_columns: ['date', 'store_nbr', 'product_id']
     columns:
       - name: date
         description: Date of the sales label.
-        tests:
+        data_tests:
           - not_null
       - name: store_nbr
         description: Store identifier.
-        tests:
+        data_tests:
           - not_null
       - name: product_id
         description: Product identifier.
-        tests:
+        data_tests:
           - not_null
       - name: feature_as_of_date
         description: Date that feature windows are calculated as of.
-        tests:
+        data_tests:
           - not_null
       - name: sales_store_product_l1d
         description: Label column representing daily store-product sales.
-        tests:
+        data_tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
+              arguments:
+                min_value: 0
 
   - name: int_train_input_store_product_family_daily
     description: >
       Store-product-family daily training features and labels for forecasting models.
-    tests:
+    data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: ['date', 'store_nbr', 'product_family']
+          arguments:
+            combination_of_columns: ['date', 'store_nbr', 'product_family']
     columns:
       - name: date
         description: Date of the sales label.
-        tests:
+        data_tests:
           - not_null
       - name: store_nbr
         description: Store identifier.
-        tests:
+        data_tests:
           - not_null
       - name: product_family
         description: Product family identifier.
-        tests:
+        data_tests:
           - not_null
       - name: feature_as_of_date
         description: Date that feature windows are calculated as of.
-        tests:
+        data_tests:
           - not_null
       - name: sales_store_family_l1d
         description: Label column representing daily store-product-family sales.
-        tests:
+        data_tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
+              arguments:
+                min_value: 0
