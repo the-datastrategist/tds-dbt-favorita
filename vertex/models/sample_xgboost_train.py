@@ -21,9 +21,9 @@ class XGBoostForecaster:
     def _get_training_data(self):
         # Load from query or file
         if "sql_query" in self.config["inputs"]:
-            df = self.bq_loader.load_data(query=self.config["sql_query"])
+            df = self.bq_loader.load_data(query=self.config["inputs"]["sql_query"])
         elif "sql_file" in self.config["inputs"]:
-            df = self.bq_loader.load_data(file=self.config["sql_file"])
+            df = self.bq_loader.load_data(file=self.config["inputs"]["sql_file"])
 
         # Adjust date column if it exists
         if "date" in df.columns:
