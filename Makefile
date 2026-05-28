@@ -147,7 +147,7 @@ model-predict: ## Generate predictions using Vertex AI model
 	docker run --rm -v $(CURDIR):/app \
 		-e GOOGLE_APPLICATION_CREDENTIALS=$(GOOGLE_APPLICATION_CREDENTIALS) \
 		$(PROJECT_NAME) python -m $(VERTEX_DIR).models.predict \
-		--file_path $(VERTEX_DIR)/config/train_config.yaml \
+		--file_path $(VERTEX_DIR)/config/predict_config.yaml \
 		--model_name $(MODEL_NAME)
 
 model-train-local: ## Train model locally (not in Docker)
@@ -156,7 +156,7 @@ model-train-local: ## Train model locally (not in Docker)
 
 model-predict-local: ## Generate predictions locally (not in Docker)
 	poetry run python -m $(VERTEX_DIR).models.predict \
-		--file_path $(VERTEX_DIR)/config/train_config.yaml \
+		--file_path $(VERTEX_DIR)/config/predict_config.yaml \
 		--model_name $(MODEL_NAME)
 
 # --- CLEANUP COMMANDS ---
