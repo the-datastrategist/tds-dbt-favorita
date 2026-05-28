@@ -1,7 +1,4 @@
-{{ config(
-    materialized = "view",
-    tags = ["staging"]
-) }}
+{{ config(**staging_date_partition_config(unique_key='id')) }}
 
 with
 
@@ -19,6 +16,10 @@ stores as (
 )
 
 select
+    {{ dbt_utils.generate_surrogate_key([
+        'cast(d.date as string)',
+        'cast(s.store_nbr as string)'
+    ]) }} as id,
     d.date,
     s.store_nbr,
     t.transactions as store_transactions
@@ -27,3 +28,5 @@ cross join stores as s
 left join favorita_transactions as t
     on d.date = t.date
     and s.store_nbr = t.store_nbr
+where true
+{{ filter_incremental_by_date('d.date') }}

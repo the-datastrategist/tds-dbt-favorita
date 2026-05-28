@@ -1,7 +1,4 @@
-{{ config(
-    materialized = "view",
-    tags = ["staging"]
-) }}
+{{ config(**staging_date_partition_config(unique_key='id')) }}
 
 with
 
@@ -34,9 +31,18 @@ test_dates as (
         from favorita_test
     ) as bounds
         on d.date between bounds.start_date and bounds.end_date
+    where true
+    {% if is_incremental() %}
+        and d.date > (select coalesce(max(date), date('1900-01-01')) from {{ this }})
+    {% endif %}
 )
 
 select
+    {{ dbt_utils.generate_surrogate_key([
+        'cast(td.date as string)',
+        'cast(tsp.store_nbr as string)',
+        'cast(tsp.item_nbr as string)'
+    ]) }} as id,
     td.date,
     tsp.store_nbr,
     tsp.item_nbr as product_id,

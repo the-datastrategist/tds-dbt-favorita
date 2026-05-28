@@ -1,7 +1,4 @@
-{{ config(
-    materialized = "view",
-    tags = ["staging"]
-) }}
+{{ config(**staging_date_partition_config(unique_key='date')) }}
 
 with
 
@@ -16,3 +13,5 @@ select
 from {{ ref('stg_favorita_date_spine') }} as d
 left join favorita_oil as o
     on d.date = o.date
+where true
+{{ filter_incremental_by_date('d.date') }}

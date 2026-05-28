@@ -20,7 +20,12 @@ models:
   tds_favorita:
     +materialized: view
     staging:
-      +materialized: view
+      +materialized: incremental
+      +incremental_strategy: insert_overwrite
+      +partition_by:
+        field: date
+        data_type: date
+      +tags: ['staging']
     intermediate:
       +materialized: table
     marts:

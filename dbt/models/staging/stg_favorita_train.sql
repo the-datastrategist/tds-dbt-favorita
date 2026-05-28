@@ -1,14 +1,12 @@
-{{ config(
-  materialized = "view",
-  tags = ["staging"]
-  )
-}}
+{{ config(**staging_date_partition_config(unique_key='id')) }}
 
 with
 
 favorita_train as (
     select *
     from {{ source('favorita_raw', 'raw_favorita_train') }}
+    where true
+    {{ filter_incremental_by_date('date') }}
 ),
 
 favorita_items as (
