@@ -7,14 +7,14 @@ services:
     container_name: tds-favorita
     volumes:
       - .:/app
-      # Mount Google Cloud credentials (keep path relative to project root for Docker)
-      - ./credentials/tds-favorita-b72f306edf29.json:/app/credentials/tds-favorita-b72f306edf29.json:ro
+      # Mount Google Cloud credentials from configured path
+      - ${GOOGLE_APPLICATION_CREDENTIALS:?GOOGLE_APPLICATION_CREDENTIALS must be set}:${GOOGLE_APPLICATION_CREDENTIALS:?GOOGLE_APPLICATION_CREDENTIALS must be set}:ro
       # Kaggle API credentials for scripts/load_favorita_to_gcs.py (~/.kaggle/kaggle.json)
       - ${KAGGLE_CONFIG_DIR:-${HOME}/.kaggle}:/root/.kaggle:ro
     environment:
       - PYTHONPATH=/app
       - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID}
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/tds-favorita-b72f306edf29.json
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:?GOOGLE_APPLICATION_CREDENTIALS must be set}
       - GOOGLE_REGION=${GOOGLE_REGION:-us-central1}
       - BQ_DATASET=${BQ_DATASET:-favorita}
       - BQ_RAW_DATASET=${BQ_RAW_DATASET:-raw_favorita}
