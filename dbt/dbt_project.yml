@@ -52,10 +52,6 @@ vars:
   project_id: "{{ env_var('GOOGLE_PROJECT_ID') }}"
   dataset: "{{ env_var('DBT_DATASET', 'favorita') }}"
   bq_raw_dataset: "{{ env_var('BQ_RAW_DATASET', 'raw_favorita') }}"
-
-  # Days of history withheld from BQML training (see bqml_model_train.sql).
-  bqml_training_holdout_days: 7
-
   bqml_explain_top_k_features: 20
 
   # Reusable column groups for get_bqml_feature_columns / get_bqml_prediction_features.

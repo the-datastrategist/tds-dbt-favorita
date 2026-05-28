@@ -244,6 +244,9 @@ make test-integration
 
 # dbt data tests (requires BigQuery credentials and built models)
 make dbt-test
+
+# Staging + features + singular reconciliation tests (excludes BQML)
+make selector-daily-refresh-test
 ```
 
 ### Continuous integration

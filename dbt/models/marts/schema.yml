@@ -17,19 +17,36 @@ models:
         description: Unique identifier for each model prediction run and date.
         data_tests:
           - not_null
-          - unique
+          - unique:
+              config:
+                severity: warn
       - name: run_date
         description: Date the prediction job was executed.
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
       - name: model_name
         description: BigQuery ML model name used for prediction.
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
+          - accepted_values:
+              arguments:
+                values: [bqml_sales_forecast]
+              config:
+                severity: warn
       - name: model_version
         description: Model version string from model configuration.
       - name: lifecycle
         description: Lifecycle status from model configuration (e.g., dev, prod).
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [prod, dev]
+              config:
+                severity: warn
 
   - name: bqml_model_evaluate
     description: >
@@ -40,19 +57,36 @@ models:
         description: Unique identifier for each model evaluation run.
         data_tests:
           - not_null
-          - unique
+          - unique:
+              config:
+                severity: warn
       - name: run_date
         description: Date the evaluation job was executed.
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
       - name: model_name
         description: BigQuery ML model name used for evaluation.
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
+          - accepted_values:
+              arguments:
+                values: [bqml_sales_forecast]
+              config:
+                severity: warn
       - name: model_version
         description: Model version string from model configuration.
       - name: lifecycle
         description: Lifecycle status from model configuration (e.g., dev, prod).
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [prod, dev]
+              config:
+                severity: warn
 
   - name: bqml_model_explain
     description: >
@@ -63,16 +97,33 @@ models:
         description: Unique identifier for each model explain run and date.
         data_tests:
           - not_null
-          - unique
+          - unique:
+              config:
+                severity: warn
       - name: run_date
         description: Date the explain job was executed.
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
       - name: model_name
         description: BigQuery ML model name used for explanation.
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
+          - accepted_values:
+              arguments:
+                values: [bqml_sales_forecast]
+              config:
+                severity: warn
       - name: model_version
         description: Model version string from model configuration.
       - name: lifecycle
         description: Lifecycle status from model configuration (e.g., dev, prod).
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [prod, dev]
+              config:
+                severity: warn

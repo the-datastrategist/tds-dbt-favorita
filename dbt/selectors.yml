@@ -36,3 +36,16 @@ selectors:
           value: bqml
         - method: tag
           value: predict
+
+  - name: daily_refresh_tests
+    description: >
+      Data tests for raw sources, staging, features, and tagged singular tests.
+      Excludes BQML marts. Equivalent to make selector-daily-refresh-test.
+    definition:
+      union:
+        - method: selector
+          value: daily_refresh
+        - method: source
+          value: favorita_raw
+        - method: tag
+          value: data_quality

@@ -46,6 +46,22 @@ models:
         description: Calendar date of the holiday or event.
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_favorita_date_spine')
+                field: date
+      - name: event_type
+        description: Holiday event type from source (type column).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - Holiday
+                  - Transfer
+                  - Bridge
+                  - Work Day
+                  - Additional
 
   - name: stg_favorita_oil
     description: >
@@ -60,6 +76,10 @@ models:
         data_tests:
           - unique
           - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_favorita_date_spine')
+                field: date
 
   - name: stg_favorita_train
     description: >
@@ -78,14 +98,38 @@ models:
         description: Sales date.
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_favorita_date_spine')
+                field: date
       - name: store_nbr
         description: Store identifier.
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_favorita_stores')
+                field: store_nbr
       - name: product_id
         description: Product (item) identifier.
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: source('favorita_raw', 'raw_favorita_items')
+                field: item_nbr
+      - name: sales
+        description: Unit sales for the store-product-day.
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+      - name: on_promotion
+        description: Whether the product was on promotion (0 or 1).
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [0, 1]
 
   - name: stg_favorita_test
     description: >
@@ -104,14 +148,26 @@ models:
         description: Forecast date.
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_favorita_date_spine')
+                field: date
       - name: store_nbr
         description: Store identifier.
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_favorita_stores')
+                field: store_nbr
       - name: product_id
         description: Product (item) identifier.
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: source('favorita_raw', 'raw_favorita_items')
+                field: item_nbr
 
   - name: stg_favorita_transactions
     description: >
@@ -130,10 +186,26 @@ models:
         description: Calendar date.
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_favorita_date_spine')
+                field: date
       - name: store_nbr
         description: Store identifier.
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_favorita_stores')
+                field: store_nbr
+      - name: store_transactions
+        description: Transaction count for the store on the date (null when missing in source).
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+              config:
+                where: store_transactions is not null
 
   - name: stg_favorita_store_holiday_events
     description: >
@@ -147,7 +219,15 @@ models:
         description: Store identifier.
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_favorita_stores')
+                field: store_nbr
       - name: date
         description: Calendar date.
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_favorita_date_spine')
+                field: date
