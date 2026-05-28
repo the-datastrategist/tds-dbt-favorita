@@ -9,7 +9,7 @@ services:
       - .:/app
       # Mount Google Cloud credentials from host path defined in .env
       - ${GOOGLE_APPLICATION_CREDENTIALS}:/app/credentials/service-account-key.json:ro
-      # Kaggle API credentials for scripts/load_favorita_to_gcs.py (~/.kaggle/kaggle.json)
+      # Kaggle API credentials (~/.kaggle/kaggle.json)
       - ${KAGGLE_CONFIG_DIR:-${HOME}/.kaggle}:/root/.kaggle:ro
     environment:
       - PYTHONPATH=/app
