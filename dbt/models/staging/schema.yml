@@ -1,42 +1,11 @@
 version: 2
 
-sources:
-  - name: favorita_stg
-    database: "{{ env_var('GOOGLE_PROJECT_ID') }}"
-    schema: "{{ env_var('DBT_DATASET') }}"
-    tables:
-      - name: stg_favorita_holiday_events
-        description: >
-          Holidays and Events, with metadata
-          - NOTE: Pay special attention to the `transferred` column. A holiday that is transferred officially falls on that calendar day, but was moved to another date by the government. A transferred day is more like a normal day than a holiday. To find the day that it was actually celebrated, look for the corresponding row where type is Transfer. For example, the holiday Independencia de Guayaquil was transferred from 2012-10-09 to 2012-10-12, which means it was celebrated on 2012-10-12. Days that are type Bridge are extra days that are added to a holiday (e.g., to extend the break across a long weekend). These are frequently made up by the type Work Day which is a day not normally scheduled for work (e.g., Saturday) that is meant to payback the Bridge.
-          - Additional holidays are days added a regular calendar holiday, for example, as typically happens around Christmas (making Christmas Eve a holiday).
-
-      - name: stg_favorita_oil
-        description: >
-          Daily oil price. Includes values during both the train and test data timeframes. 
-          (Ecuador is an oil-dependent country and it's economical health is highly vulnerable 
-          to shocks in oil prices.)
-
-      - name: stg_favorita_stores
-        description: >
-          Store metadata, including city, state, type, and cluster. `cluster` is a grouping of similar stores.
-
-      - name: stg_favorita_transactions
-        description: >
-          The training data includes dates, store and product information, 
-          whether that item was being promoted, as well as the sales numbers.
-
-          The purpose of this data is to predict sales for the thousands of 
-          product families sold at Favorita stores located in Ecuador.
-
-          See more details at:
-          https://www.kaggle.com/competitions/store-sales-time-series-forecasting/data
-
-      - name: stg_favorita_train
-        description: >
-          The training data includes dates, store and product information, 
-          whether that item was being promoted, as well as the sales numbers.
-
-      - name: stg_favorita_test
-        description: >
-          The test data for validation. Does not contain sales.
+models:
+  - name: stg_favorita_train
+    description: >
+      Staged training sales at store-product-day grain, enriched with product family.
+    columns:
+      - name: id
+        description: Surrogate key for date, store, and product.
+        data_tests:
+          - unique

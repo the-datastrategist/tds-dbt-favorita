@@ -11,7 +11,7 @@ with
 
 favorita_train as (
   select *
-  from {{ source('favorita_stg', 'stg_favorita_train') }}
+  from {{ ref('stg_favorita_train') }}
 ),
 
 -- Daily sales metrics for each store

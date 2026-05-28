@@ -12,7 +12,7 @@ with
 
 favorita_train as (
   select *
-  from {{ source('favorita_stg', 'stg_favorita_train') }}
+  from {{ ref('stg_favorita_train') }}
 ),
 
 store_sales_daily_agg as (
