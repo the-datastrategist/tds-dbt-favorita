@@ -1,0 +1,30 @@
+configs:
+  - name: train_xgboost
+    description: XG-Boost model training
+    inputs:
+      project_id: the-data-strategist
+      region: us-central1
+      sql_query: |
+          SELECT
+            *
+          FROM
+            `the-data-strategist.favorita.favorita_train_store_daily_sales_features`
+      excluded_columns:
+        - store_id
+        - product_id
+        - entity_id
+        - date
+      target_column: sales
+      gcs_model_path: gs://my-bucket/models/
+      forecast_horizon: 7
+      model_type: xgboost
+      train_days: 180
+      test_size: 0.2
+      model_params:
+        n_estimators: 100
+        max_depth: 6
+        learning_rate: 0.1
+    outputs:
+      prediction_table: the-data-strategist.favorita.favorita_train_predictions
+      performance_table: the-data-strategist.favorita.favorita_model_performance
+      metadata_table: the-data-strategist.favorita.favorita_model_metadata
