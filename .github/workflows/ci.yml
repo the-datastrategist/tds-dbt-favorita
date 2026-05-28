@@ -14,6 +14,7 @@ env:
   GOOGLE_PROJECT_ID: ci-placeholder
   GOOGLE_APPLICATION_CREDENTIALS: /tmp/ci-service-account.json
   DBT_DATASET: favorita
+  BQ_RAW_DATASET: raw_favorita
   DBT_PROFILES_DIR: dbt/profiles
   BQ_LOCATION: US
 
@@ -41,7 +42,7 @@ jobs:
         run: poetry run pytest
 
   dbt:
-    name: dbt parse and compile
+    name: dbt parse, compile, and docs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -67,3 +68,6 @@ jobs:
 
       - name: Compile dbt project
         run: poetry run dbt compile --project-dir dbt
+
+      - name: Generate dbt docs
+        run: poetry run dbt docs generate --project-dir dbt

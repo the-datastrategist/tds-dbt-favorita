@@ -1,0 +1,74 @@
+# Publish static dbt Docs to GitHub Pages (overview, lineage, exposures).
+# Enable: repo Settings → Pages → Build and deployment → GitHub Actions.
+
+name: Deploy dbt Docs
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GOOGLE_PROJECT_ID: ci-placeholder
+  GOOGLE_APPLICATION_CREDENTIALS: /tmp/ci-service-account.json
+  DBT_DATASET: favorita
+  BQ_RAW_DATASET: raw_favorita
+  DBT_PROFILES_DIR: dbt/profiles
+  BQ_LOCATION: US
+
+jobs:
+  build:
+    name: Build dbt documentation site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Poetry
+        run: pip install poetry==1.8.2
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-ansi
+
+      - name: Placeholder service account key
+        run: echo '{}' > /tmp/ci-service-account.json
+
+      - name: Install dbt packages
+        run: poetry run dbt deps --project-dir dbt
+
+      - name: Parse and compile
+        run: |
+          poetry run dbt parse --project-dir dbt
+          poetry run dbt compile --project-dir dbt
+
+      - name: Generate dbt docs
+        run: poetry run dbt docs generate --project-dir dbt
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dbt/target
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

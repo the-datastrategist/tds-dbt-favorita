@@ -1,6 +1,7 @@
 # Favorita grocery sales forecasting — dbt + BigQuery ML feature pipeline.
 # Raw data lives in BigQuery (raw_favorita); transformed models land in DBT_DATASET.
-# Makefile targets: dbt-run (excludes tag:bqml), dbt-train (tag:train), dbt-predict (tag:predict).
+# Makefile targets: selector-daily-refresh, dbt-run (excludes tag:bqml), dbt-train, dbt-predict.
+# Selectors: dbt/selectors.yml (daily_refresh, ml_features, bqml_train, bqml_score).
 
 name: tds_favorita
 version: 1.1.0

@@ -11,7 +11,7 @@ ifneq ("$(wildcard .env)","")
 	export $(shell sed 's/=.*//' .env)
 endif
 
-.PHONY: help install format lint test clean dbt-run dbt-train dbt-predict load-favorita-gcs load-favorita-bigquery
+.PHONY: help install format lint test clean dbt-run dbt-train dbt-predict selector-daily-refresh load-favorita-gcs load-favorita-bigquery
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -80,6 +80,10 @@ docker-run: ## Run default command in Docker
 # Standard dbt run - excludes BQML models
 dbt-run:
 	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --exclude tag:bqml $(ARGS)
+
+# Daily ETL: staging + intermediate features (see dbt/selectors.yml)
+selector-daily-refresh: ## Run dbt with selector daily_refresh (staging + features, no BQML)
+	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --selector daily_refresh $(ARGS)
 
 # Run all dbt models used for training (features + BQML training)
 dbt-train:

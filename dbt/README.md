@@ -10,7 +10,8 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 - **Dockerized**: Run everything locally in Docker containers
 - **Poetry**: Modern Python dependency management
 - **Testing**: pytest for Vertex utilities; dbt data tests on staging and intermediate models
-- **CI/CD**: GitHub Actions on every push and PR (Python lint/tests, `dbt parse` / `dbt compile`)
+- **CI/CD**: GitHub Actions on every push and PR (Python lint/tests, `dbt parse` / `dbt compile` / `dbt docs generate`)
+- **Hosted dbt Docs**: GitHub Pages deploy on push to `main` / `master` (see [Hosted documentation](#hosted-documentation))
 - **dbt Docs & lineage**: Project overview (`docs/overview.md`), exposures for ML and operational consumers (`models/exposures.yml`)
 - **Code Quality**: Black, flake8, and mypy for code quality
 
@@ -33,7 +34,7 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 │   ├── utils/             # Utilities (data loading, Vertex helpers)
 │   └── config/            # Model configuration files
 ├── tests/                 # Python test suite (pytest)
-├── .github/workflows/     # CI (lint, pytest, dbt parse/compile)
+├── .github/workflows/     # CI and GitHub Pages (dbt docs)
 ├── Dockerfile             # Docker image definition
 ├── docker-compose.yml     # Docker Compose configuration
 ├── pyproject.toml         # Poetry dependencies
@@ -184,7 +185,15 @@ make dbt-docs-generate
 make dbt-docs-serve     # http://localhost:8080 — open Overview, then explore Exposures in lineage
 ```
 
-To publish static docs publicly (e.g. GitHub Pages), add a workflow that runs `dbt docs generate` and deploys `target/`; see [What's missing](#whats-missing-for-end-to-end-predictions) in the repo root README for hosted docs as a follow-up.
+### Hosted documentation
+
+After you enable **Settings → Pages → Build and deployment → GitHub Actions**, pushes to `main` / `master` run [`.github/workflows/docs.yml`](../.github/workflows/docs.yml) and publish static dbt Docs.
+
+**Public URL (replace org/repo with yours):**
+
+`https://<github-org-or-user>.github.io/<repository-name>/`
+
+The site includes the [project overview](docs/overview.md), model catalog, and [exposures](models/exposures.yml) on the lineage graph. No BigQuery credentials are required to browse it.
 
 ### Vertex AI model commands
 
@@ -244,13 +253,13 @@ Pull requests and pushes to `main` / `master` run [`.github/workflows/ci.yml`](.
 | Job | What it checks |
 |-----|----------------|
 | **python** | `flake8` on `vertex/` and `tests/`, then `pytest` |
-| **dbt** | `dbt deps`, `dbt parse`, and `dbt compile` (no warehouse connection) |
+| **dbt** | `dbt deps`, `dbt parse`, `dbt compile`, and `dbt docs generate` (no warehouse connection) |
 
 Warehouse-backed checks (`dbt run`, `dbt test`) are run locally or in your GCP environment after `make dbt-debug`. To mirror CI locally without Docker:
 
 ```bash
 poetry install
-export GOOGLE_PROJECT_ID=ci-placeholder DBT_DATASET=favorita DBT_PROFILES_DIR=dbt/profiles
+export GOOGLE_PROJECT_ID=ci-placeholder DBT_DATASET=favorita BQ_RAW_DATASET=raw_favorita DBT_PROFILES_DIR=dbt/profiles
 echo '{}' > /tmp/ci-service-account.json
 export GOOGLE_APPLICATION_CREDENTIALS=/tmp/ci-service-account.json
 poetry run flake8 vertex tests
@@ -258,6 +267,7 @@ poetry run pytest
 poetry run dbt deps --project-dir dbt
 poetry run dbt parse --project-dir dbt
 poetry run dbt compile --project-dir dbt
+poetry run dbt docs generate --project-dir dbt
 ```
 
 ## Machine Learning Workflows
@@ -352,9 +362,9 @@ To run end-to-end predictions from a local Dockerized environment, you'll need:
    - Vertex AI Model Registry for model versioning
    - Vertex AI Endpoints for online predictions
    - Or BigQuery ML for batch predictions
-9. ✅ **CI/CD** - GitHub Actions for lint, pytest, and dbt parse/compile (see [Continuous integration](#continuous-integration))
+9. ✅ **CI/CD** - GitHub Actions for lint, pytest, and dbt parse/compile/docs (see [Continuous integration](#continuous-integration))
 10. ✅ **dbt Docs content** - Project overview and exposures (see [dbt documentation and lineage](#dbt-documentation-and-lineage))
-11. ⚠️ **Hosted dbt Docs** - Publish `dbt docs generate` output (e.g. GitHub Pages) for a shareable demo URL
+11. ✅ **Hosted dbt Docs** - GitHub Pages via [docs.yml](../.github/workflows/docs.yml) (enable Pages → GitHub Actions in repo settings)
 12. ⚠️ **Warehouse CI** - Optional: add a protected workflow with GCP secrets for `dbt build` / `dbt test` on a dev dataset
 13. ⚠️ **Automated retraining** - Scheduled jobs for model refresh (Composer, Cloud Run, or dbt Cloud)
 
