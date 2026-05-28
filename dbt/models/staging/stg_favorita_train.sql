@@ -23,7 +23,7 @@ select
         'cast(t.date as string)',
         'cast(t.store_nbr as string)',
         'cast(t.item_nbr as string)'
-    ]) }}             as id,
+    ]) }} as id,
     t.date,
     t.store_nbr,
     t.item_nbr      as product_id,

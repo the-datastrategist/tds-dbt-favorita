@@ -1,6 +1,16 @@
 version: 2
 
 models:
+  - name: stg_favorita_date_spine
+    description: >
+      One row per calendar day from the first training date through the last test date.
+    columns:
+      - name: date
+        description: Calendar date within the train-through-test range.
+        data_tests:
+          - unique
+          - not_null
+
   - name: stg_favorita_train
     description: >
       Staged training sales at store-product-day grain, enriched with product family.
