@@ -49,9 +49,11 @@ class XGBoostForecaster:
             raise ValueError("Target column not specified in the config.")
 
         # Specify the feature columns (X)
+        target_column = self.config["inputs"]["target_column"]
         excluded_columns = self.config.get("inputs", {}).get("excluded_columns", [])
-        self.train_X = self.train_df.drop(columns=excluded_columns, errors="ignore")
-        self.test_X = self.test_df.drop(columns=excluded_columns, errors="ignore")
+        columns_to_drop = list(set(excluded_columns + [target_column]))
+        self.train_X = self.train_df.drop(columns=columns_to_drop, errors="ignore")
+        self.test_X = self.test_df.drop(columns=columns_to_drop, errors="ignore")
 
     def train(self):
         # Prep training data
