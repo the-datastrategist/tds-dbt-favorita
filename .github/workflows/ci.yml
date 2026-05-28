@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOOGLE_PROJECT_ID: ci-placeholder
+  GOOGLE_APPLICATION_CREDENTIALS: /tmp/ci-service-account.json
+  DBT_DATASET: favorita
+  DBT_PROFILES_DIR: dbt/profiles
+  BQ_LOCATION: US
+
+jobs:
+  python:
+    name: Python lint and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Poetry
+        run: pip install poetry==1.8.2
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-ansi
+
+      - name: Lint
+        run: poetry run flake8 vertex tests
+
+      - name: Unit tests
+        run: poetry run pytest
+
+  dbt:
+    name: dbt parse and compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Poetry
+        run: pip install poetry==1.8.2
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-ansi
+
+      - name: Placeholder service account key
+        run: echo '{}' > /tmp/ci-service-account.json
+
+      - name: Install dbt packages
+        run: poetry run dbt deps --project-dir dbt
+
+      - name: Parse dbt project
+        run: poetry run dbt parse --project-dir dbt
+
+      - name: Compile dbt project
+        run: poetry run dbt compile --project-dir dbt

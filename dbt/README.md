@@ -9,7 +9,8 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 - **End-to-end Pipeline**: From data transformation to model training and prediction
 - **Dockerized**: Run everything locally in Docker containers
 - **Poetry**: Modern Python dependency management
-- **Testing**: Minimal test suite with pytest
+- **Testing**: pytest for Vertex utilities; dbt data tests on staging and intermediate models
+- **CI/CD**: GitHub Actions on every push and PR (Python lint/tests, `dbt parse` / `dbt compile`)
 - **Code Quality**: Black, flake8, and mypy for code quality
 
 ## Project Structure
@@ -28,7 +29,8 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 │   ├── models/            # Training and prediction scripts
 │   ├── utils/             # Utilities (data loading, Vertex helpers)
 │   └── config/            # Model configuration files
-├── tests/                 # Test suite
+├── tests/                 # Python test suite (pytest)
+├── .github/workflows/     # CI (lint, pytest, dbt parse/compile)
 ├── Dockerfile             # Docker image definition
 ├── docker-compose.yml     # Docker Compose configuration
 ├── pyproject.toml         # Poetry dependencies
@@ -207,6 +209,32 @@ make test-unit
 
 # Run only integration tests
 make test-integration
+
+# dbt data tests (requires BigQuery credentials and built models)
+make dbt-test
+```
+
+### Continuous integration
+
+Pull requests and pushes to `main` / `master` run [`.github/workflows/ci.yml`](../.github/workflows/ci.yml):
+
+| Job | What it checks |
+|-----|----------------|
+| **python** | `flake8` on `vertex/` and `tests/`, then `pytest` |
+| **dbt** | `dbt deps`, `dbt parse`, and `dbt compile` (no warehouse connection) |
+
+Warehouse-backed checks (`dbt run`, `dbt test`) are run locally or in your GCP environment after `make dbt-debug`. To mirror CI locally without Docker:
+
+```bash
+poetry install
+export GOOGLE_PROJECT_ID=ci-placeholder DBT_DATASET=favorita DBT_PROFILES_DIR=dbt/profiles
+echo '{}' > /tmp/ci-service-account.json
+export GOOGLE_APPLICATION_CREDENTIALS=/tmp/ci-service-account.json
+poetry run flake8 vertex tests
+poetry run pytest
+poetry run dbt deps --project-dir dbt
+poetry run dbt parse --project-dir dbt
+poetry run dbt compile --project-dir dbt
 ```
 
 ## Machine Learning Workflows
@@ -300,9 +328,9 @@ To run end-to-end predictions from a local Dockerized environment, you'll need:
    - Vertex AI Model Registry for model versioning
    - Vertex AI Endpoints for online predictions
    - Or BigQuery ML for batch predictions
-9. ⚠️ **CI/CD** - Consider adding:
-   - GitHub Actions or GitLab CI for automated testing
-   - Automated model retraining pipelines
+9. ✅ **CI/CD** - GitHub Actions for lint, pytest, and dbt parse/compile (see [Continuous integration](#continuous-integration))
+10. ⚠️ **Warehouse CI** - Optional: add a protected workflow with GCP secrets for `dbt build` / `dbt test` on a dev dataset
+11. ⚠️ **Automated retraining** - Scheduled jobs for model refresh (Composer, Cloud Run, or dbt Cloud)
 
 ## License
 
