@@ -24,6 +24,4 @@ def load_data_from_config(config: dict[str, Any]) -> pd.DataFrame:
     if "source_table" in inputs:
         table = inputs["source_table"]
         return run_query(f"SELECT * FROM `{table}`", project_id=project_id)
-    raise ValueError(
-        "Config must define inputs.sql_query, inputs.sql_file, or inputs.source_table"
-    )
+    raise ValueError("Config must define inputs.sql_query, inputs.sql_file, or inputs.source_table")

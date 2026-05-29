@@ -201,9 +201,7 @@ def merge_row_to_bigquery(
     select_params = ", ".join(f"@{pname} AS {col}" for col, pname in zip(columns, param_names))
 
     update_assignments = [
-        f"{col} = S.{col}"
-        for col in columns
-        if col != merge_key and row[col] is not None
+        f"{col} = S.{col}" for col in columns if col != merge_key and row[col] is not None
     ]
     insert_cols = ", ".join(columns)
     insert_vals = ", ".join(f"S.{col}" for col in columns)
@@ -235,4 +233,4 @@ def vertex_safe_run_id(*parts: str) -> str:
     raw = "-".join(part for part in parts if part)
     safe = re.sub(r"[^a-z0-9-]", "-", raw.lower())
     safe = re.sub(r"-+", "-", safe).strip("-")
-    return (safe[:128] if safe else "run")
+    return safe[:128] if safe else "run"

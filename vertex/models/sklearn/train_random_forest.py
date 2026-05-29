@@ -17,7 +17,6 @@ from sklearn.ensemble import RandomForestRegressor
 
 from vertex.config.load_config import DEFAULT_CONFIG_PATH, get_job_spec, load_model_config
 from vertex.utils.artifacts import register_from_manifest, save_joblib_artifacts
-from vertex.utils.optimize_params import resolve_model_parameters
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config
 from vertex.utils.data_utils import get_hash
@@ -30,6 +29,7 @@ from vertex.utils.metadata import (
     metadata_to_bq_row,
     performance_row_from_metadata,
 )
+from vertex.utils.optimize_params import resolve_model_parameters
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +51,7 @@ def train_random_forest(
     model_parameters: Optional[dict[str, Any]] = None,
 ) -> RandomForestRegressor:
     params = (
-        model_parameters.copy()
-        if model_parameters is not None
-        else DEFAULT_MODEL_PARAMETERS.copy()
+        model_parameters.copy() if model_parameters is not None else DEFAULT_MODEL_PARAMETERS.copy()
     )
     model = RandomForestRegressor(**params)
     model.fit(X_train, y_train)
@@ -83,9 +81,7 @@ def run_train_random_forest(
     date_column = inputs.get("date_column", "date")
     excluded_columns = list(inputs.get("excluded_columns", []))
     categorical_columns = list(inputs.get("categorical_columns", []))
-    params, params_provenance = resolve_model_parameters(
-        config, DEFAULT_MODEL_PARAMETERS
-    )
+    params, params_provenance = resolve_model_parameters(config, DEFAULT_MODEL_PARAMETERS)
     gcs_model_path = inputs.get("gcs_model_path")
     if not gcs_model_path:
         raise ValueError("inputs.gcs_model_path is required")

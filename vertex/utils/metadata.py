@@ -27,17 +27,9 @@ def get_performance_metrics(y_actual, y_pred) -> dict[str, float]:
     r2 = r2_score(y_actual, y_pred)
 
     mape = float(np.mean(np.abs((y_actual - y_pred) / (y_actual + epsilon))) * 100)
-    wape = float(
-        np.sum(np.abs(y_actual - y_pred))
-        / (np.sum(np.abs(y_actual)) + epsilon)
-        * 100
-    )
+    wape = float(np.sum(np.abs(y_actual - y_pred)) / (np.sum(np.abs(y_actual)) + epsilon) * 100)
     smape = float(
-        np.mean(
-            2 * np.abs(y_actual - y_pred)
-            / (np.abs(y_actual) + np.abs(y_pred) + epsilon)
-        )
-        * 100
+        np.mean(2 * np.abs(y_actual - y_pred) / (np.abs(y_actual) + np.abs(y_pred) + epsilon)) * 100
     )
     bias = float(np.mean(y_pred - y_actual))
     medae = median_absolute_error(y_actual, y_pred)
@@ -85,16 +77,10 @@ def metadata_to_bq_row(metadata: dict[str, Any]) -> dict[str, Any]:
         "project_id": metadata.get("project_id"),
         "region": metadata.get("region"),
         "parameters": json.dumps(metadata.get("parameters", {}), default=str),
-        "feature_importance": json.dumps(
-            metadata.get("feature_importance", {}), default=str
-        ),
+        "feature_importance": json.dumps(metadata.get("feature_importance", {}), default=str),
         "features": metadata.get("features", []),
-        "train_performance": json.dumps(
-            metadata.get("train_performance", {}), default=str
-        ),
-        "test_performance": json.dumps(
-            metadata.get("test_performance", {}), default=str
-        ),
+        "train_performance": json.dumps(metadata.get("train_performance", {}), default=str),
+        "test_performance": json.dumps(metadata.get("test_performance", {}), default=str),
     }
     return {key: value for key, value in row.items() if value is not None}
 

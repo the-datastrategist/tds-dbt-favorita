@@ -15,11 +15,11 @@ from typing import Any, Optional
 import pandas as pd
 
 from vertex.config.load_config import DEFAULT_CONFIG_PATH, get_job_spec, load_model_config
-from vertex.utils.features import prepare_feature_matrix
 from vertex.utils.artifacts import load_xgboost_from_gcs, resolve_latest_artifact
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config
 from vertex.utils.data_utils import get_hash
+from vertex.utils.features import prepare_feature_matrix
 from vertex.utils.ml_utils import sanitize_feature_columns
 from vertex.utils.predictions import build_standard_prediction_rows, new_predict_run_id
 

@@ -96,24 +96,17 @@ def resolve_gcp_settings(
 
     staging_bucket = _normalize_bucket(
         _require(
-            vertex_cfg.get("staging_bucket")
-            or os.getenv("VERTEX_AI_STAGING_BUCKET"),
+            vertex_cfg.get("staging_bucket") or os.getenv("VERTEX_AI_STAGING_BUCKET"),
             "VERTEX_AI_STAGING_BUCKET",
         )
     )
 
-    pipeline_root = vertex_cfg.get("pipeline_root") or os.getenv(
-        "VERTEX_AI_PIPELINE_ROOT"
-    )
+    pipeline_root = vertex_cfg.get("pipeline_root") or os.getenv("VERTEX_AI_PIPELINE_ROOT")
     if not pipeline_root:
         pipeline_root = f"{staging_bucket.rstrip('/')}/pipeline-root"
     pipeline_root = _normalize_bucket(pipeline_root)
 
-    training_image = (
-        image_uri
-        or vertex_cfg.get("image")
-        or os.getenv("VERTEX_TRAINING_IMAGE")
-    )
+    training_image = image_uri or vertex_cfg.get("image") or os.getenv("VERTEX_TRAINING_IMAGE")
     training_image = _require(
         training_image,
         "VERTEX_TRAINING_IMAGE",

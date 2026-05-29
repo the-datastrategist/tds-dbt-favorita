@@ -131,9 +131,7 @@ def run_optimize_timeseries(config: dict[str, Any]) -> dict[str, Any]:
                 "run_date": run_at.date(),
                 "target_column": target_column,
                 "objective_metric": objective_metric,
-                "objective_value": float(
-                    test_perf.get(objective_metric, test_perf["mae"])
-                ),
+                "objective_value": float(test_perf.get(objective_metric, test_perf["mae"])),
                 "feature_count": 0,
                 "test_size": test_size,
                 "parameters": json.dumps(base, default=str),

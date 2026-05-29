@@ -54,9 +54,7 @@ def run_configs(
 
     mode = vertex_mode.lower()
     if mode not in VALID_VERTEX_MODES:
-        raise ValueError(
-            f"vertex_mode must be one of {sorted(VALID_VERTEX_MODES)}, got {mode!r}"
-        )
+        raise ValueError(f"vertex_mode must be one of {sorted(VALID_VERTEX_MODES)}, got {mode!r}")
 
     path = str(config_path or DEFAULT_CONFIG_PATH)
     workers = max_workers or len(config_names)

@@ -2,7 +2,6 @@
 
 import pytest
 
-from vertex.config.load_config import load_model_config
 from vertex.models.registry import ensure_registered, get_runner
 
 

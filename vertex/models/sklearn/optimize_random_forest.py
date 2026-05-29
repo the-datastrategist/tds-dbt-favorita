@@ -16,7 +16,6 @@ import pandas as pd
 from vertex.config.load_config import DEFAULT_CONFIG_PATH, get_job_spec, load_model_config
 from vertex.models.sklearn.train_random_forest import (
     ARTIFACT_MODEL_TYPE,
-    DEFAULT_MODEL_PARAMETERS,
     train_random_forest,
 )
 from vertex.utils.bigquery_utils import load_to_bigquery
@@ -124,9 +123,7 @@ def run_optimize_random_forest(config: dict[str, Any]) -> dict[str, Any]:
                 "run_date": run_at.date(),
                 "target_column": target_column,
                 "objective_metric": objective_metric,
-                "objective_value": float(
-                    test_metrics.get(objective_metric, test_metrics["mae"])
-                ),
+                "objective_value": float(test_metrics.get(objective_metric, test_metrics["mae"])),
                 "feature_count": len(features),
                 "test_size": test_size,
                 "parameters": json.dumps(params, default=str),

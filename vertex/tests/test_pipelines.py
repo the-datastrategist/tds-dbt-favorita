@@ -1,7 +1,6 @@
 """Tests for pipeline config resolution and KFP compile."""
 
 import json
-from pathlib import Path
 
 import pytest
 

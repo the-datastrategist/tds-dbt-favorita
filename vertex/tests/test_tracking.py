@@ -37,9 +37,7 @@ class TestJobRunTracking:
         assert row["job_run_id"] == "preset-id"
 
     @patch("vertex.utils.tracking.merge_row_to_bigquery")
-    def test_finish_job_run_includes_duration_and_artifact(
-        self, mock_merge, sample_config
-    ):
+    def test_finish_job_run_includes_duration_and_artifact(self, mock_merge, sample_config):
         started_at = dt(2024, 1, 1, 12, 0, 0)
         finish_job_run(
             sample_config,

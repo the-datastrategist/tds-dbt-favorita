@@ -33,9 +33,7 @@ def resolve_pipeline_steps(
     pipelines = load_pipeline_definitions(config_path)
     if pipeline_name not in pipelines:
         available = sorted(pipelines.keys())
-        raise ValueError(
-            f"Pipeline {pipeline_name!r} not found. Available: {available}"
-        )
+        raise ValueError(f"Pipeline {pipeline_name!r} not found. Available: {available}")
 
     definition = pipelines[pipeline_name]
     allowed_steps = set(definition.get("steps") or list(STEP_ORDER))

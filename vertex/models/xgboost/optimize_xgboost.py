@@ -12,17 +12,17 @@ import logging
 import os
 import uuid
 from datetime import datetime as dt
-from typing import Any, Optional
+from typing import Any
 
 import optuna
 import pandas as pd
 
 from vertex.config.load_config import DEFAULT_CONFIG_PATH, get_job_spec, load_model_config
 from vertex.models.xgboost.train_xgboost import train_sklearn_xgboost
-from vertex.utils.features import chronological_train_test_split, prepare_feature_matrix
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config
 from vertex.utils.data_utils import get_hash
+from vertex.utils.features import chronological_train_test_split, prepare_feature_matrix
 from vertex.utils.metadata import get_performance_metrics
 from vertex.utils.optimize_params import persist_best_params
 
@@ -53,9 +53,7 @@ def _as_bq_timestamp(value: dt) -> pd.Timestamp:
 def run_optimize_xgboost(config: dict[str, Any]) -> dict[str, Any]:
     spec = get_job_spec(config)
     if spec["model_type"] not in ("xgboost", "xgboost_sklearn"):
-        raise ValueError(
-            f"optimize_xgboost does not support model_type={spec['model_type']!r}"
-        )
+        raise ValueError(f"optimize_xgboost does not support model_type={spec['model_type']!r}")
 
     inputs = config.get("inputs", {})
     outputs = config.get("outputs", {})
@@ -128,9 +126,7 @@ def run_optimize_xgboost(config: dict[str, Any]) -> dict[str, Any]:
                 "run_date": run_at.date(),
                 "target_column": target_column,
                 "objective_metric": objective_metric,
-                "objective_value": float(
-                    test_metrics.get(objective_metric, test_metrics["mae"])
-                ),
+                "objective_value": float(test_metrics.get(objective_metric, test_metrics["mae"])),
                 "feature_count": len(features),
                 "test_size": test_size,
                 "parameters": json.dumps(params, default=str),

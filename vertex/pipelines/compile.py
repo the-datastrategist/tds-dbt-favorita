@@ -20,9 +20,7 @@ from vertex.pipelines.favorita_ml_pipeline import create_favorita_ml_pipeline
 logger = logging.getLogger(__name__)
 
 COMPILED_DIR = Path(__file__).resolve().parent / "compiled"
-DEFAULT_TRAINING_IMAGE = (
-    "us-central1-docker.pkg.dev/example-project/vertex/tds-favorita:latest"
-)
+DEFAULT_TRAINING_IMAGE = "us-central1-docker.pkg.dev/example-project/vertex/tds-favorita:latest"
 
 
 def _resolve_training_image(
@@ -38,11 +36,7 @@ def _resolve_training_image(
         **(pipelines[pipeline_name].get("vertex") or {}),
     }
     settings = resolve_gcp_settings(merged)
-    return (
-        settings.training_image
-        or os.getenv("VERTEX_TRAINING_IMAGE")
-        or DEFAULT_TRAINING_IMAGE
-    )
+    return settings.training_image or os.getenv("VERTEX_TRAINING_IMAGE") or DEFAULT_TRAINING_IMAGE
 
 
 def compile_favorita_pipeline(
@@ -70,9 +64,7 @@ def compile_favorita_pipeline(
             continue
         steps.append(step)
 
-    image = training_image or _resolve_training_image(
-        pipeline_name, config_path, step_configs
-    )
+    image = training_image or _resolve_training_image(pipeline_name, config_path, step_configs)
     pipeline_func = create_favorita_ml_pipeline(image, steps=steps)
 
     output_path = output_path or (COMPILED_DIR / f"{pipeline_name}.json")

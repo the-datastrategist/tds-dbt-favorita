@@ -1,7 +1,5 @@
 """Tests for deprecated vertex_utils shims."""
 
-import warnings
-
 import pytest
 
 from vertex.utils.vertex_utils import VertexModelSaver

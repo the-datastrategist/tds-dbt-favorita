@@ -79,9 +79,7 @@ def chronological_train_test_split(
 
     split_index = int(len(work) * (1 - test_size))
     if split_index <= 0 or split_index >= len(work):
-        raise ValueError(
-            f"Invalid split: {len(work)} rows with test_size={test_size}"
-        )
+        raise ValueError(f"Invalid split: {len(work)} rows with test_size={test_size}")
 
     train = work.iloc[:split_index]
     test = work.iloc[split_index:]

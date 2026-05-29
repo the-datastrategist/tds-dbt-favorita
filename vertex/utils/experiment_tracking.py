@@ -72,9 +72,7 @@ def resolve_tracking_settings(config: dict[str, Any]) -> TrackingSettings:
 
     enabled = _env_bool("EXPERIMENT_TRACKING_ENABLED", bool(mlflow_cfg.get("enabled", True)))
     tracking_uri = (
-        mlflow_cfg.get("tracking_uri")
-        or os.getenv("MLFLOW_TRACKING_URI")
-        or "file:./mlruns"
+        mlflow_cfg.get("tracking_uri") or os.getenv("MLFLOW_TRACKING_URI") or "file:./mlruns"
     )
     vertex_experiments = _env_bool(
         "VERTEX_EXPERIMENT_TRACKING_ENABLED",
@@ -336,8 +334,7 @@ class ExperimentRunContext:
             "model_type": metadata.get("model_type"),
             "model_family": metadata.get("model_family"),
             "target_column": metadata.get("target_column"),
-            "manifest_gcs_uri": result.get("manifest_gcs_uri")
-            or metadata.get("manifest_gcs_uri"),
+            "manifest_gcs_uri": result.get("manifest_gcs_uri") or metadata.get("manifest_gcs_uri"),
             "joblib_gcs_uri": result.get("joblib_gcs_uri") or metadata.get("joblib_gcs_uri"),
             "train_row_count": result.get("train_row_count") or metadata.get("train_row_count"),
             "test_row_count": metadata.get("test_row_count"),
@@ -373,9 +370,7 @@ class ExperimentRunContext:
                 "model_run_id": result.get("model_run_id"),
                 "model_id": result.get("model_id"),
                 "model_gcs_uri": result.get("model_gcs_uri"),
-                "prediction_table": (self.config.get("outputs") or {}).get(
-                    "prediction_table"
-                ),
+                "prediction_table": (self.config.get("outputs") or {}).get("prediction_table"),
             }
         )
         count = result.get("prediction_count")

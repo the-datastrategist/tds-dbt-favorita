@@ -34,8 +34,7 @@ def get_runner(model_type: str, step: str) -> Runner:
     if key not in _REGISTRY:
         registered = sorted(_REGISTRY.keys())
         raise ValueError(
-            f"No runner for model_type={model_type!r}, step={step!r}. "
-            f"Registered: {registered}"
+            f"No runner for model_type={model_type!r}, step={step!r}. " f"Registered: {registered}"
         )
     return _REGISTRY[key]
 

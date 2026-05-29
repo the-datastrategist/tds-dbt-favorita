@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime as dt
 from typing import Any, Optional
 
 import numpy as np
@@ -193,12 +192,8 @@ def fit_entity_models(
         "trend": trend,
     }
 
-    train_performance = get_performance_metrics(
-        np.asarray(train_actual), np.asarray(train_pred)
-    )
-    test_performance = get_performance_metrics(
-        np.asarray(test_actual), np.asarray(test_pred)
-    )
+    train_performance = get_performance_metrics(np.asarray(train_actual), np.asarray(train_pred))
+    test_performance = get_performance_metrics(np.asarray(test_actual), np.asarray(test_pred))
     return (
         bundle,
         train_performance,
@@ -285,9 +280,7 @@ def predict_forward_rows(
             )
         forecast = np.asarray(fitted.forecast(steps=forecast_horizon))
         base_row = entity_df.iloc[-1].to_dict()
-        for step, (pred_date, pred_value) in enumerate(
-            zip(future_dates, forecast), start=1
-        ):
+        for step, (pred_date, pred_value) in enumerate(zip(future_dates, forecast), start=1):
             row = dict(base_row)
             row[date_column] = last_date
             row["forecast_date"] = pred_date

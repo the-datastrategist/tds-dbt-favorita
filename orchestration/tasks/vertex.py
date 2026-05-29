@@ -14,9 +14,7 @@ _VERTEX_CONFIG = str(DEFAULT_CONFIG_PATH)
 def _validate_vertex_mode(vertex_mode: str) -> str:
     mode = vertex_mode.lower()
     if mode not in VALID_VERTEX_MODES:
-        raise ValueError(
-            f"vertex_mode must be one of {sorted(VALID_VERTEX_MODES)}, got {mode!r}"
-        )
+        raise ValueError(f"vertex_mode must be one of {sorted(VALID_VERTEX_MODES)}, got {mode!r}")
     return mode
 
 

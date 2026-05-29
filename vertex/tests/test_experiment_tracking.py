@@ -1,6 +1,6 @@
 """Tests for MLflow and Vertex experiment tracking."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 

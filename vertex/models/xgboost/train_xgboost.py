@@ -18,11 +18,14 @@ import pandas as pd
 from xgboost import XGBRegressor
 
 from vertex.config.load_config import DEFAULT_CONFIG_PATH, get_job_spec, load_model_config
-from vertex.utils.artifacts import VERTEX_SKLEARN_SERVING_IMAGE, save_xgboost_sklearn_artifacts
+from vertex.utils.artifacts import (
+    VERTEX_SKLEARN_SERVING_IMAGE,
+    register_from_manifest,
+    save_xgboost_sklearn_artifacts,
+)
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config
 from vertex.utils.data_utils import get_hash
-from vertex.utils.artifacts import register_from_manifest
 from vertex.utils.metadata import (
     build_sklearn_train_metadata,
     metadata_to_bq_row,
@@ -68,9 +71,7 @@ def train_sklearn_xgboost(
     model_parameters: Optional[dict[str, Any]] = None,
 ) -> XGBRegressor:
     params = (
-        model_parameters.copy()
-        if model_parameters is not None
-        else DEFAULT_MODEL_PARAMETERS.copy()
+        model_parameters.copy() if model_parameters is not None else DEFAULT_MODEL_PARAMETERS.copy()
     )
     model = XGBRegressor(**params)
     model.fit(X_train, y_train)
@@ -91,9 +92,7 @@ def get_train_metadata(
         "extra",
         {"sklearn_serving_image": VERTEX_SKLEARN_SERVING_IMAGE},
     )
-    return build_sklearn_train_metadata(
-        model, X_train, X_test, y_train, y_test, **kwargs
-    )
+    return build_sklearn_train_metadata(model, X_train, X_test, y_train, y_test, **kwargs)
 
 
 def run_train_xgboost(
@@ -122,9 +121,7 @@ def run_train_xgboost(
     date_column = inputs.get("date_column", "date")
     excluded_columns = list(inputs.get("excluded_columns", []))
     categorical_columns = list(inputs.get("categorical_columns", []))
-    params, params_provenance = resolve_model_parameters(
-        config, DEFAULT_MODEL_PARAMETERS
-    )
+    params, params_provenance = resolve_model_parameters(config, DEFAULT_MODEL_PARAMETERS)
     gcs_model_path = inputs.get("gcs_model_path")
     if not gcs_model_path:
         raise ValueError("inputs.gcs_model_path is required")

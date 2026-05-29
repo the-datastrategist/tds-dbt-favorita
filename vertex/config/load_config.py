@@ -6,7 +6,7 @@ import copy
 import os
 import re
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
@@ -34,11 +34,7 @@ def _resolve_env_strings(value: Any) -> Any:
 def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     merged = copy.deepcopy(base)
     for key, value in override.items():
-        if (
-            key in merged
-            and isinstance(merged[key], dict)
-            and isinstance(value, dict)
-        ):
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
             merged[key] = _deep_merge(merged[key], value)
         else:
             merged[key] = copy.deepcopy(value)
@@ -167,11 +163,7 @@ def validate_config_for_step(config: dict[str, Any]) -> None:
     outputs = config.get("outputs") or {}
 
     if step in ("train", "optimize"):
-        if not (
-            inputs.get("sql_query")
-            or inputs.get("sql_file")
-            or inputs.get("source_table")
-        ):
+        if not (inputs.get("sql_query") or inputs.get("sql_file") or inputs.get("source_table")):
             raise ValueError(f"{spec['config_name']}: inputs.sql_query (or file/table) required")
         if not inputs.get("target_column"):
             raise ValueError(f"{spec['config_name']}: inputs.target_column required")
@@ -183,11 +175,7 @@ def validate_config_for_step(config: dict[str, Any]) -> None:
             raise ValueError(f"{spec['config_name']}: outputs.metadata_table required")
 
     if step == "predict":
-        if not (
-            inputs.get("sql_query")
-            or inputs.get("sql_file")
-            or inputs.get("source_table")
-        ):
+        if not (inputs.get("sql_query") or inputs.get("sql_file") or inputs.get("source_table")):
             raise ValueError(f"{spec['config_name']}: predict inputs need sql_query/file/table")
         if not outputs.get("prediction_table"):
             raise ValueError(f"{spec['config_name']}: outputs.prediction_table required")

@@ -1,11 +1,11 @@
-from google.cloud import bigquery
-import pandas as pd
-from datetime import datetime, timedelta
 import hashlib
 import json
 import os
+from datetime import datetime
 from typing import Dict, Optional, Union
-import yaml
+
+import pandas as pd
+from google.cloud import bigquery
 
 
 class BigQueryLoader:
@@ -60,10 +60,10 @@ def parse_env_list(env_var: str, default: Optional[str] = None) -> list:
 def get_hash_id(data: Union[dict, str, bytes]) -> str:
     """
     Generate a SHA256 hash from a dictionary or string.
-    
+
     Args:
         data (dict or str): Input data to hash.
-    
+
     Returns:
         str: A SHA256 hash string.
     """
@@ -108,7 +108,7 @@ def split_by_time_percentile(df: pd.DataFrame, date_col: str = "date", test_size
     """
     if date_col not in df.columns:
         raise ValueError(f"Column '{date_col}' not found in DataFrame.")
-    
+
     # Sort unique dates
     unique_dates = sorted(df[date_col].dropna().unique())
     split_idx = int(len(unique_dates) * (1 - test_size))

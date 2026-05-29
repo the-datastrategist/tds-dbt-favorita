@@ -26,15 +26,10 @@ def _job_runs_table(config: dict[str, Any]) -> str:
     table = outputs.get("job_runs_table")
     if table:
         return table
-    defaults_table = (config.get("defaults") or {}).get("outputs", {}).get(
-        "job_runs_table"
-    )
+    defaults_table = (config.get("defaults") or {}).get("outputs", {}).get("job_runs_table")
     if defaults_table:
         return defaults_table
-    project = (
-        config.get("inputs", {}).get("project_id")
-        or os.getenv("GOOGLE_PROJECT_ID")
-    )
+    project = config.get("inputs", {}).get("project_id") or os.getenv("GOOGLE_PROJECT_ID")
     if not project:
         raise ValueError("project_id required for job_runs_table")
     return f"{project}.favorita.favorita_vertex_job_runs"
@@ -71,8 +66,7 @@ def _base_row(config: dict[str, Any], job_run_id: str) -> dict[str, Any]:
         "git_sha": get_git_sha(),
         "image_uri": get_container_image(),
         "pipeline_run_id": get_pipeline_run_id(),
-        "optimize_run_id": inputs.get("optimize_run_id")
-        or os.getenv("VERTEX_OPTIMIZE_RUN_ID"),
+        "optimize_run_id": inputs.get("optimize_run_id") or os.getenv("VERTEX_OPTIMIZE_RUN_ID"),
     }
 
 

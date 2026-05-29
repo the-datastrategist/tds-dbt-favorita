@@ -16,7 +16,6 @@ from vertex.models.timeseries.ts_common import (
     prepare_panel,
 )
 from vertex.utils.artifacts import save_joblib_artifacts
-from vertex.utils.optimize_params import resolve_model_parameters
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config
 from vertex.utils.data_utils import get_hash
@@ -25,6 +24,7 @@ from vertex.utils.metadata import (
     metadata_to_bq_row,
     performance_row_from_metadata,
 )
+from vertex.utils.optimize_params import resolve_model_parameters
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +35,7 @@ def run_train_timeseries(config: dict[str, Any]) -> dict[str, Any]:
     spec = get_job_spec(config)
     model_type = spec["model_type"]
     if model_type not in SUPPORTED_TYPES:
-        raise ValueError(
-            f"train_timeseries supports {sorted(SUPPORTED_TYPES)}; got {model_type!r}"
-        )
+        raise ValueError(f"train_timeseries supports {sorted(SUPPORTED_TYPES)}; got {model_type!r}")
 
     inputs = config.get("inputs", {})
     outputs = config.get("outputs", {})
@@ -53,9 +51,7 @@ def run_train_timeseries(config: dict[str, Any]) -> dict[str, Any]:
     if max_entities is not None:
         max_entities = int(max_entities)
 
-    params, params_provenance = resolve_model_parameters(
-        config, default_model_params(model_type)
-    )
+    params, params_provenance = resolve_model_parameters(config, default_model_params(model_type))
 
     gcs_model_path = inputs.get("gcs_model_path")
     if not gcs_model_path:
@@ -74,7 +70,9 @@ def run_train_timeseries(config: dict[str, Any]) -> dict[str, Any]:
         date_column=date_column,
         target_column=target_column,
     )
-    logger.info("Prepared panel with %s rows, %s entities", len(panel), panel[entity_column].nunique())
+    logger.info(
+        "Prepared panel with %s rows, %s entities", len(panel), panel[entity_column].nunique()
+    )
 
     bundle, train_perf, test_perf, entity_count, entities_fitted = fit_entity_models(
         panel,

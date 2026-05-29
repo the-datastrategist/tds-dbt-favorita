@@ -8,9 +8,10 @@ import os
 from datetime import datetime as dt
 from typing import Any, Optional
 
+from google.cloud import bigquery, storage
+
 from vertex.config.load_config import load_all_configs
 from vertex.utils.artifacts import parse_gcs_uri, upload_bytes
-from google.cloud import bigquery, storage
 
 logger = logging.getLogger(__name__)
 
@@ -113,9 +114,7 @@ def load_best_params_from_bq(
     ]
     if optimize_run_id:
         run_clause = "AND optimize_run_id = @optimize_run_id"
-        params.append(
-            bigquery.ScalarQueryParameter("optimize_run_id", "STRING", optimize_run_id)
-        )
+        params.append(bigquery.ScalarQueryParameter("optimize_run_id", "STRING", optimize_run_id))
     query = f"""
         WITH latest_run AS (
             SELECT optimize_run_id
@@ -151,9 +150,9 @@ def load_best_params_from_bq(
         params = json.loads(params)
     return {
         "optimize_run_id": row.get("optimize_run_id"),
-        "best_trial_number": int(row["best_trial_number"])
-        if row.get("best_trial_number") is not None
-        else None,
+        "best_trial_number": (
+            int(row["best_trial_number"]) if row.get("best_trial_number") is not None else None
+        ),
         "best_value": float(row["best_value"]) if row.get("best_value") is not None else None,
         "best_params": params or {},
         "source": "bigquery",
@@ -165,10 +164,10 @@ def resolve_model_parameters(
     defaults: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """
-  Merge model_params for training.
+    Merge model_params for training.
 
-  Precedence: YAML model_params < GCS latest_best_params < explicit optimize_run_id pin.
-  Set inputs.use_optimized_params: false to skip optimize lookup.
+    Precedence: YAML model_params < GCS latest_best_params < explicit optimize_run_id pin.
+    Set inputs.use_optimized_params: false to skip optimize lookup.
     """
     inputs = config.get("inputs") or {}
     outputs = config.get("outputs") or {}
@@ -196,19 +195,14 @@ def resolve_model_parameters(
         return base_params, provenance
 
     provenance["optimize_config_name"] = optimize_config_name
-    optimize_run_id = (
-        inputs.get("optimize_run_id")
-        or os.getenv("VERTEX_OPTIMIZE_RUN_ID")
-        or None
-    )
+    optimize_run_id = inputs.get("optimize_run_id") or os.getenv("VERTEX_OPTIMIZE_RUN_ID") or None
     provenance["optimize_run_id"] = optimize_run_id
 
     gcs_model_path = inputs.get("gcs_model_path")
     best_record: Optional[dict[str, Any]] = None
     if gcs_model_path:
-        uri = (
-            os.getenv("VERTEX_BEST_PARAMS_URI")
-            or best_params_gcs_uri(gcs_model_path, optimize_config_name)
+        uri = os.getenv("VERTEX_BEST_PARAMS_URI") or best_params_gcs_uri(
+            gcs_model_path, optimize_config_name
         )
         provenance["best_params_uri"] = uri
         best_record = load_best_params_from_gcs(uri)

@@ -36,9 +36,7 @@ class TestTsCommon:
                 0, 0.1, len(dates)
             )
             for d, v in zip(dates, values):
-                rows.append(
-                    {"entity_id": entity, "date": d, "sales": float(v), "store_id": 1}
-                )
+                rows.append({"entity_id": entity, "date": d, "sales": float(v), "store_id": 1})
         panel = prepare_panel(
             pd.DataFrame(rows),
             entity_column="entity_id",

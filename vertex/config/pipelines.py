@@ -45,16 +45,15 @@ def resolve_pipeline_step_configs(
     config_path: str | Path | None = None,
 ) -> dict[str, str]:
     """
-    Resolve optimize/train/predict config names for a named pipeline.
+      Resolve optimize/train/predict config names for a named pipeline.
 
-    Uses explicit `configs` in the pipeline definition, or discovers configs
-  by model_family + model_type + step.
+      Uses explicit `configs` in the pipeline definition, or discovers configs
+    by model_family + model_type + step.
     """
     pipelines = load_pipeline_definitions(config_path)
     if pipeline_name not in pipelines:
         raise ValueError(
-            f"Pipeline {pipeline_name!r} not found. "
-            f"Available: {sorted(pipelines.keys())}"
+            f"Pipeline {pipeline_name!r} not found. " f"Available: {sorted(pipelines.keys())}"
         )
     definition = pipelines[pipeline_name]
     model_family = definition["model_family"]

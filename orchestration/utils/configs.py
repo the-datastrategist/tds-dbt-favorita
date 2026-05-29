@@ -4,10 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from vertex.config.load_config import (
-    DEFAULT_CONFIG_PATH,
-    list_run_config_names,
-)
+from vertex.config.load_config import list_run_config_names
 
 
 def list_train_config_names(

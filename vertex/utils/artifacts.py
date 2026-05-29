@@ -17,9 +17,7 @@ from google.cloud import storage
 
 logger = logging.getLogger(__name__)
 
-VERTEX_SKLEARN_SERVING_IMAGE = (
-    "us-docker.pkg.dev/vertex-ai/prediction/sklearn-cpu.0-24:latest"
-)
+VERTEX_SKLEARN_SERVING_IMAGE = "us-docker.pkg.dev/vertex-ai/prediction/sklearn-cpu.0-24:latest"
 
 
 def parse_gcs_uri(gcs_uri: str) -> tuple[str, str]:
@@ -223,9 +221,7 @@ def resolve_latest_artifact(
             if model_run_id and manifest.get("model_run_id") != model_run_id:
                 continue
             prefix = blob.name.rsplit("/", 1)[0]
-            entries.append(
-                _entry_from_manifest(bucket_name, prefix, manifest)
-            )
+            entries.append(_entry_from_manifest(bucket_name, prefix, manifest))
         entries.sort(key=lambda item: item["sort_key"], reverse=True)
 
     if not entries:
@@ -397,9 +393,7 @@ def save_xgboost_sklearn_artifacts(
 
     json_blob = f"{prefix}/model.json"
     joblib_blob = f"{prefix}/model.joblib"
-    json_gcs_uri = upload_bytes(
-        bucket, json_blob, json_bytes, content_type="application/json"
-    )
+    json_gcs_uri = upload_bytes(bucket, json_blob, json_bytes, content_type="application/json")
     joblib_gcs_uri = upload_bytes(
         bucket, joblib_blob, joblib_bytes, content_type="application/octet-stream"
     )
