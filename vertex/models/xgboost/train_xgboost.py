@@ -22,11 +22,13 @@ from vertex.utils.artifacts import VERTEX_SKLEARN_SERVING_IMAGE, save_xgboost_sk
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config
 from vertex.utils.data_utils import get_hash
+from vertex.utils.artifacts import register_from_manifest
 from vertex.utils.metadata import (
     build_sklearn_train_metadata,
     metadata_to_bq_row,
     performance_row_from_metadata,
 )
+from vertex.utils.optimize_params import resolve_model_parameters
 
 __all__ = [
     "metadata_to_bq_row",
@@ -120,7 +122,9 @@ def run_train_xgboost(
     date_column = inputs.get("date_column", "date")
     excluded_columns = list(inputs.get("excluded_columns", []))
     categorical_columns = list(inputs.get("categorical_columns", []))
-    params = dict(inputs.get("model_params", DEFAULT_MODEL_PARAMETERS))
+    params, params_provenance = resolve_model_parameters(
+        config, DEFAULT_MODEL_PARAMETERS
+    )
     gcs_model_path = inputs.get("gcs_model_path")
     if not gcs_model_path:
         raise ValueError("inputs.gcs_model_path is required")
@@ -219,23 +223,17 @@ def run_train_xgboost(
         )
         logger.info("Wrote test performance to %s", performance_table)
 
-    register = register_vertex_model or bool(vertex_cfg.get("register_model"))
-    if register:
-        from vertex.utils.vertex_utils import VertexModelSaver
-
-        saver_config = {
-            "name": config_name,
-            "inputs": {
-                "project_id": project_id,
-                "region": region,
-                "gcs_model_path": gcs_model_path,
-            },
-        }
-        saver = VertexModelSaver(saver_config, model)
-        saver.model_artifact_uri = joblib_uri
-        saver.save_model()
+    if register_vertex_model or vertex_cfg.get("register_model"):
+        register_from_manifest(
+            manifest_uri=manifest_uri,
+            display_name=config_name,
+            project_id=project_id,
+            region=region,
+            artifact_uri=joblib_uri,
+        )
         logger.info("Registered model in Vertex AI Model Registry")
 
+    train_rows = len(df_features)
     return {
         "model": model,
         "config_name": config_name,
@@ -245,6 +243,9 @@ def run_train_xgboost(
         "joblib_gcs_uri": joblib_uri,
         "manifest_gcs_uri": manifest_uri,
         "metadata": metadata,
+        "params_provenance": params_provenance,
+        "train_row_count": train_rows,
+        "row_count": train_rows,
     }
 
 

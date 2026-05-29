@@ -16,7 +16,8 @@ import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 
 from vertex.config.load_config import DEFAULT_CONFIG_PATH, get_job_spec, load_model_config
-from vertex.utils.artifacts import save_joblib_artifacts
+from vertex.utils.artifacts import register_from_manifest, save_joblib_artifacts
+from vertex.utils.optimize_params import resolve_model_parameters
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config
 from vertex.utils.data_utils import get_hash
@@ -82,7 +83,9 @@ def run_train_random_forest(
     date_column = inputs.get("date_column", "date")
     excluded_columns = list(inputs.get("excluded_columns", []))
     categorical_columns = list(inputs.get("categorical_columns", []))
-    params = dict(inputs.get("model_params", DEFAULT_MODEL_PARAMETERS))
+    params, params_provenance = resolve_model_parameters(
+        config, DEFAULT_MODEL_PARAMETERS
+    )
     gcs_model_path = inputs.get("gcs_model_path")
     if not gcs_model_path:
         raise ValueError("inputs.gcs_model_path is required")
@@ -177,27 +180,23 @@ def run_train_random_forest(
         )
 
     if register_vertex_model or vertex_cfg.get("register_model"):
-        from vertex.utils.vertex_utils import VertexModelSaver
-
-        saver = VertexModelSaver(
-            {
-                "name": config_name,
-                "inputs": {
-                    "project_id": project_id,
-                    "region": region,
-                    "gcs_model_path": gcs_model_path,
-                },
-            },
-            model,
+        register_from_manifest(
+            manifest_uri=manifest_uri,
+            display_name=config_name,
+            project_id=project_id,
+            region=region,
+            artifact_uri=joblib_uri,
         )
-        saver.model_artifact_uri = joblib_uri
-        saver.save_model()
 
+    train_rows = len(df_features)
     return {
         "config_name": config_name,
         "model_run_id": model_run_id,
         "model_id": model_id,
         "joblib_gcs_uri": joblib_uri,
+        "params_provenance": params_provenance,
+        "train_row_count": train_rows,
+        "row_count": train_rows,
         "manifest_gcs_uri": manifest_uri,
     }
 

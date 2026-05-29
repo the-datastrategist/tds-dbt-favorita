@@ -27,6 +27,7 @@ from vertex.utils.features import (
     prepare_feature_matrix,
 )
 from vertex.utils.metadata import get_performance_metrics
+from vertex.utils.optimize_params import persist_best_params
 
 logger = logging.getLogger(__name__)
 
@@ -146,11 +147,16 @@ def run_optimize_random_forest(config: dict[str, Any]) -> dict[str, Any]:
         )
 
     best = study.best_trial
-    return {
+    result = {
         "optimize_run_id": optimize_run_id,
+        "config_name": config_name,
         "best_trial_number": int(best.number),
+        "best_value": float(best.value),
         "best_params": best.params,
     }
+    if inputs.get("gcs_model_path"):
+        result["best_params_uri"] = persist_best_params(config, result)
+    return result
 
 
 def main() -> None:

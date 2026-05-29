@@ -24,6 +24,7 @@ from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config
 from vertex.utils.data_utils import get_hash
 from vertex.utils.metadata import get_performance_metrics
+from vertex.utils.optimize_params import persist_best_params
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +152,7 @@ def run_optimize_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         logger.info("Wrote %s trials to %s", len(trial_rows), optimize_table)
 
     best = study.best_trial
-    return {
+    result = {
         "optimize_run_id": optimize_run_id,
         "config_name": config_name,
         "trial_count": trial_count,
@@ -160,6 +161,9 @@ def run_optimize_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         "best_params": best.params,
         "optimize_table": optimize_table,
     }
+    if inputs.get("gcs_model_path"):
+        result["best_params_uri"] = persist_best_params(config, result)
+    return result
 
 
 def main() -> None:

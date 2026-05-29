@@ -440,3 +440,44 @@ def save_xgboost_sklearn_artifacts(
 
     logger.info("Saved model JSON to %s", json_gcs_uri)
     return json_gcs_uri, joblib_gcs_uri, trees_gcs_uri, manifest_gcs_uri
+
+
+def register_from_manifest(
+    *,
+    manifest_uri: str,
+    display_name: str,
+    project_id: str,
+    region: str = "us-central1",
+    serving_container_image_uri: str = VERTEX_SKLEARN_SERVING_IMAGE,
+    artifact_uri: Optional[str] = None,
+) -> str:
+    """
+    Register a trained model in Vertex AI Model Registry from a GCS manifest.
+
+    Returns:
+        Model resource name.
+    """
+    from google.cloud import aiplatform
+
+    bucket_name, blob_path = parse_gcs_uri(manifest_uri)
+    client = storage.Client()
+    manifest = json.loads(client.bucket(bucket_name).blob(blob_path).download_as_text())
+
+    model_artifact_uri = artifact_uri or manifest.get("joblib_gcs_uri")
+    if not model_artifact_uri and manifest.get("gcs_prefix"):
+        prefix = manifest["gcs_prefix"].rstrip("/")
+        model_file = manifest.get("model_file", "model.joblib")
+        model_artifact_uri = f"gs://{bucket_name}/{prefix}/{model_file}"
+
+    if not model_artifact_uri:
+        raise ValueError(f"Could not resolve artifact URI from manifest {manifest_uri}")
+
+    aiplatform.init(project=project_id, location=region)
+    uploaded = aiplatform.Model.upload(
+        display_name=display_name,
+        artifact_uri=model_artifact_uri,
+        serving_container_image_uri=serving_container_image_uri,
+    )
+    uploaded.wait()
+    logger.info("Registered Vertex model %s from %s", uploaded.resource_name, manifest_uri)
+    return uploaded.resource_name

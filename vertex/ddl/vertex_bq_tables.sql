@@ -1,8 +1,8 @@
 -- BigQuery DDL for Vertex ML orchestration and outputs (Favorita).
--- Run manually or via your infra pipeline against project the-data-strategist.
+-- Run manually or via your infra pipeline against project tds-favorita.
 
 -- Job orchestration audit trail
-CREATE TABLE IF NOT EXISTS `the-data-strategist.favorita.favorita_vertex_job_runs` (
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_vertex_job_runs` (
   job_run_id STRING NOT NULL,
   config_name STRING NOT NULL,
   model_family STRING,
@@ -14,14 +14,31 @@ CREATE TABLE IF NOT EXISTS `the-data-strategist.favorita.favorita_vertex_job_run
   error_message STRING,
   started_at TIMESTAMP NOT NULL,
   finished_at TIMESTAMP,
+  duration_sec FLOAT64,
+  row_count INT64,
+  artifact_uri STRING,
+  git_sha STRING,
+  image_uri STRING,
+  pipeline_run_id STRING,
+  optimize_run_id STRING,
   project_id STRING,
   region STRING
 )
 PARTITION BY DATE(started_at)
 CLUSTER BY config_name, job_step, status;
 
+-- Existing deployments: add columns (run once per environment)
+-- ALTER TABLE `tds-favorita.favorita.favorita_vertex_job_runs`
+--   ADD COLUMN IF NOT EXISTS duration_sec FLOAT64,
+--   ADD COLUMN IF NOT EXISTS row_count INT64,
+--   ADD COLUMN IF NOT EXISTS artifact_uri STRING,
+--   ADD COLUMN IF NOT EXISTS git_sha STRING,
+--   ADD COLUMN IF NOT EXISTS image_uri STRING,
+--   ADD COLUMN IF NOT EXISTS pipeline_run_id STRING,
+--   ADD COLUMN IF NOT EXISTS optimize_run_id STRING;
+
 -- Training metadata (one row per training run)
-CREATE TABLE IF NOT EXISTS `the-data-strategist.favorita.favorita_model_metadata` (
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_metadata` (
   model_run_id STRING NOT NULL,
   model_id STRING NOT NULL,
   parameter_id STRING,
@@ -53,7 +70,7 @@ PARTITION BY DATE(run_at)
 CLUSTER BY model_family, model_type, config_name;
 
 -- Holdout / evaluation metrics
-CREATE TABLE IF NOT EXISTS `the-data-strategist.favorita.favorita_model_performance` (
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_performance` (
   model_run_id STRING NOT NULL,
   model_id STRING NOT NULL,
   config_name STRING,
@@ -77,7 +94,7 @@ PARTITION BY DATE(run_at)
 CLUSTER BY model_family, model_type;
 
 -- Hyperparameter optimization trials
-CREATE TABLE IF NOT EXISTS `the-data-strategist.favorita.favorita_model_optimize` (
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_optimize` (
   optimize_run_id STRING NOT NULL,
   trial_number INT64 NOT NULL,
   config_name STRING NOT NULL,
@@ -99,7 +116,7 @@ PARTITION BY run_date
 CLUSTER BY config_name, model_family;
 
 -- Unified predictions across model types
-CREATE TABLE IF NOT EXISTS `the-data-strategist.favorita.favorita_model_predictions` (
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_predictions` (
   prediction_id STRING NOT NULL,
   predict_run_id STRING NOT NULL,
   model_run_id STRING,

@@ -23,6 +23,7 @@ from vertex.models.timeseries.ts_common import (
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config
 from vertex.utils.data_utils import get_hash
+from vertex.utils.optimize_params import persist_best_params
 
 logger = logging.getLogger(__name__)
 
@@ -153,11 +154,16 @@ def run_optimize_timeseries(config: dict[str, Any]) -> dict[str, Any]:
         )
 
     best = study.best_trial
-    return {
+    result = {
         "optimize_run_id": optimize_run_id,
+        "config_name": spec["config_name"],
         "best_trial_number": int(best.number),
+        "best_value": float(best.value),
         "best_params": best.params,
     }
+    if inputs.get("gcs_model_path"):
+        result["best_params_uri"] = persist_best_params(config, result)
+    return result
 
 
 def main() -> None:

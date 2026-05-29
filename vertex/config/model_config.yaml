@@ -1,12 +1,12 @@
 defaults:
-  project_id: the-data-strategist
+  project_id: tds-favorita
   region: us-central1
   outputs:
-    metadata_table: the-data-strategist.favorita.favorita_model_metadata
-    performance_table: the-data-strategist.favorita.favorita_model_performance
-    prediction_table: the-data-strategist.favorita.favorita_model_predictions
-    optimize_table: the-data-strategist.favorita.favorita_model_optimize
-    job_runs_table: the-data-strategist.favorita.favorita_vertex_job_runs
+    metadata_table: tds-favorita.favorita.favorita_model_metadata
+    performance_table: tds-favorita.favorita.favorita_model_performance
+    prediction_table: tds-favorita.favorita.favorita_model_predictions
+    optimize_table: tds-favorita.favorita.favorita_model_optimize
+    job_runs_table: tds-favorita.favorita.favorita_vertex_job_runs
 
 # Vertex Pipelines (KFP): optimize → train → predict
 pipelines:
@@ -52,7 +52,7 @@ configs:
     inputs:
       sql_query: |
         SELECT *
-        FROM `the-data-strategist.favorita.favorita_train_store_daily_sales_features`
+        FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales
       date_column: date
       entity_column: entity_id
@@ -66,6 +66,8 @@ configs:
         - entity_id
         - date
       gcs_model_path: gs://favorita-vertex-models/
+      optimize_config_name: favorita_xgboost_optimize
+      use_optimized_params: true
       forecast_horizon: 7
       train_days: 180
       test_size: 0.2
@@ -87,7 +89,7 @@ configs:
     inputs:
       sql_query: |
         SELECT *
-        FROM `the-data-strategist.favorita.favorita_train_store_daily_sales_features`
+        FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales
       date_column: date
       id_columns:
@@ -117,7 +119,7 @@ configs:
     inputs:
       sql_query: |
         SELECT *
-        FROM `the-data-strategist.favorita.favorita_train_store_daily_sales_features`
+        FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales
       date_column: date
       excluded_columns:
@@ -128,6 +130,7 @@ configs:
       test_size: 0.2
       trial_count: 20
       objective_metric: mae
+      gcs_model_path: gs://favorita-vertex-models/
     outputs: {}
 
   - name: favorita_rf_train
@@ -143,7 +146,7 @@ configs:
     inputs:
       sql_query: |
         SELECT *
-        FROM `the-data-strategist.favorita.favorita_train_store_daily_sales_features`
+        FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales
       date_column: date
       entity_column: entity_id
@@ -157,6 +160,8 @@ configs:
         - entity_id
         - date
       gcs_model_path: gs://favorita-vertex-models/
+      optimize_config_name: favorita_rf_optimize
+      use_optimized_params: true
       test_size: 0.2
       model_params:
         n_estimators: 200
@@ -173,7 +178,7 @@ configs:
     inputs:
       sql_query: |
         SELECT *
-        FROM `the-data-strategist.favorita.favorita_train_store_daily_sales_features`
+        FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales
       date_column: date
       id_columns:
@@ -199,7 +204,7 @@ configs:
     inputs:
       sql_query: |
         SELECT *
-        FROM `the-data-strategist.favorita.favorita_train_store_daily_sales_features`
+        FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales
       date_column: date
       excluded_columns:
@@ -210,6 +215,7 @@ configs:
       test_size: 0.2
       trial_count: 15
       objective_metric: mae
+      gcs_model_path: gs://favorita-vertex-models/
     outputs: {}
 
   - name: favorita_arima_train
@@ -224,7 +230,7 @@ configs:
     inputs:
       sql_query: |
         SELECT *
-        FROM `the-data-strategist.favorita.favorita_train_store_daily_sales_features`
+        FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales
       date_column: date
       entity_column: entity_id
@@ -249,7 +255,7 @@ configs:
     inputs:
       sql_query: |
         SELECT *
-        FROM `the-data-strategist.favorita.favorita_train_store_daily_sales_features`
+        FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales
       date_column: date
       entity_column: entity_id
@@ -273,7 +279,7 @@ configs:
     inputs:
       sql_query: |
         SELECT *
-        FROM `the-data-strategist.favorita.favorita_train_store_daily_sales_features`
+        FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales
       date_column: date
       entity_column: entity_id
@@ -296,7 +302,7 @@ configs:
     inputs:
       sql_query: |
         SELECT *
-        FROM `the-data-strategist.favorita.favorita_train_store_daily_sales_features`
+        FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales
       date_column: date
       entity_column: entity_id
@@ -321,7 +327,7 @@ configs:
     inputs:
       sql_query: |
         SELECT *
-        FROM `the-data-strategist.favorita.favorita_train_store_daily_sales_features`
+        FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales
       date_column: date
       entity_column: entity_id
@@ -344,7 +350,7 @@ configs:
     inputs:
       sql_query: |
         SELECT *
-        FROM `the-data-strategist.favorita.favorita_train_store_daily_sales_features`
+        FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales
       date_column: date
       entity_column: entity_id
@@ -365,7 +371,7 @@ configs:
     inputs:
       sql_query: |
         SELECT *
-        FROM `the-data-strategist.favorita.favorita_train_store_daily_sales_features`
+        FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales
       date_column: date
       excluded_columns:

@@ -45,13 +45,25 @@ def run_job(
         spec.get("model_family"),
     )
 
-    job_run_id = start_job_run(config)
+    job_run_id, started_at = start_job_run(config)
     try:
         result = run_registered(config)
-        finish_job_run(config, job_run_id, status="SUCCEEDED")
+        finish_job_run(
+            config,
+            job_run_id,
+            started_at=started_at,
+            status="SUCCEEDED",
+            result=result,
+        )
         return result
     except Exception as exc:
-        finish_job_run(config, job_run_id, status="FAILED", error_message=str(exc))
+        finish_job_run(
+            config,
+            job_run_id,
+            started_at=started_at,
+            status="FAILED",
+            error_message=str(exc),
+        )
         raise
 
 

@@ -16,6 +16,7 @@ from vertex.models.timeseries.ts_common import (
     prepare_panel,
 )
 from vertex.utils.artifacts import save_joblib_artifacts
+from vertex.utils.optimize_params import resolve_model_parameters
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config
 from vertex.utils.data_utils import get_hash
@@ -52,8 +53,9 @@ def run_train_timeseries(config: dict[str, Any]) -> dict[str, Any]:
     if max_entities is not None:
         max_entities = int(max_entities)
 
-    params = dict(default_model_params(model_type))
-    params.update(inputs.get("model_params") or {})
+    params, params_provenance = resolve_model_parameters(
+        config, default_model_params(model_type)
+    )
 
     gcs_model_path = inputs.get("gcs_model_path")
     if not gcs_model_path:
@@ -169,7 +171,11 @@ def run_train_timeseries(config: dict[str, Any]) -> dict[str, Any]:
         "model_run_id": model_run_id,
         "model_id": model_id,
         "joblib_gcs_uri": joblib_uri,
+        "manifest_gcs_uri": manifest_uri,
         "entities_fitted": entities_fitted,
+        "params_provenance": params_provenance,
+        "train_row_count": int(len(panel)),
+        "row_count": int(len(panel)),
     }
 
 

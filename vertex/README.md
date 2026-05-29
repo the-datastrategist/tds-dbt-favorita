@@ -21,6 +21,11 @@ model_config.yaml  →  vertex.jobs.run  →  registry (model_type × step)  →
 
 Configs that share **`model_family`** (e.g. `favorita_store_daily`) are meant to be used together: train writes artifacts; predict references `inputs.artifact_config_name` to find them.
 
+**Optimize → train:** After Optuna, best hyperparameters are written to  
+`gs://<bucket>/optimize/<optimize_config_name>/latest_best_params.json`. Train configs set  
+`inputs.optimize_config_name` (or infer `*_train` → `*_optimize`) and merge those params over  
+`inputs.model_params` unless `use_optimized_params: false`.
+
 ## Directory layout
 
 ```text
@@ -57,10 +62,10 @@ vertex/
    - `favorita_model_optimize` — hyperparameter trials
    - `favorita_model_predictions` — unified prediction fact table
 
-3. **Feature data** — training SQL in config usually points at dbt marts (e.g. `favorita_train_store_daily_sales_features`). Build features with dbt before training:
+3. **Feature data** — training SQL in config usually points at dbt marts (e.g. `int_sales_store_daily`). Build features with dbt before training:
 
    ```bash
-   make dbt-run-model MODEL=int_train_input_store_daily
+   make dbt-run-model MODEL=int_sales_store_daily
    ```
 
 4. **Docker image** (local Docker or Vertex container)
@@ -88,7 +93,7 @@ Example train block (abbreviated):
     model_type: xgboost
   inputs:
     sql_query: |
-      SELECT * FROM `project.dataset.favorita_train_store_daily_sales_features`
+      SELECT * FROM `project.dataset.int_sales_store_daily`
     target_column: sales
     gcs_model_path: gs://your-bucket/models/
   outputs: {}   # inherits metadata_table, etc. from defaults
@@ -96,15 +101,10 @@ Example train block (abbreviated):
 
 Predict config must set **`inputs.artifact_config_name`** to the train config name (e.g. `favorita_xgboost_train`) unless you pin **`inputs.model_run_id`**.
 
-Validate a config from Python:
+Validate a single config:
 
 ```bash
-poetry run python -c "
-from vertex.config.load_config import load_model_config, validate_config_for_step
-c = load_model_config('favorita_xgboost_train')
-validate_config_for_step(c)
-print('OK')
-"
+make vertex-validate-config MODEL=favorita_xgboost_train
 ```
 
 ## Running jobs (Makefile)
@@ -118,15 +118,13 @@ From the **repository root**. Default **`VERTEX_MODE=docker`** runs `vertex.jobs
 | `make vertex-optimize` | Optuna search (`favorita_xgboost_optimize`) |
 | `make vertex-train VERTEX_MODE=vertex` | Submit training **Custom Job** to Vertex AI |
 | `make vertex-train VERTEX_MODE=vertex SYNC=1` | Submit and wait until the job finishes |
-| `make vertex-train VERTEX_MODE=local` | Run via Poetry on the host (no Docker) |
-
 Explicit targets:
 
-| Docker (local machine) | Vertex AI submit | Poetry (host) |
-|------------------------|------------------|---------------|
-| `vertex-train-docker` | `vertex-submit-train` | `vertex-train-local` |
-| `vertex-predict-docker` | `vertex-submit-predict` | `vertex-predict-local` |
-| `vertex-optimize-docker` | `vertex-submit-optimize` | `vertex-optimize-local` |
+| Docker (local machine) | Vertex AI submit |
+|------------------------|------------------|
+| `vertex-train-docker` | `vertex-submit-train` |
+| `vertex-predict-docker` | `vertex-submit-predict` |
+| `vertex-optimize-docker` | `vertex-submit-optimize` |
 
 Run **any** named config:
 
@@ -164,7 +162,7 @@ make vertex-train VERTEX_TRAIN_CONFIG=my_custom_train
    make vertex-train VERTEX_MODE=vertex
    ```
 
-The Custom Job runs: `python -m vertex.jobs.run --config-name <name>`. Job start/finish rows are appended to **`favorita_vertex_job_runs`** when BigQuery is reachable.
+The Custom Job runs: `python -m vertex.jobs.run --config-name <name>`. Job runs are **upserted** (MERGE) into **`favorita_vertex_job_runs`** — one row per `job_run_id` with duration, artifact URI, git SHA, and image URI when BigQuery is reachable. Submit passes `VERTEX_JOB_RUN_ID` so submitter and container share the same id.
 
 Optional per-config overrides under `vertex:` in YAML:
 
@@ -176,6 +174,8 @@ vertex:
   image: us-central1-docker.pkg.dev/...   # else VERTEX_TRAINING_IMAGE
   register_model: false
 ```
+
+Model Registry upload uses `artifacts.register_from_manifest` (manifest URI from training), not the legacy `VertexModelSaver` path.
 
 ## Running without Make
 
@@ -193,14 +193,14 @@ docker run --rm -v "$(pwd)":/app -w /app \
   --config-name favorita_xgboost_train
 ```
 
-**Poetry**:
+**Docker Compose** (same as Makefile / `docker compose`):
 
 ```bash
-poetry run python -m vertex.jobs.run --config-name favorita_xgboost_train
-poetry run python -m vertex.jobs.submit --config-name favorita_xgboost_train --sync
+docker compose run --rm ml-pipeline python -m vertex.jobs.run \
+  --config-name favorita_xgboost_train
+docker compose run --rm ml-pipeline python -m vertex.jobs.submit \
+  --config-name favorita_xgboost_train --sync
 ```
-
-Module shortcuts (see `pyproject.toml`): `poetry run vertex-run`, `poetry run vertex-submit`.
 
 ## Artifacts and IDs
 
@@ -291,6 +291,8 @@ make dbt-vertex
 **GCP practices** (consulting template): dedicated pipeline SA (`VERTEX_PIPELINE_SERVICE_ACCOUNT`), customer-owned `VERTEX_AI_PIPELINE_ROOT`, resource labels (`GCP_CLIENT_LABEL`, `GCP_ENVIRONMENT`), and least-privilege IAM — see [ops/README.md](ops/README.md).
 
 dbt models: `stg_vertex_model_predictions`, `stg_vertex_model_metadata`, `stg_vertex_job_runs` (sources in `dbt/models/sources/vertex.yml`). Apply DDL once: `vertex/ddl/vertex_bq_tables.sql` (`make vertex-bq-ddl` prints the path).
+
+**Prefect** can run the same pipelines locally (sequential Docker steps) or submit a PipelineJob (`vertex_mode=vertex`). See [orchestration/README.md](../orchestration/README.md).
 
 ## Adding a model family
 

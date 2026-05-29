@@ -20,7 +20,7 @@ def load_pipeline_definitions(
     raw = load_raw_config(config_path)
     pipelines = raw.get("pipelines") or {}
     if not isinstance(pipelines, dict):
-        raise ValueError(f"pipelines must be a mapping in {path}")
+        raise ValueError(f"pipelines must be a mapping in {config_path}")
     return pipelines
 
 
