@@ -33,6 +33,13 @@ models:
       +materialized: incremental
       +incremental_strategy: insert_overwrite
       +tags: [staging]
+      # Vertex ML outputs (views over favorita_model_* tables)
+      stg_vertex_model_predictions:
+        +tags: [staging, vertex]
+      stg_vertex_model_metadata:
+        +tags: [staging, vertex]
+      stg_vertex_job_runs:
+        +tags: [staging, vertex]
 
     # ML feature tables for Vertex AI exports and BQML training (int_train_input_*).
     intermediate:

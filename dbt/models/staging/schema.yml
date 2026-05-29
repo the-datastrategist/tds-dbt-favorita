@@ -231,3 +231,25 @@ models:
               arguments:
                 to: ref('stg_favorita_date_spine')
                 field: date
+
+  - name: stg_vertex_model_predictions
+    description: >
+      Vertex AI predictions (all model types) from favorita_model_predictions.
+    columns:
+      - name: prediction_id
+        data_tests:
+          - not_null
+      - name: model_run_id
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: model_type
+        data_tests:
+          - not_null
+
+  - name: stg_vertex_model_metadata
+    description: Training metadata for Vertex model runs.
+
+  - name: stg_vertex_job_runs
+    description: Audit log for Vertex Custom Jobs and PipelineJobs.

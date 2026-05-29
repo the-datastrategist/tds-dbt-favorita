@@ -3,9 +3,9 @@ import pandas as pd
 from datetime import datetime, timedelta
 import hashlib
 import json
-from typing import Union
+import os
+from typing import Dict, Optional, Union
 import yaml
-from typing import Dict, Optional
 
 
 class BigQueryLoader:
@@ -49,7 +49,15 @@ class BigQueryLoader:
         job.result()
 
 
-def get_hash_id(data: Union[dict, str]) -> str:
+def parse_env_list(env_var: str, default: Optional[str] = None) -> list:
+    """Parse a comma-separated environment variable into a list."""
+    raw = os.getenv(env_var, default or "")
+    if not raw:
+        return []
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+def get_hash_id(data: Union[dict, str, bytes]) -> str:
     """
     Generate a SHA256 hash from a dictionary or string.
     
@@ -64,10 +72,17 @@ def get_hash_id(data: Union[dict, str]) -> str:
         data_str = json.dumps(data, sort_keys=True)
     elif isinstance(data, str):
         data_str = data
+    elif isinstance(data, bytes):
+        data_str = data.decode("utf-8", errors="replace")
     else:
-        raise ValueError("Input must be a dict or a string")
+        raise ValueError("Input must be a dict, str, or bytes")
 
     return hashlib.sha256(data_str.encode("utf-8")).hexdigest()
+
+
+def get_hash(data: Union[dict, str, bytes]) -> str:
+    """Alias for get_hash_id (compatible with legacy training scripts)."""
+    return get_hash_id(data)
 
 
 def get_timestamp() -> str:
@@ -108,37 +123,10 @@ def split_by_time_percentile(df: pd.DataFrame, date_col: str = "date", test_size
 
 def load_config_from_yaml(file_name: str, config_name: Optional[str] = None) -> Dict:
     """
-    Loads a specific config from a YAML file.
-
-    Args:
-        file_name (str): Path to the YAML file.
-        config_name (str, optional): The `name` of the config to extract. If None, the first config is returned.
-
-    Returns:
-        dict: The selected config's dictionary.
-
-    Raises:
-        FileNotFoundError: If the YAML file does not exist.
-        ValueError: If the config name is not found.
+    Load a config from YAML with defaults merged (delegates to vertex.config.load_config).
     """
-    try:
-        with open(file_name, "r") as file:
-            data = yaml.safe_load(file)
+    from vertex.config.load_config import load_all_configs, load_model_config
 
-        configs = data.get("configs", [])
-        if not configs:
-            raise ValueError("No configs found in the YAML file.")
-
-        if config_name is None:
-            return configs[0]
-
-        for config in configs:
-            if config.get("name") == config_name:
-                return config
-
-        raise ValueError(f"Config with name '{config_name}' not found.")
-
-    except FileNotFoundError as e:
-        raise FileNotFoundError(f"YAML file not found: {file_name}") from e
-    except yaml.YAMLError as e:
-        raise ValueError(f"Invalid YAML format in {file_name}") from e
+    if config_name is None:
+        return load_all_configs(file_name)[0]
+    return load_model_config(config_name, file_name)

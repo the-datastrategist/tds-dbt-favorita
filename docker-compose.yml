@@ -9,7 +9,6 @@ services:
       - .:/app
       # Mount Google Cloud credentials (keep path relative to project root for Docker)
       - ./credentials/tds-favorita-b72f306edf29.json:/app/credentials/tds-favorita-b72f306edf29.json:ro
-      # Kaggle API credentials for scripts/load_favorita_to_gcs.py (~/.kaggle/kaggle.json)
       - ${KAGGLE_CONFIG_DIR:-${HOME}/.kaggle}:/root/.kaggle:ro
     environment:
       - PYTHONPATH=/app

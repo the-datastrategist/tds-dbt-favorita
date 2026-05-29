@@ -295,7 +295,7 @@ poetry run dbt docs generate --project-dir dbt
 
 ### Option 2: Vertex AI (custom XGBoost models)
 
-1. **Configure training** — edit `vertex/config/train_config.yaml`
+1. **Configure training** — edit `vertex/config/model_config.yml`
 
 2. **Prepare features in BigQuery** (if needed)
    ```bash

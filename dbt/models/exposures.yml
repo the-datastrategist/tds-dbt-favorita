@@ -54,6 +54,26 @@ exposures:
         tool: Vertex AI
         repo_path: vertex/models/
 
+  - name: favorita_vertex_predictions
+    label: Vertex AI model predictions
+    type: ml
+    maturity: medium
+    description: >
+      Unified prediction outputs from Vertex custom jobs and pipelines
+      (xgboost, random_forest, ARIMA, SARIMA). Staged for BI and downstream marts.
+    depends_on:
+      - ref('stg_vertex_model_predictions')
+      - ref('stg_vertex_model_metadata')
+      - ref('stg_vertex_job_runs')
+    owner:
+      name: The Data Strategist
+      email: gordon@thedatastrategist.com
+    url: https://www.thedatastrategist.com
+    config:
+      meta:
+        tool: Vertex AI
+        repo_path: vertex/
+
   - name: favorita_operational_calendar
     label: Operational calendar and holidays
     type: dashboard

@@ -215,6 +215,7 @@ dbt/logs/
 
 # Vertex AI / Model artifacts
 vertex/models/tmp/
+vertex/pipelines/compiled/*.json
 *.joblib
 *.pkl
 *.h5

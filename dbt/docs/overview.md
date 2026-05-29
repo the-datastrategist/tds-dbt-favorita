@@ -34,7 +34,7 @@ raw_favorita  →  staging  →  int_train_input_*  →  bqml_model_*
 1. Load raw data: `make load-favorita-bigquery`
 2. Build features (excludes BQML): `make dbt-run`
 3. **BQML path:** `make dbt-train` then `make dbt-predict`
-4. **Vertex path:** `make model-train` / `make model-predict` (uses `vertex/config/train_config.yaml`)
+4. **Vertex path:** `make model-train` / `make model-predict` (uses `vertex/config/model_config.yml`)
 
 Generate this site locally: `make dbt-docs-generate` and `make dbt-docs-serve` (http://localhost:8080).
 

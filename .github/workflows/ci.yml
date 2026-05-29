@@ -39,7 +39,15 @@ jobs:
         run: poetry run flake8 vertex
 
       - name: Unit tests
-        run: poetry run pytest
+        run: poetry run pytest -m unit
+
+      - name: Compile Vertex KFP pipeline (no GCP)
+        run: |
+          poetry run python -m vertex.pipelines.compile \
+            --pipeline favorita_arima \
+            --output /tmp/favorita_arima_pipeline.json \
+            --training-image us-central1-docker.pkg.dev/ci/ci:latest \
+            --skip-optimize --skip-predict
 
   dbt:
     name: dbt parse, compile, and docs

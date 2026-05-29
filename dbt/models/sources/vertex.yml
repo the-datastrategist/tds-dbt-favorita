@@ -1,0 +1,32 @@
+version: 2
+
+# Tables written by vertex/jobs (train, predict, optimize). Apply vertex/ddl/vertex_bq_tables.sql first.
+sources:
+  - name: vertex_ml
+    description: Vertex AI custom training outputs in the analytics dataset
+    database: "{{ var('project_id') }}"
+    schema: "{{ var('dataset') }}"
+    tables:
+      - name: favorita_model_predictions
+        description: Unified prediction rows across model_type (xgboost, random_forest, arima, sarima)
+        columns:
+          - name: prediction_id
+            description: Stable hash per prediction row
+          - name: model_run_id
+            description: Training run that produced the artifact
+          - name: model_id
+            description: Logical model version (parameters + features / entity scope)
+          - name: model_type
+            description: xgboost, random_forest, arima, sarima, etc.
+
+      - name: favorita_model_metadata
+        description: Training run metadata and GCS artifact URIs
+
+      - name: favorita_model_performance
+        description: Holdout performance metrics per training run
+
+      - name: favorita_model_optimize
+        description: Hyperparameter optimization trials (Optuna)
+
+      - name: favorita_vertex_job_runs
+        description: Custom Job and pipeline orchestration audit log

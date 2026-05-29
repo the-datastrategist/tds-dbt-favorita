@@ -5,7 +5,7 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 ## Features
 
 - **dbt + BigQuery ML**: Train and deploy ML models directly in BigQuery
-- **Vertex AI**: Train custom models (XGBoost, etc.) and deploy to Vertex AI
+- **Vertex AI**: Config-driven train / predict / optimize (XGBoost, Random Forest, ARIMA, SARIMA; Prophet planned), runnable in local Docker or as Vertex Custom Jobs
 - **End-to-end Pipeline**: From data transformation to model training and prediction
 - **Dockerized**: Run everything locally in Docker containers
 - **Poetry**: Modern Python dependency management
@@ -29,11 +29,13 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 │   │   └── exposures.yml  # Downstream ML/dashboard lineage nodes
 │   ├── macros/            # dbt macros for BigQuery ML
 │   └── profiles/          # dbt profiles configuration
-├── vertex/                # Vertex AI model code
-│   ├── models/            # Training and prediction scripts
-│   ├── utils/             # Utilities (data loading, Vertex helpers)
-│   ├── tests/             # Python test suite (pytest)
-│   └── config/            # Model configuration files
+├── vertex/                # Vertex AI custom ML (see vertex/README.md)
+│   ├── config/            # model_config.yaml + loader
+│   ├── jobs/              # run.py (execute) and submit.py (Custom Jobs)
+│   ├── models/            # xgboost/, sklearn/, timeseries/ + registry
+│   ├── utils/             # BigQuery, GCS artifacts, predictions schema
+│   ├── ddl/               # BigQuery table DDL for Vertex outputs
+│   └── tests/             # pytest unit tests
 ├── .github/workflows/     # CI and GitHub Pages (dbt docs)
 ├── Dockerfile             # Docker image definition
 ├── docker-compose.yml     # Docker Compose configuration
@@ -49,7 +51,8 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
   - BigQuery dataset (`raw_favorita` for raw tables)
   - Vertex AI API enabled
   - Service account with appropriate permissions
-  - GCS bucket with Favorita competition archives (`.csv.7z`), e.g. `gs://favorita-vertex-ai/source_data`
+  - GCS buckets: raw competition data (`.csv.7z`) and, for Vertex, model artifacts / staging (see `env.example`)
+  - Vertex AI API enabled (if submitting Custom Jobs to GCP)
 
 ## Setup
 
@@ -109,10 +112,15 @@ make load-favorita-bigquery
 # 4. Run dbt models (staging → marts; excludes BQML unless selected)
 make dbt-run
 
-# 5. Train / predict with Vertex scripts (runs in Docker)
-make model-train
-make model-predict
+# 5. (Once) Create Vertex output tables in BigQuery — see vertex/ddl/vertex_bq_tables.sql
+
+# 6. Train / predict / optimize with Vertex (runs in Docker by default)
+make vertex-train
+make vertex-predict
+# make vertex-optimize   # optional Optuna search
 ```
+
+For Vertex-specific setup, configs, and GCP submit: **[vertex/README.md](vertex/README.md)**.
 
 Interactive shell inside the same image:
 
@@ -197,19 +205,48 @@ The site includes the [project overview](dbt/docs/overview.md), model catalog, a
 
 ### Vertex AI model commands
 
-Default targets run in Docker (`docker run` with the project image):
+Vertex jobs are defined in [`vertex/config/model_config.yaml`](vertex/config/model_config.yaml). Use **`VERTEX_MODE`** to choose where the job runs:
+
+| `VERTEX_MODE` | Behavior |
+|---------------|----------|
+| `docker` (default) | Run `vertex.jobs.run` in the local Docker image |
+| `vertex` | Submit a Vertex AI Custom Job (`vertex.jobs.submit`) |
+| `local` | Run via Poetry on the host |
 
 ```bash
-make model-train
-make model-predict
+# Local Docker (default)
+make vertex-train
+make vertex-predict
+make vertex-optimize
+
+# Vertex AI Custom Jobs (set VERTEX_AI_STAGING_BUCKET + VERTEX_TRAINING_IMAGE in .env)
+make vertex-train VERTEX_MODE=vertex
+make vertex-submit-train              # explicit submit
+make vertex-train VERTEX_MODE=vertex SYNC=1   # submit and wait
+
+# Poetry on host
+make vertex-train VERTEX_MODE=local
 ```
 
-Optional local runs (Poetry on the host, no Docker):
+**Vertex Pipelines** (KFP: optimize → train → predict) and **dbt staging** over Vertex BigQuery tables:
 
 ```bash
-make model-train-local
-make model-predict-local
+make vertex-pipeline-compile VERTEX_PIPELINE=favorita_xgboost
+make vertex-pipeline-submit VERTEX_PIPELINE=favorita_xgboost VERTEX_MODE=vertex
+make dbt-vertex    # stg_vertex_* models
 ```
+
+Other useful targets:
+
+```bash
+make vertex-run-docker VERTEX_CONFIG_NAME=favorita_xgboost_train
+make vertex-submit VERTEX_CONFIG_NAME=favorita_xgboost_predict
+make help    # lists all vertex-* targets
+```
+
+Aliases: `make model-train` → `vertex-train-docker`, `make model-train-local` → `vertex-train-local`, etc.
+
+Full detail: **[vertex/README.md](vertex/README.md)**.
 
 ### Code Quality
 
@@ -290,20 +327,31 @@ poetry run dbt docs generate --project-dir dbt
    make dbt-predict
    ```
 
-### Option 2: Vertex AI (custom XGBoost models)
+### Option 2: Vertex AI (custom Python models)
 
-1. **Configure training** — edit `vertex/config/train_config.yaml`
+Supported types: **xgboost**, **random_forest**, **arima**, **sarima** (see config names in [vertex/README.md](vertex/README.md#supported-model-types)).
 
-2. **Prepare features in BigQuery** (if needed)
+1. **Create BigQuery output tables** (one time) — [`vertex/ddl/vertex_bq_tables.sql`](vertex/ddl/vertex_bq_tables.sql)
+
+2. **Configure jobs** — [`vertex/config/model_config.yaml`](vertex/config/model_config.yaml)
+
+3. **Prepare features in BigQuery** (if needed)
    ```bash
-   make dbt-run-model MODEL=int_train_input_daily
+   make dbt-run-model MODEL=int_train_input_store_daily
    ```
 
-3. **Train and predict**
+4. **Train, optimize (optional), predict**
    ```bash
-   make model-train
-   make model-predict
+   make docker-build
+   make vertex-train                                    # XGBoost (default config)
+   make vertex-train VERTEX_TRAIN_CONFIG=favorita_rf_train
+   make vertex-optimize VERTEX_OPTIMIZE_CONFIG=favorita_arima_optimize
+   make vertex-predict VERTEX_PREDICT_CONFIG=favorita_sarima_predict
+   # Vertex AI Custom Jobs:
+   make vertex-train VERTEX_MODE=vertex VERTEX_TRAIN_CONFIG=favorita_rf_train
    ```
+
+See **[vertex/README.md](vertex/README.md)** for architecture, env vars, and troubleshooting.
 
 ## Environment Variables
 
@@ -314,7 +362,10 @@ Key environment variables (see `env.example` for full list):
 - `GCS_RAW_DATA_BUCKET`: GCS source for `.csv.7z` archives (`make load-favorita-bigquery`)
 - `BQ_RAW_DATASET`: BigQuery dataset for raw tables (default: `raw_favorita`)
 - `DBT_DATASET`: BigQuery dataset name for dbt models
-- `VERTEX_AI_MODEL_BUCKET`: GCS bucket for model artifacts
+- `VERTEX_AI_STAGING_BUCKET`: GCS prefix for Vertex Custom Job staging (required for `VERTEX_MODE=vertex`)
+- `VERTEX_AI_MODEL_BUCKET`: GCS bucket for model artifacts (optional; paths also set in `model_config.yaml`)
+- `VERTEX_TRAINING_IMAGE`: Container image URI for Custom Jobs (e.g. Artifact Registry `.../tds-favorita:latest`)
+- `VERTEX_MODE` / `SYNC`: Make variables for Docker vs Vertex submit vs wait (see `make help`)
 
 ## Development
 
@@ -327,13 +378,13 @@ Key environment variables (see `env.example` for full list):
    ```bash
    poetry run python scripts/load_favorita_to_bigquery.py
    poetry run dbt run --project-dir dbt
-   make model-train-local
+   make vertex-train-local
    ```
 
 ### Adding New Models
 
 1. **BigQuery ML**: Create new SQL model in `dbt/models/marts/ml_models/`
-2. **Vertex AI**: Create new training script in `vertex/models/` and config in `vertex/config/`
+2. **Vertex AI**: Add modules under `vertex/models/<family>/`, register in `vertex/models/registry.py`, add train/predict/optimize blocks to `vertex/config/model_config.yaml` — see [vertex/README.md](vertex/README.md#adding-a-model-family)
 3. **Lineage**: Add or update an exposure in `dbt/models/exposures.yml` when a new dashboard, app, or ML job consumes dbt models; refresh docs with `make dbt-docs-generate`
 
 ### Testing
@@ -349,9 +400,9 @@ To run end-to-end predictions from a local Dockerized environment, you'll need:
 
 1. ✅ **Docker setup** - Complete
 2. ✅ **dbt configuration** - Complete
-3. ✅ **Vertex AI setup** - Complete
-4. ✅ **Model training scripts** - Complete
-5. ✅ **Prediction scripts** - Complete
+3. ✅ **Vertex AI setup** - Config-driven jobs, Docker + Custom Job submit (see [vertex/README.md](vertex/README.md))
+4. ✅ **Model training scripts** - XGBoost train / predict / optimize
+5. ✅ **Prediction scripts** - Unified BigQuery prediction schema
 6. ⚠️ **Data pipeline orchestration** - Consider adding:
    - Airflow or Prefect for workflow orchestration
    - Or use `make` commands for simple workflows
