@@ -8,7 +8,8 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 - **Vertex AI**: Config-driven train / predict / optimize (XGBoost, Random Forest, ARIMA, SARIMA; Prophet planned), runnable in local Docker or as Vertex Custom Jobs
 - **End-to-end Pipeline**: From data transformation to model training and prediction
 - **Dockerized**: Run everything locally in Docker containers
-- **Poetry**: Modern Python dependency management
+- **Prefect**: OSS workflow orchestration for scheduled and manual dbt / Vertex / ML pipeline runs via Docker (`make prefect-*`; see [orchestration/README.md](orchestration/README.md))
+- **pip + Docker**: Locked dependencies in `requirements.txt`; all local commands run in Docker
 - **Testing**: pytest for Vertex utilities; dbt data tests on staging and intermediate models
 - **CI/CD**: GitHub Actions on every push and PR (Python lint/tests, `dbt parse` / `dbt compile` / `dbt docs generate`)
 - **Hosted dbt Docs**: GitHub Pages deploy on push to `main` / `master` (see [Hosted documentation](#hosted-documentation))
@@ -23,7 +24,7 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 │   ├── docs/              # Project overview for dbt Docs (overview.md)
 │   ├── models/
 │   │   ├── staging/       # Staging models
-│   │   ├── intermediate/  # ML training feature sets (int_train_input_*)
+│   │   ├── intermediate/  # ML training feature sets (int_sales_*)
 │   │   ├── marts/         # Final models and BQML outputs
 │   │   │   └── ml_models/ # BigQuery ML models
 │   │   └── exposures.yml  # Downstream ML/dashboard lineage nodes
@@ -36,10 +37,13 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 │   ├── utils/             # BigQuery, GCS artifacts, predictions schema
 │   ├── ddl/               # BigQuery table DDL for Vertex outputs
 │   └── tests/             # pytest unit tests
+├── orchestration/         # Prefect flows, tasks (see orchestration/README.md)
+├── prefect.yaml           # Prefect deployment definitions
 ├── .github/workflows/     # CI and GitHub Pages (dbt docs)
 ├── Dockerfile             # Docker image definition
 ├── docker-compose.yml     # Docker Compose configuration
-├── pyproject.toml         # Poetry dependencies
+├── requirements.txt       # Locked Python dependencies (pip)
+├── pyproject.toml         # Tool config (black, pytest, mypy)
 └── Makefile               # Convenient commands
 
 ```
@@ -86,11 +90,6 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
    docker compose build
    ```
 
-6. **Install dependencies locally (optional, for development without Docker)**
-   ```bash
-   poetry install
-   ```
-
 ## Usage
 
 Pipeline commands (dbt, data load, and the default Vertex train/predict targets) run in Docker via `make`. Pass extra CLI flags with `ARGS`, for example `make load-favorita-bigquery ARGS="--dry-run"`.
@@ -121,6 +120,8 @@ make vertex-predict
 ```
 
 For Vertex-specific setup, configs, and GCP submit: **[vertex/README.md](vertex/README.md)**.
+
+For Prefect (scheduled / manual dbt, Vertex training, and ML pipelines): **[orchestration/README.md](orchestration/README.md)**.
 
 Interactive shell inside the same image:
 
@@ -166,7 +167,7 @@ make dbt-predict        # models tagged predict
 make dbt-test
 
 # Single model
-make dbt-run-model MODEL=int_train_input_daily
+make dbt-run-model MODEL=int_sales_daily
 
 # Extra dbt flags
 make dbt-run ARGS="--select stg_favorita_train"
@@ -211,7 +212,6 @@ Vertex jobs are defined in [`vertex/config/model_config.yaml`](vertex/config/mod
 |---------------|----------|
 | `docker` (default) | Run `vertex.jobs.run` in the local Docker image |
 | `vertex` | Submit a Vertex AI Custom Job (`vertex.jobs.submit`) |
-| `local` | Run via Poetry on the host |
 
 ```bash
 # Local Docker (default)
@@ -224,8 +224,6 @@ make vertex-train VERTEX_MODE=vertex
 make vertex-submit-train              # explicit submit
 make vertex-train VERTEX_MODE=vertex SYNC=1   # submit and wait
 
-# Poetry on host
-make vertex-train VERTEX_MODE=local
 ```
 
 **Vertex Pipelines** (KFP: optimize → train → predict) and **dbt staging** over Vertex BigQuery tables:
@@ -244,7 +242,7 @@ make vertex-submit VERTEX_CONFIG_NAME=favorita_xgboost_predict
 make help    # lists all vertex-* targets
 ```
 
-Aliases: `make model-train` → `vertex-train-docker`, `make model-train-local` → `vertex-train-local`, etc.
+Aliases: `make model-train` → `vertex-train-docker`, etc.
 
 Full detail: **[vertex/README.md](vertex/README.md)**.
 
@@ -292,19 +290,22 @@ Pull requests and pushes to `main` / `master` run [`.github/workflows/ci.yml`](.
 | **python** | `flake8` on `vertex/`, then `pytest` |
 | **dbt** | `dbt deps`, `dbt parse`, `dbt compile`, and `dbt docs generate` (no warehouse connection) |
 
-Warehouse-backed checks (`dbt run`, `dbt test`) are run locally or in your GCP environment after `make dbt-debug`. To mirror CI locally without Docker:
+Warehouse-backed checks (`dbt run`, `dbt test`) are run locally or in your GCP environment after `make dbt-debug`. To mirror CI checks in Docker:
 
 ```bash
-poetry install
-export GOOGLE_PROJECT_ID=ci-placeholder DBT_DATASET=favorita BQ_RAW_DATASET=raw_favorita DBT_PROFILES_DIR=dbt/profiles
-echo '{}' > /tmp/ci-service-account.json
-export GOOGLE_APPLICATION_CREDENTIALS=/tmp/ci-service-account.json
-poetry run flake8 vertex
-poetry run pytest
-poetry run dbt deps --project-dir dbt
-poetry run dbt parse --project-dir dbt
-poetry run dbt compile --project-dir dbt
-poetry run dbt docs generate --project-dir dbt
+make install
+make lint
+make test-unit
+make dbt-deps
+docker compose run --rm ml-pipeline dbt parse --project-dir dbt
+docker compose run --rm ml-pipeline dbt compile --project-dir dbt
+docker compose run --rm ml-pipeline dbt docs generate --project-dir dbt
+```
+
+To refresh locked dependencies after editing `requirements.in`:
+
+```bash
+make requirements-lock
 ```
 
 ## Machine Learning Workflows
@@ -318,7 +319,7 @@ poetry run dbt docs generate --project-dir dbt
 
 2. **Prepare training data with dbt**
    ```bash
-   make dbt-run-model MODEL=int_train_input_daily
+   make dbt-run-model MODEL=int_sales_daily
    ```
 
 3. **Train and run BQML models**
@@ -337,7 +338,7 @@ Supported types: **xgboost**, **random_forest**, **arima**, **sarima** (see conf
 
 3. **Prepare features in BigQuery** (if needed)
    ```bash
-   make dbt-run-model MODEL=int_train_input_store_daily
+   make dbt-run-model MODEL=int_sales_store_daily
    ```
 
 4. **Train, optimize (optional), predict**
@@ -369,17 +370,7 @@ Key environment variables (see `env.example` for full list):
 
 ## Development
 
-### Local development (without Docker)
-
-1. Install Poetry: https://python-poetry.org/docs/#installation
-2. Install dependencies: `poetry install`
-3. Set up environment variables in `.env`
-4. Run tools directly, for example:
-   ```bash
-   poetry run python scripts/load_favorita_to_bigquery.py
-   poetry run dbt run --project-dir dbt
-   make vertex-train-local
-   ```
+All Python tooling runs inside the `ml-pipeline` container (`make docker-bash` for a shell), built on **Python 3.11** (`python:3.11-slim`). Update `requirements.in` / `requirements-dev.in`, then `make requirements-lock` and `make install` to rebuild the image.
 
 ### Adding New Models
 
@@ -389,9 +380,9 @@ Key environment variables (see `env.example` for full list):
 
 ### Testing
 
-Tests are located in `vertex/tests/`. Run with:
+Tests are located in `vertex/tests/` and `orchestration/tests/`. Run with:
 ```bash
-poetry run pytest
+make test
 ```
 
 ## What's Missing for End-to-End Predictions
@@ -403,12 +394,10 @@ To run end-to-end predictions from a local Dockerized environment, you'll need:
 3. ✅ **Vertex AI setup** - Config-driven jobs, Docker + Custom Job submit (see [vertex/README.md](vertex/README.md))
 4. ✅ **Model training scripts** - XGBoost train / predict / optimize
 5. ✅ **Prediction scripts** - Unified BigQuery prediction schema
-6. ⚠️ **Data pipeline orchestration** - Consider adding:
-   - Airflow or Prefect for workflow orchestration
+6. ✅ **Prefect orchestration** - Manual and scheduled dbt, Vertex train, and ML pipeline (optimize → train → predict) deployments ([orchestration/README.md](orchestration/README.md))
    - Or use `make` commands for simple workflows
-7. ⚠️ **Monitoring and logging** - Consider adding:
-   - MLflow or Weights & Biases for experiment tracking
-   - Cloud Logging integration for Vertex AI
+7. ✅ **Experiment tracking** - MLflow + Vertex AI Experiments on every `vertex.jobs.run` (train/predict/optimize); BigQuery metadata unchanged ([vertex/README.md](vertex/README.md))
+   - ⚠️ Cloud Logging integration for Vertex AI (optional)
 8. ⚠️ **Model serving** - For production:
    - Vertex AI Model Registry for model versioning
    - Vertex AI Endpoints for online predictions

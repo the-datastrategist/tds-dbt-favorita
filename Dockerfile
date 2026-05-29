@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 # System environment settings
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -15,20 +15,9 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
-ENV POETRY_VERSION=1.8.2
-ENV POETRY_HOME="/opt/poetry"
-ENV POETRY_VENV_IN_PROJECT=1
-ENV POETRY_NO_INTERACTION=1
-RUN curl -sSL https://install.python-poetry.org | python3 -
-ENV PATH="$POETRY_HOME/bin:$PATH"
-
-# Copy Poetry project files first for better layer caching
-COPY pyproject.toml poetry.lock* ./
-
-# Configure Poetry and install dependencies
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --with dev
+# Install Python dependencies (dev tools included for local Docker workflows)
+COPY requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt
 
 # Copy project files
 COPY . .
