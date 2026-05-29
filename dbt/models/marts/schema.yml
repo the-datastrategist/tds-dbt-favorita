@@ -33,8 +33,7 @@ models:
               config:
                 severity: warn
           - accepted_values:
-              arguments:
-                values: [bqml_sales_forecast]
+              values: [bqml_sales_forecast]
               config:
                 severity: warn
       - name: model_version
@@ -43,8 +42,7 @@ models:
         description: Lifecycle status from model configuration (e.g., dev, prod).
         data_tests:
           - accepted_values:
-              arguments:
-                values: [prod, dev]
+              values: [prod, dev]
               config:
                 severity: warn
 
@@ -73,8 +71,7 @@ models:
               config:
                 severity: warn
           - accepted_values:
-              arguments:
-                values: [bqml_sales_forecast]
+              values: [bqml_sales_forecast]
               config:
                 severity: warn
       - name: model_version
@@ -83,8 +80,7 @@ models:
         description: Lifecycle status from model configuration (e.g., dev, prod).
         data_tests:
           - accepted_values:
-              arguments:
-                values: [prod, dev]
+              values: [prod, dev]
               config:
                 severity: warn
 
@@ -113,8 +109,7 @@ models:
               config:
                 severity: warn
           - accepted_values:
-              arguments:
-                values: [bqml_sales_forecast]
+              values: [bqml_sales_forecast]
               config:
                 severity: warn
       - name: model_version
@@ -123,7 +118,6 @@ models:
         description: Lifecycle status from model configuration (e.g., dev, prod).
         data_tests:
           - accepted_values:
-              arguments:
-                values: [prod, dev]
+              values: [prod, dev]
               config:
                 severity: warn
