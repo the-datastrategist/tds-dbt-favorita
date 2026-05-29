@@ -163,6 +163,7 @@ def finish_job_run(
     status: str,
     error_message: Optional[str] = None,
     result: Any = None,
+    extra_fields: Optional[dict[str, Any]] = None,
 ) -> None:
     """Merge terminal status and runtime metadata for job_run_id."""
     finished_at = dt.utcnow()
@@ -183,5 +184,7 @@ def finish_job_run(
     opt_id = _optimize_run_id_from_result(result)
     if opt_id:
         row["optimize_run_id"] = opt_id
+    if extra_fields:
+        row.update(extra_fields)
 
     _write_job_run(row, config)

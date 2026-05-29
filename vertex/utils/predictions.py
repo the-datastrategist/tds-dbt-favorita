@@ -74,10 +74,10 @@ def build_standard_prediction_rows(
     """
     Build prediction rows with a consistent schema across model types.
 
-    Entity columns default to entity_id, store_id, product_id when present in df.
+    Entity columns default to store_nbr (mapped to store_id / entity_id for BQ).
     """
     index = predictions.index
-    id_columns = id_columns or ["entity_id", "store_id", "product_id"]
+    id_columns = id_columns or ["store_nbr"]
     entity_cols = [col for col in id_columns if col in df.columns]
 
     run_at_ts = pd.Timestamp(run_at)
@@ -108,6 +108,13 @@ def build_standard_prediction_rows(
     for col in ("entity_id", "store_id", "product_id"):
         if col not in rows:
             rows[col] = _optional_series(df, col, index)
+    if "store_nbr" in df.columns:
+        store_vals = rows.get("store_id")
+        if store_vals is None or all(v is None for v in store_vals):
+            rows["store_id"] = _optional_series(df, "store_nbr", index)
+        entity_vals = rows.get("entity_id")
+        if entity_vals is None or all(v is None for v in entity_vals):
+            rows["entity_id"] = df.loc[index, "store_nbr"].astype(str).tolist()
 
     rows["date"] = _optional_series(df, date_column, index)
     actual_col = actual_column or target_column

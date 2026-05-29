@@ -19,6 +19,7 @@ from vertex.config.load_config import (
     validate_config_for_step,
 )
 from vertex.models.registry import ensure_registered, run_registered
+from vertex.utils.experiment_tracking import ExperimentRunContext
 from vertex.utils.tracking import finish_job_run, start_job_run
 
 logger = logging.getLogger(__name__)
@@ -46,25 +47,30 @@ def run_job(
     )
 
     job_run_id, started_at = start_job_run(config)
-    try:
-        result = run_registered(config)
-        finish_job_run(
-            config,
-            job_run_id,
-            started_at=started_at,
-            status="SUCCEEDED",
-            result=result,
-        )
-        return result
-    except Exception as exc:
-        finish_job_run(
-            config,
-            job_run_id,
-            started_at=started_at,
-            status="FAILED",
-            error_message=str(exc),
-        )
-        raise
+    with ExperimentRunContext(config, job_run_id=job_run_id) as experiment:
+        try:
+            result = run_registered(config)
+            experiment.log_success(result)
+            finish_job_run(
+                config,
+                job_run_id,
+                started_at=started_at,
+                status="SUCCEEDED",
+                result=result,
+                extra_fields=experiment.job_run_fields(),
+            )
+            return result
+        except Exception as exc:
+            experiment.log_failure(str(exc))
+            finish_job_run(
+                config,
+                job_run_id,
+                started_at=started_at,
+                status="FAILED",
+                error_message=str(exc),
+                extra_fields=experiment.job_run_fields(),
+            )
+            raise
 
 
 def main() -> None:

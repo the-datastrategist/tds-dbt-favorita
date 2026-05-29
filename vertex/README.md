@@ -52,9 +52,13 @@ vertex/
    - Service account with BigQuery read/write and GCS read/write on your model bucket
    - Credentials JSON mounted for Docker (see root README)
 
-2. **BigQuery tables** (run once)
+2. **BigQuery tables** (run once; re-run after DDL changes)
 
-   Apply [`ddl/vertex_bq_tables.sql`](ddl/vertex_bq_tables.sql) in your project, or create equivalent tables:
+   ```bash
+   make vertex-bq-ddl
+   ```
+
+   This applies [`ddl/vertex_bq_tables.sql`](ddl/vertex_bq_tables.sql) (`CREATE TABLE` + idempotent `ALTER TABLE` migrations). Tables:
 
    - `favorita_vertex_job_runs` — orchestration audit
    - `favorita_model_metadata` — training lineage
@@ -94,7 +98,10 @@ Example train block (abbreviated):
   inputs:
     sql_query: |
       SELECT * FROM `project.dataset.int_sales_store_daily`
-    target_column: sales
+    target_column: sales_store
+    entity_column: store_nbr
+    id_columns: [store_nbr]
+    excluded_columns: [store_nbr, date, sales_store_l1d]
     gcs_model_path: gs://your-bucket/models/
   outputs: {}   # inherits metadata_table, etc. from defaults
 ```
@@ -163,6 +170,25 @@ make vertex-train VERTEX_TRAIN_CONFIG=my_custom_train
    ```
 
 The Custom Job runs: `python -m vertex.jobs.run --config-name <name>`. Job runs are **upserted** (MERGE) into **`favorita_vertex_job_runs`** — one row per `job_run_id` with duration, artifact URI, git SHA, and image URI when BigQuery is reachable. Submit passes `VERTEX_JOB_RUN_ID` so submitter and container share the same id.
+
+**Experiment tracking** (train, predict, optimize via `vertex.jobs.run`):
+
+| Destination | What is logged |
+|-------------|----------------|
+| **BigQuery** | Training metadata (`favorita_model_metadata`), performance, predictions, optimize trials, job runs (existing runners) |
+| **MLflow** | Params, metrics, tags per job run (`MLFLOW_TRACKING_URI`, default `file:./mlruns`) |
+| **Vertex AI Experiments** | Same params/metrics under `vertex.experiment` (default `favorita-vertex`) |
+
+Disable with `EXPERIMENT_TRACKING_ENABLED=false`. Optional `defaults.mlflow` in `model_config.yaml`:
+
+```yaml
+defaults:
+  mlflow:
+    enabled: true
+    experiment_name: favorita-vertex
+    vertex_experiments: true
+    # tracking_uri: gs://your-bucket/mlflow
+```
 
 Optional per-config overrides under `vertex:` in YAML:
 

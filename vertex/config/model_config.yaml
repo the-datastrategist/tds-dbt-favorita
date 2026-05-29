@@ -1,6 +1,10 @@
 defaults:
   project_id: tds-favorita
   region: us-central1
+  mlflow:
+    enabled: true
+    experiment_name: favorita-vertex
+    vertex_experiments: true
   outputs:
     metadata_table: tds-favorita.favorita.favorita_model_metadata
     performance_table: tds-favorita.favorita.favorita_model_performance
@@ -42,6 +46,7 @@ configs:
   - name: favorita_xgboost_train
     description: Train XGBoost on store daily sales features
     model_family: favorita_store_daily
+    include_in_run: true
     job:
       step: train
       model_type: xgboost
@@ -53,18 +58,15 @@ configs:
       sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales
+      target_column: sales_store
       date_column: date
-      entity_column: entity_id
+      entity_column: store_nbr
       id_columns:
-        - store_id
-        - product_id
-        - entity_id
+        - store_nbr
       excluded_columns:
-        - store_id
-        - product_id
-        - entity_id
+        - store_nbr
         - date
+        - sales_store_l1d
       gcs_model_path: gs://favorita-vertex-models/
       optimize_config_name: favorita_xgboost_optimize
       use_optimized_params: true
@@ -90,17 +92,14 @@ configs:
       sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales
+      target_column: sales_store
       date_column: date
       id_columns:
-        - store_id
-        - product_id
-        - entity_id
+        - store_nbr
       excluded_columns:
-        - store_id
-        - product_id
-        - entity_id
+        - store_nbr
         - date
+        - sales_store_l1d
       gcs_model_path: gs://favorita-vertex-models/
       artifact_config_name: favorita_xgboost_train
       model_run_id: null
@@ -120,13 +119,12 @@ configs:
       sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales
+      target_column: sales_store
       date_column: date
       excluded_columns:
-        - store_id
-        - product_id
-        - entity_id
+        - store_nbr
         - date
+        - sales_store_l1d
       test_size: 0.2
       trial_count: 20
       objective_metric: mae
@@ -147,18 +145,15 @@ configs:
       sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales
+      target_column: sales_store
       date_column: date
-      entity_column: entity_id
+      entity_column: store_nbr
       id_columns:
-        - store_id
-        - product_id
-        - entity_id
+        - store_nbr
       excluded_columns:
-        - store_id
-        - product_id
-        - entity_id
+        - store_nbr
         - date
+        - sales_store_l1d
       gcs_model_path: gs://favorita-vertex-models/
       optimize_config_name: favorita_rf_optimize
       use_optimized_params: true
@@ -179,17 +174,14 @@ configs:
       sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales
+      target_column: sales_store
       date_column: date
       id_columns:
-        - store_id
-        - product_id
-        - entity_id
+        - store_nbr
       excluded_columns:
-        - store_id
-        - product_id
-        - entity_id
+        - store_nbr
         - date
+        - sales_store_l1d
       gcs_model_path: gs://favorita-vertex-models/
       artifact_config_name: favorita_rf_train
       forecast_horizon: 7
@@ -205,13 +197,12 @@ configs:
       sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales
+      target_column: sales_store
       date_column: date
       excluded_columns:
-        - store_id
-        - product_id
-        - entity_id
+        - store_nbr
         - date
+        - sales_store_l1d
       test_size: 0.2
       trial_count: 15
       objective_metric: mae
@@ -231,9 +222,9 @@ configs:
       sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales
+      target_column: sales_store
       date_column: date
-      entity_column: entity_id
+      entity_column: store_nbr
       training_mode: per_entity
       gcs_model_path: gs://favorita-vertex-models/
       test_size: 0.2
@@ -256,13 +247,15 @@ configs:
       sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales
+      target_column: sales_store
       date_column: date
-      entity_column: entity_id
+      entity_column: store_nbr
       id_columns:
-        - store_id
-        - product_id
-        - entity_id
+        - store_nbr
+      excluded_columns:
+        - store_nbr
+        - date
+        - sales_store_l1d
       gcs_model_path: gs://favorita-vertex-models/
       artifact_config_name: favorita_arima_train
       predict_scope: holdout
@@ -280,9 +273,9 @@ configs:
       sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales
+      target_column: sales_store
       date_column: date
-      entity_column: entity_id
+      entity_column: store_nbr
       test_size: 0.2
       trial_count: 10
       min_train_obs: 60
@@ -303,9 +296,9 @@ configs:
       sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales
+      target_column: sales_store
       date_column: date
-      entity_column: entity_id
+      entity_column: store_nbr
       training_mode: per_entity
       gcs_model_path: gs://favorita-vertex-models/
       test_size: 0.2
@@ -328,13 +321,15 @@ configs:
       sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales
+      target_column: sales_store
       date_column: date
-      entity_column: entity_id
+      entity_column: store_nbr
       id_columns:
-        - store_id
-        - product_id
-        - entity_id
+        - store_nbr
+      excluded_columns:
+        - store_nbr
+        - date
+        - sales_store_l1d
       gcs_model_path: gs://favorita-vertex-models/
       artifact_config_name: favorita_sarima_train
       predict_scope: holdout
@@ -351,9 +346,9 @@ configs:
       sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales
+      target_column: sales_store
       date_column: date
-      entity_column: entity_id
+      entity_column: store_nbr
       test_size: 0.2
       trial_count: 8
       min_train_obs: 90
@@ -372,13 +367,12 @@ configs:
       sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales
+      target_column: sales_store
       date_column: date
       excluded_columns:
-        - store_id
-        - product_id
-        - entity_id
+        - store_nbr
         - date
+        - sales_store_l1d
       gcs_model_path: gs://favorita-vertex-models/
       forecast_horizon: 7
       test_size: 0.2

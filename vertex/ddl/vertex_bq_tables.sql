@@ -22,20 +22,19 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_vertex_job_runs` (
   pipeline_run_id STRING,
   optimize_run_id STRING,
   project_id STRING,
-  region STRING
+  region STRING,
+  mlflow_run_id STRING,
+  vertex_experiment_run STRING
 )
 PARTITION BY DATE(started_at)
 CLUSTER BY config_name, job_step, status;
 
--- Existing deployments: add columns (run once per environment)
--- ALTER TABLE `tds-favorita.favorita.favorita_vertex_job_runs`
---   ADD COLUMN IF NOT EXISTS duration_sec FLOAT64,
---   ADD COLUMN IF NOT EXISTS row_count INT64,
---   ADD COLUMN IF NOT EXISTS artifact_uri STRING,
---   ADD COLUMN IF NOT EXISTS git_sha STRING,
---   ADD COLUMN IF NOT EXISTS image_uri STRING,
---   ADD COLUMN IF NOT EXISTS pipeline_run_id STRING,
---   ADD COLUMN IF NOT EXISTS optimize_run_id STRING;
+-- Idempotent migrations for tables created before mlflow / experiment columns existed
+ALTER TABLE `tds-favorita.favorita.favorita_vertex_job_runs`
+  ADD COLUMN IF NOT EXISTS mlflow_run_id STRING;
+
+ALTER TABLE `tds-favorita.favorita.favorita_vertex_job_runs`
+  ADD COLUMN IF NOT EXISTS vertex_experiment_run STRING;
 
 -- Training metadata (one row per training run)
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_metadata` (

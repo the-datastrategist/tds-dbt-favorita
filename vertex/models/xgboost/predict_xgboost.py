@@ -81,7 +81,7 @@ def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
     date_column = inputs.get("date_column", "date")
     excluded_columns = list(inputs.get("excluded_columns", []))
     categorical_columns = list(inputs.get("categorical_columns", []))
-    id_columns = list(inputs.get("id_columns", ["entity_id", "store_id", "product_id"]))
+    id_columns = list(inputs.get("id_columns", ["store_nbr"]))
     gcs_model_path = inputs.get("gcs_model_path")
     if not gcs_model_path:
         raise ValueError("inputs.gcs_model_path is required")

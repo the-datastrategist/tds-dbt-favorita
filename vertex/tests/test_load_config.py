@@ -4,6 +4,7 @@ import pytest
 
 from vertex.config.load_config import (
     get_job_spec,
+    list_run_config_names,
     load_model_config,
     validate_config_for_step,
 )
@@ -43,3 +44,8 @@ class TestLoadConfig:
     def test_missing_config_raises(self):
         with pytest.raises(ValueError, match="not found"):
             load_model_config("does_not_exist")
+
+    def test_list_run_config_names_train(self):
+        names = list_run_config_names(step="train")
+        assert "favorita_xgboost_train" in names
+        assert "favorita_rf_train" not in names

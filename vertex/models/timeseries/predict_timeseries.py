@@ -42,11 +42,11 @@ def run_predict_timeseries(config: dict[str, Any]) -> dict[str, Any]:
 
     target_column = inputs.get("target_column") or "sales"
     date_column = inputs.get("date_column", "date")
-    entity_column = inputs.get("entity_column", "entity_id")
+    entity_column = inputs.get("entity_column", "store_nbr")
     test_size = float(inputs.get("test_size", 0.2))
     predict_scope = inputs.get("predict_scope", "holdout")
     forecast_horizon = int(inputs.get("forecast_horizon", 7))
-    id_columns = list(inputs.get("id_columns", ["entity_id", "store_id", "product_id"]))
+    id_columns = list(inputs.get("id_columns", ["store_nbr"]))
 
     gcs_model_path = inputs.get("gcs_model_path")
     artifact_config_name = inputs.get("artifact_config_name")

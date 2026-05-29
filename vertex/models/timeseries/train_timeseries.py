@@ -46,7 +46,7 @@ def run_train_timeseries(config: dict[str, Any]) -> dict[str, Any]:
 
     target_column = inputs["target_column"]
     date_column = inputs.get("date_column", "date")
-    entity_column = inputs.get("entity_column", "entity_id")
+    entity_column = inputs.get("entity_column", "store_nbr")
     test_size = float(inputs.get("test_size", 0.2))
     min_train_obs = int(inputs.get("min_train_obs", 30))
     max_entities = inputs.get("max_entities")

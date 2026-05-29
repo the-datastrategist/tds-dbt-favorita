@@ -87,6 +87,36 @@ def _merge_config_defaults(
     return merged
 
 
+def config_include_in_run(config: dict[str, Any]) -> bool:
+    """True when a config block explicitly sets include_in_run: true."""
+    return config.get("include_in_run") is True
+
+
+def list_run_config_names(
+    config_path: str | Path | None = None,
+    *,
+    step: str | None = "train",
+    include_legacy_aliases: bool = False,
+) -> list[str]:
+    """
+    Return sorted config names with include_in_run: true.
+
+    When step is set, only configs whose job.step matches are included.
+    Legacy aliases such as train_xgboost are excluded unless requested.
+    """
+    names: list[str] = []
+    for config in load_all_configs(config_path):
+        if step is not None and get_job_spec(config)["step"] != step:
+            continue
+        if not config_include_in_run(config):
+            continue
+        name = config.get("name", "")
+        if not include_legacy_aliases and name.startswith("train_"):
+            continue
+        names.append(name)
+    return sorted(names)
+
+
 def load_model_config(
     config_name: str,
     config_path: str | Path | None = None,

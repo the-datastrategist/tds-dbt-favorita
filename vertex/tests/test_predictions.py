@@ -43,3 +43,29 @@ class TestPredictionRows:
         assert rows["model_run_id"].tolist() == ["mrid", "mrid"]
         assert rows["prediction"].tolist() == [9.5, 19.0]
         assert rows["entity_id"].tolist() == ["e1", "e2"]
+
+    def test_store_nbr_maps_to_bq_entity_columns(self):
+        df = pd.DataFrame(
+            {
+                "store_nbr": [10, 20],
+                "date": pd.to_datetime(["2024-01-01", "2024-01-02"]),
+                "sales_store": [100.0, 200.0],
+            }
+        )
+        predictions = pd.Series([95.0, 195.0], index=df.index)
+        run_at = datetime(2024, 6, 1, 12, 0, 0)
+        rows = build_standard_prediction_rows(
+            df,
+            predictions,
+            predict_run_id="pred-run",
+            model_id="mid",
+            model_run_id="mrid",
+            config_name="favorita_xgboost_predict",
+            model_family="favorita_store_daily",
+            model_type="xgboost_sklearn",
+            target_column="sales_store",
+            run_at=run_at,
+            id_columns=["store_nbr"],
+        )
+        assert rows["store_id"].tolist() == [10, 20]
+        assert rows["entity_id"].tolist() == ["10", "20"]
