@@ -20,7 +20,7 @@ endif
 	vertex-train-docker vertex-predict-docker vertex-optimize-docker \
 	vertex-submit-train vertex-submit-predict vertex-submit-optimize \
 	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
-	dbt-vertex vertex-bq-ddl vertex-validate-config \
+	dbt-vertex vertex-bq-ddl vertex-validate-config vertex-validate-configs \
 	model-train model-predict model-optimize docker-build docker-bash
 
 help: ## Show this help message
@@ -130,8 +130,8 @@ dbt-docs-serve:
 
 # --- DATA INGESTION ---
 
-load-favorita-gcs: ## Download Kaggle Favorita data and upload to GCS (Docker)
-	docker compose run --rm ml-pipeline python $(ARGS)
+load-favorita-gcs: ## Download Kaggle Favorita data and upload to GCS (Docker; pass script via ARGS)
+	$(DOCKER_RUN) python $(ARGS)
 
 load-favorita-bigquery: ## Load Favorita 7z CSVs from GCS into BigQuery raw_favorita (Docker)
 	docker compose run --rm ml-pipeline python scripts/load_favorita_to_bigquery.py $(ARGS)
