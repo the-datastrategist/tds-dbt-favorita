@@ -12,14 +12,14 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 - **Testing**: pytest for Vertex utilities; dbt data tests on staging and intermediate models
 - **CI/CD**: GitHub Actions on every push and PR (Python lint/tests, `dbt parse` / `dbt compile` / `dbt docs generate`)
 - **Hosted dbt Docs**: GitHub Pages deploy on push to `main` / `master` (see [Hosted documentation](#hosted-documentation))
-- **dbt Docs & lineage**: Project overview (`dbt/docs/overview.md`), exposures for ML and operational consumers (`dbt/models/exposures.yml`)
+- **dbt Docs & lineage**: Project overview (`docs/overview.md`), exposures for ML and operational consumers (`models/exposures.yml`)
 - **Code Quality**: Black, flake8, and mypy for code quality
 
 ## Project Structure
 
 ```
 .
-├── dbt/                    # dbt models and configurations
+├── dbt/                    # dbt models and configurations (this directory)
 │   ├── docs/              # Project overview for dbt Docs (overview.md)
 │   ├── models/
 │   │   ├── staging/       # Staging models
@@ -169,12 +169,12 @@ make dbt-docs-serve     # http://localhost:8080
 
 ### dbt documentation and lineage
 
-Narrative docs and exposures are configured in the dbt project (`docs-paths` in `dbt/dbt_project.yml`):
+Narrative docs and exposures live in this project (`docs-paths` in [`dbt_project.yml`](dbt_project.yml)):
 
 | File | Purpose |
 |------|---------|
-| [`dbt/docs/overview.md`](dbt/docs/overview.md) | **Overview** tab in dbt Docs: architecture, grains, run order, data-quality notes |
-| [`dbt/models/exposures.yml`](dbt/models/exposures.yml) | Lineage **exposures** linking models to BQML forecasts, Vertex training, calendar/holiday context, and store master data |
+| [`docs/overview.md`](docs/overview.md) | **Overview** tab in dbt Docs: architecture, grains, run order, data-quality notes |
+| [`models/exposures.yml`](models/exposures.yml) | Lineage **exposures** linking models to BQML forecasts, Vertex training, calendar/holiday context, and store master data |
 
 Defined exposures include `favorita_company_forecast`, `favorita_store_product_features`, `favorita_vertex_training`, `favorita_operational_calendar`, and `favorita_store_master`. In the docs site, open the lineage graph and select an exposure to highlight upstream models.
 
@@ -187,13 +187,13 @@ make dbt-docs-serve     # http://localhost:8080 — open Overview, then explore 
 
 ### Hosted documentation
 
-After you enable **Settings → Pages → Build and deployment → GitHub Actions**, pushes to `main` / `master` run [`.github/workflows/docs.yml`](.github/workflows/docs.yml) and publish static dbt Docs.
+After you enable **Settings → Pages → Build and deployment → GitHub Actions**, pushes to `main` / `master` run [`.github/workflows/docs.yml`](../.github/workflows/docs.yml) and publish static dbt Docs.
 
 **Public URL (replace org/repo with yours):**
 
 `https://<github-org-or-user>.github.io/<repository-name>/`
 
-The site includes the [project overview](dbt/docs/overview.md), model catalog, and [exposures](dbt/models/exposures.yml) on the lineage graph. No BigQuery credentials are required to browse it.
+The site includes the [project overview](docs/overview.md), model catalog, and [exposures](models/exposures.yml) on the lineage graph. No BigQuery credentials are required to browse it.
 
 ### Vertex AI model commands
 
@@ -244,11 +244,14 @@ make test-integration
 
 # dbt data tests (requires BigQuery credentials and built models)
 make dbt-test
+
+# Staging + features + singular reconciliation tests (excludes BQML)
+make selector-daily-refresh-test
 ```
 
 ### Continuous integration
 
-Pull requests and pushes to `main` / `master` run [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+Pull requests and pushes to `main` / `master` run [`.github/workflows/ci.yml`](../.github/workflows/ci.yml):
 
 | Job | What it checks |
 |-----|----------------|
@@ -332,9 +335,9 @@ Key environment variables (see `env.example` for full list):
 
 ### Adding New Models
 
-1. **BigQuery ML**: Create new SQL model in `dbt/models/marts/ml_models/`
-2. **Vertex AI**: Create new training script in `vertex/models/` and config in `vertex/config/`
-3. **Lineage**: Add or update an exposure in `dbt/models/exposures.yml` when a new dashboard, app, or ML job consumes dbt models; refresh docs with `make dbt-docs-generate`
+1. **BigQuery ML**: Create new SQL model in `models/marts/ml_models/`
+2. **Vertex AI**: Create new training script in `../vertex/models/` and config in `../vertex/config/`
+3. **Lineage**: Add or update an exposure in `models/exposures.yml` when a new dashboard, app, or ML job consumes dbt models; refresh docs with `make dbt-docs-generate`
 
 ### Testing
 
@@ -364,7 +367,7 @@ To run end-to-end predictions from a local Dockerized environment, you'll need:
    - Or BigQuery ML for batch predictions
 9. ✅ **CI/CD** - GitHub Actions for lint, pytest, and dbt parse/compile/docs (see [Continuous integration](#continuous-integration))
 10. ✅ **dbt Docs content** - Project overview and exposures (see [dbt documentation and lineage](#dbt-documentation-and-lineage))
-11. ✅ **Hosted dbt Docs** - GitHub Pages via [docs.yml](.github/workflows/docs.yml) (enable Pages → GitHub Actions in repo settings)
+11. ✅ **Hosted dbt Docs** - GitHub Pages via [docs.yml](../.github/workflows/docs.yml) (enable Pages → GitHub Actions in repo settings)
 12. ⚠️ **Warehouse CI** - Optional: add a protected workflow with GCP secrets for `dbt build` / `dbt test` on a dev dataset
 13. ⚠️ **Automated retraining** - Scheduled jobs for model refresh (Composer, Cloud Run, or dbt Cloud)
 

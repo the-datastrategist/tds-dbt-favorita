@@ -1,0 +1,51 @@
+# Named selection criteria for dbt run / build / test.
+# Usage: dbt run --selector daily_refresh  |  make selector-daily-refresh
+
+selectors:
+  - name: daily_refresh
+    description: >
+      Staging models and intermediate ML feature tables (int_train_input_*).
+      Excludes BigQuery ML marts (tag bqml). Equivalent to make dbt-run.
+    definition:
+      union:
+        - method: tag
+          value: staging
+        - method: tag
+          value: features
+
+  - name: ml_features
+    description: Intermediate training feature tables only (int_train_input_*).
+    definition:
+      method: tag
+      value: features
+
+  - name: bqml_train
+    description: BigQuery ML training models (bqml + train tags).
+    definition:
+      intersection:
+        - method: tag
+          value: bqml
+        - method: tag
+          value: train
+
+  - name: bqml_score
+    description: BQML predict, evaluate, and explain (bqml + predict tags).
+    definition:
+      intersection:
+        - method: tag
+          value: bqml
+        - method: tag
+          value: predict
+
+  - name: daily_refresh_tests
+    description: >
+      Data tests for raw sources, staging, features, and tagged singular tests.
+      Excludes BQML marts. Equivalent to make selector-daily-refresh-test.
+    definition:
+      union:
+        - method: selector
+          value: daily_refresh
+        - method: source
+          value: favorita_raw
+        - method: tag
+          value: data_quality

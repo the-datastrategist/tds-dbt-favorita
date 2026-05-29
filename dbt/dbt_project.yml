@@ -1,0 +1,157 @@
+# Favorita grocery sales forecasting — dbt + BigQuery ML feature pipeline.
+# Raw data lives in BigQuery (raw_favorita); transformed models land in DBT_DATASET.
+# Makefile targets: selector-daily-refresh, dbt-run (excludes tag:bqml), dbt-train, dbt-predict.
+# Selectors: dbt/selectors.yml (daily_refresh, ml_features, bqml_train, bqml_score).
+
+name: tds_favorita
+version: 1.1.0
+config-version: 2
+
+profile: tds_favorita
+
+require-dbt-version: [">=1.7.0", "<2.0.0"]
+
+model-paths: ["models"]
+docs-paths: ["docs"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: target
+clean-targets:
+  - target
+  - dbt_packages
+
+models:
+  tds_favorita:
+    +materialized: view
+
+    # Light transforms from raw_favorita sources; date-partitioned models set partition in-model.
+    staging:
+      +materialized: incremental
+      +incremental_strategy: insert_overwrite
+      +tags: [staging]
+
+    # ML feature tables for Vertex AI exports and BQML training (int_train_input_*).
+    intermediate:
+      +materialized: table
+      +partition_by:
+        field: date
+        data_type: date
+      +tags: [train, features]
+
+    marts:
+      +materialized: table
+      ml_models:
+        +materialized: view
+        +tags: [bqml]
+
+vars:
+  project_id: "{{ env_var('GOOGLE_PROJECT_ID') }}"
+  dataset: "{{ env_var('DBT_DATASET', 'favorita') }}"
+  bq_raw_dataset: "{{ env_var('BQ_RAW_DATASET', 'raw_favorita') }}"
+  bqml_explain_top_k_features: 20
+
+  # Reusable column groups for get_bqml_feature_columns / get_bqml_prediction_features.
+  feature_sets:
+    datetime:
+      - day_of_month
+      - day_of_week
+      - iso_week_of_year
+      - month
+      - quarter
+      - year
+      - week_of_month
+      - iso_year
+      - iso_week
+      - day_name
+      - month_name
+
+  # BigQuery ML model definitions consumed by models/marts/ml_models/bqml_model_*.sql
+  model_configs:
+    - model_name: bqml_sales_forecast
+      version: v1.0
+      lifecycle: prod
+      metric: sales_company
+      interval: day
+      train_ref: int_train_input_daily
+      predict_ref: int_train_input_daily
+      include_in_run: true
+      include_in_forecast: true
+      model_type: BOOSTED_TREE_REGRESSOR
+      input_label_cols:
+        - sales_company
+      max_iterations: 50
+      learn_rate: 0.1
+      max_tree_depth: 6
+      l1_reg: 0.1
+      l2_reg: 0.1
+      early_stop: true
+      feature_set_groups:
+        - datetime
+      feature_columns:
+        - sales_company_l3d
+        - sales_company_l7d
+        - sales_company_l14d
+        - sales_company_l28d
+        - sales_company_l30d
+        - sales_company_l60d
+        - sales_company_l90d
+        - avg_sales_company_l3d
+        - avg_sales_company_l7d
+        - avg_sales_company_l14d
+        - avg_sales_company_l28d
+        - avg_sales_company_l30d
+        - avg_sales_company_l60d
+        - avg_sales_company_l90d
+        - avg_sales_company_l180d
+        - avg_sales_company_l270d
+        - avg_sales_company_l360d
+        - stddev_sales_company_l3d
+        - stddev_sales_company_l7d
+        - stddev_sales_company_l14d
+        - stddev_sales_company_l28d
+        - stddev_sales_company_l30d
+        - stddev_sales_company_l60d
+        - stddev_sales_company_l90d
+        - stddev_sales_company_l180d
+        - stddev_sales_company_l270d
+        - stddev_sales_company_l360d
+        - sales_company_p1d
+        - sales_company_p3d
+        - sales_company_p7d
+        - sales_company_p14d
+        - sales_company_p28d
+        - sales_company_p30d
+        - sales_company_p60d
+        - sales_company_p90d
+        - avg_sales_company_l1d_l3d_pct_diff
+        - avg_sales_company_l1d_l7d_pct_diff
+        - avg_sales_company_l1d_l14d_pct_diff
+        - avg_sales_company_l1d_l28d_pct_diff
+        - avg_sales_company_l3d_l7d_pct_diff
+        - avg_sales_company_l3d_l14d_pct_diff
+        - avg_sales_company_l3d_l28d_pct_diff
+        - avg_sales_company_l7d_l14d_pct_diff
+        - avg_sales_company_l7d_l28d_pct_diff
+        - avg_sales_company_l7d_l30d_pct_diff
+        - avg_sales_company_l7d_l60d_pct_diff
+        - avg_sales_company_l7d_l90d_pct_diff
+        - avg_sales_company_l7d_l180d_pct_diff
+        - avg_sales_company_l7d_l360d_pct_diff
+        - sales_company_l1d_p1d_pct_diff
+        - sales_company_l3d_p3d_pct_diff
+        - sales_company_l7d_p7d_pct_diff
+        - sales_company_l14d_p14d_pct_diff
+        - sales_company_l28d_p28d_pct_diff
+        - sales_company_l30d_p30d_pct_diff
+        - sales_company_l60d_p60d_pct_diff
+        - sales_company_l90d_p90d_pct_diff
+
+on-run-start:
+  - "{{ log('Starting dbt run for tds_favorita', info=True) }}"
+
+on-run-end:
+  - "{{ log('dbt run completed for tds_favorita', info=True) }}"

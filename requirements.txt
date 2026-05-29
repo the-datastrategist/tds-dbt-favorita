@@ -1,0 +1,40 @@
+# Setup
+setuptools
+wheel
+
+# Data
+pandas
+numpy
+requests
+pyyaml
+
+# Data management
+dbt-core
+dbt-bigquery
+
+# Google Cloud
+google-cloud
+google-cloud-bigquery
+google-cloud-storage
+google-cloud-aiplatform
+py7zr
+
+# Kaggle data
+kagglehub==1.0.0
+
+# Data visualization
+# matplotlib
+# seaborn
+# plotly
+
+# Math
+# scipy
+scikit-learn
+xgboost
+# optuna
+
+# Services
+kfp
+# openai
+# jupyterlab
+# slack_sdk

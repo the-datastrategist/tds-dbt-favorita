@@ -1,0 +1,87 @@
+version: 2
+
+exposures:
+  - name: favorita_company_forecast
+    label: Company daily sales forecast (BQML)
+    type: ml
+    maturity: high
+    description: >
+      End-to-end company-day forecasting: feature table, BQML model training,
+      batch predictions, evaluation metrics, and global feature attribution.
+    depends_on:
+      - ref('int_train_input_daily')
+      - ref('bqml_model_train')
+      - ref('bqml_model_predict')
+      - ref('bqml_model_evaluate')
+      - ref('bqml_model_explain')
+    owner:
+      name: The Data Strategist
+      email: gordon@thedatastrategist.com
+    url: https://www.thedatastrategist.com
+
+  - name: favorita_store_product_features
+    label: Store–product daily ML features
+    type: ml
+    maturity: high
+    description: >
+      Finest-grain training features (store, product, day) for demand models
+      and competition-style forecasting at item level.
+    depends_on:
+      - ref('stg_favorita_train')
+      - ref('stg_favorita_test')
+      - ref('int_train_input_store_product_daily')
+    owner:
+      name: The Data Strategist
+      email: gordon@thedatastrategist.com
+    url: https://www.thedatastrategist.com
+
+  - name: favorita_vertex_training
+    label: Vertex AI training features
+    type: ml
+    maturity: medium
+    description: >
+      BigQuery feature tables consumed by Vertex AI training scripts under
+      vertex/ (e.g. XGBoost). Default entry point is company-day features.
+    depends_on:
+      - ref('int_train_input_daily')
+      - ref('int_train_input_store_daily')
+    owner:
+      name: The Data Strategist
+      email: gordon@thedatastrategist.com
+    url: https://www.thedatastrategist.com
+    config:
+      meta:
+        tool: Vertex AI
+        repo_path: vertex/models/
+
+  - name: favorita_operational_calendar
+    label: Operational calendar and holidays
+    type: dashboard
+    maturity: high
+    description: >
+      Calendar spine and holiday events (national and store-expanded) for
+      planning, reporting, and feature engineering context.
+    depends_on:
+      - ref('stg_favorita_date_spine')
+      - ref('stg_favorita_holiday_events')
+      - ref('stg_favorita_store_holiday_events')
+      - ref('stg_favorita_oil')
+    owner:
+      name: The Data Strategist
+      email: gordon@thedatastrategist.com
+    url: https://www.thedatastrategist.com
+
+  - name: favorita_store_master
+    label: Store master and transactions
+    type: application
+    maturity: high
+    description: >
+      Store attributes and daily transaction counts by store for operational
+      analytics and downstream joins to sales features.
+    depends_on:
+      - ref('stg_favorita_stores')
+      - ref('stg_favorita_transactions')
+    owner:
+      name: The Data Strategist
+      email: gordon@thedatastrategist.com
+    url: https://www.thedatastrategist.com
