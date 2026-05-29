@@ -1,4 +1,4 @@
--- Daily company sales in int_train_input_daily must match staged train aggregates.
+-- Daily company sales in int_sales_daily must match staged train aggregates.
 {{ config(tags=['data_quality', 'features']) }}
 
 with staged as (
@@ -13,7 +13,7 @@ intermediate as (
     select
         date,
         sales_company_l1d as sales_company_int
-    from {{ ref('int_train_input_daily') }}
+    from {{ ref('int_sales_daily') }}
 )
 
 select

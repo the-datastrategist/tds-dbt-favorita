@@ -12,7 +12,7 @@ company_sales_daily_agg as (
   select 
     date,
     sum(sales) as sales_company
-  from {{ ref('stg_favorita_train') }}
+  from {{ ref('stg_favorita_sales_fct') }}
   group by 1
 ),
 

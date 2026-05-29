@@ -41,7 +41,7 @@ models:
       stg_vertex_job_runs:
         +tags: [staging, vertex]
 
-    # ML feature tables for Vertex AI exports and BQML training (int_train_input_*).
+    # ML feature tables for Vertex AI exports and BQML training (int_sales_*).
     intermediate:
       +materialized: table
       +partition_by:
@@ -83,8 +83,8 @@ vars:
       lifecycle: prod
       metric: sales_company
       interval: day
-      train_ref: int_train_input_daily
-      predict_ref: int_train_input_daily
+      train_ref: int_sales_daily
+      predict_ref: int_sales_daily
       include_in_run: true
       include_in_forecast: true
       model_type: BOOSTED_TREE_REGRESSOR

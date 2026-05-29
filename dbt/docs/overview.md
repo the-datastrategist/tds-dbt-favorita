@@ -13,21 +13,21 @@ How much will stores sell by day, store, and product (and at coarser grains), in
 | Layer | Dataset / location | Role |
 |-------|-------------------|------|
 | **Raw** | `raw_favorita` | Competition CSVs loaded from GCS (train, test, stores, holidays, oil, transactions) |
-| **Staging** | `DBT_DATASET` | Cleaned, typed, incremental models; date spine and holiday logic |
-| **Intermediate** | `DBT_DATASET` | `int_train_input_*` feature tables at company, store, store-product, and store–product-family grains |
+| **Staging** | `DBT_DATASET` | Cleaned, typed, incremental models; date spine, holiday logic, and `stg_favorita_sales_fct` (train ∪ test at store-product-day) |
+| **Intermediate** | `DBT_DATASET` | `int_sales_*` feature tables at company, store, store-product, and store–product-family grains |
 | **Marts** | `DBT_DATASET` | BQML train / predict / evaluate / explain (tagged `bqml`) |
 
 ```text
-raw_favorita  →  staging  →  int_train_input_*  →  bqml_model_*
+raw_favorita  →  staging  →  int_sales_*  →  bqml_model_*
                       ↘  Vertex AI (vertex/) reads feature tables in BigQuery
 ```
 
 ## Model grains
 
-- **Company-day** — `int_train_input_daily` (default BQML training input)
-- **Store-day** — `int_train_input_store_daily`
-- **Store-product-day** — `int_train_input_store_product_daily`
-- **Store–product-family-day** — `int_train_input_store_product_family_daily`
+- **Company-day** — `int_sales_daily` (default BQML training input)
+- **Store-day** — `int_sales_store_daily`
+- **Store-product-day** — `int_sales_store_product_daily`
+- **Store–product-family-day** — `int_sales_store_product_family_daily`
 
 ## How to run
 

@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: int_train_input_daily
+  - name: int_sales_daily
     description: >
       Company-level daily training features and labels for forecasting models.
     data_tests:
@@ -32,7 +32,7 @@ models:
               arguments:
                 min_value: 0
 
-  - name: int_train_input_store_daily
+  - name: int_sales_store_daily
     description: >
       Store-level daily training features and labels for forecasting models.
     data_tests:
@@ -71,7 +71,7 @@ models:
               arguments:
                 min_value: 0
 
-  - name: int_train_input_store_product_daily
+  - name: int_sales_store_product_daily
     description: >
       Store-product daily training features and labels for forecasting models.
     data_tests:
@@ -118,7 +118,7 @@ models:
               arguments:
                 min_value: 0
 
-  - name: int_train_input_store_product_family_daily
+  - name: int_sales_store_product_family_daily
     description: >
       Store-product-family daily training features and labels for forecasting models.
     data_tests:

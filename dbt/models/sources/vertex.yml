@@ -4,8 +4,8 @@ version: 2
 sources:
   - name: vertex_ml
     description: Vertex AI custom training outputs in the analytics dataset
-    database: "{{ var('project_id') }}"
-    schema: "{{ var('dataset') }}"
+    database: "{{ env_var('GOOGLE_PROJECT_ID') }}"
+    schema: "{{ env_var('DBT_DATASET', 'favorita') }}"
     tables:
       - name: favorita_model_predictions
         description: Unified prediction rows across model_type (xgboost, random_forest, arima, sarima)
