@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: dev
     image: tds-favorita:latest
     container_name: tds-favorita
     volumes:

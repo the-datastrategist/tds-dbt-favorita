@@ -15,6 +15,34 @@ import numpy as np
 import pandas as pd
 from google.cloud import bigquery
 
+_BQ_ID_SEGMENT = re.compile(r"^[a-zA-Z0-9_-]+$")
+_MAX_BQ_SEGMENT_LEN = 1024
+
+
+def validate_bq_identifier(name: str, *, label: str = "identifier") -> str:
+    """Allowlist a single BigQuery project, dataset, or table segment."""
+    if not name or not isinstance(name, str):
+        raise ValueError(f"Invalid BigQuery {label}: {name!r}")
+    cleaned = name.strip()
+    if not cleaned or len(cleaned) > _MAX_BQ_SEGMENT_LEN:
+        raise ValueError(f"Invalid BigQuery {label}: {name!r}")
+    if not _BQ_ID_SEGMENT.match(cleaned):
+        raise ValueError(f"Invalid BigQuery {label}: {name!r}")
+    return cleaned
+
+
+def validate_bq_table_id(table_id: str) -> str:
+    """Allowlist ``dataset.table`` or ``project.dataset.table`` references."""
+    if not table_id or not isinstance(table_id, str):
+        raise ValueError(f"Invalid BigQuery table_id: {table_id!r}")
+    cleaned = table_id.strip().strip("`")
+    parts = cleaned.split(".")
+    if len(parts) not in (2, 3):
+        raise ValueError(f"Invalid BigQuery table_id: {table_id!r}")
+    labels = ("project", "dataset", "table") if len(parts) == 3 else ("dataset", "table")
+    validated = [validate_bq_identifier(part, label=label) for part, label in zip(parts, labels)]
+    return ".".join(validated)
+
 
 def run_query(
     query: str,
@@ -123,6 +151,8 @@ def load_to_bigquery(
     if not project_id:
         raise EnvironmentError("GOOGLE_PROJECT_ID must be set")
 
+    table_id = validate_bq_table_id(table_id)
+
     if isinstance(data, list):
         records = data
     else:
@@ -146,6 +176,7 @@ def load_to_bigquery(
 
 @lru_cache(maxsize=32)
 def _table_field_types(table_id: str, project_id: str) -> dict[str, str]:
+    table_id = validate_bq_table_id(table_id)
     client = bigquery.Client(project=project_id)
     table = client.get_table(table_id)
     return {field.name: field.field_type for field in table.schema}
@@ -189,6 +220,9 @@ def merge_row_to_bigquery(
     if not project_id:
         raise EnvironmentError("GOOGLE_PROJECT_ID must be set")
 
+    table_id = validate_bq_table_id(table_id)
+    merge_key = validate_bq_identifier(merge_key, label="merge_key")
+
     key_value = row.get(merge_key)
     if not key_value:
         raise ValueError(f"Row must include merge key {merge_key!r}")
@@ -196,6 +230,8 @@ def merge_row_to_bigquery(
     field_types = _table_field_types(table_id, project_id)
     row = {col: value for col, value in row.items() if col in field_types}
 
+    for col in row:
+        validate_bq_identifier(col, label="column")
     columns = list(row.keys())
     param_names = [f"p_{col}" for col in columns]
     select_params = ", ".join(f"@{pname} AS {col}" for col, pname in zip(columns, param_names))

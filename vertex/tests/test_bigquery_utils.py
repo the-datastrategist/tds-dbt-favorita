@@ -9,6 +9,8 @@ from vertex.utils.bigquery_utils import (
     _coerce_value_for_bq_type,
     _json_safe,
     _prepare_row_for_insert,
+    validate_bq_identifier,
+    validate_bq_table_id,
     vertex_safe_run_id,
 )
 
@@ -56,3 +58,28 @@ class TestBigQueryUtils:
         assert json.loads(prepared["parameters"]) == {"n_estimators": 100}
         assert prepared["config_name"] == "favorita_xgboost_train"
         assert "unknown_col" not in prepared
+
+    def test_validate_bq_table_id_accepts_two_and_three_part_refs(self):
+        assert validate_bq_table_id("favorita.int_sales_daily") == "favorita.int_sales_daily"
+        assert (
+            validate_bq_table_id("my-project.favorita.int_sales_daily")
+            == "my-project.favorita.int_sales_daily"
+        )
+
+    @pytest.mark.parametrize(
+        "table_id",
+        [
+            "",
+            "only_one_part",
+            "a.b.c.d",
+            "dataset.table; DROP TABLE x",
+            "proj.data set.table",
+        ],
+    )
+    def test_validate_bq_table_id_rejects_unsafe_values(self, table_id: str):
+        with pytest.raises(ValueError, match="Invalid BigQuery"):
+            validate_bq_table_id(table_id)
+
+    def test_validate_bq_identifier_rejects_injection(self):
+        with pytest.raises(ValueError, match="Invalid BigQuery"):
+            validate_bq_identifier("col; DROP", label="column")

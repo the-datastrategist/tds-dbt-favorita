@@ -7,7 +7,7 @@ from typing import Any
 
 import pandas as pd
 
-from vertex.utils.bigquery_utils import run_query
+from vertex.utils.bigquery_utils import run_query, validate_bq_table_id
 
 
 def load_data_from_config(config: dict[str, Any]) -> pd.DataFrame:
@@ -22,6 +22,6 @@ def load_data_from_config(config: dict[str, Any]) -> pd.DataFrame:
             query = sql_file.read()
         return run_query(query, project_id=project_id)
     if "source_table" in inputs:
-        table = inputs["source_table"]
+        table = validate_bq_table_id(inputs["source_table"])
         return run_query(f"SELECT * FROM `{table}`", project_id=project_id)
     raise ValueError("Config must define inputs.sql_query, inputs.sql_file, or inputs.source_table")

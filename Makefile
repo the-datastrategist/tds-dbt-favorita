@@ -293,8 +293,8 @@ model-optimize: vertex-optimize-docker ## Alias: optimize in Docker
 PREFECT_SERVER_PORT ?= 4200
 PREFECT_API_URL_DOCKER ?= http://host.docker.internal:$(PREFECT_SERVER_PORT)/api
 
-prefect-server: ## Start Prefect OSS server (UI http://127.0.0.1:4200)
-	docker compose run --rm -p $(PREFECT_SERVER_PORT):4200 ml-pipeline prefect server start --host 0.0.0.0
+prefect-server: ## Start Prefect OSS server (UI http://127.0.0.1:4200; localhost only)
+	docker compose run --rm -p 127.0.0.1:$(PREFECT_SERVER_PORT):4200 ml-pipeline prefect server start --host 0.0.0.0
 
 prefect-work-pool-create: ## Create default process work pool (idempotent)
 	$(DOCKER_RUN) prefect work-pool create --type process default 2>/dev/null || true
