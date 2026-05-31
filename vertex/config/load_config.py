@@ -10,9 +10,13 @@ from typing import Any
 
 import yaml
 
+from vertex.utils.data_loading import has_step_data_source
+
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent / "model_config.yaml"
 
 _ENV_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+
+VALID_STEPS = frozenset({"train", "predict", "optimize"})
 
 
 def _resolve_env_strings(value: Any) -> Any:
@@ -88,6 +92,36 @@ def config_include_in_run(config: dict[str, Any]) -> bool:
     return config.get("include_in_run") is True
 
 
+def get_model_type(config: dict[str, Any]) -> str | None:
+    """Return model_type from config top level, job block, or inputs."""
+    job = config.get("job") or {}
+    inputs = config.get("inputs") or {}
+    return config.get("model_type") or job.get("model_type") or inputs.get("model_type")
+
+
+def apply_job_step(config: dict[str, Any], step: str) -> dict[str, Any]:
+    """
+    Return a copy of config with job.step (and job.model_type) set for dispatch.
+
+    Unified model configs define model_type once; the step is chosen at runtime
+    (CLI --step, Makefile VERTEX_STEP, or KFP pipeline container args).
+    """
+    if step not in VALID_STEPS:
+        raise ValueError(f"step must be one of {sorted(VALID_STEPS)}, got {step!r}")
+    out = copy.deepcopy(config)
+    model_type = get_model_type(out)
+    if not model_type:
+        raise ValueError(
+            f"{out.get('name')}: model_type required on config, job, or inputs"
+        )
+    out["job"] = {
+        **(out.get("job") or {}),
+        "step": step,
+        "model_type": model_type,
+    }
+    return out
+
+
 def list_run_config_names(
     config_path: str | Path | None = None,
     *,
@@ -97,13 +131,12 @@ def list_run_config_names(
     """
     Return sorted config names with include_in_run: true.
 
-    When step is set, only configs whose job.step matches are included.
-    Legacy aliases such as train_xgboost are excluded unless requested.
+    Unified configs are model-level (no job.step in YAML). When step is set,
+    every include_in_run config is eligible — the step is applied at job runtime.
     """
+    del step  # retained for API compatibility; step is runtime-only now
     names: list[str] = []
     for config in load_all_configs(config_path):
-        if step is not None and get_job_spec(config)["step"] != step:
-            continue
         if not config_include_in_run(config):
             continue
         name = config.get("name", "")
@@ -116,10 +149,14 @@ def list_run_config_names(
 def load_model_config(
     config_name: str,
     config_path: str | Path | None = None,
+    *,
+    step: str | None = None,
 ) -> dict[str, Any]:
-    """Load a named config block with defaults merged."""
+    """Load a named config block with defaults merged; optionally set job.step."""
     for config in load_all_configs(config_path):
         if config.get("name") == config_name:
+            if step:
+                return apply_job_step(config, step)
             return config
     raise ValueError(f"Config with name {config_name!r} not found")
 
@@ -128,10 +165,9 @@ def get_job_spec(config: dict[str, Any]) -> dict[str, Any]:
     """
     Return normalized job routing fields: step, model_type, model_family.
 
-    Supports legacy configs that only set inputs.model_type.
+    Step must be set on config.job.step (via apply_job_step or legacy YAML).
     """
     job = config.get("job") or {}
-    inputs = config.get("inputs") or {}
     step = job.get("step")
     if not step:
         name = config.get("name", "")
@@ -141,11 +177,11 @@ def get_job_spec(config: dict[str, Any]) -> dict[str, Any]:
             step = "predict"
         elif "_optimize" in name or name.startswith("optimize_"):
             step = "optimize"
-    model_type = job.get("model_type") or inputs.get("model_type")
+    model_type = get_model_type(config)
     if not step or not model_type:
         raise ValueError(
-            "Config must define job.step and job.model_type "
-            "(or legacy inputs.model_type with a recognizable config name)."
+            f"{config.get('name')}: job.step is required "
+            "(pass --step train|predict|optimize or use apply_job_step)"
         )
     return {
         "step": step,
@@ -155,39 +191,59 @@ def get_job_spec(config: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def validate_config_for_step(config: dict[str, Any]) -> None:
+def validate_config_for_step(
+    config: dict[str, Any],
+    *,
+    step: str | None = None,
+) -> None:
     """Raise ValueError when required keys for the job step are missing."""
+    if step:
+        config = apply_job_step(config, step)
     spec = get_job_spec(config)
     step = spec["step"]
     inputs = config.get("inputs") or {}
     outputs = config.get("outputs") or {}
+    config_name = spec["config_name"]
 
     if step in ("train", "optimize"):
-        if not (inputs.get("sql_query") or inputs.get("sql_file") or inputs.get("source_table")):
-            raise ValueError(f"{spec['config_name']}: inputs.sql_query (or file/table) required")
+        if not has_step_data_source(inputs, step):
+            raise ValueError(
+                f"{config_name}: train/optimize inputs need train_sql_query, "
+                "sql_file, or source_table"
+            )
         if not inputs.get("target_column"):
-            raise ValueError(f"{spec['config_name']}: inputs.target_column required")
+            raise ValueError(f"{config_name}: inputs.target_column required")
 
     if step == "train":
         if not inputs.get("gcs_model_path"):
-            raise ValueError(f"{spec['config_name']}: inputs.gcs_model_path required")
+            raise ValueError(f"{config_name}: inputs.gcs_model_path required")
         if not outputs.get("metadata_table"):
-            raise ValueError(f"{spec['config_name']}: outputs.metadata_table required")
+            raise ValueError(f"{config_name}: outputs.metadata_table required")
 
     if step == "predict":
-        if not (inputs.get("sql_query") or inputs.get("sql_file") or inputs.get("source_table")):
-            raise ValueError(f"{spec['config_name']}: predict inputs need sql_query/file/table")
-        if not outputs.get("prediction_table"):
-            raise ValueError(f"{spec['config_name']}: outputs.prediction_table required")
-        if not inputs.get("artifact_config_name") and not inputs.get("model_run_id"):
+        if not has_step_data_source(inputs, "predict"):
             raise ValueError(
-                f"{spec['config_name']}: set inputs.artifact_config_name or "
-                "inputs.model_run_id to resolve training artifacts"
+                f"{config_name}: predict inputs need predict_sql_query, "
+                "sql_file, or source_table"
             )
+        if not outputs.get("prediction_table"):
+            raise ValueError(f"{config_name}: outputs.prediction_table required")
+        if not inputs.get("artifact_config_name") and not inputs.get("model_run_id"):
+            # Unified configs default artifact lookup to the same config name.
+            pass
 
     if step == "optimize":
         if not outputs.get("optimize_table"):
-            raise ValueError(f"{spec['config_name']}: outputs.optimize_table required")
+            raise ValueError(f"{config_name}: outputs.optimize_table required")
         trial_count = inputs.get("trial_count")
         if trial_count is None or int(trial_count) < 1:
-            raise ValueError(f"{spec['config_name']}: inputs.trial_count must be >= 1")
+            raise ValueError(f"{config_name}: inputs.trial_count must be >= 1")
+
+
+def validate_config_all_steps(config: dict[str, Any]) -> None:
+    """Validate train, predict, and optimize requirements for a unified model config."""
+    validate_config_for_step(config, step="train")
+    validate_config_for_step(config, step="predict")
+    inputs = config.get("inputs") or {}
+    if inputs.get("trial_count") is not None:
+        validate_config_for_step(config, step="optimize")

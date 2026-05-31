@@ -13,13 +13,12 @@ from vertex.utils.optimize_params import (
 
 @pytest.mark.unit
 class TestOptimizeParams:
-    def test_infer_optimize_config_name(self):
-        assert infer_optimize_config_name("favorita_xgboost_train") == "favorita_xgboost_optimize"
-        assert infer_optimize_config_name("unknown_config") is None
+    def test_infer_optimize_config_name_unified(self):
+        assert infer_optimize_config_name("favorita_xgboost") == "favorita_xgboost"
 
     def test_resolve_model_parameters_config_only(self):
         config = {
-            "name": "custom_train",
+            "name": "custom_model",
             "inputs": {
                 "use_optimized_params": False,
                 "model_params": {"max_depth": 4},
@@ -45,10 +44,9 @@ class TestOptimizeParams:
         )
 
         config = {
-            "name": "favorita_xgboost_train",
+            "name": "favorita_xgboost",
             "inputs": {
                 "gcs_model_path": "gs://bucket/models/",
-                "optimize_config_name": "favorita_xgboost_optimize",
                 "model_params": {"max_depth": 6},
             },
             "outputs": {},
@@ -60,6 +58,7 @@ class TestOptimizeParams:
         assert params["learning_rate"] == 0.05
         assert provenance["params_source"] == "optimize"
         assert provenance["optimize_run_id"] == "abc123"
+        assert provenance["optimize_config_name"] == "favorita_xgboost"
 
     def test_persist_best_params_upload(self, monkeypatch):
         uploaded: dict = {}
@@ -90,9 +89,9 @@ class TestOptimizeParams:
         )
 
         config = {
-            "name": "favorita_xgboost_optimize",
+            "name": "favorita_xgboost",
             "model_family": "favorita_store_daily",
-            "job": {"model_type": "xgboost"},
+            "model_type": "xgboost",
             "inputs": {"gcs_model_path": "gs://bucket/models/"},
         }
         uri = persist_best_params(
@@ -105,5 +104,5 @@ class TestOptimizeParams:
             },
         )
         assert uri.startswith("gs://bucket/")
-        assert "optimize/favorita_xgboost_optimize" in uri
+        assert "optimize/favorita_xgboost" in uri
         assert uploaded["bytes"]["best_params"]["max_depth"] == 8

@@ -15,6 +15,7 @@ from google.cloud import aiplatform
 
 from vertex.config.load_config import (
     DEFAULT_CONFIG_PATH,
+    apply_job_step,
     get_job_spec,
     load_model_config,
     validate_config_for_step,
@@ -29,6 +30,7 @@ def submit_job(
     config_name: str,
     config_path: str | Path | None = None,
     *,
+    step: str | None = None,
     sync: bool = False,
     image_uri: Optional[str] = None,
 ) -> aiplatform.CustomJob:
@@ -40,6 +42,10 @@ def submit_job(
     """
     path = Path(config_path) if config_path else DEFAULT_CONFIG_PATH
     config = load_model_config(config_name, path)
+    if step:
+        config = apply_job_step(config, step)
+    elif not (config.get("job") or {}).get("step"):
+        config = apply_job_step(config, "train")
     validate_config_for_step(config)
 
     settings = resolve_gcp_settings(config, image_uri=image_uri)
@@ -62,6 +68,7 @@ def submit_job(
             config_name=config_name,
             config_path=str(path),
             job_run_id=job_run_id,
+            step=spec["step"],
         ),
         staging_bucket=settings.staging_bucket,
         labels=labels,
@@ -85,6 +92,11 @@ def main() -> None:
     parser.add_argument("--config-name", "-c", required=True)
     parser.add_argument("--config-path", "-f", default=str(DEFAULT_CONFIG_PATH))
     parser.add_argument(
+        "--step",
+        default=None,
+        help="Job step (train|predict|optimize); default train",
+    )
+    parser.add_argument(
         "--sync",
         action="store_true",
         help="Block until the Custom Job completes",
@@ -95,6 +107,7 @@ def main() -> None:
     job = submit_job(
         config_name=args.config_name,
         config_path=args.config_path,
+        step=args.step,
         sync=args.sync,
         image_uri=args.image_uri,
     )

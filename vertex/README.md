@@ -96,8 +96,12 @@ Example train block (abbreviated):
     step: train
     model_type: xgboost
   inputs:
-    sql_query: |
+    train_sql_query: |
       SELECT * FROM `project.dataset.int_sales_store_daily`
+      WHERE data_split_source = 'train'
+    predict_sql_query: |
+      SELECT * FROM `project.dataset.int_sales_store_daily`
+      WHERE data_split_source = 'test'
     target_column: sales_store
     entity_column: store_nbr
     id_columns: [store_nbr]
@@ -276,9 +280,9 @@ Example configs:
 | Optimize | `favorita_xgboost_optimize` | `favorita_rf_optimize` | `favorita_arima_optimize` | `favorita_sarima_optimize` |
 
 ```bash
-make vertex-train VERTEX_TRAIN_CONFIG=favorita_rf_train
-make vertex-predict VERTEX_PREDICT_CONFIG=favorita_arima_predict
-make vertex-optimize VERTEX_OPTIMIZE_CONFIG=favorita_sarima_optimize
+make vertex-train VERTEX_TRAIN_CONFIG=favorita_xgboost
+make vertex-predict VERTEX_PREDICT_CONFIG=favorita_xgboost
+make vertex-optimize VERTEX_OPTIMIZE_CONFIG=favorita_xgboost
 ```
 
 ### Time-series predict scopes
@@ -338,6 +342,6 @@ Planned: `prophet`.
 | `VERTEX_AI_STAGING_BUCKET must be set` | `.env` or `vertex.staging_bucket` in config |
 | `VERTEX_TRAINING_IMAGE` | Image exists in Artifact Registry and job SA can pull it |
 | BigQuery load errors | Tables created from `ddl/vertex_bq_tables.sql`; SA has `bigquery.dataEditor` |
-| Credentials in Docker | `GOOGLE_CREDS_HOST` in Makefile matches mounted file (default under `credentials/`) |
+| Invalid JSON / empty credentials file | Set `GOOGLE_APPLICATION_CREDENTIALS_CONTAINER=/app/credentials/<same-basename-as-host>` in `.env` (see `env.example`) |
 
 For environment variables shared with dbt and Docker Compose, see [env.example](../env.example) and the root README.

@@ -34,7 +34,8 @@ def temp_config_file():
                 "inputs": {
                     "project_id": "test-project",
                     "region": "us-central1",
-                    "sql_query": "SELECT * FROM test_table",
+                    "train_sql_query": "SELECT * FROM test_table",
+                    "predict_sql_query": "SELECT * FROM test_table",
                 },
             }
         ]

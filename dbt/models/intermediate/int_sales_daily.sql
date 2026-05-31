@@ -11,6 +11,7 @@ with
 company_sales_daily_agg as (
   select 
     date,
+    max(data_split_source) as data_split_source,
     sum(sales) as sales_company
   from {{ ref('stg_favorita_sales_fct') }}
   group by 1
@@ -20,6 +21,7 @@ company_sales_daily_window as (
   select 
     date,
     date_sub(date, interval 1 day) as feature_as_of_date,
+    data_split_source,
 
     -- Date Transformations
       EXTRACT(DAY FROM date)        AS day_of_month,

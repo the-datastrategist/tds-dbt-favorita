@@ -44,6 +44,7 @@ def run_configs(
     config_names: list[str],
     config_path: str | Path | None = None,
     *,
+    step: str = "train",
     vertex_mode: str = "docker",
     sync: bool = False,
     max_workers: int | None = None,
@@ -67,16 +68,17 @@ def run_configs(
     )
 
     if mode == "vertex":
-        _run_vertex_batch(config_names, path, sync=sync, max_workers=workers)
+        _run_vertex_batch(config_names, path, step=step, sync=sync, max_workers=workers)
         return
 
-    _run_docker_batch(config_names, path, max_workers=workers)
+    _run_docker_batch(config_names, path, step=step, max_workers=workers)
 
 
 def _run_docker_batch(
     config_names: list[str],
     config_path: str,
     *,
+    step: str = "train",
     max_workers: int,
 ) -> None:
     failed: list[str] = []
@@ -92,6 +94,8 @@ def _run_docker_batch(
                     config_path,
                     "--config-name",
                     name,
+                    "--step",
+                    step,
                 ],
                 check=False,
             ): name
@@ -120,6 +124,7 @@ def _run_vertex_batch(
     config_names: list[str],
     config_path: str,
     *,
+    step: str = "train",
     sync: bool,
     max_workers: int,
 ) -> None:
@@ -132,6 +137,7 @@ def _run_vertex_batch(
                 submit_job,
                 name,
                 config_path,
+                step=step,
                 sync=False,
             ): name
             for name in config_names
@@ -211,6 +217,7 @@ def main() -> None:
         run_configs(
             names,
             args.config_path,
+            step=args.step,
             vertex_mode=args.vertex_mode,
             sync=args.sync,
             max_workers=args.max_workers,

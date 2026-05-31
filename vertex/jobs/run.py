@@ -13,6 +13,7 @@ from pathlib import Path
 
 from vertex.config.load_config import (
     DEFAULT_CONFIG_PATH,
+    apply_job_step,
     get_job_spec,
     load_model_config,
     validate_config_for_step,
@@ -32,7 +33,9 @@ def run_job(
 ) -> object:
     config = load_model_config(config_name, config_path)
     if step_override:
-        config.setdefault("job", {})["step"] = step_override
+        config = apply_job_step(config, step_override)
+    elif not (config.get("job") or {}).get("step"):
+        config = apply_job_step(config, "train")
     validate_config_for_step(config)
     ensure_registered()
 

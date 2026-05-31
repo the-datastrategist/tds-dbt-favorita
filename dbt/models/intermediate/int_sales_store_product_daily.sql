@@ -21,6 +21,7 @@ store_sales_daily_agg as (
     date,
     store_nbr,
     product_id,
+    max(data_split_source) as data_split_source,
     sum(sales)  as sales_store_product,
     sum(if(on_promotion = 1, sales, 0))  as sales_store_product_on_promotion,
   from favorita_train
@@ -33,6 +34,7 @@ store_sales_daily_window as (
     date,
     store_nbr,
     product_id,
+    data_split_source,
     date_sub(date, interval 1 day) as feature_as_of_date,
 
     -- DATE TRANSFORMATIONS

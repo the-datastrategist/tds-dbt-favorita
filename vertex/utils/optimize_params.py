@@ -10,7 +10,6 @@ from typing import Any, Optional
 
 from google.cloud import bigquery, storage
 
-from vertex.config.load_config import load_all_configs
 from vertex.utils.artifacts import parse_gcs_uri, upload_bytes
 
 logger = logging.getLogger(__name__)
@@ -18,21 +17,9 @@ logger = logging.getLogger(__name__)
 BEST_PARAMS_FILENAME = "latest_best_params.json"
 
 
-def infer_optimize_config_name(train_config_name: str) -> Optional[str]:
-    """Map favorita_xgboost_train -> favorita_xgboost_optimize when present in YAML."""
-    if train_config_name.endswith("_train"):
-        candidate = f"{train_config_name[:-6]}_optimize"
-    elif "_train_" in train_config_name:
-        candidate = train_config_name.replace("_train_", "_optimize_", 1)
-    else:
-        return None
-    try:
-        names = {cfg.get("name") for cfg in load_all_configs()}
-        if candidate in names:
-            return candidate
-    except (ValueError, FileNotFoundError):
-        pass
-    return None
+def infer_optimize_config_name(config_name: str) -> str:
+    """Unified model configs use the same name for optimize and train."""
+    return config_name
 
 
 def best_params_gcs_uri(gcs_model_path: str, optimize_config_name: str) -> str:
@@ -189,10 +176,8 @@ def resolve_model_parameters(
     optimize_config_name = (
         inputs.get("optimize_config_name")
         or os.getenv("VERTEX_OPTIMIZE_CONFIG_NAME")
-        or infer_optimize_config_name(config_name)
+        or config_name
     )
-    if not optimize_config_name:
-        return base_params, provenance
 
     provenance["optimize_config_name"] = optimize_config_name
     optimize_run_id = inputs.get("optimize_run_id") or os.getenv("VERTEX_OPTIMIZE_RUN_ID") or None

@@ -24,7 +24,7 @@ from vertex.utils.artifacts import (
     save_xgboost_sklearn_artifacts,
 )
 from vertex.utils.bigquery_utils import load_to_bigquery
-from vertex.utils.data_loading import load_data_from_config
+from vertex.utils.data_loading import load_data_from_config, resolve_input_sql
 from vertex.utils.data_utils import get_hash
 from vertex.utils.metadata import (
     build_sklearn_train_metadata,
@@ -194,7 +194,7 @@ def run_train_xgboost(
         joblib_gcs_uri=joblib_uri,
         trees_gcs_uri=trees_uri,
         manifest_gcs_uri=manifest_uri,
-        source_query=inputs.get("sql_query"),
+        source_query=resolve_input_sql(config, step="train"),
         model_run_id=model_run_id,
         model_id=model_id,
         project_id=project_id,

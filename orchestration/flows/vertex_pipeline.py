@@ -10,7 +10,7 @@ from orchestration.tasks.vertex import (
     run_vertex_job_config,
     run_vertex_pipeline_submit,
 )
-from orchestration.utils.pipelines import resolve_pipeline_config_names
+from orchestration.utils.pipelines import resolve_pipeline_steps
 
 
 def _default_vertex_mode() -> str:
@@ -50,12 +50,13 @@ def prefect_vertex_ml_pipeline_flow(
         Omit the predict step.
     """
     mode = (vertex_mode or _default_vertex_mode()).lower()
-    config_names = resolve_pipeline_config_names(
+    steps = resolve_pipeline_steps(
         pipeline_name,
         skip_optimize=skip_optimize,
         skip_predict=skip_predict,
     )
-    if not config_names:
+    config_names = [name for _, name in steps]
+    if not steps:
         raise ValueError(
             f"No steps to run for pipeline {pipeline_name!r} "
             f"(skip_optimize={skip_optimize}, skip_predict={skip_predict})"
@@ -70,7 +71,12 @@ def prefect_vertex_ml_pipeline_flow(
         )
         return config_names
 
-    for config_name in config_names:
-        run_vertex_job_config(config_name, vertex_mode=mode, sync=sync)
+    for step, config_name in steps:
+        run_vertex_job_config(
+            config_name,
+            step=step if step != "train" else None,
+            vertex_mode=mode,
+            sync=sync,
+        )
 
     return config_names

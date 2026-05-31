@@ -18,7 +18,7 @@ from sklearn.ensemble import RandomForestRegressor
 from vertex.config.load_config import DEFAULT_CONFIG_PATH, get_job_spec, load_model_config
 from vertex.utils.artifacts import register_from_manifest, save_joblib_artifacts
 from vertex.utils.bigquery_utils import load_to_bigquery
-from vertex.utils.data_loading import load_data_from_config
+from vertex.utils.data_loading import load_data_from_config, resolve_input_sql
 from vertex.utils.data_utils import get_hash
 from vertex.utils.features import (
     chronological_train_test_split,
@@ -152,7 +152,7 @@ def run_train_random_forest(
         gcs_uri=joblib_uri,
         joblib_gcs_uri=joblib_uri,
         manifest_gcs_uri=manifest_uri,
-        source_query=inputs.get("sql_query"),
+        source_query=resolve_input_sql(config, step="train"),
         model_run_id=model_run_id,
         model_id=model_id,
         project_id=project_id,

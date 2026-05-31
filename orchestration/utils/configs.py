@@ -15,7 +15,7 @@ def list_train_config_names(
     """
     Return sorted train config names with include_in_run: true.
 
-    By default excludes legacy aliases such as train_xgboost (use favorita_xgboost_train).
+    By default excludes legacy aliases such as train_xgboost.
     """
     return list_run_config_names(
         config_path,
@@ -44,6 +44,6 @@ def resolve_train_config_names(
         return [config_name]
 
     raise ValueError(
-        "Provide config_name (e.g. favorita_xgboost_train) or set train_all=true "
+        "Provide config_name (e.g. favorita_xgboost) or set train_all=true "
         "to run configs with include_in_run: true."
     )

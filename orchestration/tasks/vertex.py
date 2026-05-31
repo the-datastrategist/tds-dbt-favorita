@@ -22,16 +22,18 @@ def _validate_vertex_mode(vertex_mode: str) -> str:
 def run_vertex_job_config(
     config_name: str,
     *,
+    step: str | None = None,
     vertex_mode: str = "docker",
     sync: bool = False,
 ) -> None:
     """
     Run one Vertex config (train, predict, or optimize).
 
-    Equivalent to ``make vertex-run-docker`` or ``make vertex-submit`` on the host.
-    Executes in the current container (Prefect worker), not nested Docker.
+    Unified model configs use the same name for every step; pass ``step`` when
+    not training (default step is train in vertex.jobs.run).
     """
     mode = _validate_vertex_mode(vertex_mode)
+    step_args = ["--step", step] if step else []
 
     if mode == "vertex":
         cmd = [
@@ -42,6 +44,7 @@ def run_vertex_job_config(
             _VERTEX_CONFIG,
             "--config-name",
             config_name,
+            *step_args,
         ]
         if sync:
             cmd.append("--sync")
@@ -57,6 +60,7 @@ def run_vertex_job_config(
             _VERTEX_CONFIG,
             "--config-name",
             config_name,
+            *step_args,
         ]
     )
 

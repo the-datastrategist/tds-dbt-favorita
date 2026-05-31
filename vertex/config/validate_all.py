@@ -10,7 +10,7 @@ from vertex.config.load_config import (
     DEFAULT_CONFIG_PATH,
     load_all_configs,
     load_raw_config,
-    validate_config_for_step,
+    validate_config_all_steps,
 )
 from vertex.config.pipelines import (
     load_pipeline_definitions,
@@ -24,7 +24,7 @@ def validate_all_configs(config_path: Path | None = None) -> list[str]:
     validated: list[str] = []
 
     for config in load_all_configs(path):
-        validate_config_for_step(config)
+        validate_config_all_steps(config)
         validated.append(config["name"])
 
     raw = load_raw_config(path)

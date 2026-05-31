@@ -19,7 +19,7 @@ from vertex.models.sklearn.train_random_forest import (
     train_random_forest,
 )
 from vertex.utils.bigquery_utils import load_to_bigquery
-from vertex.utils.data_loading import load_data_from_config
+from vertex.utils.data_loading import load_training_data_from_config
 from vertex.utils.data_utils import get_hash
 from vertex.utils.features import (
     chronological_train_test_split,
@@ -75,7 +75,7 @@ def run_optimize_random_forest(config: dict[str, Any]) -> dict[str, Any]:
 
     project_id = inputs.get("project_id") or os.getenv("GOOGLE_PROJECT_ID")
 
-    df = load_data_from_config(config)
+    df = load_training_data_from_config(config)
     df_features, features, _ = prepare_feature_matrix(
         df,
         target_column=target_column,
@@ -162,7 +162,8 @@ def main() -> None:
     parser.add_argument("--config-path", "-f", default=str(DEFAULT_CONFIG_PATH))
     parser.add_argument("--config-name", "-c", default="favorita_rf_optimize")
     args = parser.parse_args()
-    result = run_optimize_random_forest(load_model_config(args.config_name, args.config_path))
+    config = load_model_config(args.config_name, args.config_path, step="optimize")
+    result = run_optimize_random_forest(config)
     logger.info("Best params: %s", result["best_params"])
 
 

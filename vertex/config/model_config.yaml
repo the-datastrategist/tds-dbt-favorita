@@ -12,52 +12,41 @@ defaults:
     optimize_table: tds-favorita.favorita.favorita_model_optimize
     job_runs_table: tds-favorita.favorita.favorita_vertex_job_runs
 
-# Vertex Pipelines (KFP): optimize → train → predict
+# Vertex Pipelines (KFP): optimize → train → predict (one model config per pipeline)
 pipelines:
   favorita_xgboost:
-    model_family: favorita_store_daily
-    model_type: xgboost
+    config: favorita_xgboost
     steps: [optimize, train, predict]
-    configs:
-      optimize: favorita_xgboost_optimize
-      train: favorita_xgboost_train
-      predict: favorita_xgboost_predict
     vertex:
       enable_caching: true
 
   favorita_random_forest:
-    model_family: favorita_store_daily
-    model_type: random_forest
+    config: favorita_rf
     steps: [optimize, train, predict]
-    configs:
-      optimize: favorita_rf_optimize
-      train: favorita_rf_train
-      predict: favorita_rf_predict
 
   favorita_arima:
-    model_family: favorita_store_daily
-    model_type: arima
+    config: favorita_arima
     steps: [train, predict]
-    configs:
-      train: favorita_arima_train
-      predict: favorita_arima_predict
 
 configs:
-  - name: favorita_xgboost_train
-    description: Train XGBoost on store daily sales features
+  - name: favorita_xgboost
+    description: XGBoost on store daily sales (train, predict, optimize share model_params)
     model_family: favorita_store_daily
+    model_type: xgboost
     include_in_run: true
-    job:
-      step: train
-      model_type: xgboost
     vertex:
       experiment: favorita-vertex
       machine_type: n1-standard-4
       register_model: false
     inputs:
-      sql_query: |
+      train_sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
+        WHERE data_split_source = 'train'
+      predict_sql_query: |
+        SELECT *
+        FROM `tds-favorita.favorita.int_sales_store_daily`
+        WHERE data_split_source = 'test'
       target_column: sales_store
       date_column: date
       entity_column: store_nbr
@@ -68,81 +57,32 @@ configs:
         - date
         - sales_store_l1d
       gcs_model_path: gs://favorita-vertex-models/
-      optimize_config_name: favorita_xgboost_optimize
       use_optimized_params: true
       forecast_horizon: 7
       train_days: 180
       test_size: 0.2
+      trial_count: 20
+      objective_metric: mae
+      model_run_id: null
       model_params:
         n_estimators: 100
         max_depth: 6
         learning_rate: 0.1
     outputs: {}
 
-  - name: favorita_xgboost_predict
-    description: Score holdout or scoring features with latest XGBoost artifact
+  - name: favorita_rf
+    description: Random Forest on store daily sales (shared model_params)
     model_family: favorita_store_daily
-    job:
-      step: predict
-      model_type: xgboost
-    vertex:
-      experiment: favorita-vertex
-      machine_type: n1-standard-4
-    inputs:
-      sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales_store
-      date_column: date
-      id_columns:
-        - store_nbr
-      excluded_columns:
-        - store_nbr
-        - date
-        - sales_store_l1d
-      gcs_model_path: gs://favorita-vertex-models/
-      artifact_config_name: favorita_xgboost_train
-      model_run_id: null
-      forecast_horizon: 7
-    outputs: {}
-
-  - name: favorita_xgboost_optimize
-    description: Optuna hyperparameter search for XGBoost
-    model_family: favorita_store_daily
-    job:
-      step: optimize
-      model_type: xgboost
-    vertex:
-      experiment: favorita-vertex
-      machine_type: n1-standard-4
-    inputs:
-      sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales_store
-      date_column: date
-      excluded_columns:
-        - store_nbr
-        - date
-        - sales_store_l1d
-      test_size: 0.2
-      trial_count: 20
-      objective_metric: mae
-      gcs_model_path: gs://favorita-vertex-models/
-    outputs: {}
-
-  - name: favorita_rf_train
-    description: Train Random Forest on store daily sales features
-    model_family: favorita_store_daily
-    job:
-      step: train
-      model_type: random_forest
+    model_type: random_forest
     vertex:
       experiment: favorita-vertex
       machine_type: n1-standard-4
       register_model: false
     inputs:
-      sql_query: |
+      train_sql_query: |
+        SELECT *
+        FROM `tds-favorita.favorita.int_sales_store_daily`
+      predict_sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales_store
@@ -155,81 +95,49 @@ configs:
         - date
         - sales_store_l1d
       gcs_model_path: gs://favorita-vertex-models/
-      optimize_config_name: favorita_rf_optimize
       use_optimized_params: true
+      forecast_horizon: 7
       test_size: 0.2
+      trial_count: 15
+      objective_metric: mae
       model_params:
         n_estimators: 200
         max_depth: 12
         min_samples_leaf: 2
     outputs: {}
 
-  - name: favorita_rf_predict
-    description: Predict with latest Random Forest artifact
+  - name: favorita_arima
+    description: Per-entity ARIMA on store daily sales (shared model_params)
     model_family: favorita_store_daily
-    job:
-      step: predict
-      model_type: random_forest
+    model_type: arima
+    vertex:
+      experiment: favorita-vertex
+      machine_type: n1-standard-4
     inputs:
-      sql_query: |
+      train_sql_query: |
+        SELECT *
+        FROM `tds-favorita.favorita.int_sales_store_daily`
+      predict_sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales_store
       date_column: date
+      entity_column: store_nbr
       id_columns:
         - store_nbr
       excluded_columns:
         - store_nbr
         - date
         - sales_store_l1d
-      gcs_model_path: gs://favorita-vertex-models/
-      artifact_config_name: favorita_rf_train
-      forecast_horizon: 7
-    outputs: {}
-
-  - name: favorita_rf_optimize
-    description: Optuna search for Random Forest hyperparameters
-    model_family: favorita_store_daily
-    job:
-      step: optimize
-      model_type: random_forest
-    inputs:
-      sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales_store
-      date_column: date
-      excluded_columns:
-        - store_nbr
-        - date
-        - sales_store_l1d
-      test_size: 0.2
-      trial_count: 15
-      objective_metric: mae
-      gcs_model_path: gs://favorita-vertex-models/
-    outputs: {}
-
-  - name: favorita_arima_train
-    description: Per-entity ARIMA on store daily sales
-    model_family: favorita_store_daily
-    job:
-      step: train
-      model_type: arima
-    vertex:
-      experiment: favorita-vertex
-      machine_type: n1-standard-4
-    inputs:
-      sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales_store
-      date_column: date
-      entity_column: store_nbr
       training_mode: per_entity
       gcs_model_path: gs://favorita-vertex-models/
       test_size: 0.2
       min_train_obs: 60
       max_entities: 200
+      predict_scope: holdout
+      forecast_horizon: 7
+      trial_count: 10
+      objective_metric: mae
       model_params:
         order: [2, 1, 2]
         seasonal_order: [0, 0, 0, 0]
@@ -237,14 +145,18 @@ configs:
         maxiter: 50
     outputs: {}
 
-  - name: favorita_arima_predict
-    description: ARIMA holdout predictions per entity
+  - name: favorita_sarima
+    description: Per-entity SARIMA on store daily sales (shared model_params)
     model_family: favorita_store_daily
-    job:
-      step: predict
-      model_type: arima
+    model_type: sarima
+    vertex:
+      experiment: favorita-vertex
+      machine_type: n1-standard-4
     inputs:
-      sql_query: |
+      train_sql_query: |
+        SELECT *
+        FROM `tds-favorita.favorita.int_sales_store_daily`
+      predict_sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
       target_column: sales_store
@@ -256,128 +168,17 @@ configs:
         - store_nbr
         - date
         - sales_store_l1d
-      gcs_model_path: gs://favorita-vertex-models/
-      artifact_config_name: favorita_arima_train
-      predict_scope: holdout
-      test_size: 0.2
-      forecast_horizon: 7
-    outputs: {}
-
-  - name: favorita_arima_optimize
-    description: Optuna search over ARIMA orders
-    model_family: favorita_store_daily
-    job:
-      step: optimize
-      model_type: arima
-    inputs:
-      sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales_store
-      date_column: date
-      entity_column: store_nbr
-      test_size: 0.2
-      trial_count: 10
-      min_train_obs: 60
-      max_entities: 50
-      objective_metric: mae
-    outputs: {}
-
-  - name: favorita_sarima_train
-    description: Per-entity SARIMA on store daily sales
-    model_family: favorita_store_daily
-    job:
-      step: train
-      model_type: sarima
-    vertex:
-      experiment: favorita-vertex
-      machine_type: n1-standard-4
-    inputs:
-      sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales_store
-      date_column: date
-      entity_column: store_nbr
       training_mode: per_entity
       gcs_model_path: gs://favorita-vertex-models/
       test_size: 0.2
       min_train_obs: 90
       max_entities: 100
+      predict_scope: holdout
+      trial_count: 8
+      objective_metric: mae
       model_params:
         order: [1, 1, 1]
         seasonal_order: [1, 1, 1, 7]
         trend: c
         maxiter: 50
-    outputs: {}
-
-  - name: favorita_sarima_predict
-    description: SARIMA holdout predictions per entity
-    model_family: favorita_store_daily
-    job:
-      step: predict
-      model_type: sarima
-    inputs:
-      sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales_store
-      date_column: date
-      entity_column: store_nbr
-      id_columns:
-        - store_nbr
-      excluded_columns:
-        - store_nbr
-        - date
-        - sales_store_l1d
-      gcs_model_path: gs://favorita-vertex-models/
-      artifact_config_name: favorita_sarima_train
-      predict_scope: holdout
-      test_size: 0.2
-    outputs: {}
-
-  - name: favorita_sarima_optimize
-    description: Optuna search over SARIMA orders
-    model_family: favorita_store_daily
-    job:
-      step: optimize
-      model_type: sarima
-    inputs:
-      sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales_store
-      date_column: date
-      entity_column: store_nbr
-      test_size: 0.2
-      trial_count: 8
-      min_train_obs: 90
-      max_entities: 30
-      objective_metric: mae
-    outputs: {}
-
-  # Legacy alias (deprecated — use favorita_xgboost_train)
-  - name: train_xgboost
-    description: Deprecated alias for favorita_xgboost_train
-    model_family: favorita_store_daily
-    job:
-      step: train
-      model_type: xgboost
-    inputs:
-      sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales_store
-      date_column: date
-      excluded_columns:
-        - store_nbr
-        - date
-        - sales_store_l1d
-      gcs_model_path: gs://favorita-vertex-models/
-      forecast_horizon: 7
-      test_size: 0.2
-      model_params:
-        n_estimators: 100
-        max_depth: 6
-        learning_rate: 0.1
     outputs: {}

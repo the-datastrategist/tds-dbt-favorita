@@ -4,6 +4,8 @@ KFP v2 pipeline: optimize → train → predict for a named pipeline in model_co
 The training container image is fixed at **compile** time (Artifact Registry URI per env).
 Optional steps are included at compile time from the pipeline's ``steps`` list in YAML.
 
+Each step uses the same model config name and passes ``--step`` to ``vertex.jobs.run``.
+
 Compile:
   python -m vertex.pipelines.compile --pipeline favorita_xgboost
 
@@ -19,6 +21,25 @@ from collections.abc import Sequence
 from kfp import dsl
 
 
+def _run_container(training_image: str, step: str):
+    @dsl.container_component
+    def run_step(model_config: str, config_path: str):
+        return dsl.ContainerSpec(
+            image=training_image,
+            command=["python", "-m", "vertex.jobs.run"],
+            args=[
+                "--config-path",
+                config_path,
+                "--config-name",
+                model_config,
+                "--step",
+                step,
+            ],
+        )
+
+    return run_step
+
+
 def create_favorita_ml_pipeline(
     training_image: str,
     *,
@@ -29,82 +50,29 @@ def create_favorita_ml_pipeline(
     optimize, train, predict). ``training_image`` must be a literal URI at compile time.
     """
 
-    @dsl.container_component
-    def optimize_step(config_name: str, config_path: str):
-        return dsl.ContainerSpec(
-            image=training_image,
-            command=["python", "-m", "vertex.jobs.run"],
-            args=[
-                "--config-path",
-                config_path,
-                "--config-name",
-                config_name,
-            ],
-        )
-
-    @dsl.container_component
-    def train_step(config_name: str, config_path: str):
-        return dsl.ContainerSpec(
-            image=training_image,
-            command=["python", "-m", "vertex.jobs.run"],
-            args=[
-                "--config-path",
-                config_path,
-                "--config-name",
-                config_name,
-            ],
-        )
-
-    @dsl.container_component
-    def predict_step(config_name: str, config_path: str):
-        return dsl.ContainerSpec(
-            image=training_image,
-            command=["python", "-m", "vertex.jobs.run"],
-            args=[
-                "--config-path",
-                config_path,
-                "--config-name",
-                config_name,
-            ],
-        )
-
     enabled = [s for s in ("optimize", "train", "predict") if s in steps]
     if "train" not in enabled:
         raise ValueError("Pipeline must include a train step")
 
+    step_components = {step: _run_container(training_image, step) for step in enabled}
+
     @dsl.pipeline(
         name="favorita-ml-pipeline",
-        description="Optimize, train, and predict for a Favorita model family (Vertex steps)",
+        description="Optimize, train, and predict for a Favorita model (single YAML config)",
     )
     def favorita_ml_pipeline(
-        optimize_config: str,
-        train_config: str,
-        predict_config: str,
+        model_config: str,
         config_path: str,
     ):
         previous = None
-        if "optimize" in enabled:
-            previous = optimize_step(
-                config_name=optimize_config,
+        for step in enabled:
+            task = step_components[step](
+                model_config=model_config,
                 config_path=config_path,
             )
-            previous.set_display_name("optimize")
-        if "train" in enabled:
-            train_task = train_step(
-                config_name=train_config,
-                config_path=config_path,
-            )
-            train_task.set_display_name("train")
+            task.set_display_name(step)
             if previous is not None:
-                train_task.after(previous)
-            previous = train_task
-        if "predict" in enabled:
-            pred = predict_step(
-                config_name=predict_config,
-                config_path=config_path,
-            )
-            pred.set_display_name("predict")
-            if previous is not None:
-                pred.after(previous)
+                task.after(previous)
+            previous = task
 
     return favorita_ml_pipeline

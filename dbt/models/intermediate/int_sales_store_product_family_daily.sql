@@ -20,6 +20,7 @@ store_sales_daily_agg as (
     date,
     store_nbr,
     product_family,
+    max(data_split_source) as data_split_source,
     -- base metrics
     sum(sales)                      as sales_store_family,
     count(distinct product_id)      as products_store_family,
@@ -35,6 +36,7 @@ store_sales_daily_window as (
     date,
     store_nbr,
     product_family,
+    data_split_source,
     date_sub(date, interval 1 day) as feature_as_of_date,
 
     -- DATE TRANSFORMATIONS

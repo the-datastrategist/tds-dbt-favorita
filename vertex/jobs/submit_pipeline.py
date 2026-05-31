@@ -17,6 +17,7 @@ from google.cloud import aiplatform
 from vertex.config.load_config import DEFAULT_CONFIG_PATH, load_model_config
 from vertex.config.pipelines import (
     load_pipeline_definitions,
+    resolve_pipeline_model_config,
     resolve_pipeline_step_configs,
 )
 from vertex.jobs.gcp import resolve_gcp_settings, standard_labels
@@ -51,7 +52,8 @@ def submit_pipeline(
         raise ValueError(f"Unknown pipeline {pipeline_name!r}")
 
     step_configs = resolve_pipeline_step_configs(pipeline_name, config_path)
-    train_config = load_model_config(step_configs["train"], config_path)
+    model_config_name = resolve_pipeline_model_config(pipeline_name, config_path)
+    train_config = load_model_config(model_config_name, config_path)
     merged = dict(train_config)
     merged["vertex"] = {
         **(train_config.get("vertex") or {}),
@@ -75,9 +77,7 @@ def submit_pipeline(
     )
 
     parameter_values = {
-        "optimize_config": step_configs.get("optimize", ""),
-        "train_config": step_configs["train"],
-        "predict_config": step_configs.get("predict", ""),
+        "model_config": model_config_name,
         "config_path": str(config_path),
     }
 

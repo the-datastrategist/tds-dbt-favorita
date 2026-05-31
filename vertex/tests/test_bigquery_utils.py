@@ -1,14 +1,17 @@
 """Tests for BigQuery load helpers."""
 
 import json
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
 
 from vertex.utils.bigquery_utils import (
+    INSERT_ROWS_BATCH_SIZE,
     _coerce_value_for_bq_type,
     _json_safe,
     _prepare_row_for_insert,
+    load_to_bigquery,
     validate_bq_identifier,
     validate_bq_table_id,
     vertex_safe_run_id,
@@ -83,3 +86,21 @@ class TestBigQueryUtils:
     def test_validate_bq_identifier_rejects_injection(self):
         with pytest.raises(ValueError, match="Invalid BigQuery"):
             validate_bq_identifier("col; DROP", label="column")
+
+    @patch("vertex.utils.bigquery_utils.bigquery.Client")
+    def test_load_to_bigquery_batches_large_inserts(self, mock_client_cls):
+        row_count = INSERT_ROWS_BATCH_SIZE + 50
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_table = MagicMock()
+        mock_table.schema = [MagicMock(name="config_name", field_type="STRING")]
+        mock_client.get_table.return_value = mock_table
+        mock_client.insert_rows_json.return_value = []
+
+        rows = [{"config_name": f"row-{index}"} for index in range(row_count)]
+        load_to_bigquery(rows, "proj.ds.table", project_id="proj")
+
+        assert mock_client.insert_rows_json.call_count == 2
+        first_batch, second_batch = mock_client.insert_rows_json.call_args_list
+        assert len(first_batch.args[1]) == INSERT_ROWS_BATCH_SIZE
+        assert len(second_batch.args[1]) == 50

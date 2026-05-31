@@ -66,7 +66,7 @@ def run_predict_random_forest(config: dict[str, Any]) -> dict[str, Any]:
     categorical_columns = list(inputs.get("categorical_columns", []))
     id_columns = list(inputs.get("id_columns", ["store_nbr"]))
     gcs_model_path = inputs.get("gcs_model_path")
-    artifact_config_name = inputs.get("artifact_config_name")
+    artifact_config_name = inputs.get("artifact_config_name") or config_name
     model_run_id = inputs.get("model_run_id")
     prediction_table = outputs.get("prediction_table")
     if not gcs_model_path or not prediction_table:

@@ -20,7 +20,7 @@ import pandas as pd
 from vertex.config.load_config import DEFAULT_CONFIG_PATH, get_job_spec, load_model_config
 from vertex.models.xgboost.train_xgboost import train_sklearn_xgboost
 from vertex.utils.bigquery_utils import load_to_bigquery
-from vertex.utils.data_loading import load_data_from_config
+from vertex.utils.data_loading import load_training_data_from_config
 from vertex.utils.data_utils import get_hash
 from vertex.utils.features import chronological_train_test_split, prepare_feature_matrix
 from vertex.utils.metadata import get_performance_metrics
@@ -75,7 +75,7 @@ def run_optimize_xgboost(config: dict[str, Any]) -> dict[str, Any]:
 
     project_id = inputs.get("project_id") or os.getenv("GOOGLE_PROJECT_ID")
 
-    df = load_data_from_config(config)
+    df = load_training_data_from_config(config)
     logger.info("Loaded %s rows for optimization", len(df))
 
     df_features, features, _ = prepare_feature_matrix(
@@ -172,7 +172,7 @@ def main() -> None:
     parser.add_argument("--config-name", "-c", required=True)
     args = parser.parse_args()
 
-    config = load_model_config(args.config_name, args.config_path)
+    config = load_model_config(args.config_name, args.config_path, step="optimize")
     result = run_optimize_xgboost(config)
     logger.info("Best trial %s: %s", result["best_trial_number"], result["best_params"])
 

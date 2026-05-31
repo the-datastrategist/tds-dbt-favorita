@@ -49,8 +49,8 @@ def prepare_prediction_features(
     manifest_features = manifest.get("features", [])
     if not manifest_features:
         raise ValueError("Model manifest does not contain a features list")
-    feature_cols = [column for column in manifest_features if column in matrix.columns]
-    return matrix.reindex(columns=feature_cols, fill_value=0)
+    # Align to training feature order/names; fill missing columns (e.g. all-null on test split).
+    return matrix.reindex(columns=manifest_features, fill_value=0)
 
 
 def prepare_model_input(X: pd.DataFrame) -> pd.DataFrame:
@@ -86,7 +86,7 @@ def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
     if not gcs_model_path:
         raise ValueError("inputs.gcs_model_path is required")
 
-    artifact_config_name = inputs.get("artifact_config_name")
+    artifact_config_name = inputs.get("artifact_config_name") or config_name
     model_run_id = inputs.get("model_run_id")
     prediction_table = outputs.get("prediction_table")
     if not prediction_table:

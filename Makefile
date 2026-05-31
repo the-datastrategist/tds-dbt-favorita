@@ -11,6 +11,13 @@ ifneq ("$(wildcard .env)","")
 	include .env
 	export $(shell sed 's/=.*//' .env)
 endif
+# Docker ml-pipeline uses GOOGLE_APPLICATION_CREDENTIALS_CONTAINER (see docker-compose.yml).
+ifeq ($(GOOGLE_APPLICATION_CREDENTIALS_CONTAINER),)
+ifneq ($(GOOGLE_APPLICATION_CREDENTIALS),)
+GOOGLE_APPLICATION_CREDENTIALS_CONTAINER := /app/$(patsubst ./%,%,$(GOOGLE_APPLICATION_CREDENTIALS))
+export GOOGLE_APPLICATION_CREDENTIALS_CONTAINER
+endif
+endif
 
 .PHONY: help install requirements-lock format lint test clean dbt-run dbt-train dbt-predict selector-daily-refresh selector-daily-refresh-test load-favorita-gcs load-favorita-bigquery \
 	prefect-server prefect-work-pool-create prefect-worker prefect-deploy \
@@ -147,29 +154,33 @@ load-favorita-bigquery: ## Load Favorita 7z CSVs from GCS into BigQuery raw_favo
 
 VERTEX_CONFIG = $(VERTEX_DIR)/config/model_config.yaml
 VERTEX_TRAIN_CONFIG ?=
-VERTEX_PREDICT_CONFIG ?= favorita_xgboost_predict
-VERTEX_OPTIMIZE_CONFIG ?= favorita_xgboost_optimize
+VERTEX_PREDICT_CONFIG ?= favorita_xgboost
+VERTEX_OPTIMIZE_CONFIG ?= favorita_xgboost
 VERTEX_PIPELINE ?= favorita_xgboost
 VERTEX_CONFIG_NAME ?=
+VERTEX_STEP ?=
 VERTEX_MODE ?= docker
 # Set SYNC=1 to block until a submitted Custom Job finishes
 SYNC ?=
 
 VERTEX_SUBMIT_SYNC_FLAG = $(if $(filter 1 true yes,$(SYNC)),--sync,)
+VERTEX_STEP_FLAG = $(if $(VERTEX_STEP),--step $(VERTEX_STEP),)
 
 # --- Generic runners (set VERTEX_CONFIG_NAME) ---
 
-vertex-run-docker: ## Run a config in Docker (VERTEX_CONFIG_NAME=...)
-	@test -n "$(VERTEX_CONFIG_NAME)" || (echo "Set VERTEX_CONFIG_NAME, e.g. make vertex-run-docker VERTEX_CONFIG_NAME=favorita_xgboost_train" && exit 1)
+vertex-run-docker: ## Run a config in Docker (VERTEX_CONFIG_NAME=..., optional VERTEX_STEP=)
+	@test -n "$(VERTEX_CONFIG_NAME)" || (echo "Set VERTEX_CONFIG_NAME, e.g. make vertex-run-docker VERTEX_CONFIG_NAME=favorita_xgboost" && exit 1)
 	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.run \
 		--config-path $(VERTEX_CONFIG) \
-		--config-name $(VERTEX_CONFIG_NAME)
+		--config-name $(VERTEX_CONFIG_NAME) \
+		$(VERTEX_STEP_FLAG)
 
-vertex-submit: ## Submit a config to Vertex AI Custom Training (VERTEX_CONFIG_NAME=...)
+vertex-submit: ## Submit a config to Vertex AI Custom Training (VERTEX_CONFIG_NAME=..., VERTEX_STEP=)
 	@test -n "$(VERTEX_CONFIG_NAME)" || (echo "Set VERTEX_CONFIG_NAME" && exit 1)
 	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.submit \
 		--config-path $(VERTEX_CONFIG) \
 		--config-name $(VERTEX_CONFIG_NAME) \
+		$(VERTEX_STEP_FLAG) \
 		$(VERTEX_SUBMIT_SYNC_FLAG)
 
 # Dispatch by VERTEX_MODE (docker | vertex)
@@ -193,11 +204,11 @@ vertex-train: ## Train all include_in_run configs, or one if VERTEX_CONFIG_NAME 
 			$(VERTEX_SUBMIT_SYNC_FLAG); \
 	fi
 
-vertex-predict: ## Predict (VERTEX_MODE=docker|vertex)
-	@$(MAKE) vertex-run VERTEX_CONFIG_NAME=$(VERTEX_PREDICT_CONFIG) VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC)
+vertex-predict: ## Predict (VERTEX_MODE=docker|vertex; VERTEX_PREDICT_CONFIG, VERTEX_STEP=predict)
+	@$(MAKE) vertex-run VERTEX_CONFIG_NAME=$(VERTEX_PREDICT_CONFIG) VERTEX_STEP=predict VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC)
 
-vertex-optimize: ## Hyperparameter search (VERTEX_MODE=docker|vertex)
-	@$(MAKE) vertex-run VERTEX_CONFIG_NAME=$(VERTEX_OPTIMIZE_CONFIG) VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC)
+vertex-optimize: ## Hyperparameter search (VERTEX_OPTIMIZE_CONFIG, VERTEX_STEP=optimize)
+	@$(MAKE) vertex-run VERTEX_CONFIG_NAME=$(VERTEX_OPTIMIZE_CONFIG) VERTEX_STEP=optimize VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC)
 
 # --- Explicit Docker targets ---
 
@@ -211,10 +222,10 @@ vertex-train-docker: ## Train in Docker (all include_in_run when VERTEX_TRAIN_CO
 	fi
 
 vertex-predict-docker: ## Predict in Docker
-	@$(MAKE) vertex-run-docker VERTEX_CONFIG_NAME=$(VERTEX_PREDICT_CONFIG)
+	@$(MAKE) vertex-run-docker VERTEX_CONFIG_NAME=$(VERTEX_PREDICT_CONFIG) VERTEX_STEP=predict
 
 vertex-optimize-docker: ## Optimize in Docker
-	@$(MAKE) vertex-run-docker VERTEX_CONFIG_NAME=$(VERTEX_OPTIMIZE_CONFIG)
+	@$(MAKE) vertex-run-docker VERTEX_CONFIG_NAME=$(VERTEX_OPTIMIZE_CONFIG) VERTEX_STEP=optimize
 
 # --- Explicit Vertex AI submit targets ---
 
@@ -230,10 +241,10 @@ vertex-submit-train: ## Submit training Custom Job(s) to Vertex AI
 	fi
 
 vertex-submit-predict: ## Submit prediction Custom Job to Vertex AI
-	@$(MAKE) vertex-submit VERTEX_CONFIG_NAME=$(VERTEX_PREDICT_CONFIG) SYNC=$(SYNC)
+	@$(MAKE) vertex-submit VERTEX_CONFIG_NAME=$(VERTEX_PREDICT_CONFIG) VERTEX_STEP=predict SYNC=$(SYNC)
 
 vertex-submit-optimize: ## Submit optimization Custom Job to Vertex AI
-	@$(MAKE) vertex-submit VERTEX_CONFIG_NAME=$(VERTEX_OPTIMIZE_CONFIG) SYNC=$(SYNC)
+	@$(MAKE) vertex-submit VERTEX_CONFIG_NAME=$(VERTEX_OPTIMIZE_CONFIG) VERTEX_STEP=optimize SYNC=$(SYNC)
 
 # --- Vertex Pipelines (KFP) ---
 
@@ -271,12 +282,12 @@ dbt-vertex: ## Build staging views over Vertex output tables
 vertex-bq-ddl: ## Create BigQuery tables for Vertex ML outputs (once per environment)
 	docker compose run --rm ml-pipeline python scripts/apply_vertex_bq_ddl.py
 
-vertex-validate-config: ## Validate a model config (MODEL=favorita_xgboost_train)
-	@test -n "$(MODEL)" || (echo "Set MODEL, e.g. make vertex-validate-config MODEL=favorita_xgboost_train" && exit 1)
+vertex-validate-config: ## Validate a model config (MODEL=favorita_xgboost)
+	@test -n "$(MODEL)" || (echo "Set MODEL, e.g. make vertex-validate-config MODEL=favorita_xgboost" && exit 1)
 	$(DOCKER_RUN) python -c "\
-from vertex.config.load_config import load_model_config, validate_config_for_step; \
+from vertex.config.load_config import load_model_config, validate_config_all_steps; \
 c = load_model_config('$(MODEL)'); \
-validate_config_for_step(c); \
+validate_config_all_steps(c); \
 print('OK')"
 
 vertex-validate-configs: ## Validate all model configs in model_config.yaml

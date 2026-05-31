@@ -142,9 +142,18 @@ def worker_pool_spec(
     config_path: str,
     job_run_id: str,
     command: Optional[list[str]] = None,
+    step: Optional[str] = None,
 ) -> list[dict[str, Any]]:
     """Custom Job worker pool spec running vertex.jobs.run for one config."""
     run_command = command or ["python", "-m", "vertex.jobs.run"]
+    args = [
+        "--config-path",
+        config_path,
+        "--config-name",
+        config_name,
+    ]
+    if step:
+        args.extend(["--step", step])
     env = [
         {"name": "GOOGLE_PROJECT_ID", "value": settings.project_id},
         {"name": "VERTEX_JOB_RUN_ID", "value": job_run_id},
@@ -161,12 +170,7 @@ def worker_pool_spec(
             "container_spec": {
                 "image_uri": settings.training_image,
                 "command": run_command,
-                "args": [
-                    "--config-path",
-                    config_path,
-                    "--config-name",
-                    config_name,
-                ],
+                "args": args,
                 "env": env,
             },
         }

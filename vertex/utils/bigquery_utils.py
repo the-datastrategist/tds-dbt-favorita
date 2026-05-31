@@ -17,6 +17,8 @@ from google.cloud import bigquery
 
 _BQ_ID_SEGMENT = re.compile(r"^[a-zA-Z0-9_-]+$")
 _MAX_BQ_SEGMENT_LEN = 1024
+# Streaming insertAll requests must stay under ~10 MB; batch to avoid HTTP 413.
+INSERT_ROWS_BATCH_SIZE = 500
 
 
 def validate_bq_identifier(name: str, *, label: str = "identifier") -> str:
@@ -169,9 +171,14 @@ def load_to_bigquery(
     if not prepared:
         return
 
-    errors = client.insert_rows_json(table, prepared)
-    if errors:
-        raise RuntimeError(f"BigQuery insert into {table_id} failed: {errors}")
+    for offset in range(0, len(prepared), INSERT_ROWS_BATCH_SIZE):
+        batch = prepared[offset : offset + INSERT_ROWS_BATCH_SIZE]
+        errors = client.insert_rows_json(table, batch)
+        if errors:
+            raise RuntimeError(
+                f"BigQuery insert into {table_id} failed "
+                f"(rows {offset}-{offset + len(batch) - 1}): {errors}"
+            )
 
 
 @lru_cache(maxsize=32)

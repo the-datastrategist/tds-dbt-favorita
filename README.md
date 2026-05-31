@@ -75,10 +75,14 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 3. **Set up Google Cloud credentials**
    ```bash
    mkdir -p credentials
-   # Place your service account key JSON in credentials/ and set GOOGLE_APPLICATION_CREDENTIALS in .env
-   # Example: GOOGLE_APPLICATION_CREDENTIALS=./credentials/tds-favorita-xxxxxxxxxx.json
+   # Place your service account key JSON in credentials/ (gitignored)
    ```
-   Ensure `docker-compose.yml` mounts that file at the path used by `GOOGLE_APPLICATION_CREDENTIALS` inside the container (see the `ml-pipeline` service `volumes` section).
+   In `.env`, set both paths to the **same filename** (host path and container path):
+   ```bash
+   GOOGLE_APPLICATION_CREDENTIALS=./credentials/your-key.json
+   GOOGLE_APPLICATION_CREDENTIALS_CONTAINER=/app/credentials/your-key.json
+   ```
+   The repo is bind-mounted at `/app`, so keys must live under `credentials/` — do not use an empty placeholder `service-account-key.json` unless that file contains valid JSON.
 
 4. **Ensure raw data is in GCS**
    Place Favorita competition `.csv.7z` files in the bucket/prefix from `GCS_RAW_DATA_BUCKET` (see `env.example`). Download from the [Favorita competition](https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting) if needed.
@@ -359,7 +363,8 @@ See **[vertex/README.md](vertex/README.md)** for architecture, env vars, and tro
 Key environment variables (see `env.example` for full list):
 
 - `GOOGLE_PROJECT_ID`: Your GCP project ID
-- `GOOGLE_APPLICATION_CREDENTIALS`: Path to service account key JSON (host path; must match a `docker-compose.yml` volume mount)
+- `GOOGLE_APPLICATION_CREDENTIALS`: Service account key on the host (e.g. `./credentials/your-key.json`)
+- `GOOGLE_APPLICATION_CREDENTIALS_CONTAINER`: Same file inside Docker (e.g. `/app/credentials/your-key.json`); required for `make vertex-*` and dbt in the container
 - `GCS_RAW_DATA_BUCKET`: GCS source for `.csv.7z` archives (`make load-favorita-bigquery`)
 - `BQ_RAW_DATASET`: BigQuery dataset for raw tables (default: `raw_favorita`)
 - `DBT_DATASET`: BigQuery dataset name for dbt models

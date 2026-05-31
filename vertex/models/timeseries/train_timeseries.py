@@ -17,7 +17,7 @@ from vertex.models.timeseries.ts_common import (
 )
 from vertex.utils.artifacts import save_joblib_artifacts
 from vertex.utils.bigquery_utils import load_to_bigquery
-from vertex.utils.data_loading import load_data_from_config
+from vertex.utils.data_loading import load_data_from_config, resolve_input_sql
 from vertex.utils.data_utils import get_hash
 from vertex.utils.metadata import (
     build_timeseries_train_metadata,
@@ -135,7 +135,7 @@ def run_train_timeseries(config: dict[str, Any]) -> dict[str, Any]:
         test_row_count=int(len(panel) * test_size),
         train_performance=train_perf,
         test_performance=test_perf,
-        source_query=inputs.get("sql_query"),
+        source_query=resolve_input_sql(config, step="train"),
         joblib_gcs_uri=joblib_uri,
         manifest_gcs_uri=manifest_uri,
         project_id=project_id,

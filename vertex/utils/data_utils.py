@@ -25,13 +25,16 @@ class BigQueryLoader:
             with open(file, "r") as f:
                 query = f.read()
             return self.client.query(query).to_dataframe()
-        elif "sql_query" in self.config.get("inputs", {}):
-            return self.client.query(self.config["inputs"]["sql_query"]).to_dataframe()
         elif "sql_file" in self.config.get("inputs", {}):
             sql_path = self.config["inputs"]["sql_file"]
             with open(sql_path, "r") as f:
                 query = f.read()
             return self.client.query(query).to_dataframe()
+        elif self.config.get("inputs"):
+            from vertex.utils.data_loading import resolve_input_sql
+
+            sql = resolve_input_sql(self.config)
+            return self.client.query(sql).to_dataframe()
         else:
             raise ValueError("Either query or file must be provided.")
 
