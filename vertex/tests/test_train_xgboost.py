@@ -40,6 +40,25 @@ class TestPrepareFeatureMatrix:
         assert "store_id" not in features
         assert "feature_a" in features
 
+    def test_target_in_excluded_columns_still_available(self):
+        rows = 10
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2024-01-01", periods=rows, freq="D"),
+                "sales": np.arange(rows, dtype=float),
+                "feature_a": np.random.rand(rows),
+            }
+        )
+        matrix, features, _dates = prepare_feature_matrix(
+            df,
+            target_column="sales",
+            excluded_columns=["sales", "date"],
+            date_column="date",
+        )
+        assert "sales" not in features
+        assert "sales" in matrix.columns
+        assert matrix["sales"].notna().all()
+
 
 @pytest.mark.unit
 class TestTrainSklearnXgboost:

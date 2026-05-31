@@ -19,7 +19,8 @@ def prepare_feature_matrix(
     date_column: Optional[str] = None,
 ) -> tuple[pd.DataFrame, list[str], Optional[pd.Series]]:
     """Build numeric feature matrix and optional date series for chronological split."""
-    excluded_columns = excluded_columns or []
+    # Target must stay available for y / metrics even if listed in excluded_columns.
+    excluded_columns = [c for c in (excluded_columns or []) if c != target_column]
     categorical_columns = categorical_columns or []
 
     work = df.copy()

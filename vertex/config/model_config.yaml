@@ -58,6 +58,13 @@ configs:
       id_columns:
         - store_nbr
       excluded_columns:
+        - sales_company_n1d
+        - sales_company_n7d
+        - sales_company_n14d
+        - sales_company_n28d
+        - sales_company_n30d
+        - sales_company_n60d
+        - sales_company_n90d
         - store_nbr
         - date
         - sales_store_l1d
@@ -96,6 +103,13 @@ configs:
       id_columns:
         - store_nbr
       excluded_columns:
+        - sales_company_n1d
+        - sales_company_n7d
+        - sales_company_n14d
+        - sales_company_n28d
+        - sales_company_n30d
+        - sales_company_n60d
+        - sales_company_n90d
         - store_nbr
         - date
         - sales_store_l1d
@@ -131,6 +145,13 @@ configs:
       id_columns:
         - store_nbr
       excluded_columns:
+        - sales_company_n1d
+        - sales_company_n7d
+        - sales_company_n14d
+        - sales_company_n28d
+        - sales_company_n30d
+        - sales_company_n60d
+        - sales_company_n90d
         - store_nbr
         - date
         - sales_store_l1d
@@ -170,6 +191,13 @@ configs:
       id_columns:
         - store_nbr
       excluded_columns:
+        - sales_company_n1d
+        - sales_company_n7d
+        - sales_company_n14d
+        - sales_company_n28d
+        - sales_company_n30d
+        - sales_company_n60d
+        - sales_company_n90d
         - store_nbr
         - date
         - sales_store_l1d
