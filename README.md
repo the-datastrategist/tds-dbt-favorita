@@ -2,6 +2,8 @@
 
 Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuery ML) and Google Vertex AI.
 
+**Consulting package** — reference architecture, accelerators, and delivery artifacts for client engagements: **[docs/consulting_package.md](docs/consulting_package.md)** (rendered in hosted dbt Docs via `make dbt-ui`).
+
 ## Features
 
 - **dbt + BigQuery ML**: Train and deploy ML models directly in BigQuery
@@ -14,15 +16,43 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 - **Testing**: pytest for Vertex utilities; dbt data tests on staging and intermediate models
 - **CI/CD**: GitHub Actions on every push and PR (Python lint/tests, `dbt parse` / `dbt compile` / `dbt docs generate`)
 - **Hosted dbt Docs**: GitHub Pages deploy on push to `main` / `master` (see [Hosted documentation](#hosted-documentation))
-- **dbt Docs & lineage**: Project overview (`dbt/docs/overview.md`), exposures for ML and operational consumers (`dbt/models/exposures.yml`)
+- **dbt Docs & lineage**: Project overview ([`docs/overview.md`](docs/overview.md)), exposures for ML and operational consumers (`dbt/models/exposures.yml`)
 - **Code Quality**: Black, flake8, and mypy for code quality
+- **Consulting package**: Architecture diagrams, accelerators inventory, case study, benchmarks, rollout playbook, and IaC guidance ([docs/consulting_package.md](docs/consulting_package.md))
+
+## Consulting package
+
+Productized engagement docs for proposals, kickoff, and handoff. Start at **[docs/consulting_package.md](docs/consulting_package.md)**.
+
+| Layer | Documents |
+|-------|-----------|
+| **Reference architecture** | [reference_architecture.md](docs/reference_architecture.md) — GCP layers, data flows, dual ML path |
+| **Accelerators** | [accelerators.md](docs/accelerators.md) — dbt, Vertex, MLflow, Prefect, platform assets |
+| **Delivery artifacts** | [delivery_artifacts.md](docs/delivery_artifacts.md) — index of collateral below |
+
+| Artifact | Document |
+|----------|----------|
+| Case study | [docs/case_study.md](docs/case_study.md) |
+| Benchmarks | [docs/benchmarks.md](docs/benchmarks.md) |
+| Client rollout (4-week) | [docs/client_rollout.md](docs/client_rollout.md) |
+| IaC & GCP ops | [docs/iac.md](docs/iac.md), [vertex/ops/README.md](vertex/ops/README.md) |
+
+Product-specific views: [dbt](docs/dbt/consulting_package.md) · [Vertex AI](docs/vertex/consulting_package.md) · [MLflow](docs/mlflow/consulting_package.md) · [Prefect](docs/prefect/consulting_package.md)
+
+Browse locally with **`make dbt-ui`** (http://127.0.0.1:8080) or on GitHub after `dbt docs generate` in CI.
 
 ## Project Structure
 
 ```
 .
+├── docs/                   # Project + consulting docs (dbt docs-paths: ../docs)
+│   ├── overview.md        # dbt Docs Overview tab
+│   ├── consulting_package.md
+│   ├── dbt/               # dbt-focused consulting view
+│   ├── vertex/            # Vertex-focused consulting view
+│   ├── mlflow/            # MLflow-focused consulting view
+│   └── prefect/           # Prefect-focused consulting view
 ├── dbt/                    # dbt models and configurations
-│   ├── docs/              # Project overview for dbt Docs (overview.md)
 │   ├── models/
 │   │   ├── staging/       # Staging models
 │   │   ├── intermediate/  # ML training feature sets (int_sales_*)
@@ -177,8 +207,7 @@ make dbt-run-model MODEL=int_sales_daily
 # Extra dbt flags
 make dbt-run ARGS="--select stg_favorita_train"
 
-make dbt-docs-generate
-make dbt-docs-serve     # http://localhost:8080
+make dbt-ui             # generate + serve — http://127.0.0.1:8080
 ```
 
 ### dbt documentation and lineage
@@ -187,7 +216,8 @@ Narrative docs and exposures are configured in the dbt project (`docs-paths` in 
 
 | File | Purpose |
 |------|---------|
-| [`dbt/docs/overview.md`](dbt/docs/overview.md) | **Overview** tab in dbt Docs: architecture, grains, run order, data-quality notes |
+| [`docs/overview.md`](docs/overview.md) | **Overview** tab in dbt Docs: architecture, grains, run order, data-quality notes |
+| [`docs/consulting_package.md`](docs/consulting_package.md) | Consulting package hub (architecture, accelerators, delivery artifacts) |
 | [`dbt/models/exposures.yml`](dbt/models/exposures.yml) | Lineage **exposures** linking models to BQML forecasts, Vertex training, calendar/holiday context, and store master data |
 
 Defined exposures include `favorita_company_forecast`, `favorita_store_product_features`, `favorita_vertex_training`, `favorita_operational_calendar`, and `favorita_store_master`. In the docs site, open the lineage graph and select an exposure to highlight upstream models.
@@ -195,8 +225,10 @@ Defined exposures include `favorita_company_forecast`, `favorita_store_product_f
 Generate and browse docs locally (no `dbt run` required):
 
 ```bash
+make dbt-ui             # generate + serve — http://127.0.0.1:8080
+# Or separately:
 make dbt-docs-generate
-make dbt-docs-serve     # http://localhost:8080 — open Overview, then explore Exposures in lineage
+make dbt-docs-serve     # reuse existing artifacts without regenerating
 ```
 
 ### Hosted documentation
@@ -207,7 +239,7 @@ After you enable **Settings → Pages → Build and deployment → GitHub Action
 
 `https://<github-org-or-user>.github.io/<repository-name>/`
 
-The site includes the [project overview](dbt/docs/overview.md), model catalog, and [exposures](dbt/models/exposures.yml) on the lineage graph. No BigQuery credentials are required to browse it.
+The site includes the [project overview](docs/overview.md), model catalog, and [exposures](dbt/models/exposures.yml) on the lineage graph. No BigQuery credentials are required to browse it.
 
 ### Vertex AI model commands
 
@@ -251,16 +283,20 @@ Aliases: `make model-train` → `vertex-train-docker`, etc.
 
 Full detail: **[vertex/README.md](vertex/README.md)**.
 
-### Local UIs (MLflow & Prefect)
+### Local UIs (dbt Docs, MLflow & Prefect)
 
-Both UIs run in Docker and bind to **localhost only** (override ports via Make variables):
+All three run in Docker and bind to **localhost only** (override ports via Make variables):
 
 | Command | URL | Purpose |
 |---------|-----|---------|
+| `make dbt-ui` | http://127.0.0.1:8080 | dbt Docs — model catalog, lineage graph, exposures, consulting package |
 | `make mlflow-ui` | http://127.0.0.1:5001 | Browse runs, metrics, and **Models** tab (GCS catalog pointers; not joblib copies) |
 | `make prefect-ui` | http://127.0.0.1:4200 | Prefect OSS server (API + dashboard) |
 
 ```bash
+# dbt Docs — generates site then serves until Ctrl+C (no dbt run required)
+make dbt-ui
+
 # MLflow — runs until Ctrl+C; reads MLFLOW_TRACKING_URI from .env or file:/app/mlruns
 make mlflow-ui
 
@@ -273,6 +309,7 @@ make prefect-worker
 Port **5001** is the default for MLflow because macOS **AirPlay Receiver** often occupies **5000**. Override if needed:
 
 ```bash
+make dbt-ui DBT_DOCS_PORT=8081
 make mlflow-ui MLFLOW_UI_PORT=5002
 make prefect-ui PREFECT_SERVER_PORT=4201
 ```
@@ -405,6 +442,7 @@ Key environment variables (see `env.example` for full list):
 - `VERTEX_MODE` / `SYNC`: Make variables for Docker vs Vertex submit vs wait (see `make help`)
 - `MLFLOW_TRACKING_URI`: Where Vertex jobs log experiments (default `file:./mlruns`; GCS optional)
 - `MLFLOW_REGISTER_MODEL`: When `true`, register GCS catalog pointers in MLflow Model Registry on train
+- `DBT_DOCS_PORT`: Host port for `make dbt-ui` / `make dbt-docs-serve` (default `8080`)
 - `MLFLOW_UI_PORT`: Host port for `make mlflow-ui` (default `5001`)
 - `PREFECT_SERVER_PORT`: Host port for `make prefect-ui` / `make prefect-server` (default `4200`)
 

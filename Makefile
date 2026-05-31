@@ -20,6 +20,7 @@ endif
 endif
 
 .PHONY: help install requirements-lock format lint test clean dbt-run dbt-train dbt-predict selector-daily-refresh selector-daily-refresh-test load-favorita-gcs load-favorita-bigquery \
+	dbt-ui dbt-docs dbt-docs-generate dbt-docs-serve \
 	mlflow-ui prefect-ui prefect-server prefect-work-pool-create prefect-worker prefect-deploy \
 	prefect-run-dbt prefect-run-vertex-train prefect-run-vertex-train-all prefect-run-vertex-pipeline \
 	prefect-flow-dbt prefect-flow-vertex-train prefect-flow-vertex-pipeline \
@@ -126,14 +127,22 @@ dbt-seed:
 dbt-create-table:
 	docker compose run --rm ml-pipeline dbt run-operation --project-dir dbt stage_external_sources --args '{"select": "$(DATABASE).$(TABLE)"}' --target $(DBT_TARGET)
 
-dbt-docs:
-	docker compose run --rm ml-pipeline dbt docs generate --project-dir dbt && docker compose run --rm -p 8080:8080 ml-pipeline dbt docs serve --project-dir dbt --host 0.0.0.0 --port 8080
+DBT_DOCS_PORT ?= 8080
 
-dbt-docs-generate:
+dbt-docs-generate: ## Generate static dbt Docs site (dbt/target/)
 	docker compose run --rm ml-pipeline dbt docs generate --project-dir dbt
 
-dbt-docs-serve:
-	docker compose run --rm -p 8080:8080 ml-pipeline dbt docs serve --project-dir dbt --host 0.0.0.0 --port 8080
+dbt-docs-serve: ## Serve generated dbt Docs (http://127.0.0.1:8080; run dbt-docs-generate first)
+	@echo ""
+	@echo "=== dbt Docs ==="
+	@echo "Open in your browser: http://127.0.0.1:$(DBT_DOCS_PORT)"
+	@echo "(Ctrl+C to stop)"
+	@echo ""
+	docker compose run --rm -p 127.0.0.1:$(DBT_DOCS_PORT):8080 ml-pipeline dbt docs serve --project-dir dbt --host 0.0.0.0 --port 8080
+
+dbt-ui: dbt-docs-generate dbt-docs-serve ## Generate and serve dbt Docs locally (http://127.0.0.1:8080)
+
+dbt-docs: dbt-ui ## Alias for dbt-ui
 
 # --- DATA INGESTION ---
 
@@ -306,6 +315,11 @@ MLFLOW_UI_PORT ?= 5001
 MLFLOW_TRACKING_URI ?= file:/app/mlruns
 
 mlflow-ui: ## MLflow tracking UI (http://127.0.0.1:5001; avoids macOS AirPlay on 5000)
+	@echo ""
+	@echo "=== MLflow ==="
+	@echo "Open in your browser: http://127.0.0.1:$(MLFLOW_UI_PORT)"
+	@echo "(Ctrl+C to stop)"
+	@echo ""
 	docker compose run --rm -p 127.0.0.1:$(MLFLOW_UI_PORT):5000 ml-pipeline \
 		mlflow ui --host 0.0.0.0 --backend-store-uri $(MLFLOW_TRACKING_URI)
 
@@ -315,6 +329,12 @@ PREFECT_SERVER_PORT ?= 4200
 PREFECT_API_URL_DOCKER ?= http://host.docker.internal:$(PREFECT_SERVER_PORT)/api
 
 prefect-server: ## Start Prefect OSS server (UI http://127.0.0.1:4200; localhost only)
+	@echo ""
+	@echo "=== Prefect ==="
+	@echo "Open in your browser: http://127.0.0.1:$(PREFECT_SERVER_PORT)"
+	@echo "API (workers): http://127.0.0.1:$(PREFECT_SERVER_PORT)/api"
+	@echo "(Ctrl+C to stop)"
+	@echo ""
 	docker compose run --rm -p 127.0.0.1:$(PREFECT_SERVER_PORT):4200 ml-pipeline prefect server start --host 0.0.0.0
 
 prefect-ui: prefect-server ## Alias: Prefect OSS UI (http://127.0.0.1:4200)

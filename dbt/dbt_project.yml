@@ -12,7 +12,7 @@ profile: tds_favorita
 require-dbt-version: [">=1.7.0", "<2.0.0"]
 
 model-paths: ["models"]
-docs-paths: ["docs"]
+docs-paths: ["../docs"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
 seed-paths: ["seeds"]
