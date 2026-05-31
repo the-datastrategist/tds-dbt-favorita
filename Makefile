@@ -20,7 +20,7 @@ endif
 endif
 
 .PHONY: help install requirements-lock format lint test clean dbt-run dbt-train dbt-predict selector-daily-refresh selector-daily-refresh-test load-favorita-gcs load-favorita-bigquery \
-	prefect-server prefect-work-pool-create prefect-worker prefect-deploy \
+	mlflow-ui prefect-ui prefect-server prefect-work-pool-create prefect-worker prefect-deploy \
 	prefect-run-dbt prefect-run-vertex-train prefect-run-vertex-train-all prefect-run-vertex-pipeline \
 	prefect-flow-dbt prefect-flow-vertex-train prefect-flow-vertex-pipeline \
 	vertex-train vertex-predict vertex-optimize vertex-run vertex-run-docker vertex-submit \
@@ -299,6 +299,16 @@ model-train: vertex-train-docker ## Alias: train in Docker
 model-predict: vertex-predict-docker ## Alias: predict in Docker
 model-optimize: vertex-optimize-docker ## Alias: optimize in Docker
 
+# --- MLflow / Prefect UIs (localhost only; override ports via MLFLOW_UI_PORT / PREFECT_SERVER_PORT) ---
+# Train jobs log gcs_model_catalog.json to MLflow; set MLFLOW_REGISTER_MODEL=true for Model Registry.
+
+MLFLOW_UI_PORT ?= 5001
+MLFLOW_TRACKING_URI ?= file:/app/mlruns
+
+mlflow-ui: ## MLflow tracking UI (http://127.0.0.1:5001; avoids macOS AirPlay on 5000)
+	docker compose run --rm -p 127.0.0.1:$(MLFLOW_UI_PORT):5000 ml-pipeline \
+		mlflow ui --host 0.0.0.0 --backend-store-uri $(MLFLOW_TRACKING_URI)
+
 # --- PREFECT COMMANDS ---
 
 PREFECT_SERVER_PORT ?= 4200
@@ -306,6 +316,8 @@ PREFECT_API_URL_DOCKER ?= http://host.docker.internal:$(PREFECT_SERVER_PORT)/api
 
 prefect-server: ## Start Prefect OSS server (UI http://127.0.0.1:4200; localhost only)
 	docker compose run --rm -p 127.0.0.1:$(PREFECT_SERVER_PORT):4200 ml-pipeline prefect server start --host 0.0.0.0
+
+prefect-ui: prefect-server ## Alias: Prefect OSS UI (http://127.0.0.1:4200)
 
 prefect-work-pool-create: ## Create default process work pool (idempotent)
 	$(DOCKER_RUN) prefect work-pool create --type process default 2>/dev/null || true

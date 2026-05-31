@@ -79,6 +79,23 @@ class TestExperimentRunContext:
         assert logged["test_mae"] == 1.5
         assert logged["train_mae"] == 1.0
 
+    def test_log_train_result_invokes_catalog(self, train_config):
+        ctx = ExperimentRunContext(train_config, job_run_id="job-123")
+        with (
+            patch.object(ctx, "_log_params"),
+            patch.object(ctx, "_log_metrics"),
+            patch("vertex.utils.experiment_tracking.log_train_catalog") as mock_catalog,
+        ):
+            mock_catalog.return_value = {"mlflow_model_uri": "models:/x/1"}
+            ctx.log_success(
+                {
+                    "config_name": "favorita_xgboost_train",
+                    "manifest_gcs_uri": "gs://b/m/manifest.json",
+                    "metadata": {},
+                }
+            )
+        mock_catalog.assert_called_once()
+
     def test_job_run_fields(self, train_config):
         ctx = ExperimentRunContext(train_config, job_run_id="job-123")
         ctx.mlflow_run_id = "mlflow-abc"

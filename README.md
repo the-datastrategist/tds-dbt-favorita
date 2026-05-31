@@ -9,6 +9,7 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 - **End-to-end Pipeline**: From data transformation to model training and prediction
 - **Dockerized**: Run everything locally in Docker containers
 - **Prefect**: OSS workflow orchestration for scheduled and manual dbt / Vertex / ML pipeline runs via Docker (`make prefect-*`; see [orchestration/README.md](orchestration/README.md))
+- **Experiment tracking**: MLflow + Vertex AI Experiments on every Vertex job; GCS remains canonical for model files with MLflow catalog pointers on train (`make mlflow-ui`; see [Local UIs](#local-uis-mlflow--prefect))
 - **pip + Docker**: Locked dependencies in `requirements.txt`; all local commands run in Docker
 - **Testing**: pytest for Vertex utilities; dbt data tests on staging and intermediate models
 - **CI/CD**: GitHub Actions on every push and PR (Python lint/tests, `dbt parse` / `dbt compile` / `dbt docs generate`)
@@ -250,6 +251,36 @@ Aliases: `make model-train` → `vertex-train-docker`, etc.
 
 Full detail: **[vertex/README.md](vertex/README.md)**.
 
+### Local UIs (MLflow & Prefect)
+
+Both UIs run in Docker and bind to **localhost only** (override ports via Make variables):
+
+| Command | URL | Purpose |
+|---------|-----|---------|
+| `make mlflow-ui` | http://127.0.0.1:5001 | Browse runs, metrics, and **Models** tab (GCS catalog pointers; not joblib copies) |
+| `make prefect-ui` | http://127.0.0.1:4200 | Prefect OSS server (API + dashboard) |
+
+```bash
+# MLflow — runs until Ctrl+C; reads MLFLOW_TRACKING_URI from .env or file:/app/mlruns
+make mlflow-ui
+
+# Prefect — server in one terminal; worker in another to execute deployments
+make prefect-ui
+make prefect-work-pool-create   # once
+make prefect-worker
+```
+
+Port **5001** is the default for MLflow because macOS **AirPlay Receiver** often occupies **5000**. Override if needed:
+
+```bash
+make mlflow-ui MLFLOW_UI_PORT=5002
+make prefect-ui PREFECT_SERVER_PORT=4201
+```
+
+Prefect deployments, schedules, and flow triggers: **[orchestration/README.md](orchestration/README.md)**.
+
+**MLflow catalog:** train jobs log `gcs_model_catalog.json` with `manifest_gcs_uri` / `joblib_gcs_uri`. Set `mlflow.register_model: true` in [`model_config.yaml`](vertex/config/model_config.yaml) or `MLFLOW_REGISTER_MODEL=true` to also create Model Registry versions. Predict still uses GCS via `make vertex-predict`. Details: **[vertex/README.md](vertex/README.md#experiment-tracking)**.
+
 ### Code Quality
 
 ```bash
@@ -372,6 +403,10 @@ Key environment variables (see `env.example` for full list):
 - `VERTEX_AI_MODEL_BUCKET`: GCS bucket for model artifacts (optional; paths also set in `model_config.yaml`)
 - `VERTEX_TRAINING_IMAGE`: Container image URI for Custom Jobs (e.g. Artifact Registry `.../tds-favorita:latest`)
 - `VERTEX_MODE` / `SYNC`: Make variables for Docker vs Vertex submit vs wait (see `make help`)
+- `MLFLOW_TRACKING_URI`: Where Vertex jobs log experiments (default `file:./mlruns`; GCS optional)
+- `MLFLOW_REGISTER_MODEL`: When `true`, register GCS catalog pointers in MLflow Model Registry on train
+- `MLFLOW_UI_PORT`: Host port for `make mlflow-ui` (default `5001`)
+- `PREFECT_SERVER_PORT`: Host port for `make prefect-ui` / `make prefect-server` (default `4200`)
 
 ## Development
 
@@ -401,7 +436,7 @@ To run end-to-end predictions from a local Dockerized environment, you'll need:
 5. ✅ **Prediction scripts** - Unified BigQuery prediction schema
 6. ✅ **Prefect orchestration** - Manual and scheduled dbt, Vertex train, and ML pipeline (optimize → train → predict) deployments ([orchestration/README.md](orchestration/README.md))
    - Or use `make` commands for simple workflows
-7. ✅ **Experiment tracking** - MLflow + Vertex AI Experiments on every `vertex.jobs.run` (train/predict/optimize); BigQuery metadata unchanged ([vertex/README.md](vertex/README.md))
+7. ✅ **Experiment tracking** - MLflow + Vertex AI Experiments; GCS-canonical artifacts with MLflow catalog on train (`gcs_model_catalog.json`; optional Model Registry via `MLFLOW_REGISTER_MODEL`)
    - ⚠️ Cloud Logging integration for Vertex AI (optional)
 8. ⚠️ **Model serving** - For production:
    - Vertex AI Model Registry for model versioning

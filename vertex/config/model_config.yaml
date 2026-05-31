@@ -5,6 +5,11 @@ defaults:
     enabled: true
     experiment_name: favorita-vertex
     vertex_experiments: true
+    # GCS remains canonical; MLflow stores pointers (gcs_model_catalog.json) per train run.
+    catalog_artifacts: true
+    # Set true (or MLFLOW_REGISTER_MODEL=true) to create/update MLflow Registered Models.
+    register_model: false
+    registered_model_prefix: favorita
   outputs:
     metadata_table: tds-favorita.favorita.favorita_model_metadata
     performance_table: tds-favorita.favorita.favorita_model_performance

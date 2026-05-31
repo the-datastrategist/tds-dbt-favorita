@@ -127,8 +127,10 @@ From the **repository root**. Default **`VERTEX_MODE=docker`** runs `vertex.jobs
 | `make vertex-train` | Train (default config: `favorita_xgboost_train`) |
 | `make vertex-predict` | Predict (`favorita_xgboost_predict`) |
 | `make vertex-optimize` | Optuna search (`favorita_xgboost_optimize`) |
+| `make mlflow-ui` | MLflow UI for local runs in `./mlruns` (http://127.0.0.1:5001) |
 | `make vertex-train VERTEX_MODE=vertex` | Submit training **Custom Job** to Vertex AI |
 | `make vertex-train VERTEX_MODE=vertex SYNC=1` | Submit and wait until the job finishes |
+
 Explicit targets:
 
 | Docker (local machine) | Vertex AI submit |
@@ -175,15 +177,44 @@ make vertex-train VERTEX_TRAIN_CONFIG=my_custom_train
 
 The Custom Job runs: `python -m vertex.jobs.run --config-name <name>`. Job runs are **upserted** (MERGE) into **`favorita_vertex_job_runs`** — one row per `job_run_id` with duration, artifact URI, git SHA, and image URI when BigQuery is reachable. Submit passes `VERTEX_JOB_RUN_ID` so submitter and container share the same id.
 
+## Experiment tracking
+
 **Experiment tracking** (train, predict, optimize via `vertex.jobs.run`):
 
 | Destination | What is logged |
 |-------------|----------------|
 | **BigQuery** | Training metadata (`favorita_model_metadata`), performance, predictions, optimize trials, job runs (existing runners) |
-| **MLflow** | Params, metrics, tags per job run (`MLFLOW_TRACKING_URI`, default `file:./mlruns`) |
+| **MLflow** | Params, metrics, tags per job run; on **train**, a **`gcs_model_catalog.json`** artifact pointing at GCS (`manifest_gcs_uri`, `joblib_gcs_uri`) |
 | **Vertex AI Experiments** | Same params/metrics under `vertex.experiment` (default `favorita-vertex`) |
 
-Disable with `EXPERIMENT_TRACKING_ENABLED=false`. Optional `defaults.mlflow` in `model_config.yaml`:
+### GCS canonical + MLflow catalog
+
+**Model binaries stay on GCS** (`inputs.gcs_model_path` → `manifest.json` + `model.joblib`). **`make vertex-predict`** loads from GCS via the manifest — not from MLflow.
+
+On each successful **train** job, MLflow records a **catalog pointer**:
+
+| Artifact / param | Purpose |
+|------------------|---------|
+| `gcs_model_catalog.json` | JSON sidecar on the MLflow run (default `catalog_artifacts: true`) |
+| `manifest_gcs_uri`, `joblib_gcs_uri` | Run params (also in BigQuery metadata) |
+| `models:/<name>/<version>` | Optional Model Registry entry when `register_model: true` |
+
+The registered pyfunc model is a **lightweight pointer** (kilobytes in `./mlruns` or your tracking store), not a second copy of the joblib on GCS.
+
+Enable Model Registry catalog (optional):
+
+```yaml
+defaults:
+  mlflow:
+    catalog_artifacts: true
+    register_model: true                    # or MLFLOW_REGISTER_MODEL=true in .env
+    registered_model_prefix: favorita       # → favorita-<config_name>
+    registered_model_name: my-model         # optional override
+```
+
+Or per config under `mlflow:` on a train block.
+
+Disable with `EXPERIMENT_TRACKING_ENABLED=false`. Other `defaults.mlflow` keys:
 
 ```yaml
 defaults:
@@ -191,10 +222,13 @@ defaults:
     enabled: true
     experiment_name: favorita-vertex
     vertex_experiments: true
+    catalog_artifacts: true
+    register_model: false
+    registered_model_prefix: favorita
     # tracking_uri: gs://your-bucket/mlflow
 ```
 
-Optional per-config overrides under `vertex:` in YAML:
+Optional per-config overrides under `vertex:` (Vertex AI **serving** registry — separate from MLflow):
 
 ```yaml
 vertex:
@@ -202,10 +236,24 @@ vertex:
   machine_type: n1-standard-4
   staging_bucket: gs://...   # else VERTEX_AI_STAGING_BUCKET
   image: us-central1-docker.pkg.dev/...   # else VERTEX_TRAINING_IMAGE
-  register_model: false
+  register_model: false      # Vertex AI Model Registry upload (GCS artifact for endpoints)
 ```
 
-Model Registry upload uses `artifacts.register_from_manifest` (manifest URI from training), not the legacy `VertexModelSaver` path.
+Vertex AI Model Registry upload uses `artifacts.register_from_manifest` when `vertex.register_model: true`, not the legacy `VertexModelSaver` path.
+
+### View MLflow runs locally
+
+After `make vertex-train`, `make vertex-predict`, or `make vertex-optimize`, runs appear under `./mlruns/` (gitignored). Start the UI from the repo root:
+
+```bash
+make mlflow-ui    # http://127.0.0.1:5001
+```
+
+Default host port **5001** avoids macOS AirPlay on **5000**. Override with `make mlflow-ui MLFLOW_UI_PORT=5002`. The Make target passes `--backend-store-uri` from `MLFLOW_TRACKING_URI` in `.env` or defaults to `file:/app/mlruns` (same directory via the `/app` bind mount).
+
+Each job run logs `job_run_id` as an MLflow tag/param; BigQuery stores `mlflow_run_id` and `vertex_experiment_run` on `favorita_vertex_job_runs` for cross-system joins.
+
+For Prefect orchestration UI (`make prefect-ui` on port **4200**), see the [root README](../README.md#local-uis-mlflow--prefect) and [orchestration/README.md](../orchestration/README.md).
 
 ## Running without Make
 

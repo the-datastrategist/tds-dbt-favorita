@@ -10,6 +10,7 @@ from typing import Any, Optional
 
 from vertex.config.load_config import get_job_spec
 from vertex.utils.bigquery_utils import vertex_safe_run_id
+from vertex.utils.mlflow_catalog import log_train_catalog
 from vertex.utils.run_context import get_container_image, get_git_sha, get_pipeline_run_id
 
 logger = logging.getLogger(__name__)
@@ -362,6 +363,19 @@ class ExperimentRunContext:
         manifest_uri = params.get("manifest_gcs_uri")
         if manifest_uri:
             self._mlflow_log_param("artifact_manifest_uri", _safe_str(manifest_uri))
+
+        config_name = str(params.get("config_name") or self._spec["config_name"] or "")
+        try:
+            catalog_summary = log_train_catalog(
+                self.config,
+                result,
+                config_name=config_name,
+                job_run_id=self.job_run_id,
+            )
+            if catalog_summary:
+                self._log_params(catalog_summary)
+        except Exception as exc:
+            logger.warning("MLflow GCS catalog logging failed: %s", exc)
 
     def _log_predict_result(self, result: dict[str, Any]) -> None:
         self._log_params(
