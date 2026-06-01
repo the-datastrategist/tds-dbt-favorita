@@ -73,6 +73,9 @@ store_sales_daily_window as (
     safe_divide(products_store_on_promotion, products_store)                  as pct_products_store_on_promotion,
     safe_divide(product_families_store_on_promotion, product_families_store)  as pct_product_families_store_on_promotion,
 
+    -- Store sales on the same day of week one calendar week later (e.g. Mon -> next Mon)
+    sum(sales_store) over (partition by store_nbr order by date rows between 7 following and 7 following)    as sales_store_n1d_same_dow,
+
     -- Next N-day sales (from the day after date through N days forward)
     sum(sales_store) over (partition by store_nbr order by date rows between 1 following and 1 following)    as sales_store_n1d,
     sum(sales_store) over (partition by store_nbr order by date rows between 1 following and 7 following)    as sales_store_n7d,
