@@ -34,7 +34,7 @@ pipelines:
     steps: [train, predict]
 
 configs:
-  - name: favorita_xgboost
+  - name: favorita_store_n1d_xgboost
     description: XGBoost on store daily sales (train, predict, optimize share model_params)
     model_family: favorita_store_daily
     model_type: xgboost
@@ -52,12 +52,21 @@ configs:
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
         WHERE data_split_source = 'test'
-      target_column: sales_store
+      target_column: sales_store_n1d
       date_column: date
       entity_column: store_nbr
       id_columns:
         - store_nbr
       excluded_columns:
+        - sales_store_n1d_same_dow
+        - sales_store_n1d
+        - sales_store_n7d
+        - sales_store_n14d
+        - sales_store_n28d
+        - sales_store_n30d
+        - sales_store_n60d
+        - sales_store_n90d
+        - sales_company_n1d_same_dow
         - sales_company_n1d
         - sales_company_n7d
         - sales_company_n14d
@@ -82,7 +91,7 @@ configs:
         learning_rate: 0.1
     outputs: {}
 
-  - name: favorita_rf
+  - name: favorita_store_n1d_rf
     description: Random Forest on store daily sales (shared model_params)
     model_family: favorita_store_daily
     model_type: random_forest
@@ -97,7 +106,7 @@ configs:
       predict_sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales_store
+      target_column: sales_store_n1d
       date_column: date
       entity_column: store_nbr
       id_columns:
@@ -125,7 +134,7 @@ configs:
         min_samples_leaf: 2
     outputs: {}
 
-  - name: favorita_arima
+  - name: favorita_store_n1d_arima
     description: Per-entity ARIMA on store daily sales (shared model_params)
     model_family: favorita_store_daily
     model_type: arima
@@ -139,7 +148,7 @@ configs:
       predict_sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales_store
+      target_column: sales_store_n1d
       date_column: date
       entity_column: store_nbr
       id_columns:
@@ -171,7 +180,7 @@ configs:
         maxiter: 50
     outputs: {}
 
-  - name: favorita_sarima
+  - name: favorita_store_n1d_sarima
     description: Per-entity SARIMA on store daily sales (shared model_params)
     model_family: favorita_store_daily
     model_type: sarima
@@ -185,7 +194,7 @@ configs:
       predict_sql_query: |
         SELECT *
         FROM `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales_store
+      target_column: sales_store_n1d
       date_column: date
       entity_column: store_nbr
       id_columns:

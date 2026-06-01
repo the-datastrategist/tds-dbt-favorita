@@ -7,9 +7,11 @@ Container entrypoint: load config, track job run, dispatch to model registry.
 from __future__ import annotations
 
 import argparse
+import copy
 import logging
 import sys
 from pathlib import Path
+from typing import Any
 
 from vertex.config.load_config import (
     DEFAULT_CONFIG_PATH,
@@ -25,16 +27,14 @@ from vertex.utils.tracking import finish_job_run, start_job_run
 logger = logging.getLogger(__name__)
 
 
-def run_job(
-    config_name: str,
-    config_path: str | Path | None = None,
-    *,
-    step_override: str | None = None,
-) -> object:
-    config = load_model_config(config_name, config_path)
-    if step_override:
-        config = apply_job_step(config, step_override)
-    elif not (config.get("job") or {}).get("step"):
+def run_job_config(config: dict[str, Any]) -> dict[str, Any]:
+    """
+    Execute a fully prepared config dict (used by backfill and future Prefect flows).
+
+    Caller must set job.step (via apply_job_step) before calling.
+    """
+    config = copy.deepcopy(config)
+    if not (config.get("job") or {}).get("step"):
         config = apply_job_step(config, "train")
     validate_config_for_step(config)
     ensure_registered()
@@ -52,6 +52,8 @@ def run_job(
     with ExperimentRunContext(config, job_run_id=job_run_id) as experiment:
         try:
             result = run_registered(config)
+            if not isinstance(result, dict):
+                raise TypeError(f"Expected dict result from runner, got {type(result).__name__}")
             experiment.log_success(result)
             finish_job_run(
                 config,
@@ -73,6 +75,18 @@ def run_job(
                 extra_fields=experiment.job_run_fields(),
             )
             raise
+
+
+def run_job(
+    config_name: str,
+    config_path: str | Path | None = None,
+    *,
+    step_override: str | None = None,
+) -> dict[str, Any]:
+    config = load_model_config(config_name, config_path)
+    if step_override:
+        config = apply_job_step(config, step_override)
+    return run_job_config(config)
 
 
 def main() -> None:

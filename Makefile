@@ -29,6 +29,7 @@ endif
 	vertex-submit-train vertex-submit-predict vertex-submit-optimize \
 	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
 	dbt-vertex vertex-bq-ddl vertex-validate-config vertex-validate-configs \
+	vertex-backfill prefect-flow-vertex-backfill \
 	model-train model-predict model-optimize docker-build docker-bash
 
 help: ## Show this help message
@@ -301,6 +302,43 @@ print('OK')"
 
 vertex-validate-configs: ## Validate all model configs in model_config.yaml
 	$(DOCKER_RUN) python -m $(VERTEX_DIR).config.validate_all
+
+# Walk-forward backfill: train + predict per anchor date (see vertex/jobs/backfill.py)
+VERTEX_BACKFILL_CONFIG ?= favorita_store_n1d_xgboost
+START_DATE ?=
+END_DATE ?=
+INTERVAL_DAYS ?= 1
+TRAIN_DAYS ?=
+VERTEX_BACKFILL_ARGS ?=
+
+vertex-backfill: ## Backfill train+predict (START_DATE, END_DATE, INTERVAL_DAYS=1, VERTEX_BACKFILL_CONFIG)
+	@test -n "$(START_DATE)" || (echo "Set START_DATE=YYYY-MM-DD" && exit 1)
+	@test -n "$(END_DATE)" || (echo "Set END_DATE=YYYY-MM-DD" && exit 1)
+	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.backfill \
+		--config-path $(VERTEX_CONFIG) \
+		--config-name $(VERTEX_BACKFILL_CONFIG) \
+		--start-date $(START_DATE) \
+		--end-date $(END_DATE) \
+		--interval-days $(INTERVAL_DAYS) \
+		$(if $(TRAIN_DAYS),--train-days $(TRAIN_DAYS),) \
+		$(if $(filter 1 true yes,$(DRY_RUN)),--dry-run,) \
+		$(if $(MAX_ITERATIONS),--max-iterations $(MAX_ITERATIONS),) \
+		$(if $(filter 1 true yes,$(CONTINUE_ON_ERROR)),--continue-on-error,) \
+		$(VERTEX_BACKFILL_ARGS)
+
+prefect-flow-vertex-backfill: ## Run backfill flow once in Docker (same params as vertex-backfill)
+	@test -n "$(START_DATE)" || (echo "Set START_DATE=YYYY-MM-DD" && exit 1)
+	@test -n "$(END_DATE)" || (echo "Set END_DATE=YYYY-MM-DD" && exit 1)
+	$(DOCKER_RUN) python -c "\
+from orchestration.flows.backfill import prefect_vertex_backfill_flow; \
+prefect_vertex_backfill_flow(\
+config_name='$(VERTEX_BACKFILL_CONFIG)', \
+start_date='$(START_DATE)', end_date='$(END_DATE)', \
+interval_days=int('$(INTERVAL_DAYS)'), \
+train_days=$(if $(TRAIN_DAYS),$(TRAIN_DAYS),None), \
+dry_run=$(if $(filter 1 true yes,$(DRY_RUN)),True,False), \
+max_iterations=$(if $(MAX_ITERATIONS),$(MAX_ITERATIONS),None), \
+stop_on_error=$(if $(filter 1 true yes,$(CONTINUE_ON_ERROR)),False,True))"
 
 # --- Backward-compatible aliases ---
 

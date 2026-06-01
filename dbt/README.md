@@ -39,6 +39,44 @@ make dbt-run-model MODEL=int_sales_daily
 make dbt-test ARGS="--select assert_sales_fct_row_count"
 ```
 
+## Intermediate models (`models/intermediate/`)
+
+All `int_sales_*` models live under `models/intermediate/`. In `dbt_project.yml` they are tagged **`features`** (and **`train`**). The named selector **`ml_features`** in [selectors.yml](selectors.yml) selects the same set.
+
+Run all intermediate models from the repository root:
+
+```bash
+# By folder path
+make dbt-run ARGS='--select path:models/intermediate'
+
+# By tag (same as ml_features selector)
+make dbt-run ARGS='--select tag:features'
+make dbt-run ARGS='--selector ml_features'
+```
+
+`dbt-run` already passes `--exclude tag:bqml`, so BigQuery ML marts are not built.
+
+By default, `--select` also runs **upstream** dependencies (e.g. staging). To build only the intermediate models:
+
+```bash
+make dbt-run ARGS='--select tag:features --indirect-selection empty'
+```
+
+Related targets:
+
+| Goal | Command |
+|------|---------|
+| One model | `make dbt-run-model MODEL=int_sales_daily` |
+| Staging + intermediate (daily ETL) | `make selector-daily-refresh` |
+| Features + BQML training | `make dbt-train` |
+| Tests on intermediate | `make dbt-test ARGS='--select tag:features'` |
+
+Override the dbt target with `DBT_TARGET` (from `.env`):
+
+```bash
+make dbt-run DBT_TARGET=dev ARGS='--select tag:features'
+```
+
 ## Interactive shell
 
 ```bash

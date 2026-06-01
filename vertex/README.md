@@ -154,6 +154,26 @@ Override default config names:
 make vertex-train VERTEX_TRAIN_CONFIG=my_custom_train
 ```
 
+### Walk-forward backfill
+
+Point-in-time **train → predict** for each anchor date (targets such as `sales_store_n1d` — next-day sales from features at `date`). Logic lives in `config/backfill.py` and `jobs/backfill.py`; the same `run_backfill()` function is used by the Prefect flow in `orchestration/flows/backfill.py`.
+
+| Train SQL | `date` in `(as_of - train_days, as_of - 1]` (labels observed) |
+| Predict SQL | `date = as_of` |
+
+```bash
+# Inspect generated SQL
+make vertex-backfill START_DATE=2016-08-01 END_DATE=2016-08-03 DRY_RUN=1
+
+# Run (default config: favorita_store_n1d_xgboost)
+make vertex-backfill START_DATE=2016-08-01 END_DATE=2016-08-31 INTERVAL_DAYS=1 TRAIN_DAYS=180
+
+# Dev: cap iterations
+make vertex-backfill START_DATE=2016-08-01 END_DATE=2016-08-31 MAX_ITERATIONS=2
+```
+
+Each iteration pins `inputs.model_run_id` on predict so artifacts do not cross dates. Predictions append to `favorita_model_predictions`.
+
 ## Running on Vertex AI
 
 1. Set in **`.env`** (see `env.example`):
