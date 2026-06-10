@@ -196,33 +196,38 @@ VERTEX_STEP ?=
 VERTEX_MODE ?= docker
 # Set SYNC=1 to block until a submitted Custom Job finishes
 SYNC ?=
+# After optimize: merge best_params into model_config.yaml (default 1). Set UPDATE_CONFIG=0 to skip.
+UPDATE_CONFIG ?= 1
 
 VERTEX_SUBMIT_SYNC_FLAG = $(if $(filter 1 true yes,$(SYNC)),--sync,)
 VERTEX_STEP_FLAG = $(if $(VERTEX_STEP),--step $(VERTEX_STEP),)
+VERTEX_UPDATE_CONFIG_FLAG = $(if $(filter 0 false no,$(UPDATE_CONFIG)),--no-update-config,)
 
 # --- Generic runners (set VERTEX_CONFIG_NAME) ---
 
-vertex-run-docker: ## Run a config in Docker (VERTEX_CONFIG_NAME=..., optional VERTEX_STEP=)
+vertex-run-docker: ## Run a config in Docker (VERTEX_CONFIG_NAME=..., optional VERTEX_STEP=, UPDATE_CONFIG=1)
 	@test -n "$(VERTEX_CONFIG_NAME)" || (echo "Set VERTEX_CONFIG_NAME, e.g. make vertex-run-docker VERTEX_CONFIG_NAME=favorita_store_n1d_xgboost" && exit 1)
 	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.run \
 		--config-path $(VERTEX_CONFIG) \
 		--config-name $(VERTEX_CONFIG_NAME) \
-		$(VERTEX_STEP_FLAG)
+		$(VERTEX_STEP_FLAG) \
+		$(VERTEX_UPDATE_CONFIG_FLAG)
 
-vertex-submit: ## Submit a config to Vertex AI Custom Training (VERTEX_CONFIG_NAME=..., VERTEX_STEP=)
+vertex-submit: ## Submit a config to Vertex AI Custom Training (VERTEX_CONFIG_NAME=..., VERTEX_STEP=, UPDATE_CONFIG=1)
 	@test -n "$(VERTEX_CONFIG_NAME)" || (echo "Set VERTEX_CONFIG_NAME" && exit 1)
 	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.submit \
 		--config-path $(VERTEX_CONFIG) \
 		--config-name $(VERTEX_CONFIG_NAME) \
 		$(VERTEX_STEP_FLAG) \
-		$(VERTEX_SUBMIT_SYNC_FLAG)
+		$(VERTEX_SUBMIT_SYNC_FLAG) \
+		$(VERTEX_UPDATE_CONFIG_FLAG)
 
 # Dispatch by VERTEX_MODE (docker | vertex)
 vertex-run: ## Run or submit VERTEX_CONFIG_NAME (VERTEX_MODE=docker|vertex)
 	@test -n "$(VERTEX_CONFIG_NAME)" || (echo "Set VERTEX_CONFIG_NAME" && exit 1)
 	@case "$(VERTEX_MODE)" in \
-		vertex) $(MAKE) vertex-submit VERTEX_CONFIG_NAME="$(VERTEX_CONFIG_NAME)" SYNC="$(SYNC)" ;; \
-		*) $(MAKE) vertex-run-docker VERTEX_CONFIG_NAME="$(VERTEX_CONFIG_NAME)" ;; \
+		vertex) $(MAKE) vertex-submit VERTEX_CONFIG_NAME="$(VERTEX_CONFIG_NAME)" VERTEX_STEP="$(VERTEX_STEP)" SYNC="$(SYNC)" UPDATE_CONFIG="$(UPDATE_CONFIG)" ;; \
+		*) $(MAKE) vertex-run-docker VERTEX_CONFIG_NAME="$(VERTEX_CONFIG_NAME)" VERTEX_STEP="$(VERTEX_STEP)" UPDATE_CONFIG="$(UPDATE_CONFIG)" ;; \
 	esac
 
 # --- Train / predict / optimize (pick VERTEX_MODE) ---
@@ -241,8 +246,8 @@ vertex-train: ## Train all include_in_run configs, or one if VERTEX_CONFIG_NAME 
 vertex-predict: ## Predict (VERTEX_MODE=docker|vertex; VERTEX_PREDICT_CONFIG, VERTEX_STEP=predict)
 	@$(MAKE) vertex-run VERTEX_CONFIG_NAME=$(VERTEX_PREDICT_CONFIG) VERTEX_STEP=predict VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC)
 
-vertex-optimize: ## Hyperparameter search (VERTEX_OPTIMIZE_CONFIG, VERTEX_STEP=optimize)
-	@$(MAKE) vertex-run VERTEX_CONFIG_NAME=$(VERTEX_OPTIMIZE_CONFIG) VERTEX_STEP=optimize VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC)
+vertex-optimize: ## Hyperparameter search (VERTEX_OPTIMIZE_CONFIG; UPDATE_CONFIG=1 writes model_config.yaml)
+	@$(MAKE) vertex-run VERTEX_CONFIG_NAME=$(VERTEX_OPTIMIZE_CONFIG) VERTEX_STEP=optimize VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC) UPDATE_CONFIG=$(UPDATE_CONFIG)
 
 # --- Explicit Docker targets ---
 

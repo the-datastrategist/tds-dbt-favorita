@@ -23,18 +23,14 @@ class TestBackfillDates:
         assert parse_backfill_date(date(2016, 8, 15)) == date(2016, 8, 15)
 
     def test_iter_backfill_dates_daily(self):
-        assert list(iter_backfill_dates(date(2016, 8, 1), date(2016, 8, 3), interval_days=1)) == [
-            date(2016, 8, 1),
-            date(2016, 8, 2),
-            date(2016, 8, 3),
-        ]
+        assert list(
+            iter_backfill_dates(date(2016, 8, 1), date(2016, 8, 3), interval_days=1)
+        ) == [date(2016, 8, 1), date(2016, 8, 2), date(2016, 8, 3)]
 
     def test_iter_backfill_dates_weekly(self):
-        assert list(iter_backfill_dates(date(2016, 8, 1), date(2016, 8, 15), interval_days=7)) == [
-            date(2016, 8, 1),
-            date(2016, 8, 8),
-            date(2016, 8, 15),
-        ]
+        assert list(
+            iter_backfill_dates(date(2016, 8, 1), date(2016, 8, 15), interval_days=7)
+        ) == [date(2016, 8, 1), date(2016, 8, 8), date(2016, 8, 15)]
 
     def test_iter_rejects_invalid_range(self):
         with pytest.raises(ValueError, match="start date"):

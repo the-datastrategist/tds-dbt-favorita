@@ -24,7 +24,7 @@ from vertex.utils.data_loading import load_training_data_from_config
 from vertex.utils.data_utils import get_hash
 from vertex.utils.features import chronological_train_test_split, prepare_feature_matrix
 from vertex.utils.metadata import get_performance_metrics
-from vertex.utils.optimize_params import persist_best_params
+from vertex.utils.optimize_params import complete_optimize_result
 
 logger = logging.getLogger(__name__)
 
@@ -171,9 +171,7 @@ def run_optimize_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         "best_params": best.params,
         "optimize_table": optimize_table,
     }
-    if inputs.get("gcs_model_path"):
-        result["best_params_uri"] = persist_best_params(config, result)
-    return result
+    return complete_optimize_result(config, result)
 
 
 def main() -> None:

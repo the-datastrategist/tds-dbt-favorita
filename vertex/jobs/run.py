@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import copy
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -77,13 +78,24 @@ def run_job_config(config: dict[str, Any]) -> dict[str, Any]:
             raise
 
 
+def _apply_update_config_env(update_config: bool | None) -> None:
+    if update_config is True:
+        os.environ["VERTEX_UPDATE_CONFIG"] = "1"
+    elif update_config is False:
+        os.environ["VERTEX_UPDATE_CONFIG"] = "0"
+
+
 def run_job(
     config_name: str,
     config_path: str | Path | None = None,
     *,
     step_override: str | None = None,
+    update_config: bool | None = None,
 ) -> dict[str, Any]:
-    config = load_model_config(config_name, config_path)
+    path = Path(config_path) if config_path else DEFAULT_CONFIG_PATH
+    os.environ["VERTEX_CONFIG_PATH"] = str(path)
+    _apply_update_config_env(update_config)
+    config = load_model_config(config_name, path)
     if step_override:
         config = apply_job_step(config, step_override)
     return run_job_config(config)
@@ -112,13 +124,33 @@ def main() -> None:
         default=None,
         help="Optional override for job.step (train|predict|optimize)",
     )
+    update_group = parser.add_mutually_exclusive_group()
+    update_group.add_argument(
+        "--update-config",
+        action="store_true",
+        default=None,
+        help="After optimize, merge best_params into model_config.yaml (default)",
+    )
+    update_group.add_argument(
+        "--no-update-config",
+        action="store_true",
+        default=None,
+        help="After optimize, do not write best_params to model_config.yaml",
+    )
     args = parser.parse_args()
+
+    update_config: bool | None = None
+    if args.no_update_config:
+        update_config = False
+    elif args.update_config:
+        update_config = True
 
     try:
         run_job(
             config_name=args.config_name,
             config_path=args.config_path,
             step_override=args.step,
+            update_config=update_config,
         )
     except Exception:
         logger.exception("Job failed for config %s", args.config_name)

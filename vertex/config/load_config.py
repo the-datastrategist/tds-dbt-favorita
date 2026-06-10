@@ -111,7 +111,9 @@ def apply_job_step(config: dict[str, Any], step: str) -> dict[str, Any]:
     out = copy.deepcopy(config)
     model_type = get_model_type(out)
     if not model_type:
-        raise ValueError(f"{out.get('name')}: model_type required on config, job, or inputs")
+        raise ValueError(
+            f"{out.get('name')}: model_type required on config, job, or inputs"
+        )
     out["job"] = {
         **(out.get("job") or {}),
         "step": step,

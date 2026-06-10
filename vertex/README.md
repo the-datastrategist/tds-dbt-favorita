@@ -26,6 +26,11 @@ Configs that share **`model_family`** (e.g. `favorita_store_daily`) are meant to
 `inputs.optimize_config_name` (or infer `*_train` → `*_optimize`) and merge those params over  
 `inputs.model_params` unless `use_optimized_params: false`.
 
+**Optimize → model_config.yaml:** By default, `make vertex-optimize` also merges `best_params` into  
+`inputs.model_params` for the matching config block in `model_config.yaml` (local Docker runs  
+with the repo bind-mounted). Disable with `UPDATE_CONFIG=0`, `--no-update-config`,  
+`inputs.update_config_params: false`, or `VERTEX_UPDATE_CONFIG=0`.
+
 ## Directory layout
 
 ```text

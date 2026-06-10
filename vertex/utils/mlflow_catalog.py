@@ -115,9 +115,7 @@ def _pyfunc_catalog_model(catalog: dict[str, str]) -> Any:
         def __init__(self, catalog: dict[str, str]) -> None:
             self.catalog = dict(catalog)
 
-        def predict(
-            self, context: Any, model_input: Any, params: Optional[dict[str, Any]] = None
-        ) -> Any:
+        def predict(self, context: Any, model_input: Any, params: Optional[dict[str, Any]] = None) -> Any:
             return GcsCatalogModel(self.catalog).predict(context, model_input, params)
 
     return _Model(catalog)

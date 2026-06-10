@@ -143,6 +143,7 @@ def worker_pool_spec(
     job_run_id: str,
     command: Optional[list[str]] = None,
     step: Optional[str] = None,
+    update_config: Optional[bool] = None,
 ) -> list[dict[str, Any]]:
     """Custom Job worker pool spec running vertex.jobs.run for one config."""
     run_command = command or ["python", "-m", "vertex.jobs.run"]
@@ -154,6 +155,10 @@ def worker_pool_spec(
     ]
     if step:
         args.extend(["--step", step])
+    if update_config is False:
+        args.append("--no-update-config")
+    elif update_config is True:
+        args.append("--update-config")
     env = [
         {"name": "GOOGLE_PROJECT_ID", "value": settings.project_id},
         {"name": "VERTEX_JOB_RUN_ID", "value": job_run_id},

@@ -6,11 +6,13 @@ import json
 import logging
 import os
 from datetime import datetime as dt
+from pathlib import Path
 from typing import Any, Optional
 
 from google.cloud import bigquery, storage
 
 from vertex.utils.artifacts import parse_gcs_uri, upload_bytes
+from vertex.utils.update_config_params import maybe_update_model_config_params
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +76,30 @@ def persist_best_params(
     if payload.get("optimize_run_id"):
         os.environ["VERTEX_OPTIMIZE_RUN_ID"] = str(payload["optimize_run_id"])
     return uri
+
+
+def complete_optimize_result(
+    config: dict[str, Any],
+    optimize_result: dict[str, Any],
+    *,
+    config_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """
+    Persist optimize output to GCS and optionally merge best_params into model_config.yaml.
+    """
+    inputs = config.get("inputs") or {}
+    if inputs.get("gcs_model_path"):
+        optimize_result["best_params_uri"] = persist_best_params(config, optimize_result)
+
+    updated_path = maybe_update_model_config_params(
+        config,
+        optimize_result.get("best_params") or {},
+        config_path=config_path,
+    )
+    if updated_path is not None:
+        optimize_result["config_params_updated"] = True
+        optimize_result["config_path"] = str(updated_path)
+    return optimize_result
 
 
 def load_best_params_from_gcs(gcs_uri: str) -> Optional[dict[str, Any]]:

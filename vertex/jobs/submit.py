@@ -33,6 +33,7 @@ def submit_job(
     step: str | None = None,
     sync: bool = False,
     image_uri: Optional[str] = None,
+    update_config: Optional[bool] = None,
 ) -> aiplatform.CustomJob:
     """
     Submit a Custom Job for the given config and return the job object.
@@ -69,6 +70,7 @@ def submit_job(
             config_path=str(path),
             job_run_id=job_run_id,
             step=spec["step"],
+            update_config=update_config,
         ),
         staging_bucket=settings.staging_bucket,
         labels=labels,
@@ -102,7 +104,26 @@ def main() -> None:
         help="Block until the Custom Job completes",
     )
     parser.add_argument("--image-uri", default=None, help="Override training container image")
+    update_group = parser.add_mutually_exclusive_group()
+    update_group.add_argument(
+        "--update-config",
+        action="store_true",
+        default=None,
+        help="After optimize, merge best_params into model_config.yaml (default)",
+    )
+    update_group.add_argument(
+        "--no-update-config",
+        action="store_true",
+        default=None,
+        help="After optimize, do not write best_params to model_config.yaml",
+    )
     args = parser.parse_args()
+
+    update_config: Optional[bool] = None
+    if args.no_update_config:
+        update_config = False
+    elif args.update_config:
+        update_config = True
 
     job = submit_job(
         config_name=args.config_name,
@@ -110,6 +131,7 @@ def main() -> None:
         step=args.step,
         sync=args.sync,
         image_uri=args.image_uri,
+        update_config=update_config,
     )
     print(f"Submitted: {job.resource_name}")
 
