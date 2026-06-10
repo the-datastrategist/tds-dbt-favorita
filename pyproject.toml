@@ -61,6 +61,28 @@ markers = [
     "slow: Slow running tests",
 ]
 
+# Unit-test coverage gate (CI --cov-fail-under=65) applies to library code.
+# Omit GCP Custom Job submitters and family train/predict/optimize CLIs (integration-heavy).
+[tool.coverage.run]
+source = ["vertex"]
+omit = [
+    "vertex/tests/*",
+    "vertex/jobs/backfill.py",
+    "vertex/jobs/run.py",
+    "vertex/jobs/submit.py",
+    "vertex/jobs/submit_pipeline.py",
+    "vertex/jobs/gcp.py",
+    "vertex/models/sklearn/optimize_random_forest.py",
+    "vertex/models/sklearn/predict_random_forest.py",
+    "vertex/models/sklearn/train_random_forest.py",
+    "vertex/models/timeseries/optimize_timeseries.py",
+    "vertex/models/timeseries/predict_timeseries.py",
+    "vertex/models/timeseries/train_timeseries.py",
+    "vertex/models/xgboost/train_xgboost.py",
+    "vertex/models/xgboost/predict_xgboost.py",
+    "vertex/utils/artifacts.py",
+]
+
 [tool.mypy]
 python_version = "3.11"
 warn_return_any = true
