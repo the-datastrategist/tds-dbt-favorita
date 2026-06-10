@@ -113,6 +113,7 @@ def run_optimize_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         )
         model_run_id = get_hash(f"{model_id}:{run_at.isoformat()}")
 
+        objective_value = float(test_metrics.get(objective_metric, test_metrics["mae"]))
         trial_rows.append(
             {
                 "optimize_run_id": optimize_run_id,
@@ -126,16 +127,29 @@ def run_optimize_xgboost(config: dict[str, Any]) -> dict[str, Any]:
                 "run_date": run_at.date(),
                 "target_column": target_column,
                 "objective_metric": objective_metric,
-                "objective_value": float(test_metrics.get(objective_metric, test_metrics["mae"])),
+                "objective_value": objective_value,
                 "feature_count": len(features),
                 "test_size": test_size,
                 "parameters": json.dumps(params, default=str),
                 "test_performance": json.dumps(test_metrics, default=str),
             }
         )
-        return float(test_metrics.get(objective_metric, test_metrics["mae"]))
+        logger.info(
+            "Trial %s/%s finished: %s=%.6f params=%s",
+            trial.number + 1,
+            trial_count,
+            objective_metric,
+            objective_value,
+            trial.params,
+        )
+        return objective_value
 
     study = optuna.create_study(direction="minimize")
+    logger.info(
+        "Starting Optuna study: %s trials, minimizing %s",
+        trial_count,
+        objective_metric,
+    )
     study.optimize(objective, n_trials=trial_count)
 
     if trial_rows:

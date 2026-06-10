@@ -113,11 +113,19 @@ def run_optimize_timeseries(config: dict[str, Any]) -> dict[str, Any]:
                 max_entities=max_entities,
             )
         except ValueError:
+            logger.info(
+                "Trial %s/%s finished: %s=inf (no entities fitted) params=%s",
+                trial.number + 1,
+                trial_count,
+                objective_metric,
+                trial.params,
+            )
             return float("inf")
 
         model_id = bundle_model_id(model_type, base, entities_fitted)
         model_run_id = get_hash(f"{model_id}:{run_at.isoformat()}")
 
+        objective_value = float(test_perf.get(objective_metric, test_perf["mae"]))
         trial_rows.append(
             {
                 "optimize_run_id": optimize_run_id,
@@ -131,16 +139,29 @@ def run_optimize_timeseries(config: dict[str, Any]) -> dict[str, Any]:
                 "run_date": run_at.date(),
                 "target_column": target_column,
                 "objective_metric": objective_metric,
-                "objective_value": float(test_perf.get(objective_metric, test_perf["mae"])),
+                "objective_value": objective_value,
                 "feature_count": 0,
                 "test_size": test_size,
                 "parameters": json.dumps(base, default=str),
                 "test_performance": json.dumps(test_perf, default=str),
             }
         )
-        return float(test_perf.get(objective_metric, test_perf["mae"]))
+        logger.info(
+            "Trial %s/%s finished: %s=%.6f params=%s",
+            trial.number + 1,
+            trial_count,
+            objective_metric,
+            objective_value,
+            trial.params,
+        )
+        return objective_value
 
     study = optuna.create_study(direction="minimize")
+    logger.info(
+        "Starting Optuna study: %s trials, minimizing %s",
+        trial_count,
+        objective_metric,
+    )
     study.optimize(objective, n_trials=trial_count)
 
     if trial_rows:
@@ -150,6 +171,7 @@ def run_optimize_timeseries(config: dict[str, Any]) -> dict[str, Any]:
             project_id=project_id,
             if_exists="append",
         )
+        logger.info("Wrote %s trials to %s", len(trial_rows), optimize_table)
 
     best = study.best_trial
     result = {
@@ -165,14 +187,17 @@ def run_optimize_timeseries(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     parser = argparse.ArgumentParser(description="Optimize ARIMA/SARIMA orders")
     parser.add_argument("--config-path", "-f", default=str(DEFAULT_CONFIG_PATH))
     parser.add_argument("--config-name", "-c", default="favorita_arima_optimize")
     args = parser.parse_args()
     config = load_model_config(args.config_name, args.config_path, step="optimize")
     result = run_optimize_timeseries(config)
-    logger.info("Best params: %s", result["best_params"])
+    logger.info("Best trial %s: %s", result["best_trial_number"], result["best_params"])
 
 
 if __name__ == "__main__":
