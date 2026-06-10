@@ -30,18 +30,13 @@ jobs:
     name: Build dbt documentation site
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements-dev.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
 
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
@@ -55,13 +50,22 @@ jobs:
       - name: Parse and compile
         run: |
           dbt parse --project-dir dbt
-          dbt compile --project-dir dbt
+          dbt compile --project-dir dbt \
+            --no-populate-cache \
+            --no-introspect \
+            --threads 1 \
+            --exclude config.materialized:incremental
 
       - name: Generate dbt docs
-        run: dbt docs generate --project-dir dbt
+        run: |
+          dbt docs generate --project-dir dbt \
+            --no-compile \
+            --empty-catalog \
+            --no-populate-cache \
+            --threads 1
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: dbt/target
 
@@ -75,4 +79,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
