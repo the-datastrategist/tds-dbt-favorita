@@ -20,7 +20,9 @@ class TestExtractCsvsFrom7z:
             extract_csvs_from_7z(Path("archive.7z"), Path("/tmp/extract"))
 
     @patch("scripts.load_favorita_to_bigquery.py7zr.SevenZipFile")
-    def test_extracts_when_paths_are_safe(self, mock_seven_zip_file: MagicMock, tmp_path: Path) -> None:
+    def test_extracts_when_paths_are_safe(
+        self, mock_seven_zip_file: MagicMock, tmp_path: Path
+    ) -> None:
         extract_dir = tmp_path / "out"
         extract_dir.mkdir()
         csv_path = extract_dir / "train.csv"

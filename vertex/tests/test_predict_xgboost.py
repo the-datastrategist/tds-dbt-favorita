@@ -1,6 +1,5 @@
 """Unit tests for XGBoost prediction helpers."""
 
-import numpy as np
 import pandas as pd
 import pytest
 from xgboost import XGBRegressor
