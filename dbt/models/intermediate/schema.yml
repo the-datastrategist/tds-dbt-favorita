@@ -1,25 +1,22 @@
 version: 2
 
 models:
-  - name: int_train_input_daily
+  - name: int_sales_daily
     description: >
       Company-level daily training features and labels for forecasting models.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          arguments:
-            combination_of_columns: ['date']
+          combination_of_columns: ['date']
       - dbt_utils.expression_is_true:
-          arguments:
-            expression: "feature_as_of_date = date_sub(date, interval 1 day)"
+          expression: "feature_as_of_date = date_sub(date, interval 1 day)"
     columns:
       - name: date
         description: Date of the sales label.
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_date_spine')
-                field: date
+              to: ref('stg_favorita_date_spine')
+              field: date
       - name: feature_as_of_date
         description: Date that feature windows are calculated as of.
         data_tests:
@@ -29,36 +26,31 @@ models:
         data_tests:
           - not_null
           - dbt_utils.accepted_range:
-              arguments:
-                min_value: 0
+              min_value: 0
 
-  - name: int_train_input_store_daily
+  - name: int_sales_store_daily
     description: >
       Store-level daily training features and labels for forecasting models.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          arguments:
-            combination_of_columns: ['date', 'store_nbr']
+          combination_of_columns: ['date', 'store_nbr']
       - dbt_utils.expression_is_true:
-          arguments:
-            expression: "feature_as_of_date = date_sub(date, interval 1 day)"
+          expression: "feature_as_of_date = date_sub(date, interval 1 day)"
     columns:
       - name: date
         description: Date of the sales label.
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_date_spine')
-                field: date
+              to: ref('stg_favorita_date_spine')
+              field: date
       - name: store_nbr
         description: Store identifier.
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_stores')
-                field: store_nbr
+              to: ref('stg_favorita_stores')
+              field: store_nbr
       - name: feature_as_of_date
         description: Date that feature windows are calculated as of.
         data_tests:
@@ -68,44 +60,38 @@ models:
         data_tests:
           - not_null
           - dbt_utils.accepted_range:
-              arguments:
-                min_value: 0
+              min_value: 0
 
-  - name: int_train_input_store_product_daily
+  - name: int_sales_store_product_daily
     description: >
       Store-product daily training features and labels for forecasting models.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          arguments:
-            combination_of_columns: ['date', 'store_nbr', 'product_id']
+          combination_of_columns: ['date', 'store_nbr', 'product_id']
       - dbt_utils.expression_is_true:
-          arguments:
-            expression: "feature_as_of_date = date_sub(date, interval 1 day)"
+          expression: "feature_as_of_date = date_sub(date, interval 1 day)"
     columns:
       - name: date
         description: Date of the sales label.
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_date_spine')
-                field: date
+              to: ref('stg_favorita_date_spine')
+              field: date
       - name: store_nbr
         description: Store identifier.
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_stores')
-                field: store_nbr
+              to: ref('stg_favorita_stores')
+              field: store_nbr
       - name: product_id
         description: Product identifier.
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: source('favorita_raw', 'raw_favorita_items')
-                field: item_nbr
+              to: source('favorita_raw', 'raw_favorita_items')
+              field: item_nbr
       - name: feature_as_of_date
         description: Date that feature windows are calculated as of.
         data_tests:
@@ -115,36 +101,31 @@ models:
         data_tests:
           - not_null
           - dbt_utils.accepted_range:
-              arguments:
-                min_value: 0
+              min_value: 0
 
-  - name: int_train_input_store_product_family_daily
+  - name: int_sales_store_product_family_daily
     description: >
       Store-product-family daily training features and labels for forecasting models.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          arguments:
-            combination_of_columns: ['date', 'store_nbr', 'product_family']
+          combination_of_columns: ['date', 'store_nbr', 'product_family']
       - dbt_utils.expression_is_true:
-          arguments:
-            expression: "feature_as_of_date = date_sub(date, interval 1 day)"
+          expression: "feature_as_of_date = date_sub(date, interval 1 day)"
     columns:
       - name: date
         description: Date of the sales label.
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_date_spine')
-                field: date
+              to: ref('stg_favorita_date_spine')
+              field: date
       - name: store_nbr
         description: Store identifier.
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_stores')
-                field: store_nbr
+              to: ref('stg_favorita_stores')
+              field: store_nbr
       - name: product_family
         description: Product family identifier.
         data_tests:
@@ -158,5 +139,4 @@ models:
         data_tests:
           - not_null
           - dbt_utils.accepted_range:
-              arguments:
-                min_value: 0
+              min_value: 0

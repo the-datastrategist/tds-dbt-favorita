@@ -6,8 +6,7 @@ models:
       One row per calendar day from the first training date through the last test date.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          arguments:
-            combination_of_columns: ['date']
+          combination_of_columns: ['date']
     columns:
       - name: date
         description: Calendar date within the train-through-test range.
@@ -20,8 +19,7 @@ models:
       Store metadata (city, state, type, cluster). One row per store; no date dimension.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          arguments:
-            combination_of_columns: ['store_nbr']
+          combination_of_columns: ['store_nbr']
     columns:
       - name: store_nbr
         description: Store identifier.
@@ -34,8 +32,7 @@ models:
       Staged holiday and event calendar with surrogate key and date parts.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          arguments:
-            combination_of_columns: ['id']
+          combination_of_columns: ['id']
     columns:
       - name: id
         description: Surrogate key for date, locale, type, description, and transferred flag.
@@ -47,16 +44,14 @@ models:
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_date_spine')
-                field: date
+              to: ref('stg_favorita_date_spine')
+              field: date
       - name: event_type
         description: Holiday event type from source (type column).
         data_tests:
           - not_null
           - accepted_values:
-              arguments:
-                values:
+              values:
                   - Holiday
                   - Transfer
                   - Bridge
@@ -68,8 +63,7 @@ models:
       Daily oil price aligned to the project date spine (includes train and test periods).
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          arguments:
-            combination_of_columns: ['date']
+          combination_of_columns: ['date']
     columns:
       - name: date
         description: Calendar date.
@@ -77,17 +71,15 @@ models:
           - unique
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_date_spine')
-                field: date
+              to: ref('stg_favorita_date_spine')
+              field: date
 
   - name: stg_favorita_train
     description: >
       Staged training sales at store-product-day grain, enriched with product family.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          arguments:
-            combination_of_columns: ['date', 'store_nbr', 'product_id']
+          combination_of_columns: ['date', 'store_nbr', 'product_id']
     columns:
       - name: id
         description: Surrogate key for date, store, and product.
@@ -99,45 +91,86 @@ models:
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_date_spine')
-                field: date
+              to: ref('stg_favorita_date_spine')
+              field: date
       - name: store_nbr
         description: Store identifier.
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_stores')
-                field: store_nbr
+              to: ref('stg_favorita_stores')
+              field: store_nbr
       - name: product_id
         description: Product (item) identifier.
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: source('favorita_raw', 'raw_favorita_items')
-                field: item_nbr
+              to: source('favorita_raw', 'raw_favorita_items')
+              field: item_nbr
       - name: sales
         description: Unit sales for the store-product-day.
         data_tests:
           - dbt_utils.accepted_range:
-              arguments:
-                min_value: 0
+              min_value: 0
       - name: on_promotion
         description: Whether the product was on promotion (0 or 1).
         data_tests:
           - accepted_values:
-              arguments:
-                values: [0, 1]
+              values: [0, 1]
+
+  - name: stg_favorita_sales_fct
+    description: >
+      Unified store-product-day sales fact: training rows with unit sales plus the
+      test-period scoring grid (sales null where labels are withheld).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['date', 'store_nbr', 'product_id']
+    columns:
+      - name: id
+        description: Surrogate key for date, store, and product.
+        data_tests:
+          - unique
+          - not_null
+      - name: date
+        description: Calendar date (train and test periods).
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_favorita_date_spine')
+              field: date
+      - name: store_nbr
+        description: Store identifier.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_favorita_stores')
+              field: store_nbr
+      - name: product_id
+        description: Product (item) identifier.
+        data_tests:
+          - not_null
+          - relationships:
+              to: source('favorita_raw', 'raw_favorita_items')
+              field: item_nbr
+      - name: sales
+        description: Unit sales; null on test-period rows without labels.
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              config:
+                where: sales is not null
+      - name: on_promotion
+        description: Whether the product was on promotion (0 or 1).
+        data_tests:
+          - accepted_values:
+              values: [0, 1]
 
   - name: stg_favorita_test
     description: >
       Staged test-period grid at store-product-day grain for forecasting features.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          arguments:
-            combination_of_columns: ['date', 'store_nbr', 'product_id']
+          combination_of_columns: ['date', 'store_nbr', 'product_id']
     columns:
       - name: id
         description: Surrogate key for date, store, and product.
@@ -149,33 +182,29 @@ models:
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_date_spine')
-                field: date
+              to: ref('stg_favorita_date_spine')
+              field: date
       - name: store_nbr
         description: Store identifier.
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_stores')
-                field: store_nbr
+              to: ref('stg_favorita_stores')
+              field: store_nbr
       - name: product_id
         description: Product (item) identifier.
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: source('favorita_raw', 'raw_favorita_items')
-                field: item_nbr
+              to: source('favorita_raw', 'raw_favorita_items')
+              field: item_nbr
 
   - name: stg_favorita_transactions
     description: >
       Store-level transaction counts by date (cross join of date spine and stores).
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          arguments:
-            combination_of_columns: ['date', 'store_nbr']
+          combination_of_columns: ['date', 'store_nbr']
     columns:
       - name: id
         description: Surrogate key for date and store.
@@ -187,23 +216,20 @@ models:
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_date_spine')
-                field: date
+              to: ref('stg_favorita_date_spine')
+              field: date
       - name: store_nbr
         description: Store identifier.
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_stores')
-                field: store_nbr
+              to: ref('stg_favorita_stores')
+              field: store_nbr
       - name: store_transactions
         description: Transaction count for the store on the date (null when missing in source).
         data_tests:
           - dbt_utils.accepted_range:
-              arguments:
-                min_value: 0
+              min_value: 0
               config:
                 where: store_transactions is not null
 
@@ -212,22 +238,41 @@ models:
       Holiday events expanded to each store (locale and state matching rules).
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          arguments:
-            combination_of_columns: ['store_nbr', 'date']
+          combination_of_columns: ['store_nbr', 'date']
     columns:
       - name: store_nbr
         description: Store identifier.
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_stores')
-                field: store_nbr
+              to: ref('stg_favorita_stores')
+              field: store_nbr
       - name: date
         description: Calendar date.
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('stg_favorita_date_spine')
-                field: date
+              to: ref('stg_favorita_date_spine')
+              field: date
+
+  - name: stg_vertex_model_predictions
+    description: >
+      Vertex AI predictions (all model types) from favorita_model_predictions.
+    columns:
+      - name: prediction_id
+        data_tests:
+          - not_null
+      - name: model_run_id
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: model_type
+        data_tests:
+          - not_null
+
+  - name: stg_vertex_model_metadata
+    description: Training metadata for Vertex model runs.
+
+  - name: stg_vertex_job_runs
+    description: Audit log for Vertex Custom Jobs and PipelineJobs.

@@ -4,15 +4,33 @@
 PROJECT_NAME = tds-favorita
 DBT_DIR = dbt
 VERTEX_DIR = vertex
-MODEL_NAME ?= train_xgboost
+DOCKER_RUN = docker compose run --rm ml-pipeline
 
 # Load .env variables
 ifneq ("$(wildcard .env)","")
 	include .env
 	export $(shell sed 's/=.*//' .env)
 endif
+# Docker ml-pipeline uses GOOGLE_APPLICATION_CREDENTIALS_CONTAINER (see docker-compose.yml).
+ifeq ($(GOOGLE_APPLICATION_CREDENTIALS_CONTAINER),)
+ifneq ($(GOOGLE_APPLICATION_CREDENTIALS),)
+GOOGLE_APPLICATION_CREDENTIALS_CONTAINER := /app/$(patsubst ./%,%,$(GOOGLE_APPLICATION_CREDENTIALS))
+export GOOGLE_APPLICATION_CREDENTIALS_CONTAINER
+endif
+endif
 
-.PHONY: help install format lint test clean dbt-run dbt-train dbt-predict selector-daily-refresh selector-daily-refresh-test load-favorita-bigquery
+.PHONY: help install requirements-lock format lint test clean dbt-run dbt-train dbt-predict selector-daily-refresh selector-daily-refresh-test load-favorita-gcs load-favorita-bigquery \
+	dbt-ui dbt-docs dbt-docs-generate dbt-docs-serve \
+	mlflow-ui prefect-ui prefect-server prefect-work-pool-create prefect-worker prefect-deploy \
+	prefect-run-dbt prefect-run-vertex-train prefect-run-vertex-train-all prefect-run-vertex-pipeline \
+	prefect-flow-dbt prefect-flow-vertex-train prefect-flow-vertex-pipeline \
+	vertex-train vertex-predict vertex-optimize vertex-run vertex-run-docker vertex-submit \
+	vertex-train-docker vertex-predict-docker vertex-optimize-docker \
+	vertex-submit-train vertex-submit-predict vertex-submit-optimize \
+	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
+	dbt-vertex vertex-bq-ddl vertex-validate-config vertex-validate-configs \
+	vertex-backfill prefect-flow-vertex-backfill \
+	model-train model-predict model-optimize docker-build docker-bash vertex-gcp-setup vertex-docker-push vertex-gcp-check
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -20,60 +38,73 @@ help: ## Show this help message
 
 # --- SETUP COMMANDS ---
 
-install: ## Install dependencies with Poetry
-	poetry install
+install: docker-build ## Build Docker image (installs Python deps from requirements-dev.txt)
 
-install-no-dev: ## Install dependencies without dev dependencies
-	poetry install --no-dev
-
-update: ## Update dependencies
-	poetry update
-
-lock: ## Lock dependencies
-	poetry lock
+requirements-lock: ## Regenerate requirements.txt and requirements-dev.txt (requires Docker)
+	docker run --rm -v $(CURDIR):/work -w /work python:3.11-slim bash -c '\
+		pip install -q pip-tools && \
+		pip-compile requirements.in -o requirements.txt --strip-extras && \
+		pip-compile requirements-dev.in -o requirements-dev.txt --strip-extras'
 
 # --- CODE QUALITY COMMANDS ---
 
 format: ## Format code with black and isort
-	poetry run black vertex
-	poetry run isort vertex
+	$(DOCKER_RUN) black vertex orchestration
+	$(DOCKER_RUN) isort vertex orchestration
 
 lint: ## Lint code with flake8
-	poetry run flake8 vertex
+	$(DOCKER_RUN) flake8 vertex orchestration
 
 type-check: ## Type check with mypy
-	poetry run mypy vertex
+	$(DOCKER_RUN) mypy vertex orchestration
 
 check: format lint type-check ## Run all code quality checks
 
 # --- TESTING COMMANDS ---
 
 test: ## Run tests with pytest
-	poetry run pytest
+	$(DOCKER_RUN) pytest
 
 test-cov: ## Run tests with coverage report
-	poetry run pytest --cov=vertex --cov-report=html --cov-report=term
+	$(DOCKER_RUN) pytest --cov=vertex --cov-report=html --cov-report=term
 
 test-unit: ## Run only unit tests
-	poetry run pytest -m unit
+	$(DOCKER_RUN) pytest -m unit
 
 test-integration: ## Run only integration tests
-	poetry run pytest -m integration
+	$(DOCKER_RUN) pytest -m integration
 
 # --- DOCKER COMMANDS ---
 
 docker-build: ## Build Docker image
-	docker build -t $(PROJECT_NAME):latest .
+	docker compose build
 
 docker-bash: ## Start interactive bash shell in Docker
-	docker run --rm -it -v $(CURDIR):/app \
-		-e GOOGLE_APPLICATION_CREDENTIALS=$(GOOGLE_APPLICATION_CREDENTIALS) \
-		$(PROJECT_NAME) bash
+	docker compose run --rm -it ml-pipeline bash
 
-docker-run: ## Run default command in Docker
-	docker run --rm -v $(CURDIR):/app \
-		-e GOOGLE_APPLICATION_CREDENTIALS=$(GOOGLE_APPLICATION_CREDENTIALS) \
-		$(PROJECT_NAME)
+# --- Vertex GCP image (Artifact Registry) ---
+
+ARTIFACT_REGISTRY_REPO ?= vertex
+ARTIFACT_REGISTRY_REGION ?= $(or $(VERTEX_AI_REGION),$(GOOGLE_REGION),us-central1)
+VERTEX_TRAINING_IMAGE_URI = $(ARTIFACT_REGISTRY_REGION)-docker.pkg.dev/$(GOOGLE_PROJECT_ID)/$(ARTIFACT_REGISTRY_REPO)/$(DOCKER_IMAGE_NAME):$(DOCKER_TAG)
+
+vertex-gcp-check: ## Verify Vertex env vars visible inside ml-pipeline container
+	@$(DOCKER_RUN) python -c "\
+import os; \
+required = ('GOOGLE_PROJECT_ID', 'VERTEX_AI_STAGING_BUCKET', 'VERTEX_TRAINING_IMAGE'); \
+missing = [k for k in required if not os.getenv(k)]; \
+print('GOOGLE_PROJECT_ID=', os.getenv('GOOGLE_PROJECT_ID')); \
+print('VERTEX_AI_STAGING_BUCKET=', os.getenv('VERTEX_AI_STAGING_BUCKET')); \
+print('VERTEX_TRAINING_IMAGE=', os.getenv('VERTEX_TRAINING_IMAGE')); \
+print('VERTEX_AI_PIPELINE_ROOT=', os.getenv('VERTEX_AI_PIPELINE_ROOT')); \
+exit(1 if missing else 0)" \
+	|| (echo "" && echo "Missing Vertex env in container. Set in .env and recreate: docker compose run ..." && exit 1)
+
+vertex-docker-push: docker-build ## Tag and push tds-favorita image to Artifact Registry (see scripts/push_vertex_training_image.sh)
+	bash scripts/push_vertex_training_image.sh
+
+vertex-gcp-setup: ## One-time: enable APIs + create Artifact Registry repo (requires gcloud admin login)
+	bash scripts/setup_vertex_artifact_registry.sh
 
 
 # DBT COMMANDS
@@ -121,43 +152,303 @@ dbt-seed:
 dbt-create-table:
 	docker compose run --rm ml-pipeline dbt run-operation --project-dir dbt stage_external_sources --args '{"select": "$(DATABASE).$(TABLE)"}' --target $(DBT_TARGET)
 
-dbt-docs:
-	docker compose run --rm ml-pipeline dbt docs generate --project-dir dbt && docker compose run --rm -p 8080:8080 ml-pipeline dbt docs serve --project-dir dbt --host 0.0.0.0 --port 8080
+DBT_DOCS_PORT ?= 8080
 
-dbt-docs-generate:
+dbt-docs-generate: ## Generate static dbt Docs site (dbt/target/)
 	docker compose run --rm ml-pipeline dbt docs generate --project-dir dbt
 
-dbt-docs-serve:
-	docker compose run --rm -p 8080:8080 ml-pipeline dbt docs serve --project-dir dbt --host 0.0.0.0 --port 8080
+dbt-docs-serve: ## Serve generated dbt Docs (http://127.0.0.1:8080; run dbt-docs-generate first)
+	@echo ""
+	@echo "=== dbt Docs ==="
+	@echo "Open in your browser: http://127.0.0.1:$(DBT_DOCS_PORT)"
+	@echo "(Ctrl+C to stop)"
+	@echo ""
+	docker compose run --rm -p 127.0.0.1:$(DBT_DOCS_PORT):8080 ml-pipeline dbt docs serve --project-dir dbt --host 0.0.0.0 --port 8080
+
+dbt-ui: dbt-docs-generate dbt-docs-serve ## Generate and serve dbt Docs locally (http://127.0.0.1:8080)
+
+dbt-docs: dbt-ui ## Alias for dbt-ui
 
 # --- DATA INGESTION ---
+
+load-favorita-gcs: ## Download Kaggle Favorita data and upload to GCS (Docker; pass script via ARGS)
+	$(DOCKER_RUN) python $(ARGS)
 
 load-favorita-bigquery: ## Load Favorita 7z CSVs from GCS into BigQuery raw_favorita (Docker)
 	docker compose run --rm ml-pipeline python scripts/load_favorita_to_bigquery.py $(ARGS)
 
 # --- VERTEX MODEL COMMANDS ---
+# Run in Docker:         make vertex-train  (default VERTEX_MODE=docker)
+# Run on Vertex AI:      make vertex-train VERTEX_MODE=vertex
+#
+# Override config:       make vertex-predict VERTEX_CONFIG_NAME=my_predict_config
+# Wait for Vertex job:   make vertex-train VERTEX_MODE=vertex SYNC=1
+# Requires: make install, .env with GOOGLE_PROJECT_ID; for Vertex also
+#   VERTEX_AI_STAGING_BUCKET and VERTEX_TRAINING_IMAGE (or vertex.* in YAML).
 
-model-train: ## Train model using Vertex AI
-	docker run --rm -v $(CURDIR):/app \
-		-e GOOGLE_APPLICATION_CREDENTIALS=$(GOOGLE_APPLICATION_CREDENTIALS) \
-		$(PROJECT_NAME) python -m $(VERTEX_DIR).models.sample_xgboost_train \
-		--file_path $(VERTEX_DIR)/config/train_config.yaml
+VERTEX_CONFIG = $(VERTEX_DIR)/config/model_config.yaml
+VERTEX_TRAIN_CONFIG ?=
+VERTEX_PREDICT_CONFIG ?= favorita_store_n1d_xgboost
+VERTEX_OPTIMIZE_CONFIG ?= favorita_store_n1d_xgboost
+VERTEX_PIPELINE ?= favorita_xgboost
+VERTEX_CONFIG_NAME ?=
+VERTEX_STEP ?=
+VERTEX_MODE ?= docker
+# Set SYNC=1 to block until a submitted Custom Job finishes
+SYNC ?=
+# After optimize: merge best_params into model_config.yaml (default 1). Set UPDATE_CONFIG=0 to skip.
+UPDATE_CONFIG ?= 1
 
-model-predict: ## Generate predictions using Vertex AI model
-	docker run --rm -v $(CURDIR):/app \
-		-e GOOGLE_APPLICATION_CREDENTIALS=$(GOOGLE_APPLICATION_CREDENTIALS) \
-		$(PROJECT_NAME) python -m $(VERTEX_DIR).models.predict \
-		--file_path $(VERTEX_DIR)/config/predict_config.yaml \
-		--model_name $(MODEL_NAME)
+VERTEX_SUBMIT_SYNC_FLAG = $(if $(filter 1 true yes,$(SYNC)),--sync,)
+VERTEX_STEP_FLAG = $(if $(VERTEX_STEP),--step $(VERTEX_STEP),)
+VERTEX_UPDATE_CONFIG_FLAG = $(if $(filter 0 false no,$(UPDATE_CONFIG)),--no-update-config,)
 
-model-train-local: ## Train model locally (not in Docker)
-	poetry run python -m $(VERTEX_DIR).models.sample_xgboost_train \
-		--file_path $(VERTEX_DIR)/config/train_config.yaml
+# --- Generic runners (set VERTEX_CONFIG_NAME) ---
 
-model-predict-local: ## Generate predictions locally (not in Docker)
-	poetry run python -m $(VERTEX_DIR).models.predict \
-		--file_path $(VERTEX_DIR)/config/predict_config.yaml \
-		--model_name $(MODEL_NAME)
+vertex-run-docker: ## Run a config in Docker (VERTEX_CONFIG_NAME=..., optional VERTEX_STEP=, UPDATE_CONFIG=1)
+	@test -n "$(VERTEX_CONFIG_NAME)" || (echo "Set VERTEX_CONFIG_NAME, e.g. make vertex-run-docker VERTEX_CONFIG_NAME=favorita_store_n1d_xgboost" && exit 1)
+	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.run \
+		--config-path $(VERTEX_CONFIG) \
+		--config-name $(VERTEX_CONFIG_NAME) \
+		$(VERTEX_STEP_FLAG) \
+		$(VERTEX_UPDATE_CONFIG_FLAG)
+
+vertex-submit: ## Submit a config to Vertex AI Custom Training (VERTEX_CONFIG_NAME=..., VERTEX_STEP=, UPDATE_CONFIG=1)
+	@test -n "$(VERTEX_CONFIG_NAME)" || (echo "Set VERTEX_CONFIG_NAME" && exit 1)
+	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.submit \
+		--config-path $(VERTEX_CONFIG) \
+		--config-name $(VERTEX_CONFIG_NAME) \
+		$(VERTEX_STEP_FLAG) \
+		$(VERTEX_SUBMIT_SYNC_FLAG) \
+		$(VERTEX_UPDATE_CONFIG_FLAG)
+
+# Dispatch by VERTEX_MODE (docker | vertex)
+vertex-run: ## Run or submit VERTEX_CONFIG_NAME (VERTEX_MODE=docker|vertex)
+	@test -n "$(VERTEX_CONFIG_NAME)" || (echo "Set VERTEX_CONFIG_NAME" && exit 1)
+	@case "$(VERTEX_MODE)" in \
+		vertex) $(MAKE) vertex-submit VERTEX_CONFIG_NAME="$(VERTEX_CONFIG_NAME)" VERTEX_STEP="$(VERTEX_STEP)" SYNC="$(SYNC)" UPDATE_CONFIG="$(UPDATE_CONFIG)" ;; \
+		*) $(MAKE) vertex-run-docker VERTEX_CONFIG_NAME="$(VERTEX_CONFIG_NAME)" VERTEX_STEP="$(VERTEX_STEP)" UPDATE_CONFIG="$(UPDATE_CONFIG)" ;; \
+	esac
+
+# --- Train / predict / optimize (pick VERTEX_MODE) ---
+
+vertex-train: ## Train all include_in_run configs, or one if VERTEX_CONFIG_NAME / VERTEX_TRAIN_CONFIG set
+	@if [ -n "$(VERTEX_CONFIG_NAME)" ] || [ -n "$(VERTEX_TRAIN_CONFIG)" ]; then \
+		$(MAKE) vertex-run VERTEX_CONFIG_NAME="$(or $(VERTEX_CONFIG_NAME),$(VERTEX_TRAIN_CONFIG))" VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC); \
+	else \
+		$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.run_batch \
+			--step train \
+			--config-path $(VERTEX_CONFIG) \
+			$(if $(filter vertex,$(VERTEX_MODE)),--vertex-mode vertex,) \
+			$(VERTEX_SUBMIT_SYNC_FLAG); \
+	fi
+
+vertex-predict: ## Predict (VERTEX_MODE=docker|vertex; VERTEX_PREDICT_CONFIG, VERTEX_STEP=predict)
+	@$(MAKE) vertex-run VERTEX_CONFIG_NAME=$(VERTEX_PREDICT_CONFIG) VERTEX_STEP=predict VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC)
+
+vertex-optimize: ## Hyperparameter search (VERTEX_OPTIMIZE_CONFIG; UPDATE_CONFIG=1 writes model_config.yaml)
+	@$(MAKE) vertex-run VERTEX_CONFIG_NAME=$(VERTEX_OPTIMIZE_CONFIG) VERTEX_STEP=optimize VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC) UPDATE_CONFIG=$(UPDATE_CONFIG)
+
+# --- Explicit Docker targets ---
+
+vertex-train-docker: ## Train in Docker (all include_in_run when VERTEX_TRAIN_CONFIG unset)
+	@if [ -n "$(VERTEX_TRAIN_CONFIG)" ]; then \
+		$(MAKE) vertex-run-docker VERTEX_CONFIG_NAME=$(VERTEX_TRAIN_CONFIG); \
+	else \
+		$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.run_batch \
+			--step train \
+			--config-path $(VERTEX_CONFIG); \
+	fi
+
+vertex-predict-docker: ## Predict in Docker
+	@$(MAKE) vertex-run-docker VERTEX_CONFIG_NAME=$(VERTEX_PREDICT_CONFIG) VERTEX_STEP=predict
+
+vertex-optimize-docker: ## Optimize in Docker
+	@$(MAKE) vertex-run-docker VERTEX_CONFIG_NAME=$(VERTEX_OPTIMIZE_CONFIG) VERTEX_STEP=optimize
+
+# --- Explicit Vertex AI submit targets ---
+
+vertex-submit-train: ## Submit training Custom Job(s) to Vertex AI
+	@if [ -n "$(VERTEX_TRAIN_CONFIG)" ]; then \
+		$(MAKE) vertex-submit VERTEX_CONFIG_NAME=$(VERTEX_TRAIN_CONFIG) SYNC=$(SYNC); \
+	else \
+		$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.run_batch \
+			--step train \
+			--config-path $(VERTEX_CONFIG) \
+			--vertex-mode vertex \
+			$(VERTEX_SUBMIT_SYNC_FLAG); \
+	fi
+
+vertex-submit-predict: ## Submit prediction Custom Job to Vertex AI
+	@$(MAKE) vertex-submit VERTEX_CONFIG_NAME=$(VERTEX_PREDICT_CONFIG) VERTEX_STEP=predict SYNC=$(SYNC)
+
+vertex-submit-optimize: ## Submit optimization Custom Job to Vertex AI
+	@$(MAKE) vertex-submit VERTEX_CONFIG_NAME=$(VERTEX_OPTIMIZE_CONFIG) VERTEX_STEP=optimize SYNC=$(SYNC)
+
+# --- Vertex Pipelines (KFP) ---
+
+vertex-pipeline-compile: ## Compile KFP JSON (VERTEX_PIPELINE=favorita_xgboost)
+	$(DOCKER_RUN) python -m $(VERTEX_DIR).pipelines.compile \
+		--pipeline $(VERTEX_PIPELINE) \
+		--config-path $(VERTEX_CONFIG)
+
+VERTEX_PIPELINE_SKIP_OPTIMIZE_FLAG = $(if $(filter 1 true yes,$(SKIP_OPTIMIZE)),--skip-optimize,)
+VERTEX_PIPELINE_SKIP_PREDICT_FLAG = $(if $(filter 1 true yes,$(SKIP_PREDICT)),--skip-predict,)
+
+vertex-pipeline-submit: ## Submit Vertex PipelineJob (optimize→train→predict)
+	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.submit_pipeline \
+		--pipeline $(VERTEX_PIPELINE) \
+		--config-path $(VERTEX_CONFIG) \
+		$(VERTEX_SUBMIT_SYNC_FLAG) \
+		$(VERTEX_PIPELINE_SKIP_OPTIMIZE_FLAG) \
+		$(VERTEX_PIPELINE_SKIP_PREDICT_FLAG)
+
+vertex-pipeline-submit-sync: ## Submit pipeline and wait until complete
+	@$(MAKE) vertex-pipeline-submit SYNC=1
+
+vertex-pipeline-train-only: ## Pipeline without optimize/predict steps
+	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.submit_pipeline \
+		--pipeline $(VERTEX_PIPELINE) \
+		--config-path $(VERTEX_CONFIG) \
+		--skip-optimize --skip-predict \
+		$(VERTEX_SUBMIT_SYNC_FLAG)
+
+# --- dbt + BigQuery ops ---
+
+dbt-vertex: ## Build staging views over Vertex output tables
+	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:vertex $(ARGS)
+
+vertex-bq-ddl: ## Create BigQuery tables for Vertex ML outputs (once per environment)
+	docker compose run --rm ml-pipeline python scripts/apply_vertex_bq_ddl.py
+
+vertex-validate-config: ## Validate a model config (MODEL=favorita_store_n1d_xgboost)
+	@test -n "$(MODEL)" || (echo "Set MODEL, e.g. make vertex-validate-config MODEL=favorita_store_n1d_xgboost" && exit 1)
+	$(DOCKER_RUN) python -c "\
+from vertex.config.load_config import load_model_config, validate_config_all_steps; \
+c = load_model_config('$(MODEL)'); \
+validate_config_all_steps(c); \
+print('OK')"
+
+vertex-validate-configs: ## Validate all model configs in model_config.yaml
+	$(DOCKER_RUN) python -m $(VERTEX_DIR).config.validate_all
+
+# Walk-forward backfill: train + predict per anchor date (see vertex/jobs/backfill.py)
+VERTEX_BACKFILL_CONFIG ?= favorita_store_n1d_xgboost
+START_DATE ?=
+END_DATE ?=
+INTERVAL_DAYS ?= 1
+TRAIN_DAYS ?=
+VERTEX_BACKFILL_ARGS ?=
+
+vertex-backfill: ## Backfill train+predict (START_DATE, END_DATE, INTERVAL_DAYS=1, VERTEX_BACKFILL_CONFIG)
+	@test -n "$(START_DATE)" || (echo "Set START_DATE=YYYY-MM-DD" && exit 1)
+	@test -n "$(END_DATE)" || (echo "Set END_DATE=YYYY-MM-DD" && exit 1)
+	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.backfill \
+		--config-path $(VERTEX_CONFIG) \
+		--config-name $(VERTEX_BACKFILL_CONFIG) \
+		--start-date $(START_DATE) \
+		--end-date $(END_DATE) \
+		--interval-days $(INTERVAL_DAYS) \
+		$(if $(TRAIN_DAYS),--train-days $(TRAIN_DAYS),) \
+		$(if $(filter 1 true yes,$(DRY_RUN)),--dry-run,) \
+		$(if $(MAX_ITERATIONS),--max-iterations $(MAX_ITERATIONS),) \
+		$(if $(filter 1 true yes,$(CONTINUE_ON_ERROR)),--continue-on-error,) \
+		$(VERTEX_BACKFILL_ARGS)
+
+prefect-flow-vertex-backfill: ## Run backfill flow once in Docker (same params as vertex-backfill)
+	@test -n "$(START_DATE)" || (echo "Set START_DATE=YYYY-MM-DD" && exit 1)
+	@test -n "$(END_DATE)" || (echo "Set END_DATE=YYYY-MM-DD" && exit 1)
+	$(DOCKER_RUN) python -c "\
+from orchestration.flows.backfill import prefect_vertex_backfill_flow; \
+prefect_vertex_backfill_flow(\
+config_name='$(VERTEX_BACKFILL_CONFIG)', \
+start_date='$(START_DATE)', end_date='$(END_DATE)', \
+interval_days=int('$(INTERVAL_DAYS)'), \
+train_days=$(if $(TRAIN_DAYS),$(TRAIN_DAYS),None), \
+dry_run=$(if $(filter 1 true yes,$(DRY_RUN)),True,False), \
+max_iterations=$(if $(MAX_ITERATIONS),$(MAX_ITERATIONS),None), \
+stop_on_error=$(if $(filter 1 true yes,$(CONTINUE_ON_ERROR)),False,True))"
+
+# --- Backward-compatible aliases ---
+
+model-train: vertex-train-docker ## Alias: train in Docker
+model-predict: vertex-predict-docker ## Alias: predict in Docker
+model-optimize: vertex-optimize-docker ## Alias: optimize in Docker
+
+# --- MLflow / Prefect UIs (localhost only; override ports via MLFLOW_UI_PORT / PREFECT_SERVER_PORT) ---
+# Train jobs log gcs_model_catalog.json to MLflow; set MLFLOW_REGISTER_MODEL=true for Model Registry.
+
+MLFLOW_UI_PORT ?= 5001
+MLFLOW_TRACKING_URI ?= file:/app/mlruns
+
+mlflow-ui: ## MLflow tracking UI (http://127.0.0.1:5001; avoids macOS AirPlay on 5000)
+	@echo ""
+	@echo "=== MLflow ==="
+	@echo "Open in your browser: http://127.0.0.1:$(MLFLOW_UI_PORT)"
+	@echo "(Ctrl+C to stop)"
+	@echo ""
+	docker compose run --rm -p 127.0.0.1:$(MLFLOW_UI_PORT):5000 ml-pipeline \
+		mlflow ui --host 0.0.0.0 --backend-store-uri $(MLFLOW_TRACKING_URI)
+
+# --- PREFECT COMMANDS ---
+
+PREFECT_SERVER_PORT ?= 4200
+PREFECT_API_URL_DOCKER ?= http://host.docker.internal:$(PREFECT_SERVER_PORT)/api
+
+prefect-server: ## Start Prefect OSS server (UI http://127.0.0.1:4200; localhost only)
+	@echo ""
+	@echo "=== Prefect ==="
+	@echo "Open in your browser: http://127.0.0.1:$(PREFECT_SERVER_PORT)"
+	@echo "API (workers): http://127.0.0.1:$(PREFECT_SERVER_PORT)/api"
+	@echo "(Ctrl+C to stop)"
+	@echo ""
+	docker compose run --rm -p 127.0.0.1:$(PREFECT_SERVER_PORT):4200 ml-pipeline prefect server start --host 0.0.0.0
+
+prefect-ui: prefect-server ## Alias: Prefect OSS UI (http://127.0.0.1:4200)
+
+prefect-work-pool-create: ## Create default process work pool (idempotent)
+	$(DOCKER_RUN) prefect work-pool create --type process default 2>/dev/null || true
+
+prefect-worker: ## Start worker for the default work pool (server must be running)
+	docker compose run --rm -e PREFECT_API_URL=$(PREFECT_API_URL_DOCKER) ml-pipeline prefect worker start --pool default
+
+prefect-deploy: ## Register all deployments from prefect.yaml
+	docker compose run --rm -e PREFECT_API_URL=$(PREFECT_API_URL_DOCKER) ml-pipeline prefect deploy --all
+
+# Trigger deployments (Prefect server + worker must be running)
+prefect-run-dbt: ## Trigger manual prefect-dbt-run deployment
+	$(DOCKER_RUN) -e PREFECT_API_URL=$(PREFECT_API_URL_DOCKER) prefect deployment run 'prefect-dbt-run/prefect-dbt-run-manual'
+
+prefect-run-vertex-train: ## Trigger manual Vertex train deployment (VERTEX_TRAIN_CONFIG)
+	$(DOCKER_RUN) -e PREFECT_API_URL=$(PREFECT_API_URL_DOCKER) prefect deployment run \
+		'prefect-vertex-train-model/prefect-vertex-train-model-manual' \
+		--param config_name=$(VERTEX_TRAIN_CONFIG)
+
+prefect-run-vertex-train-all: ## Trigger Vertex train-all deployment
+	$(DOCKER_RUN) -e PREFECT_API_URL=$(PREFECT_API_URL_DOCKER) prefect deployment run \
+		'prefect-vertex-train-model/prefect-vertex-train-model-manual' \
+		--param train_all=true --param config_name=null
+
+prefect-run-vertex-pipeline: ## Trigger manual ML pipeline deployment (VERTEX_PIPELINE)
+	$(DOCKER_RUN) -e PREFECT_API_URL=$(PREFECT_API_URL_DOCKER) prefect deployment run \
+		'prefect-vertex-ml-pipeline/prefect-vertex-ml-pipeline-manual' \
+		--param pipeline_name=$(VERTEX_PIPELINE)
+
+# Run flows directly in Docker (no Prefect server; for development)
+prefect-flow-dbt: ## Run prefect-dbt-run flow once in Docker
+	$(DOCKER_RUN) python -c "from orchestration.flows.dbt import prefect_dbt_run_flow; prefect_dbt_run_flow()"
+
+prefect-flow-vertex-train: ## Run prefect-vertex-train flow once (VERTEX_TRAIN_CONFIG, VERTEX_MODE)
+	$(DOCKER_RUN) python -c "\
+from orchestration.flows.vertex import prefect_vertex_train_model_flow; \
+prefect_vertex_train_model_flow(config_name='$(VERTEX_TRAIN_CONFIG)', vertex_mode='$(VERTEX_MODE)', sync=$(if $(filter 1 true yes,$(SYNC)),True,False))"
+
+prefect-flow-vertex-pipeline: ## Run prefect-vertex-ml-pipeline flow once (VERTEX_PIPELINE, VERTEX_MODE)
+	$(DOCKER_RUN) python -c "\
+from orchestration.flows.vertex_pipeline import prefect_vertex_ml_pipeline_flow; \
+prefect_vertex_ml_pipeline_flow(\
+pipeline_name='$(VERTEX_PIPELINE)', vertex_mode='$(VERTEX_MODE)', sync=$(if $(filter 1 true yes,$(SYNC)),True,False), \
+skip_optimize=$(if $(filter 1 true yes,$(SKIP_OPTIMIZE)),True,False), skip_predict=$(if $(filter 1 true yes,$(SKIP_PREDICT)),True,False))"
 
 # --- CLEANUP COMMANDS ---
 
@@ -172,5 +463,5 @@ clean: ## Clean generated files and artifacts
 	find . -type d -name __pycache__ -exec rm -r {} +
 	find . -type f -name "*.pyc" -delete
 
-clean-all: clean ## Clean all including Poetry cache
-	poetry cache clear pypi --all .
+clean-all: clean ## Clean generated artifacts (same as clean)
+	@true

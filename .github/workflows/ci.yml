@@ -11,6 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  PYTHONPATH: .
   GOOGLE_PROJECT_ID: ci-placeholder
   GOOGLE_APPLICATION_CREDENTIALS: /tmp/ci-service-account.json
   DBT_DATASET: favorita
@@ -23,51 +24,81 @@ jobs:
     name: Python lint and tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.10"
-
-      - name: Install Poetry
-        run: pip install poetry==1.8.2
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
 
       - name: Install dependencies
-        run: poetry install --no-interaction --no-ansi
+        run: pip install -r requirements-dev.txt
+
+      - name: Format check
+        run: |
+          black --check vertex orchestration
+          isort --check-only vertex orchestration
 
       - name: Lint
-        run: poetry run flake8 vertex
+        run: flake8 vertex orchestration
+
+      - name: Type check
+        run: mypy vertex orchestration
+
+      - name: Validate model configs
+        run: python -m vertex.config.validate_all
 
       - name: Unit tests
-        run: poetry run pytest
+        run: pytest -m unit --cov-fail-under=65
+
+      - name: Compile Vertex KFP pipeline (no GCP)
+        run: |
+          python -m vertex.pipelines.compile \
+            --pipeline favorita_arima \
+            --output /tmp/favorita_arima_pipeline.json \
+            --training-image us-central1-docker.pkg.dev/ci/ci:latest \
+            --skip-optimize --skip-predict
 
   dbt:
     name: dbt parse, compile, and docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.10"
-
-      - name: Install Poetry
-        run: pip install poetry==1.8.2
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
 
       - name: Install dependencies
-        run: poetry install --no-interaction --no-ansi
+        run: pip install -r requirements-dev.txt
 
       - name: Placeholder service account key
         run: echo '{}' > /tmp/ci-service-account.json
 
       - name: Install dbt packages
-        run: poetry run dbt deps --project-dir dbt
+        run: dbt deps --project-dir dbt
 
       - name: Parse dbt project
-        run: poetry run dbt parse --project-dir dbt
+        run: dbt parse --project-dir dbt
 
+      # BigQuery compile connects to GCP unless cache population and introspection
+      # are disabled. Incremental insert_overwrite models still need a live
+      # connection, so compile tables/views only (incremental SQL is validated by parse).
       - name: Compile dbt project
-        run: poetry run dbt compile --project-dir dbt
+        run: |
+          dbt compile --project-dir dbt \
+            --no-populate-cache \
+            --no-introspect \
+            --threads 1 \
+            --exclude config.materialized:incremental
 
       - name: Generate dbt docs
-        run: poetry run dbt docs generate --project-dir dbt
+        run: |
+          dbt docs generate --project-dir dbt \
+            --no-compile \
+            --empty-catalog \
+            --no-populate-cache \
+            --threads 1

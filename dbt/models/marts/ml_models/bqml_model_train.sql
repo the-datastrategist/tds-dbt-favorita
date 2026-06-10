@@ -47,7 +47,7 @@
   {%- set include_in_run = model_config.include_in_run if 'include_in_run' in model_config else true -%}
   {%- if include_in_run -%}
     {%- set model_name = model_config.model_name -%}
-    {%- set train_ref = model_config.train_ref if 'train_ref' in model_config else 'int_train_input_daily' -%}
+    {%- set train_ref = model_config.train_ref if 'train_ref' in model_config else 'int_sales_daily' -%}
     {%- set model_options = [] -%}
   {%- for key in option_keys -%}
     {%- if key in model_config -%}

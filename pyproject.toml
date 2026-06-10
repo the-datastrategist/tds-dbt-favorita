@@ -1,53 +1,8 @@
-[tool.poetry]
-name = "tds-favorita"
-version = "0.1.0"
-description = "Machine learning pipeline for Favorita sales forecasting using dbt and Google Vertex AI"
-authors = ["Gordon Silvera <gordon@thedatastrategist.com>"]
-readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "^3.10"
-pandas = "^2.0.0"
-numpy = "^1.24.0"
-pyyaml = "^6.0"
-requests = "^2.31.0"
-scikit-learn = "^1.3.0"
-xgboost = "^2.0.0"
-# dbt dependencies
-dbt-core = "^1.7.0"
-dbt-bigquery = "^1.7.0"
-# Google Cloud dependencies
-google-cloud-bigquery = "^3.11.0"
-google-cloud-storage = "^2.10.0"
-google-cloud-aiplatform = "^1.38.0"
-py7zr = "^0.22.0"
-# Kaggle data (pin: 1.0.1 requires kagglesdk.get_web_endpoint not yet on PyPI)
-kagglehub = "1.0.0"
-# ML Pipeline
-kfp = "^2.5.0"
-
-[tool.poetry.group.dev.dependencies]
-# Code formatting and linting
-black = "^23.12.0"
-flake8 = "^6.1.0"
-isort = "^5.12.0"
-mypy = "^1.7.0"
-# Testing
-pytest = "^7.4.0"
-pytest-cov = "^4.1.0"
-pytest-mock = "^3.12.0"
-
-[tool.poetry.scripts]
-train = "vertex.models.sample_xgboost_train:main"
-predict = "vertex.models.predict:main"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+# Tool configuration only — runtime deps are in requirements.txt (see requirements.in).
 
 [tool.black]
 line-length = 100
-target-version = ['py310']
+target-version = ['py311']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -89,7 +44,7 @@ exclude = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["vertex/tests"]
+testpaths = ["vertex/tests", "orchestration/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -106,12 +61,38 @@ markers = [
     "slow: Slow running tests",
 ]
 
+# Unit-test coverage gate (CI --cov-fail-under=65) applies to library code.
+# Omit GCP Custom Job submitters and family train/predict/optimize CLIs (integration-heavy).
+[tool.coverage.run]
+source = ["vertex"]
+omit = [
+    "vertex/tests/*",
+    "vertex/jobs/backfill.py",
+    "vertex/jobs/run.py",
+    "vertex/jobs/submit.py",
+    "vertex/jobs/submit_pipeline.py",
+    "vertex/jobs/gcp.py",
+    "vertex/models/sklearn/optimize_random_forest.py",
+    "vertex/models/sklearn/predict_random_forest.py",
+    "vertex/models/sklearn/train_random_forest.py",
+    "vertex/models/timeseries/optimize_timeseries.py",
+    "vertex/models/timeseries/predict_timeseries.py",
+    "vertex/models/timeseries/train_timeseries.py",
+    "vertex/models/xgboost/train_xgboost.py",
+    "vertex/models/xgboost/predict_xgboost.py",
+    "vertex/utils/artifacts.py",
+]
+
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
 ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "xgboost.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "statsmodels.*"
 ignore_missing_imports = true

@@ -1,0 +1,12 @@
+.git
+.venv
+venv
+__pycache__
+.pytest_cache
+.mypy_cache
+htmlcov
+dbt/target
+dbt/dbt_packages
+dbt/logs
+*.pyc
+.env

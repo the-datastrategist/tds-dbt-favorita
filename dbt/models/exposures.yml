@@ -9,7 +9,7 @@ exposures:
       End-to-end company-day forecasting: feature table, BQML model training,
       batch predictions, evaluation metrics, and global feature attribution.
     depends_on:
-      - ref('int_train_input_daily')
+      - ref('int_sales_daily')
       - ref('bqml_model_train')
       - ref('bqml_model_predict')
       - ref('bqml_model_evaluate')
@@ -27,9 +27,8 @@ exposures:
       Finest-grain training features (store, product, day) for demand models
       and competition-style forecasting at item level.
     depends_on:
-      - ref('stg_favorita_train')
-      - ref('stg_favorita_test')
-      - ref('int_train_input_store_product_daily')
+      - ref('stg_favorita_sales_fct')
+      - ref('int_sales_store_product_daily')
     owner:
       name: The Data Strategist
       email: gordon@thedatastrategist.com
@@ -43,8 +42,8 @@ exposures:
       BigQuery feature tables consumed by Vertex AI training scripts under
       vertex/ (e.g. XGBoost). Default entry point is company-day features.
     depends_on:
-      - ref('int_train_input_daily')
-      - ref('int_train_input_store_daily')
+      - ref('int_sales_daily')
+      - ref('int_sales_store_daily')
     owner:
       name: The Data Strategist
       email: gordon@thedatastrategist.com
@@ -53,6 +52,26 @@ exposures:
       meta:
         tool: Vertex AI
         repo_path: vertex/models/
+
+  - name: favorita_vertex_predictions
+    label: Vertex AI model predictions
+    type: ml
+    maturity: medium
+    description: >
+      Unified prediction outputs from Vertex custom jobs and pipelines
+      (xgboost, random_forest, ARIMA, SARIMA). Staged for BI and downstream marts.
+    depends_on:
+      - ref('stg_vertex_model_predictions')
+      - ref('stg_vertex_model_metadata')
+      - ref('stg_vertex_job_runs')
+    owner:
+      name: The Data Strategist
+      email: gordon@thedatastrategist.com
+    url: https://www.thedatastrategist.com
+    config:
+      meta:
+        tool: Vertex AI
+        repo_path: vertex/
 
   - name: favorita_operational_calendar
     label: Operational calendar and holidays

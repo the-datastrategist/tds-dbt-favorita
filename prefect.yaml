@@ -1,0 +1,82 @@
+# Prefect OSS project — deploy with: make prefect-deploy (Docker)
+# Docs: orchestration/README.md
+
+name: tds-favorita
+prefect-version: ">=3.0.0,<4.0.0"
+
+build: null
+push: null
+pull: null
+
+deployments:
+  - name: prefect-dbt-run-manual
+    entrypoint: orchestration/flows/dbt.py:prefect_dbt_run_flow
+    work_pool:
+      name: default
+    description: Manual trigger for make dbt-run (dbt run, exclude tag:bqml).
+    parameters: {}
+
+  - name: prefect-dbt-run-scheduled
+    entrypoint: orchestration/flows/dbt.py:prefect_dbt_run_flow
+    work_pool:
+      name: default
+    description: Daily scheduled make dbt-run.
+    parameters: {}
+    schedules:
+      - cron: "0 6 * * *"
+        timezone: UTC
+        active: true
+
+  - name: prefect-vertex-train-model-manual
+    entrypoint: orchestration/flows/vertex.py:prefect_vertex_train_model_flow
+    work_pool:
+      name: default
+    description: Manual Vertex training for one config or all train configs.
+    parameters:
+      config_name: favorita_store_n1d_xgboost
+      train_all: false
+      vertex_mode: docker
+      sync: false
+
+  - name: prefect-vertex-train-model-schedule
+    entrypoint: orchestration/flows/vertex.py:prefect_vertex_train_model_flow
+    work_pool:
+      name: default
+    description: Scheduled Vertex training (default single config; set train_all in UI/API).
+    parameters:
+      config_name: favorita_store_n1d_xgboost
+      train_all: false
+      vertex_mode: docker
+      sync: false
+    schedules:
+      - cron: "0 7 * * *"
+        timezone: UTC
+        active: true
+
+  - name: prefect-vertex-ml-pipeline-manual
+    entrypoint: orchestration/flows/vertex_pipeline.py:prefect_vertex_ml_pipeline_flow
+    work_pool:
+      name: default
+    description: Manual end-to-end ML pipeline (optimize → train → predict).
+    parameters:
+      pipeline_name: favorita_xgboost
+      vertex_mode: docker
+      sync: false
+      skip_optimize: false
+      skip_predict: false
+
+  - name: prefect-vertex-ml-pipeline-scheduled
+    entrypoint: orchestration/flows/vertex_pipeline.py:prefect_vertex_ml_pipeline_flow
+    work_pool:
+      name: default
+    description: Weekly scheduled XGBoost ML pipeline (docker, full steps).
+    parameters:
+      pipeline_name: favorita_xgboost
+      vertex_mode: docker
+      sync: false
+      skip_optimize: false
+      skip_predict: false
+    schedules:
+      - cron: "0 8 * * 0"
+        timezone: UTC
+        active: true

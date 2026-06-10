@@ -12,7 +12,7 @@ profile: tds_favorita
 require-dbt-version: [">=1.7.0", "<2.0.0"]
 
 model-paths: ["models"]
-docs-paths: ["docs"]
+docs-paths: ["../docs"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
 seed-paths: ["seeds"]
@@ -33,8 +33,15 @@ models:
       +materialized: incremental
       +incremental_strategy: insert_overwrite
       +tags: [staging]
+      # Vertex ML outputs (views over favorita_model_* tables)
+      stg_vertex_model_predictions:
+        +tags: [staging, vertex]
+      stg_vertex_model_metadata:
+        +tags: [staging, vertex]
+      stg_vertex_job_runs:
+        +tags: [staging, vertex]
 
-    # ML feature tables for Vertex AI exports and BQML training (int_train_input_*).
+    # ML feature tables for Vertex AI exports and BQML training (int_sales_*).
     intermediate:
       +materialized: table
       +partition_by:
@@ -76,8 +83,8 @@ vars:
       lifecycle: prod
       metric: sales_company
       interval: day
-      train_ref: int_train_input_daily
-      predict_ref: int_train_input_daily
+      train_ref: int_sales_daily
+      predict_ref: int_sales_daily
       include_in_run: true
       include_in_forecast: true
       model_type: BOOSTED_TREE_REGRESSOR

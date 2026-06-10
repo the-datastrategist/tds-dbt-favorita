@@ -5,7 +5,7 @@ configs:
       project_id: the-data-strategist
       region: us-central1
       model_name: train_xgboost
-      sql_query: |
+      predict_sql_query: |
           SELECT
             *
           FROM

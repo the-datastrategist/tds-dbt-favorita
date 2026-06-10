@@ -1,0 +1,242 @@
+defaults:
+  project_id: tds-favorita
+  region: us-central1
+  mlflow:
+    enabled: true
+    experiment_name: favorita-vertex
+    vertex_experiments: true
+    # GCS remains canonical; MLflow stores pointers (gcs_model_catalog.json) per train run.
+    catalog_artifacts: true
+    # Set true (or MLFLOW_REGISTER_MODEL=true) to create/update MLflow Registered Models.
+    register_model: false
+    registered_model_prefix: favorita
+  outputs:
+    metadata_table: tds-favorita.favorita.favorita_model_metadata
+    performance_table: tds-favorita.favorita.favorita_model_performance
+    prediction_table: tds-favorita.favorita.favorita_model_predictions
+    optimize_table: tds-favorita.favorita.favorita_model_optimize
+    job_runs_table: tds-favorita.favorita.favorita_vertex_job_runs
+
+# Vertex Pipelines (KFP): optimize → train → predict (one model config per pipeline)
+pipelines:
+  favorita_xgboost:
+    config: favorita_store_n1d_xgboost
+    steps: [optimize, train, predict]
+    vertex:
+      enable_caching: true
+
+  favorita_random_forest:
+    config: favorita_store_n1d_rf
+    steps: [optimize, train, predict]
+
+  favorita_arima:
+    config: favorita_store_n1d_arima
+    steps: [train, predict]
+
+configs:
+
+
+  - name: favorita_store_n1d_xgboost
+    description: XGBoost on store daily sales (train, predict, optimize share model_params)
+    model_family: favorita_store_daily
+    model_type: xgboost
+    include_in_run: true
+    vertex:
+      experiment: favorita-vertex
+      machine_type: n1-standard-4
+      register_model: false
+    inputs:
+      train_sql_query: |
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) = 1
+      predict_sql_query: |
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) = 1
+      target_column: sales_store_n1d
+      date_column: date
+      entity_column: store_nbr
+      id_columns:
+        - store_nbr
+      excluded_columns:
+        - sales_store_n1d_same_dow
+        - sales_store_n1d
+        - sales_store_n7d
+        - sales_store_n14d
+        - sales_store_n28d
+        - sales_store_n30d
+        - sales_store_n60d
+        - sales_store_n90d
+        - sales_company_n1d_same_dow
+        - sales_company_n1d
+        - sales_company_n7d
+        - sales_company_n14d
+        - sales_company_n28d
+        - sales_company_n30d
+        - sales_company_n60d
+        - sales_company_n90d
+        - store_nbr
+        - date
+        - sales_store_l1d
+      gcs_model_path: gs://favorita-vertex-models/
+      use_optimized_params: true
+      forecast_horizon: 7
+      train_days: 180
+      test_size: 0.2
+      trial_count: 20
+      objective_metric: mae
+      model_run_id: null
+      model_params:
+        n_estimators: 100
+        max_depth: 8
+        learning_rate: 0.036
+        subsample: 0.852
+        colsample_bytree: 0.845
+    outputs: {}
+
+
+  - name: favorita_store_n1d_rf
+    description: Random Forest on store daily sales (shared model_params)
+    model_family: favorita_store_daily
+    model_type: random_forest
+    vertex:
+      experiment: favorita-vertex
+      machine_type: n1-standard-4
+      register_model: false
+    inputs:
+      train_sql_query: |
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) > 1
+      predict_sql_query: |
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) = 1
+      target_column: sales_store_n1d
+      date_column: date
+      entity_column: store_nbr
+      id_columns:
+        - store_nbr
+      excluded_columns:
+        - sales_company_n1d
+        - sales_company_n7d
+        - sales_company_n14d
+        - sales_company_n28d
+        - sales_company_n30d
+        - sales_company_n60d
+        - sales_company_n90d
+        - store_nbr
+        - date
+        - sales_store_l1d
+      gcs_model_path: gs://favorita-vertex-models/
+      use_optimized_params: true
+      forecast_horizon: 7
+      test_size: 0.2
+      trial_count: 15
+      objective_metric: mae
+      model_params:
+        n_estimators: 360
+        max_depth: 24
+        min_samples_split: 13
+        min_samples_leaf: 7
+    outputs: {}
+
+
+  - name: favorita_store_n1d_arima
+    description: Per-entity ARIMA on store daily sales (shared model_params)
+    model_family: favorita_store_daily
+    model_type: arima
+    vertex:
+      experiment: favorita-vertex
+      machine_type: n1-standard-4
+    inputs:
+      train_sql_query: |
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) > 1
+        
+      predict_sql_query: |
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) = 1
+        
+      target_column: sales_store_n1d
+      date_column: date
+      entity_column: store_nbr
+      id_columns:
+        - store_nbr
+      excluded_columns:
+        - sales_company_n1d
+        - sales_company_n7d
+        - sales_company_n14d
+        - sales_company_n28d
+        - sales_company_n30d
+        - sales_company_n60d
+        - sales_company_n90d
+        - store_nbr
+        - date
+        - sales_store_l1d
+      training_mode: per_entity
+      gcs_model_path: gs://favorita-vertex-models/
+      test_size: 0.2
+      min_train_obs: 60
+      max_entities: 200
+      predict_scope: holdout
+      forecast_horizon: 7
+      trial_count: 10
+      objective_metric: mae
+      model_params:
+        order: [2, 1, 2]
+        seasonal_order: [0, 0, 0, 0]
+        trend: c
+        maxiter: 50
+    outputs: {}
+
+
+  - name: favorita_store_n1d_sarima
+    description: Per-entity SARIMA on store daily sales (shared model_params)
+    model_family: favorita_store_daily
+    model_type: sarima
+    vertex:
+      experiment: favorita-vertex
+      machine_type: n1-standard-4
+    inputs:
+      train_sql_query: |
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) > 1
+      predict_sql_query: |
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) = 1
+      target_column: sales_store_n1d
+      date_column: date
+      entity_column: store_nbr
+      id_columns:
+        - store_nbr
+      excluded_columns:
+        - sales_company_n1d
+        - sales_company_n7d
+        - sales_company_n14d
+        - sales_company_n28d
+        - sales_company_n30d
+        - sales_company_n60d
+        - sales_company_n90d
+        - store_nbr
+        - date
+        - sales_store_l1d
+      training_mode: per_entity
+      gcs_model_path: gs://favorita-vertex-models/
+      test_size: 0.2
+      min_train_obs: 90
+      max_entities: 100
+      predict_scope: holdout
+      trial_count: 8
+      objective_metric: mae
+      model_params:
+        order: [1, 1, 1]
+        seasonal_order: [1, 1, 1, 7]
+        trend: c
+        maxiter: 50
+    outputs: {}

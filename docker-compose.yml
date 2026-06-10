@@ -3,18 +3,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: dev
     image: tds-favorita:latest
     container_name: tds-favorita
     volumes:
       - .:/app
-      # Mount Google Cloud credentials from host path defined in .env
-      - ${GOOGLE_APPLICATION_CREDENTIALS}:/app/credentials/service-account-key.json:ro
+      # GCP credentials: use credentials/ under the .:/app mount (no separate file bind —
+      # Docker Desktop virtiofs cannot mount a file inside an already bind-mounted directory).
       # Kaggle API credentials (~/.kaggle/kaggle.json)
       - ${KAGGLE_CONFIG_DIR:-${HOME}/.kaggle}:/root/.kaggle:ro
     environment:
       - PYTHONPATH=/app
       - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID}
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service-account-key.json
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS_CONTAINER:-/app/credentials/service-account-key.json}
       - GOOGLE_REGION=${GOOGLE_REGION:-us-central1}
       - BQ_DATASET=${BQ_DATASET:-favorita}
       - BQ_RAW_DATASET=${BQ_RAW_DATASET:-raw_favorita}
@@ -25,7 +26,10 @@ services:
       - VERTEX_AI_PROJECT_ID=${VERTEX_AI_PROJECT_ID:-${GOOGLE_PROJECT_ID}}
       - VERTEX_AI_REGION=${VERTEX_AI_REGION:-${GOOGLE_REGION:-us-central1}}
       - VERTEX_AI_STAGING_BUCKET=${VERTEX_AI_STAGING_BUCKET}
+      - VERTEX_AI_PIPELINE_ROOT=${VERTEX_AI_PIPELINE_ROOT}
       - VERTEX_AI_MODEL_BUCKET=${VERTEX_AI_MODEL_BUCKET}
+      - VERTEX_TRAINING_IMAGE=${VERTEX_TRAINING_IMAGE}
+      - VERTEX_PIPELINE_SERVICE_ACCOUNT=${VERTEX_PIPELINE_SERVICE_ACCOUNT}
       - GCS_RAW_DATA_BUCKET=${GCS_RAW_DATA_BUCKET}
       - KAGGLE_API_TOKEN=${KAGGLE_API_TOKEN}
     working_dir: /app

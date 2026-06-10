@@ -24,6 +24,8 @@ from pathlib import Path
 import py7zr
 from google.cloud import bigquery, storage
 
+from vertex.utils.bigquery_utils import validate_bq_identifier, validate_bq_table_id
+
 DEFAULT_GCS_LOCATION = "gs://favorita-vertex-ai/source_data"
 DEFAULT_PROJECT = "tds-favorita"
 DEFAULT_DATASET = "raw_favorita"
@@ -85,10 +87,20 @@ def list_plain_csv_blobs(bucket: storage.Bucket, prefix: str) -> list[storage.Bl
 
 
 def extract_csvs_from_7z(archive_path: Path, extract_dir: Path) -> list[Path]:
+    extract_root = extract_dir.resolve()
     with py7zr.SevenZipFile(archive_path, mode="r") as archive:
-        archive.extractall(path=extract_dir)
+        for member in archive.getnames():
+            member_path = Path(member)
+            if member_path.is_absolute() or ".." in member_path.parts:
+                raise ValueError(f"Unsafe path in archive: {member!r}")
+            target = (extract_root / member_path).resolve()
+            try:
+                target.relative_to(extract_root)
+            except ValueError as exc:
+                raise ValueError(f"Unsafe path in archive: {member!r}") from exc
+        archive.extractall(path=extract_root)
     return sorted(
-        p for p in extract_dir.rglob("*") if p.is_file() and p.suffix.lower() == CSV_SUFFIX
+        p for p in extract_root.rglob("*") if p.is_file() and p.suffix.lower() == CSV_SUFFIX
     )
 
 
@@ -100,6 +112,7 @@ def load_csv_to_bigquery(
     dry_run: bool = False,
     write_disposition: str = bigquery.WriteDisposition.WRITE_TRUNCATE,
 ) -> None:
+    table_id = validate_bq_table_id(table_id)
     if dry_run:
         print(f"[dry-run] would load {csv_path} -> {table_id}")
         return
@@ -126,6 +139,8 @@ def ensure_dataset(
     *,
     dry_run: bool = False,
 ) -> None:
+    project = validate_bq_identifier(project, label="project")
+    dataset_id = validate_bq_identifier(dataset_id, label="dataset")
     dataset_ref = f"{project}.{dataset_id}"
     if dry_run:
         print(f"[dry-run] would ensure dataset {dataset_ref} ({location})")

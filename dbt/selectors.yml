@@ -4,7 +4,7 @@
 selectors:
   - name: daily_refresh
     description: >
-      Staging models and intermediate ML feature tables (int_train_input_*).
+      Staging models and intermediate ML feature tables (int_sales_*).
       Excludes BigQuery ML marts (tag bqml). Equivalent to make dbt-run.
     definition:
       union:
@@ -14,7 +14,7 @@ selectors:
           value: features
 
   - name: ml_features
-    description: Intermediate training feature tables only (int_train_input_*).
+    description: Intermediate training feature tables only (int_sales_*).
     definition:
       method: tag
       value: features

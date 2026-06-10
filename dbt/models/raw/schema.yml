@@ -25,8 +25,7 @@ sources:
           - name: transactions
             data_tests:
               - dbt_utils.accepted_range:
-                  arguments:
-                    min_value: 0
+                  min_value: 0
 
       - name: raw_favorita_stores
         description: >
@@ -60,8 +59,7 @@ sources:
           - name: type
             data_tests:
               - accepted_values:
-                  arguments:
-                    values:
+                  values:
                       - Holiday
                       - Transfer
                       - Bridge
@@ -88,8 +86,7 @@ sources:
           - name: unit_sales
             data_tests:
               - dbt_utils.accepted_range:
-                  arguments:
-                    min_value: 0
+                  min_value: 0
 
       - name: raw_favorita_test
         description: >
