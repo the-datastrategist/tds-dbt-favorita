@@ -167,7 +167,7 @@ def run_optimize_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         "config_name": config_name,
         "trial_count": trial_count,
         "best_trial_number": int(best.number),
-        "best_value": float(best.value),
+        "best_value": float(best.value if best.value is not None else 0.0),
         "best_params": best.params,
         "optimize_table": optimize_table,
     }

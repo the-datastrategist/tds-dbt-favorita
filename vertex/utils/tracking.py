@@ -25,10 +25,10 @@ def _job_runs_table(config: dict[str, Any]) -> str:
     outputs = config.get("outputs") or {}
     table = outputs.get("job_runs_table")
     if table:
-        return table
+        return str(table)
     defaults_table = (config.get("defaults") or {}).get("outputs", {}).get("job_runs_table")
     if defaults_table:
-        return defaults_table
+        return str(defaults_table)
     project = config.get("inputs", {}).get("project_id") or os.getenv("GOOGLE_PROJECT_ID")
     if not project:
         raise ValueError("project_id required for job_runs_table")

@@ -176,10 +176,12 @@ def run_train_random_forest(
         )
 
     if register_vertex_model or vertex_cfg.get("register_model"):
+        if not project_id:
+            raise ValueError("project_id required to register model in Vertex AI Model Registry")
         register_from_manifest(
             manifest_uri=manifest_uri,
             display_name=config_name,
-            project_id=project_id,
+            project_id=str(project_id),
             region=region,
             artifact_uri=joblib_uri,
         )

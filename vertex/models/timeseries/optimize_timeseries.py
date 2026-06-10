@@ -178,7 +178,7 @@ def run_optimize_timeseries(config: dict[str, Any]) -> dict[str, Any]:
         "optimize_run_id": optimize_run_id,
         "config_name": spec["config_name"],
         "best_trial_number": int(best.number),
-        "best_value": float(best.value),
+        "best_value": float(best.value if best.value is not None else 0.0),
         "best_params": best.params,
     }
     return complete_optimize_result(config, result)

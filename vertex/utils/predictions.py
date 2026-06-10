@@ -37,7 +37,7 @@ STANDARD_PREDICTION_COLUMNS = [
 def _optional_series(df: pd.DataFrame, column: str, index: pd.Index) -> list[Any]:
     if column not in df.columns:
         return [None] * len(index)
-    return df.loc[index, column].tolist()
+    return list(df.loc[index, column].tolist())
 
 
 def prediction_ids(predict_run_id: str, index: pd.Index) -> list[str]:

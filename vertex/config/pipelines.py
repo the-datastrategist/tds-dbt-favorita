@@ -76,12 +76,12 @@ def resolve_pipeline_model_config(
 
     explicit = definition.get("config")
     if explicit:
-        return explicit
+        return str(explicit)
 
     # Legacy: configs.train or per-step map
     legacy = definition.get("configs") or {}
     if legacy.get("train"):
-        return legacy["train"]
+        return str(legacy["train"])
 
     model_family = definition["model_family"]
     model_type = definition["model_type"]

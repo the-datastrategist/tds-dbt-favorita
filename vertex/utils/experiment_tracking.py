@@ -6,7 +6,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from vertex.config.load_config import get_job_spec
 from vertex.utils.bigquery_utils import vertex_safe_run_id
@@ -81,7 +81,7 @@ def resolve_tracking_settings(config: dict[str, Any]) -> TrackingSettings:
     )
 
     project_id = inputs.get("project_id") or os.getenv("GOOGLE_PROJECT_ID")
-    region = inputs.get("region") or os.getenv("VERTEX_AI_REGION", "us-central1")
+    region = str(inputs.get("region") or os.getenv("VERTEX_AI_REGION", "us-central1"))
 
     return TrackingSettings(
         enabled=enabled,
@@ -308,7 +308,7 @@ class ExperimentRunContext:
         try:
             from google.cloud import aiplatform
 
-            aiplatform.log_metrics(metrics)
+            aiplatform.log_metrics(cast(dict[str, float | int | str], metrics))
         except Exception as exc:
             logger.debug("Vertex log_metrics failed: %s", exc)
 

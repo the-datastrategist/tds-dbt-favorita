@@ -7,7 +7,7 @@ import logging
 import os
 from datetime import datetime as dt
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from google.cloud import bigquery, storage
 
@@ -49,6 +49,8 @@ def persist_best_params(
         raise ValueError("inputs.gcs_model_path required to persist best params")
 
     optimize_config_name = spec_name
+    if not optimize_config_name:
+        raise ValueError("config name required to persist best params")
     uri = best_params_gcs_uri(gcs_model_path, optimize_config_name)
     bucket_name, blob_path = parse_gcs_uri(uri)
 
@@ -110,7 +112,7 @@ def load_best_params_from_gcs(gcs_uri: str) -> Optional[dict[str, Any]]:
     blob = client.bucket(bucket_name).blob(blob_path)
     if not blob.exists():
         return None
-    return json.loads(blob.download_as_text())
+    return cast(dict[str, Any], json.loads(blob.download_as_text()))
 
 
 def load_best_params_from_bq(

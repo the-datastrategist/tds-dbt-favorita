@@ -6,7 +6,7 @@ import copy
 import os
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
@@ -58,7 +58,7 @@ def _load_yaml_file(config_path: Path) -> dict[str, Any]:
 def load_raw_config(config_path: str | Path | None = None) -> dict[str, Any]:
     """Load full YAML document (defaults, configs, pipelines) with env substitution."""
     path = Path(config_path) if config_path else DEFAULT_CONFIG_PATH
-    return _resolve_env_strings(_load_yaml_file(path))
+    return cast(dict[str, Any], _resolve_env_strings(_load_yaml_file(path)))
 
 
 def load_all_configs(config_path: str | Path | None = None) -> list[dict[str, Any]]:

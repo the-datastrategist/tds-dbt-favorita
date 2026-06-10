@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -108,10 +108,10 @@ def fit_entity_models(
     Returns:
         bundle, train_performance, test_performance, entity_count, entities_fitted
     """
-    order = normalize_order(model_params.get("order", [1, 1, 1]), 3)
-    seasonal_order = normalize_order(
-        model_params.get("seasonal_order", [0, 0, 0, 0]),
-        4,
+    order = cast(tuple[int, int, int], normalize_order(model_params.get("order", [1, 1, 1]), 3))
+    seasonal_order = cast(
+        tuple[int, int, int, int],
+        normalize_order(model_params.get("seasonal_order", [0, 0, 0, 0]), 4),
     )
     trend = str(model_params.get("trend", "c"))
     maxiter = int(model_params.get("maxiter", 50))

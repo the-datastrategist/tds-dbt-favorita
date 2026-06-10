@@ -169,14 +169,14 @@ def list_model_artifacts(
                 continue
             seen_prefixes.add(prefix)
             manifest_path = f"{prefix}/manifest.json"
-            manifest: dict[str, Any] = {}
+            legacy_manifest: dict[str, Any] = {}
             if bucket.blob(manifest_path).exists():
-                manifest = json.loads(bucket.blob(manifest_path).download_as_text())
-            entry_run_id = manifest.get("model_run_id")
+                legacy_manifest = json.loads(bucket.blob(manifest_path).download_as_text())
+            entry_run_id = legacy_manifest.get("model_run_id")
             if model_run_id and entry_run_id != model_run_id:
                 continue
-            if manifest:
-                entries.append(_entry_from_manifest(bucket_name, prefix, manifest))
+            if legacy_manifest:
+                entries.append(_entry_from_manifest(bucket_name, prefix, legacy_manifest))
             else:
                 entries.append(
                     {
@@ -185,7 +185,7 @@ def list_model_artifacts(
                         "model_json_uri": f"gs://{bucket_name}/{blob.name}",
                         "manifest_uri": f"gs://{bucket_name}/{manifest_path}",
                         "model_run_id": entry_run_id,
-                        "manifest": manifest,
+                        "manifest": legacy_manifest,
                         "sort_key": prefix,
                     }
                 )
@@ -237,7 +237,11 @@ def resolve_latest_artifact(
         raw = client.bucket(bucket_name).blob(blob_path).download_as_text()
         manifest = json.loads(raw)
     artifact_uri = chosen.get("artifact_uri") or chosen.get("model_json_uri")
-    return artifact_uri, manifest
+    if not artifact_uri:
+        raise FileNotFoundError(
+            f"Artifact entry missing model JSON URI (artifact_config_name={artifact_config_name!r})"
+        )
+    return str(artifact_uri), manifest
 
 
 def load_joblib_from_gcs(gcs_uri: str) -> Any:
@@ -474,4 +478,4 @@ def register_from_manifest(
     )
     uploaded.wait()
     logger.info("Registered Vertex model %s from %s", uploaded.resource_name, manifest_uri)
-    return uploaded.resource_name
+    return str(uploaded.resource_name)

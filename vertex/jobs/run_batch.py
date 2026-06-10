@@ -14,6 +14,8 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from google.cloud import aiplatform
+
 from vertex.config.load_config import DEFAULT_CONFIG_PATH, list_run_config_names
 from vertex.jobs.submit import submit_job
 
@@ -128,7 +130,7 @@ def _run_vertex_batch(
     sync: bool,
     max_workers: int,
 ) -> None:
-    submitted: list[tuple[str, object]] = []
+    submitted: list[tuple[str, aiplatform.CustomJob]] = []
     failed: list[str] = []
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:

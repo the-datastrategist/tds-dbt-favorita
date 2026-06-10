@@ -111,7 +111,7 @@ class GcsCatalogModel:
 def _pyfunc_catalog_model(catalog: dict[str, str]) -> Any:
     import mlflow.pyfunc
 
-    class _Model(mlflow.pyfunc.PythonModel):
+    class _Model(mlflow.pyfunc.PythonModel):  # type: ignore[name-defined,misc,valid-type]
         def __init__(self, catalog: dict[str, str]) -> None:
             self.catalog = dict(catalog)
 

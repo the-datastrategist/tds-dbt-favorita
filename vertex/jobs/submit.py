@@ -59,7 +59,7 @@ def submit_job(
         staging_bucket=settings.staging_bucket,
     )
 
-    job_run_id = start_job_run(config)
+    job_run_id, _started_at = start_job_run(config)
     display_name = f"{config_name}-{job_run_id[:8]}"
 
     job = aiplatform.CustomJob(

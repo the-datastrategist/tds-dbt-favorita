@@ -18,7 +18,6 @@ import sys
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Any
 
 from vertex.config.backfill import (
     apply_backfill_overrides,
