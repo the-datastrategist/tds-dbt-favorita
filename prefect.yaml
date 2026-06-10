@@ -33,7 +33,7 @@ deployments:
       name: default
     description: Manual Vertex training for one config or all train configs.
     parameters:
-      config_name: favorita_xgboost
+      config_name: favorita_store_n1d_xgboost
       train_all: false
       vertex_mode: docker
       sync: false
@@ -44,7 +44,7 @@ deployments:
       name: default
     description: Scheduled Vertex training (default single config; set train_all in UI/API).
     parameters:
-      config_name: favorita_xgboost
+      config_name: favorita_store_n1d_xgboost
       train_all: false
       vertex_mode: docker
       sync: false

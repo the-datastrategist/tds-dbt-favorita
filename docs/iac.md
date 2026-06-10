@@ -85,8 +85,8 @@ gs://CLIENT-vertex-staging/
   pipeline-root/               # VERTEX_AI_PIPELINE_ROOT — KFP snapshots
 
 gs://CLIENT-vertex-models/
-  favorita_xgboost/            # inputs.gcs_model_path per config
-  favorita_rf/
+  favorita_store_n1d_xgboost/            # inputs.gcs_model_path per config
+  favorita_store_n1d_rf/
   ...
 
 gs://CLIENT-mlflow/            # optional MLFLOW_TRACKING_URI backend

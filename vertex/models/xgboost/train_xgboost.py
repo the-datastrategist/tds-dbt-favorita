@@ -1,8 +1,8 @@
 """
 Train an XGBoost regressor via the scikit-learn API and publish artifacts to GCS + BigQuery.
 
-  python -m vertex.models.xgboost.train_xgboost --config-name favorita_xgboost_train
-  python -m vertex.jobs.run --config-name favorita_xgboost_train
+  python -m vertex.models.xgboost.train_xgboost --config-name favorita_store_n1d_xgboost
+  python -m vertex.jobs.run --config-name favorita_store_n1d_xgboost
 """
 
 from __future__ import annotations
@@ -272,7 +272,7 @@ def main() -> None:
     parser.add_argument(
         "--config-name",
         "-c",
-        default="favorita_xgboost_train",
+        default="favorita_store_n1d_xgboost",
     )
     parser.add_argument("--register-vertex-model", action="store_true")
     args = parser.parse_args()

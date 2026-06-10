@@ -1,7 +1,7 @@
 """
 Generate XGBoost predictions using a trained artifact and write unified rows to BigQuery.
 
-  python -m vertex.models.xgboost.predict_xgboost --config-name favorita_xgboost_predict
+  python -m vertex.models.xgboost.predict_xgboost --config-name favorita_store_n1d_xgboost
 """
 
 from __future__ import annotations

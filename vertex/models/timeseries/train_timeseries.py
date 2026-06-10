@@ -181,7 +181,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description="Train ARIMA/SARIMA from model_config.yaml")
     parser.add_argument("--config-path", "-f", default=str(DEFAULT_CONFIG_PATH))
-    parser.add_argument("--config-name", "-c", default="favorita_arima_train")
+    parser.add_argument("--config-name", "-c", default="favorita_store_n1d_arima")
     args = parser.parse_args()
     run_train_timeseries(load_model_config(args.config_name, args.config_path))
 

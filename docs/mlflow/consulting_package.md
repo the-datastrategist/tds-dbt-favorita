@@ -121,8 +121,8 @@ Tags include: `job_run_id`, `config_name`, `model_type`, `model_family`, `git_sh
 ### Benchmark workflow
 
 ```bash
-make vertex-train VERTEX_TRAIN_CONFIG=favorita_xgboost
-make vertex-train VERTEX_TRAIN_CONFIG=favorita_rf
+make vertex-train VERTEX_TRAIN_CONFIG=favorita_store_n1d_xgboost
+make vertex-train VERTEX_TRAIN_CONFIG=favorita_store_n1d_rf
 make mlflow-ui
 ```
 

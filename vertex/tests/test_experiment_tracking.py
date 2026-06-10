@@ -14,7 +14,7 @@ from vertex.utils.experiment_tracking import (
 class TestResolveTrackingSettings:
     def test_merges_config_and_vertex_experiment(self):
         config = {
-            "name": "favorita_xgboost_train",
+            "name": "favorita_store_n1d_xgboost",
             "job": {"step": "train", "model_type": "xgboost"},
             "model_family": "favorita_store_daily",
             "vertex": {"experiment": "custom-experiment"},
@@ -30,7 +30,7 @@ class TestResolveTrackingSettings:
     def test_disabled_via_env(self, monkeypatch):
         monkeypatch.setenv("EXPERIMENT_TRACKING_ENABLED", "false")
         config = {
-            "name": "favorita_xgboost_train",
+            "name": "favorita_store_n1d_xgboost",
             "job": {"step": "train", "model_type": "xgboost"},
             "mlflow": {"enabled": True},
             "inputs": {},
@@ -44,7 +44,7 @@ class TestExperimentRunContext:
     @pytest.fixture
     def train_config(self):
         return {
-            "name": "favorita_xgboost_train",
+            "name": "favorita_store_n1d_xgboost",
             "model_family": "favorita_store_daily",
             "job": {"step": "train", "model_type": "xgboost"},
             "mlflow": {
@@ -63,7 +63,7 @@ class TestExperimentRunContext:
         ):
             ctx.log_success(
                 {
-                    "config_name": "favorita_xgboost_train",
+                    "config_name": "favorita_store_n1d_xgboost",
                     "model_run_id": "run-1",
                     "metadata": {
                         "model_type": "xgboost_sklearn",
@@ -89,7 +89,7 @@ class TestExperimentRunContext:
             mock_catalog.return_value = {"mlflow_model_uri": "models:/x/1"}
             ctx.log_success(
                 {
-                    "config_name": "favorita_xgboost_train",
+                    "config_name": "favorita_store_n1d_xgboost",
                     "manifest_gcs_uri": "gs://b/m/manifest.json",
                     "metadata": {},
                 }
@@ -99,10 +99,10 @@ class TestExperimentRunContext:
     def test_job_run_fields(self, train_config):
         ctx = ExperimentRunContext(train_config, job_run_id="job-123")
         ctx.mlflow_run_id = "mlflow-abc"
-        ctx.vertex_experiment_run_name = "favorita_xgboost_train-deadbeef"
+        ctx.vertex_experiment_run_name = "favorita_store_n1d_xgboost-deadbeef"
         fields = ctx.job_run_fields()
         assert fields["mlflow_run_id"] == "mlflow-abc"
-        assert fields["vertex_experiment_run"] == "favorita_xgboost_train-deadbeef"
+        assert fields["vertex_experiment_run"] == "favorita_store_n1d_xgboost-deadbeef"
 
     def test_disabled_skips_start(self, train_config, monkeypatch):
         monkeypatch.setenv("EXPERIMENT_TRACKING_ENABLED", "false")

@@ -12,6 +12,7 @@ from kfp import compiler
 from vertex.config.load_config import DEFAULT_CONFIG_PATH, load_model_config
 from vertex.config.pipelines import (
     load_pipeline_definitions,
+    resolve_pipeline_name,
     resolve_pipeline_step_configs,
 )
 from vertex.jobs.gcp import resolve_gcp_settings
@@ -24,7 +25,7 @@ DEFAULT_TRAINING_IMAGE = "us-central1-docker.pkg.dev/example-project/vertex/tds-
 
 
 def _resolve_training_image(
-    pipeline_name: str,
+    pipeline_key: str,
     config_path: Path,
     step_configs: dict[str, str],
 ) -> str:
@@ -33,7 +34,7 @@ def _resolve_training_image(
     merged = dict(train_config)
     merged["vertex"] = {
         **(train_config.get("vertex") or {}),
-        **(pipelines[pipeline_name].get("vertex") or {}),
+        **(pipelines[pipeline_key].get("vertex") or {}),
     }
     settings = resolve_gcp_settings(merged)
     return settings.training_image or os.getenv("VERTEX_TRAINING_IMAGE") or DEFAULT_TRAINING_IMAGE
@@ -50,9 +51,10 @@ def compile_favorita_pipeline(
 ) -> Path:
     """Compile favorita_ml_pipeline to JSON; returns output file path."""
     config_path = config_path or DEFAULT_CONFIG_PATH
+    pipeline_key = resolve_pipeline_name(pipeline_name, config_path)
     step_configs = resolve_pipeline_step_configs(pipeline_name, config_path)
     pipelines = load_pipeline_definitions(config_path)
-    declared_steps = list(pipelines[pipeline_name].get("steps") or ["train"])
+    declared_steps = list(pipelines[pipeline_key].get("steps") or ["train"])
 
     steps: list[str] = []
     for step in ("optimize", "train", "predict"):
@@ -64,7 +66,7 @@ def compile_favorita_pipeline(
             continue
         steps.append(step)
 
-    image = training_image or _resolve_training_image(pipeline_name, config_path, step_configs)
+    image = training_image or _resolve_training_image(pipeline_key, config_path, step_configs)
     pipeline_func = create_favorita_ml_pipeline(image, steps=steps)
 
     output_path = output_path or (COMPILED_DIR / f"{pipeline_name}.json")

@@ -21,8 +21,8 @@ from vertex.utils.bigquery_utils import (
 @pytest.mark.unit
 class TestBigQueryUtils:
     def test_vertex_safe_run_id_replaces_underscores(self):
-        assert vertex_safe_run_id("favorita_xgboost_train", "7c4c022f") == (
-            "favorita-xgboost-train-7c4c022f"
+        assert vertex_safe_run_id("favorita_store_n1d_xgboost", "7c4c022f") == (
+            "favorita-store-n1d-xgboost-7c4c022f"
         )
 
     def test_coerce_json_from_string(self):
@@ -54,12 +54,12 @@ class TestBigQueryUtils:
         row = {
             "parameters": json.dumps({"n_estimators": 100}),
             "run_at": pd.Timestamp("2024-01-01 12:00:00"),
-            "config_name": "favorita_xgboost_train",
+            "config_name": "favorita_store_n1d_xgboost",
             "unknown_col": "drop-me",
         }
         prepared = _prepare_row_for_insert(row, schema)
         assert json.loads(prepared["parameters"]) == {"n_estimators": 100}
-        assert prepared["config_name"] == "favorita_xgboost_train"
+        assert prepared["config_name"] == "favorita_store_n1d_xgboost"
         assert "unknown_col" not in prepared
 
     def test_validate_bq_table_id_accepts_two_and_three_part_refs(self):

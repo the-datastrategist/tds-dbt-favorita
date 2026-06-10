@@ -193,7 +193,7 @@ def main() -> None:
     )
     parser = argparse.ArgumentParser(description="Optimize ARIMA/SARIMA orders")
     parser.add_argument("--config-path", "-f", default=str(DEFAULT_CONFIG_PATH))
-    parser.add_argument("--config-name", "-c", default="favorita_arima_optimize")
+    parser.add_argument("--config-name", "-c", default="favorita_store_n1d_arima")
     args = parser.parse_args()
     config = load_model_config(args.config_name, args.config_path, step="optimize")
     result = run_optimize_timeseries(config)

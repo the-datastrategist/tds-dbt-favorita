@@ -44,6 +44,6 @@ def resolve_train_config_names(
         return [config_name]
 
     raise ValueError(
-        "Provide config_name (e.g. favorita_xgboost) or set train_all=true "
+        "Provide config_name (e.g. favorita_store_n1d_xgboost) or set train_all=true "
         "to run configs with include_in_run: true."
     )

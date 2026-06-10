@@ -13,7 +13,7 @@ class TestJobRunTracking:
     @pytest.fixture
     def sample_config(self):
         return {
-            "name": "favorita_xgboost_train",
+            "name": "favorita_store_n1d_xgboost",
             "model_family": "favorita_store_daily",
             "job": {"step": "train", "model_type": "xgboost"},
             "inputs": {

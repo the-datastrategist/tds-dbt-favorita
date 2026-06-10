@@ -1,7 +1,7 @@
 """
 Train a RandomForestRegressor and publish joblib artifacts to GCS + BigQuery.
 
-  python -m vertex.models.sklearn.train_random_forest --config-name favorita_rf_train
+  python -m vertex.models.sklearn.train_random_forest --config-name favorita_store_n1d_rf
 """
 
 from __future__ import annotations
@@ -204,7 +204,7 @@ def main() -> None:
     )
     parser = argparse.ArgumentParser(description="Train Random Forest from model_config.yaml")
     parser.add_argument("--config-path", "-f", default=str(DEFAULT_CONFIG_PATH))
-    parser.add_argument("--config-name", "-c", default="favorita_rf_train")
+    parser.add_argument("--config-name", "-c", default="favorita_store_n1d_rf")
     parser.add_argument("--register-vertex-model", action="store_true")
     args = parser.parse_args()
 

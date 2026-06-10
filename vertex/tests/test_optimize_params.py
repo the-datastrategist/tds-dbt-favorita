@@ -14,7 +14,7 @@ from vertex.utils.optimize_params import (
 @pytest.mark.unit
 class TestOptimizeParams:
     def test_infer_optimize_config_name_unified(self):
-        assert infer_optimize_config_name("favorita_xgboost") == "favorita_xgboost"
+        assert infer_optimize_config_name("favorita_store_n1d_xgboost") == "favorita_store_n1d_xgboost"
 
     def test_resolve_model_parameters_config_only(self):
         config = {
@@ -44,7 +44,7 @@ class TestOptimizeParams:
         )
 
         config = {
-            "name": "favorita_xgboost",
+            "name": "favorita_store_n1d_xgboost",
             "inputs": {
                 "gcs_model_path": "gs://bucket/models/",
                 "model_params": {"max_depth": 6},
@@ -58,7 +58,7 @@ class TestOptimizeParams:
         assert params["learning_rate"] == 0.05
         assert provenance["params_source"] == "optimize"
         assert provenance["optimize_run_id"] == "abc123"
-        assert provenance["optimize_config_name"] == "favorita_xgboost"
+        assert provenance["optimize_config_name"] == "favorita_store_n1d_xgboost"
 
     def test_persist_best_params_upload(self, monkeypatch):
         uploaded: dict = {}
@@ -89,7 +89,7 @@ class TestOptimizeParams:
         )
 
         config = {
-            "name": "favorita_xgboost",
+            "name": "favorita_store_n1d_xgboost",
             "model_family": "favorita_store_daily",
             "model_type": "xgboost",
             "inputs": {"gcs_model_path": "gs://bucket/models/"},
@@ -104,5 +104,5 @@ class TestOptimizeParams:
             },
         )
         assert uri.startswith("gs://bucket/")
-        assert "optimize/favorita_xgboost" in uri
+        assert "optimize/favorita_store_n1d_xgboost" in uri
         assert uploaded["bytes"]["best_params"]["max_depth"] == 8

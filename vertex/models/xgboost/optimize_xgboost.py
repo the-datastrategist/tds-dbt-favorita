@@ -1,7 +1,7 @@
 """
 Optuna hyperparameter search for XGBoost; writes trials to BigQuery.
 
-  python -m vertex.models.xgboost.optimize_xgboost --config-name favorita_xgboost_optimize
+  python -m vertex.models.xgboost.optimize_xgboost --config-name favorita_store_n1d_xgboost
 """
 
 from __future__ import annotations

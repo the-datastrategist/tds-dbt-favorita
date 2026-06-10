@@ -20,20 +20,21 @@ defaults:
 # Vertex Pipelines (KFP): optimize → train → predict (one model config per pipeline)
 pipelines:
   favorita_xgboost:
-    config: favorita_xgboost
+    config: favorita_store_n1d_xgboost
     steps: [optimize, train, predict]
     vertex:
       enable_caching: true
 
   favorita_random_forest:
-    config: favorita_rf
+    config: favorita_store_n1d_rf
     steps: [optimize, train, predict]
 
   favorita_arima:
-    config: favorita_arima
+    config: favorita_store_n1d_arima
     steps: [train, predict]
 
 configs:
+
 
   - name: favorita_store_n1d_xgboost
     description: XGBoost on store daily sales (train, predict, optimize share model_params)
@@ -46,13 +47,13 @@ configs:
       register_model: false
     inputs:
       train_sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
-        WHERE data_split_source = 'train'
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) = 1
       predict_sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
-        WHERE data_split_source = 'test'
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) = 1
       target_column: sales_store_n1d
       date_column: date
       entity_column: store_nbr
@@ -94,6 +95,7 @@ configs:
         colsample_bytree: 0.845
     outputs: {}
 
+
   - name: favorita_store_n1d_rf
     description: Random Forest on store daily sales (shared model_params)
     model_family: favorita_store_daily
@@ -104,11 +106,13 @@ configs:
       register_model: false
     inputs:
       train_sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) > 1
       predict_sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) = 1
       target_column: sales_store_n1d
       date_column: date
       entity_column: store_nbr
@@ -138,6 +142,7 @@ configs:
         min_samples_leaf: 7
     outputs: {}
 
+
   - name: favorita_store_n1d_arima
     description: Per-entity ARIMA on store daily sales (shared model_params)
     model_family: favorita_store_daily
@@ -147,11 +152,15 @@ configs:
       machine_type: n1-standard-4
     inputs:
       train_sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) > 1
+        
       predict_sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) = 1
+        
       target_column: sales_store_n1d
       date_column: date
       entity_column: store_nbr
@@ -184,6 +193,7 @@ configs:
         maxiter: 50
     outputs: {}
 
+
   - name: favorita_store_n1d_sarima
     description: Per-entity SARIMA on store daily sales (shared model_params)
     model_family: favorita_store_daily
@@ -193,11 +203,13 @@ configs:
       machine_type: n1-standard-4
     inputs:
       train_sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) > 1
       predict_sql_query: |
-        SELECT *
-        FROM `tds-favorita.favorita.int_sales_store_daily`
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) = 1
       target_column: sales_store_n1d
       date_column: date
       entity_column: store_nbr

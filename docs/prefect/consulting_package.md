@@ -117,7 +117,7 @@ make prefect-flow-vertex-pipeline SKIP_OPTIMIZE=1
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `config_name` | `favorita_xgboost_train` | Train config from YAML |
+| `config_name` | `favorita_store_n1d_xgboost` | Train config from YAML |
 | `train_all` | `false` | Train all `include_in_run` configs |
 | `vertex_mode` | `docker` | `docker` or `vertex` (Custom Job / PipelineJob) |
 | `sync` | `false` | Wait for Vertex job completion |

@@ -22,14 +22,14 @@ Compare **BigQuery ML** and **Vertex AI** models on shared holdout metrics. Use 
 
 Populate after running pipelines in your GCP project. Replace `{values}` with measured results.
 
-### Store-day grain (Vertex default — `favorita_xgboost`)
+### Store-day grain (Vertex default — `favorita_store_n1d_xgboost`)
 
 | Platform | Model | Config | test_mae | test_wape | test_rmse | Train time | Notes |
 |----------|-------|--------|----------|-----------|-----------|------------|-------|
-| vertex | xgboost | `favorita_xgboost` | `{fill}` | `{fill}` | `{fill}` | `{fill}` | Default pipeline |
-| vertex | random_forest | `favorita_rf` | `{fill}` | `{fill}` | `{fill}` | `{fill}` | Same features as XGBoost |
-| vertex | arima | `favorita_arima` | `{fill}` | `{fill}` | `{fill}` | `{fill}` | Per-entity time series |
-| vertex | sarima | `favorita_sarima` | `{fill}` | `{fill}` | `{fill}` | `{fill}` | Seasonal order in YAML |
+| vertex | xgboost | `favorita_store_n1d_xgboost` | `{fill}` | `{fill}` | `{fill}` | `{fill}` | Default XGBoost config |
+| vertex | random_forest | `favorita_store_n1d_rf` | `{fill}` | `{fill}` | `{fill}` | `{fill}` | Same features as XGBoost |
+| vertex | arima | `favorita_store_n1d_arima` | `{fill}` | `{fill}` | `{fill}` | `{fill}` | Per-entity time series |
+| vertex | sarima | `favorita_store_n1d_sarima` | `{fill}` | `{fill}` | `{fill}` | `{fill}` | Seasonal order in YAML |
 
 ### Company-day grain (BQML default — `bqml_sales_forecast`)
 
@@ -59,14 +59,14 @@ make dbt-train
 make dbt-predict
 
 # 3. Vertex models (Docker — repeat per config)
-make vertex-train VERTEX_TRAIN_CONFIG=favorita_xgboost
-make vertex-predict VERTEX_PREDICT_CONFIG=favorita_xgboost
+make vertex-train VERTEX_TRAIN_CONFIG=favorita_store_n1d_xgboost
+make vertex-predict VERTEX_PREDICT_CONFIG=favorita_store_n1d_xgboost
 
-make vertex-train VERTEX_TRAIN_CONFIG=favorita_rf
-make vertex-predict VERTEX_PREDICT_CONFIG=favorita_rf
+make vertex-train VERTEX_TRAIN_CONFIG=favorita_store_n1d_rf
+make vertex-predict VERTEX_PREDICT_CONFIG=favorita_store_n1d_rf
 
-make vertex-train VERTEX_TRAIN_CONFIG=favorita_arima
-make vertex-predict VERTEX_PREDICT_CONFIG=favorita_arima
+make vertex-train VERTEX_TRAIN_CONFIG=favorita_store_n1d_arima
+make vertex-predict VERTEX_PREDICT_CONFIG=favorita_store_n1d_arima
 
 # 4. Optional: full tuned pipeline
 make vertex-pipeline-submit VERTEX_PIPELINE=favorita_xgboost SYNC=1

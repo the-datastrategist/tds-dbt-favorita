@@ -31,13 +31,13 @@ class TestBuildCatalogRecord:
     def test_extracts_gcs_uris(self):
         record = build_catalog_record(
             {
-                "config_name": "favorita_xgboost_train",
+                "config_name": "favorita_store_n1d_xgboost",
                 "model_run_id": "run-1",
                 "manifest_gcs_uri": "gs://bucket/m/manifest.json",
                 "joblib_gcs_uri": "gs://bucket/m/model.joblib",
                 "metadata": {"model_type": "xgboost_sklearn", "model_family": "fam"},
             },
-            config_name="favorita_xgboost_train",
+            config_name="favorita_store_n1d_xgboost",
             job_run_id="job-abc",
         )
         assert record["storage"] == "gcs"
@@ -51,10 +51,10 @@ class TestResolveRegisteredModelName:
         settings = resolve_catalog_settings({"mlflow": {"registered_model_prefix": "favorita"}})
         name = resolve_registered_model_name(
             {},
-            config_name="favorita_xgboost_train",
+            config_name="favorita_store_n1d_xgboost",
             catalog_settings=settings,
         )
-        assert name == "favorita-favorita_xgboost_train"
+        assert name == "favorita-favorita_store_n1d_xgboost"
 
     def test_explicit_override(self):
         settings = resolve_catalog_settings(
@@ -86,7 +86,7 @@ class TestLogTrainCatalog:
             summary = log_train_catalog(
                 config,
                 result,
-                config_name="favorita_xgboost_train",
+                config_name="favorita_store_n1d_xgboost",
                 job_run_id="job-1",
             )
         mock_log_dict.assert_called_once()
@@ -113,8 +113,8 @@ class TestLogTrainCatalog:
             summary = log_train_catalog(
                 config,
                 result,
-                config_name="favorita_xgboost_train",
+                config_name="favorita_store_n1d_xgboost",
             )
         mock_log_model.assert_called_once()
         assert summary is not None
-        assert summary["mlflow_model_uri"] == "models:/favorita-favorita_xgboost_train/3"
+        assert summary["mlflow_model_uri"] == "models:/favorita-favorita_store_n1d_xgboost/3"

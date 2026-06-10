@@ -2,7 +2,7 @@
 Run multiple model configs concurrently.
 
   python -m vertex.jobs.run_batch --step train
-  python -m vertex.jobs.run_batch --config-name favorita_xgboost_train
+  python -m vertex.jobs.run_batch --config-name favorita_store_n1d_xgboost
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 """
 Submit a Vertex AI Custom Job that runs vertex.jobs.run in a training container.
 
-  python -m vertex.jobs.submit --config-name favorita_xgboost_train
+  python -m vertex.jobs.submit --config-name favorita_store_n1d_xgboost
 """
 
 from __future__ import annotations

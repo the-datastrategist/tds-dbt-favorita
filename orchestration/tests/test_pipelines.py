@@ -22,7 +22,7 @@ def test_list_pipeline_names_includes_xgboost() -> None:
 def test_resolve_pipeline_steps_xgboost_full() -> None:
     steps = resolve_pipeline_steps("favorita_xgboost")
     assert [s for s, _ in steps] == ["optimize", "train", "predict"]
-    assert steps[1][1] == "favorita_xgboost"
+    assert steps[1][1] == "favorita_store_n1d_xgboost"
 
 
 @pytest.mark.unit
@@ -44,7 +44,7 @@ def test_resolve_pipeline_steps_train_only() -> None:
         skip_optimize=True,
         skip_predict=True,
     )
-    assert names == ["favorita_xgboost"]
+    assert names == ["favorita_store_n1d_xgboost"]
 
 
 @pytest.mark.unit

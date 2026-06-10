@@ -34,7 +34,7 @@ def prefect_vertex_train_model_flow(
     Parameters
     ----------
     config_name:
-        Named train config (e.g. favorita_xgboost_train). Required unless train_all.
+        Named train config (e.g. favorita_store_n1d_xgboost). Required unless train_all.
     train_all:
         When true, run every config with include_in_run: true and job.step == train.
     vertex_mode:

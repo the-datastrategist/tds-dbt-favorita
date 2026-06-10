@@ -30,7 +30,7 @@ endif
 	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
 	dbt-vertex vertex-bq-ddl vertex-validate-config vertex-validate-configs \
 	vertex-backfill prefect-flow-vertex-backfill \
-	model-train model-predict model-optimize docker-build docker-bash
+	model-train model-predict model-optimize docker-build docker-bash vertex-gcp-setup vertex-docker-push vertex-gcp-check
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -81,6 +81,30 @@ docker-build: ## Build Docker image
 
 docker-bash: ## Start interactive bash shell in Docker
 	docker compose run --rm -it ml-pipeline bash
+
+# --- Vertex GCP image (Artifact Registry) ---
+
+ARTIFACT_REGISTRY_REPO ?= vertex
+ARTIFACT_REGISTRY_REGION ?= $(or $(VERTEX_AI_REGION),$(GOOGLE_REGION),us-central1)
+VERTEX_TRAINING_IMAGE_URI = $(ARTIFACT_REGISTRY_REGION)-docker.pkg.dev/$(GOOGLE_PROJECT_ID)/$(ARTIFACT_REGISTRY_REPO)/$(DOCKER_IMAGE_NAME):$(DOCKER_TAG)
+
+vertex-gcp-check: ## Verify Vertex env vars visible inside ml-pipeline container
+	@$(DOCKER_RUN) python -c "\
+import os; \
+required = ('GOOGLE_PROJECT_ID', 'VERTEX_AI_STAGING_BUCKET', 'VERTEX_TRAINING_IMAGE'); \
+missing = [k for k in required if not os.getenv(k)]; \
+print('GOOGLE_PROJECT_ID=', os.getenv('GOOGLE_PROJECT_ID')); \
+print('VERTEX_AI_STAGING_BUCKET=', os.getenv('VERTEX_AI_STAGING_BUCKET')); \
+print('VERTEX_TRAINING_IMAGE=', os.getenv('VERTEX_TRAINING_IMAGE')); \
+print('VERTEX_AI_PIPELINE_ROOT=', os.getenv('VERTEX_AI_PIPELINE_ROOT')); \
+exit(1 if missing else 0)" \
+	|| (echo "" && echo "Missing Vertex env in container. Set in .env and recreate: docker compose run ..." && exit 1)
+
+vertex-docker-push: docker-build ## Tag and push tds-favorita image to Artifact Registry (see scripts/push_vertex_training_image.sh)
+	bash scripts/push_vertex_training_image.sh
+
+vertex-gcp-setup: ## One-time: enable APIs + create Artifact Registry repo (requires gcloud admin login)
+	bash scripts/setup_vertex_artifact_registry.sh
 
 
 # DBT COMMANDS
@@ -164,8 +188,8 @@ load-favorita-bigquery: ## Load Favorita 7z CSVs from GCS into BigQuery raw_favo
 
 VERTEX_CONFIG = $(VERTEX_DIR)/config/model_config.yaml
 VERTEX_TRAIN_CONFIG ?=
-VERTEX_PREDICT_CONFIG ?= favorita_xgboost
-VERTEX_OPTIMIZE_CONFIG ?= favorita_xgboost
+VERTEX_PREDICT_CONFIG ?= favorita_store_n1d_xgboost
+VERTEX_OPTIMIZE_CONFIG ?= favorita_store_n1d_xgboost
 VERTEX_PIPELINE ?= favorita_xgboost
 VERTEX_CONFIG_NAME ?=
 VERTEX_STEP ?=
@@ -179,7 +203,7 @@ VERTEX_STEP_FLAG = $(if $(VERTEX_STEP),--step $(VERTEX_STEP),)
 # --- Generic runners (set VERTEX_CONFIG_NAME) ---
 
 vertex-run-docker: ## Run a config in Docker (VERTEX_CONFIG_NAME=..., optional VERTEX_STEP=)
-	@test -n "$(VERTEX_CONFIG_NAME)" || (echo "Set VERTEX_CONFIG_NAME, e.g. make vertex-run-docker VERTEX_CONFIG_NAME=favorita_xgboost" && exit 1)
+	@test -n "$(VERTEX_CONFIG_NAME)" || (echo "Set VERTEX_CONFIG_NAME, e.g. make vertex-run-docker VERTEX_CONFIG_NAME=favorita_store_n1d_xgboost" && exit 1)
 	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.run \
 		--config-path $(VERTEX_CONFIG) \
 		--config-name $(VERTEX_CONFIG_NAME) \
@@ -292,8 +316,8 @@ dbt-vertex: ## Build staging views over Vertex output tables
 vertex-bq-ddl: ## Create BigQuery tables for Vertex ML outputs (once per environment)
 	docker compose run --rm ml-pipeline python scripts/apply_vertex_bq_ddl.py
 
-vertex-validate-config: ## Validate a model config (MODEL=favorita_xgboost)
-	@test -n "$(MODEL)" || (echo "Set MODEL, e.g. make vertex-validate-config MODEL=favorita_xgboost" && exit 1)
+vertex-validate-config: ## Validate a model config (MODEL=favorita_store_n1d_xgboost)
+	@test -n "$(MODEL)" || (echo "Set MODEL, e.g. make vertex-validate-config MODEL=favorita_store_n1d_xgboost" && exit 1)
 	$(DOCKER_RUN) python -c "\
 from vertex.config.load_config import load_model_config, validate_config_all_steps; \
 c = load_model_config('$(MODEL)'); \

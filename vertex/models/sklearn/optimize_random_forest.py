@@ -173,7 +173,7 @@ def main() -> None:
     )
     parser = argparse.ArgumentParser(description="Optimize Random Forest hyperparameters")
     parser.add_argument("--config-path", "-f", default=str(DEFAULT_CONFIG_PATH))
-    parser.add_argument("--config-name", "-c", default="favorita_rf_optimize")
+    parser.add_argument("--config-name", "-c", default="favorita_store_n1d_rf")
     args = parser.parse_args()
     config = load_model_config(args.config_name, args.config_path, step="optimize")
     result = run_optimize_random_forest(config)

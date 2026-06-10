@@ -7,6 +7,7 @@ from pathlib import Path
 from vertex.config.load_config import DEFAULT_CONFIG_PATH
 from vertex.config.pipelines import (
     load_pipeline_definitions,
+    resolve_pipeline_name,
     resolve_pipeline_step_configs,
 )
 
@@ -31,11 +32,8 @@ def resolve_pipeline_steps(
     Honors pipeline ``steps`` in YAML and optional skip flags (train-only, etc.).
     """
     pipelines = load_pipeline_definitions(config_path)
-    if pipeline_name not in pipelines:
-        available = sorted(pipelines.keys())
-        raise ValueError(f"Pipeline {pipeline_name!r} not found. Available: {available}")
-
-    definition = pipelines[pipeline_name]
+    pipeline_key = resolve_pipeline_name(pipeline_name, config_path)
+    definition = pipelines[pipeline_key]
     allowed_steps = set(definition.get("steps") or list(STEP_ORDER))
     step_configs = resolve_pipeline_step_configs(pipeline_name, config_path)
 

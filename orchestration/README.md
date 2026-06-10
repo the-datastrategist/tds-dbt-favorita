@@ -71,17 +71,17 @@ Flow code lives under `orchestration/` (not `prefect/`) so it does not shadow th
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `config_name` | `favorita_xgboost_train` | Train config name from `model_config.yaml` |
+| `config_name` | `favorita_store_n1d_xgboost` | Train config name from `model_config.yaml` |
 | `train_all` | `false` | Train every non-legacy train config |
 | `vertex_mode` | `docker` (or `PREFECT_DEFAULT_VERTEX_MODE`) | `docker` (in-container job) or `vertex` (Custom Job submit) |
 | `sync` | `false` | With `vertex_mode=vertex`, wait for the Custom Job |
 
 Train configs discovered for `train_all=true` (excluding legacy `train_*` aliases):
 
-- `favorita_xgboost_train`
-- `favorita_rf_train`
-- `favorita_arima_train`
-- `favorita_sarima_train`
+- `favorita_store_n1d_xgboost`
+- `favorita_store_n1d_rf`
+- `favorita_store_n1d_arima`
+- `favorita_store_n1d_sarima`
 
 ## Flow parameters (ML pipeline)
 
@@ -115,7 +115,7 @@ Runs the flow once inside Docker (no deployment registration required):
 ```bash
 make prefect-flow-dbt
 make prefect-flow-vertex-train
-make prefect-flow-vertex-train VERTEX_TRAIN_CONFIG=favorita_rf_train VERTEX_MODE=vertex SYNC=1
+make prefect-flow-vertex-train VERTEX_TRAIN_CONFIG=favorita_store_n1d_rf VERTEX_MODE=vertex SYNC=1
 make prefect-flow-vertex-pipeline
 make prefect-flow-vertex-pipeline VERTEX_PIPELINE=favorita_arima SKIP_OPTIMIZE=1 SKIP_PREDICT=1
 ```

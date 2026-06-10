@@ -30,7 +30,7 @@ gs://CLIENT-vertex-staging/
   pipeline-root/          # VERTEX_AI_PIPELINE_ROOT — KFP snapshots
   staging/                # Vertex SDK staging
 gs://CLIENT-vertex-models/
-  favorita_xgboost_train/ # inputs.gcs_model_path per config
+  favorita_store_n1d_xgboost/ # inputs.gcs_model_path per config
 ```
 
 ## Labels (chargeback)

@@ -1,7 +1,7 @@
 """
 Container entrypoint: load config, track job run, dispatch to model registry.
 
-  python -m vertex.jobs.run --config-name favorita_xgboost_train
+  python -m vertex.jobs.run --config-name favorita_store_n1d_xgboost
 """
 
 from __future__ import annotations

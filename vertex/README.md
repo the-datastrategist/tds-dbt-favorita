@@ -15,9 +15,9 @@ model_config.yaml  →  vertex.jobs.run  →  registry (model_type × step)  →
 
 | Step | Config example | What it does |
 |------|----------------|--------------|
-| `train` | `favorita_xgboost_train` | Fit model, write GCS artifacts + metadata/performance to BigQuery |
-| `predict` | `favorita_xgboost_predict` | Load latest (or pinned) artifact, write unified rows to `favorita_model_predictions` |
-| `optimize` | `favorita_xgboost_optimize` | Optuna trials → `favorita_model_optimize` |
+| `train` | `favorita_store_n1d_xgboost` | Fit model, write GCS artifacts + metadata/performance to BigQuery |
+| `predict` | `favorita_store_n1d_xgboost` | Load latest (or pinned) artifact, write unified rows to `favorita_model_predictions` |
+| `optimize` | `favorita_store_n1d_xgboost` | Optuna trials → `favorita_model_optimize` |
 
 Configs that share **`model_family`** (e.g. `favorita_store_daily`) are meant to be used together: train writes artifacts; predict references `inputs.artifact_config_name` to find them.
 
@@ -90,7 +90,7 @@ All jobs use **`config/model_config.yaml`**.
 Example train block (abbreviated):
 
 ```yaml
-- name: favorita_xgboost_train
+- name: favorita_store_n1d_xgboost
   model_family: favorita_store_daily
   job:
     step: train
@@ -110,12 +110,12 @@ Example train block (abbreviated):
   outputs: {}   # inherits metadata_table, etc. from defaults
 ```
 
-Predict config must set **`inputs.artifact_config_name`** to the train config name (e.g. `favorita_xgboost_train`) unless you pin **`inputs.model_run_id`**.
+Predict config must set **`inputs.artifact_config_name`** to the train config name (e.g. `favorita_store_n1d_xgboost`) unless you pin **`inputs.model_run_id`**.
 
 Validate a single config:
 
 ```bash
-make vertex-validate-config MODEL=favorita_xgboost_train
+make vertex-validate-config MODEL=favorita_store_n1d_xgboost
 ```
 
 ## Running jobs (Makefile)
@@ -124,9 +124,9 @@ From the **repository root**. Default **`VERTEX_MODE=docker`** runs `vertex.jobs
 
 | Command | Description |
 |---------|-------------|
-| `make vertex-train` | Train (default config: `favorita_xgboost_train`) |
-| `make vertex-predict` | Predict (`favorita_xgboost_predict`) |
-| `make vertex-optimize` | Optuna search (`favorita_xgboost_optimize`) |
+| `make vertex-train` | Train (default config: `favorita_store_n1d_xgboost`) |
+| `make vertex-predict` | Predict (`favorita_store_n1d_xgboost`) |
+| `make vertex-optimize` | Optuna search (`favorita_store_n1d_xgboost`) |
 | `make mlflow-ui` | MLflow UI for local runs in `./mlruns` (http://127.0.0.1:5001) |
 | `make vertex-train VERTEX_MODE=vertex` | Submit training **Custom Job** to Vertex AI |
 | `make vertex-train VERTEX_MODE=vertex SYNC=1` | Submit and wait until the job finishes |
@@ -142,8 +142,8 @@ Explicit targets:
 Run **any** named config:
 
 ```bash
-make vertex-run-docker VERTEX_CONFIG_NAME=favorita_xgboost_train
-make vertex-submit VERTEX_CONFIG_NAME=favorita_xgboost_predict SYNC=1
+make vertex-run-docker VERTEX_CONFIG_NAME=favorita_store_n1d_xgboost
+make vertex-submit VERTEX_CONFIG_NAME=favorita_store_n1d_xgboost SYNC=1
 ```
 
 Legacy aliases still work: `make model-train` → `vertex-train-docker`, etc.
@@ -288,16 +288,16 @@ docker run --rm -v "$(pwd)":/app -w /app \
   tds-favorita:latest \
   python -m vertex.jobs.run \
   --config-path vertex/config/model_config.yaml \
-  --config-name favorita_xgboost_train
+  --config-name favorita_store_n1d_xgboost
 ```
 
 **Docker Compose** (same as Makefile / `docker compose`):
 
 ```bash
 docker compose run --rm ml-pipeline python -m vertex.jobs.run \
-  --config-name favorita_xgboost_train
+  --config-name favorita_store_n1d_xgboost
 docker compose run --rm ml-pipeline python -m vertex.jobs.submit \
-  --config-name favorita_xgboost_train --sync
+  --config-name favorita_store_n1d_xgboost --sync
 ```
 
 ## Artifacts and IDs
@@ -343,14 +343,14 @@ Example configs:
 
 | Step | XGBoost | Random Forest | ARIMA | SARIMA |
 |------|---------|---------------|-------|--------|
-| Train | `favorita_xgboost_train` | `favorita_rf_train` | `favorita_arima_train` | `favorita_sarima_train` |
-| Predict | `favorita_xgboost_predict` | `favorita_rf_predict` | `favorita_arima_predict` | `favorita_sarima_predict` |
-| Optimize | `favorita_xgboost_optimize` | `favorita_rf_optimize` | `favorita_arima_optimize` | `favorita_sarima_optimize` |
+| Train | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` |
+| Predict | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` |
+| Optimize | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` |
 
 ```bash
-make vertex-train VERTEX_TRAIN_CONFIG=favorita_xgboost
-make vertex-predict VERTEX_PREDICT_CONFIG=favorita_xgboost
-make vertex-optimize VERTEX_OPTIMIZE_CONFIG=favorita_xgboost
+make vertex-train VERTEX_TRAIN_CONFIG=favorita_store_n1d_xgboost
+make vertex-predict VERTEX_PREDICT_CONFIG=favorita_store_n1d_xgboost
+make vertex-optimize VERTEX_OPTIMIZE_CONFIG=favorita_store_n1d_xgboost
 ```
 
 ### Time-series predict scopes

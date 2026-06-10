@@ -274,8 +274,8 @@ make dbt-vertex    # stg_vertex_* models
 Other useful targets:
 
 ```bash
-make vertex-run-docker VERTEX_CONFIG_NAME=favorita_xgboost_train
-make vertex-submit VERTEX_CONFIG_NAME=favorita_xgboost_predict
+make vertex-run-docker VERTEX_CONFIG_NAME=favorita_store_n1d_xgboost
+make vertex-submit VERTEX_CONFIG_NAME=favorita_store_n1d_xgboost VERTEX_STEP=predict
 make help    # lists all vertex-* targets
 ```
 
@@ -417,11 +417,11 @@ Supported types: **xgboost**, **random_forest**, **arima**, **sarima** (see conf
    ```bash
    make docker-build
    make vertex-train                                    # XGBoost (default config)
-   make vertex-train VERTEX_TRAIN_CONFIG=favorita_rf_train
-   make vertex-optimize VERTEX_OPTIMIZE_CONFIG=favorita_arima_optimize
-   make vertex-predict VERTEX_PREDICT_CONFIG=favorita_sarima_predict
+   make vertex-train VERTEX_TRAIN_CONFIG=favorita_store_n1d_rf
+   make vertex-optimize VERTEX_OPTIMIZE_CONFIG=favorita_store_n1d_arima
+   make vertex-predict VERTEX_PREDICT_CONFIG=favorita_store_n1d_sarima
    # Vertex AI Custom Jobs:
-   make vertex-train VERTEX_MODE=vertex VERTEX_TRAIN_CONFIG=favorita_rf_train
+   make vertex-train VERTEX_MODE=vertex VERTEX_TRAIN_CONFIG=favorita_store_n1d_rf
    ```
 
 See **[vertex/README.md](vertex/README.md)** for architecture, env vars, and troubleshooting.

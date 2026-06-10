@@ -24,6 +24,35 @@ def load_pipeline_definitions(
     return pipelines
 
 
+def resolve_pipeline_name(
+    name_or_config: str,
+    config_path: str | Path | None = None,
+) -> str:
+    """
+    Return the pipeline key from a pipeline name or linked model config name.
+
+    Accepts either the key under ``pipelines:`` (e.g. ``favorita_random_forest``)
+    or the unified model config it references (e.g. ``favorita_store_n1d_rf``).
+    """
+    pipelines = load_pipeline_definitions(config_path)
+    if name_or_config in pipelines:
+        return name_or_config
+    for pipeline_name, definition in pipelines.items():
+        if definition.get("config") == name_or_config:
+            return pipeline_name
+        legacy = definition.get("configs") or {}
+        if name_or_config in legacy.values():
+            return pipeline_name
+    config_names = sorted(
+        c for definition in pipelines.values() if (c := definition.get("config"))
+    )
+    raise ValueError(
+        f"Pipeline {name_or_config!r} not found. "
+        f"Pipeline keys: {sorted(pipelines.keys())}. "
+        f"Model config names: {config_names}"
+    )
+
+
 def find_config_by_family_and_type(
     model_family: str,
     model_type: str,
@@ -43,11 +72,8 @@ def resolve_pipeline_model_config(
     config_path: str | Path | None = None,
 ) -> str:
     """Return the single model config name for a pipeline."""
+    pipeline_name = resolve_pipeline_name(pipeline_name, config_path)
     pipelines = load_pipeline_definitions(config_path)
-    if pipeline_name not in pipelines:
-        raise ValueError(
-            f"Pipeline {pipeline_name!r} not found. Available: {sorted(pipelines.keys())}"
-        )
     definition = pipelines[pipeline_name]
 
     explicit = definition.get("config")
@@ -84,11 +110,8 @@ def resolve_pipeline_step_configs(
     Unified setups use one model config for every step; the job step is set at
     runtime via ``--step``.
     """
+    pipeline_name = resolve_pipeline_name(pipeline_name, config_path)
     pipelines = load_pipeline_definitions(config_path)
-    if pipeline_name not in pipelines:
-        raise ValueError(
-            f"Pipeline {pipeline_name!r} not found. Available: {sorted(pipelines.keys())}"
-        )
     definition = pipelines[pipeline_name]
     steps = list(definition.get("steps") or ["optimize", "train", "predict"])
     model_config = resolve_pipeline_model_config(pipeline_name, config_path)
@@ -106,6 +129,7 @@ def load_pipeline_vertex_config(
     config_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Merge vertex: settings from the model config with pipeline-level overrides."""
+    pipeline_name = resolve_pipeline_name(pipeline_name, config_path)
     pipelines = load_pipeline_definitions(config_path)
     definition = pipelines[pipeline_name]
     model_config_name = resolve_pipeline_model_config(pipeline_name, config_path)
