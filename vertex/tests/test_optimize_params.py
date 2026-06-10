@@ -14,7 +14,9 @@ from vertex.utils.optimize_params import (
 @pytest.mark.unit
 class TestOptimizeParams:
     def test_infer_optimize_config_name_unified(self):
-        assert infer_optimize_config_name("favorita_store_n1d_xgboost") == "favorita_store_n1d_xgboost"
+        assert (
+            infer_optimize_config_name("favorita_store_n1d_xgboost") == "favorita_store_n1d_xgboost"
+        )
 
     def test_resolve_model_parameters_config_only(self):
         config = {

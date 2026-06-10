@@ -47,8 +47,8 @@ class BigQueryLoader:
         write_disposition = write_disposition or "WRITE_TRUNCATE"
         # Load the data into BigQuery
         job = self.client.load_table_from_dataframe(
-            df, table_name, job_config=bigquery.LoadJobConfig(
-                write_disposition=write_disposition))
+            df, table_name, job_config=bigquery.LoadJobConfig(write_disposition=write_disposition)
+        )
         job.result()
 
 

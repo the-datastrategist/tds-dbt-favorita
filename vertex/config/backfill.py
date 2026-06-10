@@ -75,7 +75,7 @@ def build_backfill_train_sql(
     Training rows with observed labels for target ``sales_store_n1d``.
 
     Row at date d uses next-day sales as the label, so through end-of-day
-  ``as_of_date`` only dates ``<= as_of_date - 1 day`` are valid for training.
+    ``as_of_date`` only dates ``<= as_of_date - 1 day`` are valid for training.
     """
     if train_days < 1:
         raise ValueError(f"train_days must be >= 1, got {train_days}")

@@ -43,9 +43,7 @@ def resolve_pipeline_name(
         legacy = definition.get("configs") or {}
         if name_or_config in legacy.values():
             return pipeline_name
-    config_names = sorted(
-        c for definition in pipelines.values() if (c := definition.get("config"))
-    )
+    config_names = sorted(c for definition in pipelines.values() if (c := definition.get("config")))
     raise ValueError(
         f"Pipeline {name_or_config!r} not found. "
         f"Pipeline keys: {sorted(pipelines.keys())}. "

@@ -56,7 +56,9 @@ def run_backfill_iteration(
 ) -> BackfillIterationResult:
     """Train on history through as_of_date - 1 day, then predict at as_of_date."""
     base = load_model_config(config_name, config_path)
-    resolved_train_days = int(train_days if train_days is not None else base.get("inputs", {}).get("train_days", 180))
+    resolved_train_days = int(
+        train_days if train_days is not None else base.get("inputs", {}).get("train_days", 180)
+    )
     table = feature_table or resolve_feature_table(base)
 
     train_config = apply_backfill_overrides(
@@ -119,7 +121,7 @@ def run_backfill(
     end = parse_backfill_date(end_date)
     dates = list(iter_backfill_dates(start, end, interval_days=interval_days))
     if max_iterations is not None:
-        dates = dates[: max_iterations]
+        dates = dates[:max_iterations]
 
     if dry_run:
         base = load_model_config(config_name, config_path)
@@ -225,11 +227,18 @@ def main() -> None:
         sys.exit(1)
 
     if args.dry_run:
-        logger.info("Dry run complete (%s dates)", len(list(iter_backfill_dates(
-            parse_backfill_date(args.start_date),
-            parse_backfill_date(args.end_date),
-            interval_days=args.interval_days,
-        ))))
+        logger.info(
+            "Dry run complete (%s dates)",
+            len(
+                list(
+                    iter_backfill_dates(
+                        parse_backfill_date(args.start_date),
+                        parse_backfill_date(args.end_date),
+                        interval_days=args.interval_days,
+                    )
+                )
+            ),
+        )
         return
 
     logger.info("Backfill finished successfully (%s iterations)", len(results))
