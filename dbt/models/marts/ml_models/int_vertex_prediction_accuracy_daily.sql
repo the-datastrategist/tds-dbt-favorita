@@ -2,7 +2,7 @@
   One row per (config_name, forecast_date), aggregating stg_vertex_model_predictions rows
   where actual is now known. forecast_date (not run_date) is the grouping key: a prediction
   made on day T for T+7 only becomes checkable on T+7 once actual lands, so this table fills
-  in retroactively as actuals arrive. Feeds favorita_prediction_accuracy_rolling.
+  in retroactively as actuals arrive. Feeds ml_prediction_accuracy_rolling.
 
   Note: unique_key + BigQuery's default merge incremental_strategy make this idempotent, but
   every run still scans all of stg_vertex_model_predictions rather than filtering by an

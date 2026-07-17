@@ -1,6 +1,6 @@
 {#
   Unified BQML + Vertex holdout metrics, normalized to a shared column set, so benchmarking
-  and champion selection (favorita_model_champion) are queries instead of hand-filled tables.
+  and champion selection (ml_model_champion) are queries instead of hand-filled tables.
   See docs/specs/model_leaderboard_mart.md.
 #}
 

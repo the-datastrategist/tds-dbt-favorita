@@ -1,7 +1,7 @@
 {#
   WAPE for BigQuery ML predictions, joined back to actuals in the feature table each
   model_config was scored against. ML.EVALUATE doesn't return WAPE natively, so this fills
-  the gap for favorita_model_leaderboard, using the same metric benchmarks.md already
+  the gap for ml_model_leaderboard, using the same metric benchmarks.md already
   recommends as the primary grain-level metric for Vertex models.
 
   Usage:

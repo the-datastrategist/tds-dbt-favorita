@@ -172,7 +172,7 @@ models:
     description: >
       WAPE per BigQuery ML model_name/run_date, joined from bqml_model_predict back to the
       actuals in each model_config's feature table. Fills the gap left by ML.EVALUATE, which
-      doesn't return WAPE natively. Feeds favorita_model_leaderboard.
+      doesn't return WAPE natively. Feeds ml_model_leaderboard.
     columns:
       - name: model_name
         description: BigQuery ML model name.
@@ -185,7 +185,7 @@ models:
       - name: wape
         description: Weighted absolute percentage error over all predictions for this run_date.
 
-  - name: favorita_model_leaderboard
+  - name: ml_model_leaderboard
     description: >
       Unified BQML + Vertex holdout metrics, one row per (platform, config, run), normalized
       to a shared column set (mae, rmse, r2, wape) so both platforms are directly comparable.
@@ -226,7 +226,7 @@ models:
           Weighted absolute percentage error. For BQML, computed from int_bqml_model_wape
           since ML.EVALUATE doesn't return it natively.
 
-  - name: favorita_model_champion
+  - name: ml_model_champion
     description: >
       Current champion config per grain: the best config (by leaderboard_primary_metric_by_grain)
       among each config's own latest run. Table-materialized snapshot of "now" only — see
@@ -282,7 +282,7 @@ models:
       - name: bias
         description: Mean signed error (prediction minus actual); positive means over-forecasting.
 
-  - name: favorita_prediction_accuracy_rolling
+  - name: ml_prediction_accuracy_rolling
     description: >
       Rolling 7-day and 28-day trailing accuracy per config_name, joined to the model_run_id's
       training-time (test) performance for comparison. Powers assert_no_material_accuracy_drift.
@@ -324,11 +324,11 @@ unit_tests:
       rows:
         - {config_name: cfg_a, forecast_date: 2024-01-01, n_predictions: 2, mae: 15, wape: 0.1, bias: -5}
 
-  - name: test_favorita_prediction_accuracy_rolling_computes_trailing_average
+  - name: test_ml_prediction_accuracy_rolling_computes_trailing_average
     description: >
       wape_7d should be the trailing average of daily wape within the lookback window, and
       train_test_wape should come from the joined training-time performance row.
-    model: favorita_prediction_accuracy_rolling
+    model: ml_prediction_accuracy_rolling
     given:
       - input: ref('int_vertex_prediction_accuracy_daily')
         rows:

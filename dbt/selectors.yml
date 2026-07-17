@@ -57,5 +57,5 @@ selectors:
       stg_vertex_model_predictions has refreshed. Equivalent to make selector-accuracy-monitoring.
     definition:
       method: fqn
-      value: favorita_prediction_accuracy_rolling
+      value: ml_prediction_accuracy_rolling
       children: true
