@@ -40,3 +40,4 @@ from {{ ref('int_vertex_prediction_accuracy_daily') }} a
 left join {{ ref('stg_vertex_model_performance') }} p
     on a.model_run_id = p.model_run_id
     and p.metric_set = 'test'
+where a.forecast_date is not null

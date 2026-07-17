@@ -320,6 +320,7 @@ unit_tests:
           - {config_name: cfg_a, model_run_id: run1, forecast_date: 2024-01-01, actual: 100, prediction: 110}
           - {config_name: cfg_a, model_run_id: run1, forecast_date: 2024-01-01, actual: 200, prediction: 180}
           - {config_name: cfg_a, model_run_id: run1, forecast_date: 2024-01-02, actual: null, prediction: 150}
+          - {config_name: cfg_a, model_run_id: run1, forecast_date: null, actual: 50, prediction: 55}
     expect:
       rows:
         - {config_name: cfg_a, forecast_date: 2024-01-01, n_predictions: 2, mae: 15, wape: 0.1, bias: -5}
@@ -334,6 +335,7 @@ unit_tests:
         rows:
           - {config_name: cfg_a, model_run_id: run1, forecast_date: 2024-01-01, mae: 10, wape: 0.1, bias: 1, n_predictions: 5}
           - {config_name: cfg_a, model_run_id: run1, forecast_date: 2024-01-02, mae: 20, wape: 0.3, bias: 1, n_predictions: 5}
+          - {config_name: cfg_a, model_run_id: run1, forecast_date: null, mae: 99, wape: 0.99, bias: 1, n_predictions: 1}
       - input: ref('stg_vertex_model_performance')
         rows:
           - {model_run_id: run1, metric_set: test, mae: 12, wape: 0.15}
