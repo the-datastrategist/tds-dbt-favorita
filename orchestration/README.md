@@ -115,7 +115,7 @@ Runs the flow once inside Docker (no deployment registration required):
 ```bash
 make prefect-flow-dbt
 make prefect-flow-vertex-train
-make prefect-flow-vertex-train VERTEX_TRAIN_CONFIG=favorita_store_n1d_rf VERTEX_MODE=vertex SYNC=1
+make prefect-flow-vertex-train VERTEX_CONFIG=favorita_store_n1d_rf VERTEX_MODE=vertex SYNC=1
 make prefect-flow-vertex-pipeline
 make prefect-flow-vertex-pipeline VERTEX_PIPELINE=favorita_arima SKIP_OPTIMIZE=1 SKIP_PREDICT=1
 ```

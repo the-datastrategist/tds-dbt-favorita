@@ -417,11 +417,11 @@ Supported types: **xgboost**, **random_forest**, **arima**, **sarima** (see conf
    ```bash
    make docker-build
    make vertex-train                                    # XGBoost (default config)
-   make vertex-train VERTEX_TRAIN_CONFIG=favorita_store_n1d_rf
-   make vertex-optimize VERTEX_OPTIMIZE_CONFIG=favorita_store_n1d_arima
-   make vertex-predict VERTEX_PREDICT_CONFIG=favorita_store_n1d_sarima
+   make vertex-train VERTEX_CONFIG=favorita_store_n1d_rf
+   make vertex-optimize VERTEX_CONFIG=favorita_store_n1d_arima
+   make vertex-predict VERTEX_CONFIG=favorita_store_n1d_sarima
    # Vertex AI Custom Jobs:
-   make vertex-train VERTEX_MODE=vertex VERTEX_TRAIN_CONFIG=favorita_store_n1d_rf
+   make vertex-train VERTEX_MODE=vertex VERTEX_CONFIG=favorita_store_n1d_rf
    ```
 
 See **[vertex/README.md](vertex/README.md)** for architecture, env vars, and troubleshooting.

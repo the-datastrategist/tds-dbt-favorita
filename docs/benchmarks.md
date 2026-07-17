@@ -59,14 +59,14 @@ make dbt-train
 make dbt-predict
 
 # 3. Vertex models (Docker — repeat per config)
-make vertex-train VERTEX_TRAIN_CONFIG=favorita_store_n1d_xgboost
-make vertex-predict VERTEX_PREDICT_CONFIG=favorita_store_n1d_xgboost
+make vertex-train VERTEX_CONFIG=favorita_store_n1d_xgboost
+make vertex-predict VERTEX_CONFIG=favorita_store_n1d_xgboost
 
-make vertex-train VERTEX_TRAIN_CONFIG=favorita_store_n1d_rf
-make vertex-predict VERTEX_PREDICT_CONFIG=favorita_store_n1d_rf
+make vertex-train VERTEX_CONFIG=favorita_store_n1d_rf
+make vertex-predict VERTEX_CONFIG=favorita_store_n1d_rf
 
-make vertex-train VERTEX_TRAIN_CONFIG=favorita_store_n1d_arima
-make vertex-predict VERTEX_PREDICT_CONFIG=favorita_store_n1d_arima
+make vertex-train VERTEX_CONFIG=favorita_store_n1d_arima
+make vertex-predict VERTEX_CONFIG=favorita_store_n1d_arima
 
 # 4. Optional: full tuned pipeline
 make vertex-pipeline-submit VERTEX_PIPELINE=favorita_xgboost SYNC=1
