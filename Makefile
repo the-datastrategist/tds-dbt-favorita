@@ -162,8 +162,8 @@ dbt-predict: ## Run BQML predict/evaluate/explain models (tag:predict)
 dbt-build: ## Run + test (+ seed/snapshot) in DAG order, excluding BQML (tag:bqml)
 	docker compose run --rm ml-pipeline dbt build --project-dir dbt --target $(DBT_TARGET) --exclude tag:bqml $(ARGS)
 
-dbt-test: ## Run data tests (all, or --select via ARGS)
-	docker compose run --rm ml-pipeline dbt test --project-dir dbt --target $(DBT_TARGET) $(ARGS)
+dbt-test: ## Run data tests, excluding BQML (tag:bqml); pass ARGS to override, e.g. ARGS='--select tag:bqml'
+	docker compose run --rm ml-pipeline dbt test --project-dir dbt --target $(DBT_TARGET) --exclude tag:bqml $(ARGS)
 
 dbt-compile: ## Compile models to SQL without executing (dbt/target/compiled)
 	docker compose run --rm ml-pipeline dbt compile --project-dir dbt --target $(DBT_TARGET) $(ARGS)
