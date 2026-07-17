@@ -25,6 +25,8 @@ module "iam_vertex_sa" {
     module.bigquery_datasets.raw_dataset_id,
     module.bigquery_datasets.analytics_dataset_id,
   ]
+  prediction_bucket_names = [module.gcs_buckets.bucket_names["models"]]
+  prediction_dataset_ids  = [module.bigquery_datasets.analytics_dataset_id]
 
   depends_on = [module.gcp_apis]
 }

@@ -7,8 +7,8 @@ from typing import Any, Optional
 
 import pandas as pd
 
-from vertex.config.forecast_contract import ForecastContract, load_forecast_contract
 from vertex.config.feature_availability import feature_cutoff_metadata_from_frame
+from vertex.config.forecast_contract import ForecastContract, load_forecast_contract
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_utils import get_hash
 from vertex.utils.run_context import get_git_sha
@@ -101,7 +101,9 @@ def build_forecast_output_rows(
                 "contract_hash": contract.hash,
             }
         )
-        for run_id, entity_key, target, h in zip(forecast_run_ids, entity_keys, target_date, horizon)
+        for run_id, entity_key, target, h in zip(
+            forecast_run_ids, entity_keys, target_date, horizon
+        )
     ]
 
     frame = pd.DataFrame(

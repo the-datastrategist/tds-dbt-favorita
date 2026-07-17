@@ -2,6 +2,7 @@
 
 import copy
 from datetime import date
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -30,7 +31,7 @@ def _contract(*, baselines=None, segment_columns=None) -> BacktestContract:
 
 def _history() -> pd.DataFrame:
     dates = pd.date_range("2016-07-25", "2016-08-08", freq="D")
-    rows = []
+    rows: list[dict[str, Any]] = []
     for store_nbr, segment, values in (
         (1, "large", range(1, 16)),
         (2, "small", [0] * 15),

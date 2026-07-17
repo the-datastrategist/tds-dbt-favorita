@@ -3,6 +3,11 @@ output "vertex_service_account_email" {
   value       = module.iam_vertex_sa.email
 }
 
+output "vertex_prediction_service_account_email" {
+  description = "Prediction-only Vertex service account email."
+  value       = module.iam_vertex_sa.prediction_email
+}
+
 output "artifact_registry_url" {
   description = "Docker push target for `make vertex-docker-push`."
   value       = module.artifact_registry.repository_url

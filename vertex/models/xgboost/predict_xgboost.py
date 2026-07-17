@@ -14,6 +14,7 @@ from typing import Any, Optional
 
 import pandas as pd
 
+from vertex.config.feature_availability import validate_model_features_from_config
 from vertex.config.load_config import (
     DEFAULT_CONFIG_PATH,
     explain_enabled,
@@ -21,7 +22,6 @@ from vertex.config.load_config import (
     get_job_spec,
     load_model_config,
 )
-from vertex.config.feature_availability import validate_model_features_from_config
 from vertex.utils.artifacts import load_xgboost_from_gcs, resolve_latest_artifact
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config

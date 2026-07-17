@@ -8,6 +8,7 @@ labels for cost allocation, and a dedicated pipeline service account when provid
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -36,6 +37,15 @@ def _require(value: Optional[str], name: str) -> str:
 
 def _normalize_bucket(uri: str) -> str:
     return uri if uri.startswith("gs://") else f"gs://{uri}"
+
+
+def validate_immutable_image_uri(image_uri: str) -> None:
+    """Reject mutable image tags for remote Vertex submissions."""
+    if not re.search(r"@sha256:[0-9a-f]{64}$", image_uri):
+        raise ValueError(
+            "Vertex submissions require an immutable image digest ending in "
+            "@sha256:<64 hex characters>; run make vertex-docker-push"
+        )
 
 
 def standard_labels(
@@ -113,8 +123,17 @@ def resolve_gcp_settings(
     )
 
     machine_type = vertex_cfg.get("machine_type", "n1-standard-4")
-    service_account = vertex_cfg.get("service_account") or os.getenv(
-        "VERTEX_PIPELINE_SERVICE_ACCOUNT"
+    job_step = ((config or {}).get("job") or {}).get("step")
+    if job_step == "predict":
+        service_account = vertex_cfg.get("prediction_service_account") or os.getenv(
+            "VERTEX_PREDICTION_SERVICE_ACCOUNT"
+        )
+    else:
+        service_account = None
+    service_account = (
+        service_account
+        or vertex_cfg.get("service_account")
+        or os.getenv("VERTEX_PIPELINE_SERVICE_ACCOUNT")
     )
     network = vertex_cfg.get("network") or os.getenv("VERTEX_NETWORK")
 

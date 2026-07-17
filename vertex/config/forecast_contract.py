@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
@@ -13,9 +13,7 @@ from vertex.utils.data_utils import get_hash
 DEFAULT_FORECAST_CONTRACT_PATH = Path(__file__).resolve().parent / "forecast_contract.yaml"
 
 VALID_FREQUENCIES = frozenset({"day"})
-VALID_RECONCILIATION_POLICIES = frozenset(
-    {"none", "bottom_up", "top_down", "middle_out", "mint"}
-)
+VALID_RECONCILIATION_POLICIES = frozenset({"none", "bottom_up", "top_down", "middle_out", "mint"})
 VALID_DEMAND_POLICIES = frozenset(
     {
         "observed_sales_only",
@@ -34,7 +32,7 @@ class ForecastContract:
 
     @property
     def spec(self) -> dict[str, Any]:
-        return self.raw["forecast"]
+        return cast(dict[str, Any], self.raw["forecast"])
 
     @property
     def name(self) -> str:
@@ -146,8 +144,7 @@ def validate_forecast_contract(raw: dict[str, Any]) -> ForecastContract:
     overlap = known_future.intersection(observed)
     if overlap:
         raise ValueError(
-            "features cannot be both known-future and observed: "
-            f"{', '.join(sorted(overlap))}"
+            "features cannot be both known-future and observed: " f"{', '.join(sorted(overlap))}"
         )
 
     if spec["frequency"] not in VALID_FREQUENCIES:
@@ -158,9 +155,7 @@ def validate_forecast_contract(raw: dict[str, Any]) -> ForecastContract:
             f"{sorted(VALID_RECONCILIATION_POLICIES)}"
         )
     if spec["demand_policy"] not in VALID_DEMAND_POLICIES:
-        raise ValueError(
-            f"forecast.demand_policy must be one of {sorted(VALID_DEMAND_POLICIES)}"
-        )
+        raise ValueError(f"forecast.demand_policy must be one of {sorted(VALID_DEMAND_POLICIES)}")
     if int(spec["training_window_days"]) <= 0:
         raise ValueError("forecast.training_window_days must be positive")
 

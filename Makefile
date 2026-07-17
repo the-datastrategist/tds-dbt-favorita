@@ -45,8 +45,8 @@ install: docker-build ## Build Docker image (installs Python deps from requireme
 requirements-lock: ## Regenerate requirements.txt and requirements-dev.txt (requires Docker)
 	docker run --rm -v $(CURDIR):/work -w /work python:3.11-slim bash -c '\
 		pip install -q pip-tools && \
-		pip-compile requirements.in -o requirements.txt --strip-extras && \
-		pip-compile requirements-dev.in -o requirements-dev.txt --strip-extras'
+		pip-compile --upgrade requirements.in -o requirements.txt --strip-extras && \
+		pip-compile --upgrade requirements-dev.in -o requirements-dev.txt --strip-extras'
 
 # --- CODE QUALITY COMMANDS ---
 
@@ -88,8 +88,6 @@ docker-bash: ## Start interactive bash shell in Docker
 
 ARTIFACT_REGISTRY_REPO ?= vertex
 ARTIFACT_REGISTRY_REGION ?= $(or $(VERTEX_AI_REGION),$(GOOGLE_REGION),us-central1)
-VERTEX_TRAINING_IMAGE_URI = $(ARTIFACT_REGISTRY_REGION)-docker.pkg.dev/$(GOOGLE_PROJECT_ID)/$(ARTIFACT_REGISTRY_REPO)/$(DOCKER_IMAGE_NAME):$(DOCKER_TAG)
-
 vertex-gcp-check: ## Verify Vertex env vars visible inside ml-pipeline container
 	@$(DOCKER_RUN) python -c "\
 import os; \
@@ -102,7 +100,7 @@ print('VERTEX_AI_PIPELINE_ROOT=', os.getenv('VERTEX_AI_PIPELINE_ROOT')); \
 exit(1 if missing else 0)" \
 	|| (echo "" && echo "Missing Vertex env in container. Set in .env and recreate: docker compose run ..." && exit 1)
 
-vertex-docker-push: docker-build ## Tag and push tds-favorita image to Artifact Registry (see scripts/push_vertex_training_image.sh)
+vertex-docker-push: ## Build and push a Git-SHA-tagged production image; print its immutable digest
 	bash scripts/push_vertex_training_image.sh
 
 vertex-gcp-setup: ## One-time: enable APIs + create Artifact Registry repo (requires gcloud admin login)

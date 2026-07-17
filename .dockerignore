@@ -64,6 +64,12 @@ docker-compose.yml
 Dockerfile
 .dockerignore
 
+# Terraform local state and downloaded providers
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
 # CI/CD
 .github/
 .gitlab-ci.yml

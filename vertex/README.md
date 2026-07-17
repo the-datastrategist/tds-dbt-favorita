@@ -187,7 +187,8 @@ Each iteration pins `inputs.model_run_id` on predict so artifacts do not cross d
    GOOGLE_PROJECT_ID=your-project
    VERTEX_AI_REGION=us-central1
    VERTEX_AI_STAGING_BUCKET=gs://your-bucket/vertex-staging
-   VERTEX_TRAINING_IMAGE=us-central1-docker.pkg.dev/your-project/repo/tds-favorita:latest
+   # `make vertex-docker-push` prints the digest-pinned value after publishing.
+   VERTEX_TRAINING_IMAGE=us-central1-docker.pkg.dev/your-project/repo/tds-favorita@sha256:<digest>
    ```
 
 2. Build, tag, and push the image your project uses for training.

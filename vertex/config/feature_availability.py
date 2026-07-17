@@ -90,9 +90,7 @@ class FeatureAvailabilityRegistry:
             if entry.availability == "observed_after_period":
                 leaking.append(feature_name)
         if unregistered:
-            raise ValueError(
-                f"Unregistered {context}: {', '.join(unregistered[:20])}"
-            )
+            raise ValueError(f"Unregistered {context}: {', '.join(unregistered[:20])}")
         if leaking:
             raise ValueError(
                 "Observed-after-period features cannot be used as model inputs: "
@@ -150,9 +148,7 @@ def _entry_from_mapping(
 ) -> FeatureAvailabilityEntry:
     availability = payload.get("availability")
     if availability not in ALLOWED_AVAILABILITY:
-        raise ValueError(
-            f"{name}: availability must be one of {sorted(ALLOWED_AVAILABILITY)}"
-        )
+        raise ValueError(f"{name}: availability must be one of {sorted(ALLOWED_AVAILABILITY)}")
     max_target_lag_days = payload.get("max_target_lag_days")
     if max_target_lag_days is not None and int(max_target_lag_days) < 0:
         raise ValueError(f"{name}: max_target_lag_days must be >= 0")
@@ -166,9 +162,7 @@ def _entry_from_mapping(
         source_cutoff_column=payload.get("source_cutoff_column"),
         plan_version_column=payload.get("plan_version_column"),
         materialization_column=payload.get("materialization_column"),
-        max_target_lag_days=(
-            int(max_target_lag_days) if max_target_lag_days is not None else None
-        ),
+        max_target_lag_days=(int(max_target_lag_days) if max_target_lag_days is not None else None),
         pattern=pattern,
     )
 
@@ -249,9 +243,7 @@ def feature_cutoff_metadata_from_frame(
         max_date = pd.to_datetime(df[date_column], errors="coerce").max()
         if pd.notna(max_date):
             payload["data_cutoff"] = max_date.to_pydatetime().isoformat()
-            payload["source_cutoff_json"] = {
-                date_column: max_date.to_pydatetime().isoformat()
-            }
+            payload["source_cutoff_json"] = {date_column: max_date.to_pydatetime().isoformat()}
     if registry:
         payload["feature_availability_hash"] = registry.hash
     if materialization_id:
