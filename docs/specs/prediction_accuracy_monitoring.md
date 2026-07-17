@@ -9,12 +9,12 @@
 
 ## Summary
 
-`favorita_model_predictions` already stores `actual` alongside `prediction` per row ([`vertex/ddl/vertex_bq_tables.sql`](../../vertex/ddl/vertex_bq_tables.sql)), and [`benchmarks.md`](../benchmarks.md) already has a "Prediction vs actual" query recipe — but nothing runs on a schedule, and nothing fails loudly when accuracy degrades. This spec turns that ad hoc query into a dbt mart plus dbt tests that fail (or warn) when live accuracy drifts materially from the metrics recorded at training time.
+`ml_model_predictions` already stores `actual` alongside `prediction` per row ([`vertex/ddl/vertex_bq_tables.sql`](../../vertex/ddl/vertex_bq_tables.sql)), and [`benchmarks.md`](../benchmarks.md) already has a "Prediction vs actual" query recipe — but nothing runs on a schedule, and nothing fails loudly when accuracy degrades. This spec turns that ad hoc query into a dbt mart plus dbt tests that fail (or warn) when live accuracy drifts materially from the metrics recorded at training time.
 
 ## Problem
 
-- Once a model is in production, its holdout metrics (`favorita_model_performance`, recorded once per training run) go stale — nothing re-checks whether *live* predictions still perform that well.
-- `actual` in `favorita_model_predictions` is populated whenever the source join has ground truth available (see `build_standard_prediction_rows(..., actual_column=...)` in [`vertex/utils/predictions.py`](../../vertex/utils/predictions.py)) but for forward-looking forecasts (`forecast_horizon > 0`), `actual` is `NULL` until the forecasted date passes — so accuracy monitoring is naturally lagged and must tolerate partial data.
+- Once a model is in production, its holdout metrics (`ml_model_performance`, recorded once per training run) go stale — nothing re-checks whether *live* predictions still perform that well.
+- `actual` in `ml_model_predictions` is populated whenever the source join has ground truth available (see `build_standard_prediction_rows(..., actual_column=...)` in [`vertex/utils/predictions.py`](../../vertex/utils/predictions.py)) but for forward-looking forecasts (`forecast_horizon > 0`), `actual` is `NULL` until the forecasted date passes — so accuracy monitoring is naturally lagged and must tolerate partial data.
 - There's no equivalent for BQML predictions/actuals — `bqml_model_predict` doesn't carry an `actual` column at all today.
 
 ## Goals

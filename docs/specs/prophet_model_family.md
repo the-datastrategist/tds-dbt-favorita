@@ -15,7 +15,7 @@ This repo already supports two per-entity time-series model types (`arima`, `sar
 
 - `prophet` as a new `model_type`, fittable per-entity (store) exactly like `arima`/`sarima` — same `train_days`, `forecast_horizon`, holdout-then-forward-forecast pattern.
 - Zero special-casing in `vertex/jobs/run.py`, `submit.py`, or the KFP pipeline compiler — the registry dispatch pattern means adding a model family should only touch `vertex/models/`, `vertex/config/load_config.py` (if any Prophet-only validation is needed), `model_config.yaml`, and `vertex/tests/`.
-- Prophet's native uncertainty intervals (`yhat_lower`/`yhat_upper`) populate the existing `prediction_lower`/`prediction_upper` columns on `favorita_model_predictions` (already in the DDL, currently unused by ARIMA/SARIMA, which don't emit intervals today).
+- Prophet's native uncertainty intervals (`yhat_lower`/`yhat_upper`) populate the existing `prediction_lower`/`prediction_upper` columns on `ml_model_predictions` (already in the DDL, currently unused by ARIMA/SARIMA, which don't emit intervals today).
 
 ## Non-goals
 

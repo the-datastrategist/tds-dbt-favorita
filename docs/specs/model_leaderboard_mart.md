@@ -3,7 +3,7 @@
 # SPEC: Model leaderboard mart
 
 **Status:** Shipped
-**Roadmap reference:** [`client_rollout.md`](../client_rollout.md#post-rollout-weeks-58-optional) — "Model leaderboard mart | `favorita_model_performance` + dbt mart"; [`delivery_artifacts.md`](../delivery_artifacts.md#dashboard-blueprint) dashboard page 3 "Model leaderboard"
+**Roadmap reference:** [`client_rollout.md`](../client_rollout.md#post-rollout-weeks-58-optional) — "Model leaderboard mart | `ml_model_performance` + dbt mart"; [`delivery_artifacts.md`](../delivery_artifacts.md#dashboard-blueprint) dashboard page 3 "Model leaderboard"
 
 ---
 
@@ -13,7 +13,7 @@ Today, comparing BQML and Vertex models means manually filling in `{fill}` place
 
 ## Problem
 
-- `favorita_model_performance` (Vertex holdout metrics: mae, rmse, wape, r2, ...) has **no staging model** yet — it's declared as a source in [`dbt/models/sources/vertex.yml`](../../dbt/models/sources/vertex.yml) but, unlike `favorita_model_predictions`/`favorita_model_metadata`, there is no `stg_vertex_model_performance.sql`.
+- `ml_model_performance` (Vertex holdout metrics: mae, rmse, wape, r2, ...) has **no staging model** yet — it's declared as a source in [`dbt/models/sources/vertex.yml`](../../dbt/models/sources/vertex.yml) but, unlike `ml_model_predictions`/`ml_model_metadata`, there is no `stg_vertex_model_performance.sql`.
 - BQML's `bqml_model_evaluate` mart ([`dbt/models/marts/ml_models/bqml_model_evaluate.sql`](../../dbt/models/marts/ml_models/bqml_model_evaluate.sql)) returns whatever columns `ML.EVALUATE()` emits for the model type (`mean_absolute_error`, `mean_squared_error`, `r2_score`, ... for `BOOSTED_TREE_REGRESSOR`) — not the same column names as Vertex's `mae`/`rmse`/`wape`.
 - There is consequently **no single query** that ranks BQML vs. Vertex vs. model family/config, and champion selection (`benchmarks.md` § "Champion selection") is a manual judgment call with no persisted audit trail of *when* a champion changed.
 
@@ -63,10 +63,10 @@ select
     smape,
     bias,
     median_ae
-from {{ source('vertex_ml', 'favorita_model_performance') }}{% endraw %}
+from {{ source('vertex_ml', 'ml_model_performance') }}{% endraw %}
 ```
 
-Add `dbt/models/staging/schema.yml` column docs + `not_null` tests on `model_run_id`, `model_id`, `config_name`. Note in the description that `metric_set` is currently always `'test'` (see [`vertex/utils/metadata.py`](../../vertex/utils/metadata.py) `performance_row_from_metadata`, called with `metric_set="test"` from all three train scripts) — `'train'` metrics exist in `favorita_model_metadata.train_performance` (JSON) but aren't written to `favorita_model_performance` today. Out of scope here; flag as a follow-on if train-vs-test comparison becomes a need.
+Add `dbt/models/staging/schema.yml` column docs + `not_null` tests on `model_run_id`, `model_id`, `config_name`. Note in the description that `metric_set` is currently always `'test'` (see [`vertex/utils/metadata.py`](../../vertex/utils/metadata.py) `performance_row_from_metadata`, called with `metric_set="test"` from all three train scripts) — `'train'` metrics exist in `ml_model_metadata.train_performance` (JSON) but aren't written to `ml_model_performance` today. Out of scope here; flag as a follow-on if train-vs-test comparison becomes a need.
 
 ### 2. Normalize BQML metrics to the same shape
 
