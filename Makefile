@@ -179,9 +179,12 @@ dbt-clean: ## Remove dbt/target and dbt/dbt_packages via `dbt clean`
 	docker compose run --rm ml-pipeline dbt clean --project-dir dbt
 
 DBT_DOCS_PORT ?= 8080
+# dbt-core's catalog parser requests table_owner, but dbt-bigquery does not
+# return that optional field. Suppress only agate's resulting harmless warning.
+DBT_DOCS_PYTHONWARNINGS ?= ignore::RuntimeWarning:agate.type_tester
 
 dbt-docs-generate: ## Generate static dbt Docs site (dbt/target/)
-	docker compose run --rm ml-pipeline dbt docs generate --project-dir dbt
+	docker compose run --rm -e PYTHONWARNINGS="$(DBT_DOCS_PYTHONWARNINGS)" ml-pipeline dbt docs generate --project-dir dbt
 
 dbt-docs-serve: ## Serve generated dbt Docs (http://127.0.0.1:8080; run dbt-docs-generate first)
 	@echo ""
