@@ -49,3 +49,13 @@ selectors:
           value: favorita_raw
         - method: tag
           value: data_quality
+
+  - name: accuracy_monitoring
+    description: >
+      Prediction accuracy monitoring for Vertex models: rolling accuracy mart plus the
+      drift test comparing live WAPE to training-time WAPE. Run daily, after
+      stg_vertex_model_predictions has refreshed. Equivalent to make selector-accuracy-monitoring.
+    definition:
+      method: fqn
+      value: favorita_prediction_accuracy_rolling
+      children: true

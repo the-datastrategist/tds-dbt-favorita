@@ -17,6 +17,7 @@ mindmap
       BQML macros + marts
       stg_vertex_* over ML outputs
       model leaderboard + champion
+      prediction accuracy monitoring
       exposures + schema tests
       selectors daily_refresh
     Vertex
@@ -52,12 +53,13 @@ mindmap
 | BQML marts | `dbt/models/marts/ml_models/` | Train, predict, evaluate, explain via macros |
 | Vertex staging | `dbt/models/staging/stg_vertex_*.sql` | Views over Vertex-written BQ tables |
 | Model leaderboard | `favorita_model_leaderboard`, `favorita_model_champion` | Unified BQML + Vertex metrics, ranked, champion-flagged per grain |
+| Accuracy monitoring | `favorita_prediction_accuracy_rolling`, `assert_no_material_accuracy_drift` | Rolling 7d/28d live accuracy vs. training-time metrics, with a drift test |
 | Sources | `dbt/models/sources/vertex.yml` | Contract for ML output tables |
 | Selectors | `dbt/selectors.yml` | `daily_refresh`, `ml_features`, `bqml_train`, `bqml_score` |
 | Exposures | `dbt/models/exposures.yml` | Lineage to ML, dashboard, and app consumers |
 | Docs | `docs/` | Overview + consulting package (`dbt_project.yml` → `docs-paths: ["../docs"]`) |
 
-**Commands:** `make dbt-run`, `make dbt-train`, `make dbt-predict`, `make dbt-vertex`, `make dbt-test`
+**Commands:** `make dbt-run`, `make dbt-train`, `make dbt-predict`, `make dbt-vertex`, `make dbt-test`, `make selector-accuracy-monitoring`
 
 → Product view: [dbt/consulting_package.md](dbt/consulting_package.md)
 

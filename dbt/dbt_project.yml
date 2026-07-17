@@ -69,6 +69,10 @@ vars:
     store-day: wape
     company-day: mae
 
+  # How much worse rolling WAPE may get vs. training-time WAPE before
+  # assert_no_material_accuracy_drift flags it. Conservative default; tune per client.
+  accuracy_drift_tolerance_pct: 0.25
+
   # Reusable column groups for get_bqml_feature_columns / get_bqml_prediction_features.
   feature_sets:
     datetime:

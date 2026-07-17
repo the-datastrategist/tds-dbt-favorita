@@ -19,7 +19,7 @@ export GOOGLE_APPLICATION_CREDENTIALS_CONTAINER
 endif
 endif
 
-.PHONY: help install requirements-lock format lint test clean selector-daily-refresh selector-daily-refresh-test load-favorita-gcs load-favorita-bigquery \
+.PHONY: help install requirements-lock format lint test clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring load-favorita-gcs load-favorita-bigquery \
 	dbt-deps dbt-debug dbt-seed dbt-run dbt-run-full-refresh dbt-run-model dbt-run-operation dbt-create-table \
 	dbt-train dbt-predict dbt-build dbt-test dbt-compile dbt-list dbt-snapshot dbt-source-freshness dbt-clean \
 	dbt-ui dbt-docs dbt-docs-generate dbt-docs-serve \
@@ -149,6 +149,9 @@ selector-daily-refresh: ## Run dbt with selector daily_refresh (staging + featur
 
 selector-daily-refresh-test: ## Run data tests for daily_refresh + singular data_quality tests (no BQML)
 	docker compose run --rm ml-pipeline dbt test --project-dir dbt --target $(DBT_TARGET) --selector daily_refresh_tests $(ARGS)
+
+selector-accuracy-monitoring: ## Build the prediction-accuracy rolling mart + run its drift test
+	docker compose run --rm ml-pipeline dbt build --project-dir dbt --target $(DBT_TARGET) --selector accuracy_monitoring $(ARGS)
 
 dbt-train: ## Run features + BQML training models (tag:train)
 	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:train $(ARGS)
