@@ -19,7 +19,9 @@ export GOOGLE_APPLICATION_CREDENTIALS_CONTAINER
 endif
 endif
 
-.PHONY: help install requirements-lock format lint test clean dbt-run dbt-train dbt-predict selector-daily-refresh selector-daily-refresh-test load-favorita-gcs load-favorita-bigquery \
+.PHONY: help install requirements-lock format lint test clean selector-daily-refresh selector-daily-refresh-test load-favorita-gcs load-favorita-bigquery \
+	dbt-deps dbt-debug dbt-seed dbt-run dbt-run-full-refresh dbt-run-model dbt-run-operation dbt-create-table \
+	dbt-train dbt-predict dbt-build dbt-test dbt-compile dbt-list dbt-snapshot dbt-source-freshness dbt-clean \
 	dbt-ui dbt-docs dbt-docs-generate dbt-docs-serve \
 	mlflow-ui prefect-ui prefect-server prefect-work-pool-create prefect-worker prefect-deploy \
 	prefect-run-dbt prefect-run-vertex-train prefect-run-vertex-train-all prefect-run-vertex-pipeline \
@@ -34,7 +36,7 @@ endif
 
 help: ## Show this help message
 	@echo "Available commands:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-28s\033[0m %s\n", $$1, $$2}'
 
 # --- SETUP COMMANDS ---
 
@@ -108,10 +110,35 @@ vertex-gcp-setup: ## One-time: enable APIs + create Artifact Registry repo (requ
 
 
 # DBT COMMANDS
+# All targets accept DBT_TARGET (from .env, default `dev`) and pass extra flags via ARGS,
+# e.g. make dbt-run ARGS='--select tag:features'
 
-# Standard dbt run - excludes BQML models
-dbt-run:
+dbt-deps: ## Install dbt packages (dbt_packages/)
+	docker compose run --rm ml-pipeline dbt deps --project-dir dbt $(ARGS)
+
+dbt-debug: ## Test the dbt connection/profile
+	docker compose run --rm ml-pipeline dbt debug --project-dir dbt --target $(DBT_TARGET) $(ARGS)
+
+dbt-seed: ## Load CSV seeds (dbt/seeds/) into the warehouse
+	docker compose run --rm ml-pipeline dbt seed --project-dir dbt --target $(DBT_TARGET) $(ARGS)
+
+dbt-run: ## Run all models, excluding BQML (tag:bqml)
 	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --exclude tag:bqml $(ARGS)
+
+dbt-run-full-refresh: ## Full-refresh run, excluding BQML (tag:bqml)
+	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --full-refresh --exclude tag:bqml $(ARGS)
+
+dbt-run-model: ## Run a single model/selector (MODEL=int_sales_daily)
+	@test -n "$(MODEL)" || (echo "Set MODEL, e.g. make dbt-run-model MODEL=int_sales_daily" && exit 1)
+	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select $(MODEL) $(ARGS)
+
+dbt-run-operation: ## Invoke a dbt macro as a run-operation (MODEL=macro_name)
+	@test -n "$(MODEL)" || (echo "Set MODEL to a macro name, e.g. make dbt-run-operation MODEL=stage_external_sources" && exit 1)
+	docker compose run --rm ml-pipeline dbt run-operation --project-dir dbt $(MODEL) --target $(DBT_TARGET) $(ARGS)
+
+dbt-create-table: ## Stage a raw external source into BigQuery (DATABASE=..., TABLE=...)
+	@test -n "$(DATABASE)" && test -n "$(TABLE)" || (echo "Set DATABASE and TABLE, e.g. make dbt-create-table DATABASE=raw_favorita TABLE=stores" && exit 1)
+	docker compose run --rm ml-pipeline dbt run-operation --project-dir dbt stage_external_sources --args '{"select": "$(DATABASE).$(TABLE)"}' --target $(DBT_TARGET)
 
 # Daily ETL: staging + intermediate features (see dbt/selectors.yml)
 selector-daily-refresh: ## Run dbt with selector daily_refresh (staging + features, no BQML)
@@ -120,37 +147,32 @@ selector-daily-refresh: ## Run dbt with selector daily_refresh (staging + featur
 selector-daily-refresh-test: ## Run data tests for daily_refresh + singular data_quality tests (no BQML)
 	docker compose run --rm ml-pipeline dbt test --project-dir dbt --target $(DBT_TARGET) --selector daily_refresh_tests $(ARGS)
 
-# Run all dbt models used for training (features + BQML training)
-dbt-train:
+dbt-train: ## Run features + BQML training models (tag:train)
 	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:train $(ARGS)
 
-# Run all dbt models used for prediction, evaluation, and explanation
-dbt-predict:
+dbt-predict: ## Run BQML predict/evaluate/explain models (tag:predict)
 	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:predict $(ARGS)
 
-dbt-run-full-refresh:
-	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --full-refresh --exclude tag:bqml $(ARGS)
+dbt-build: ## Run + test (+ seed/snapshot) in DAG order, excluding BQML (tag:bqml)
+	docker compose run --rm ml-pipeline dbt build --project-dir dbt --target $(DBT_TARGET) --exclude tag:bqml $(ARGS)
 
-dbt-run-model:
-	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select $(MODEL) $(ARGS)
-
-dbt-run-operation:
-	docker compose run --rm ml-pipeline dbt run-operation --project-dir dbt $(MODEL) --target $(DBT_TARGET) $(ARGS)
-
-dbt-deps:
-	docker compose run --rm ml-pipeline dbt deps --project-dir dbt $(ARGS)
-
-dbt-test:
+dbt-test: ## Run data tests (all, or --select via ARGS)
 	docker compose run --rm ml-pipeline dbt test --project-dir dbt --target $(DBT_TARGET) $(ARGS)
 
-dbt-debug:
-	docker compose run --rm ml-pipeline dbt debug --project-dir dbt --target $(DBT_TARGET) $(ARGS)
+dbt-compile: ## Compile models to SQL without executing (dbt/target/compiled)
+	docker compose run --rm ml-pipeline dbt compile --project-dir dbt --target $(DBT_TARGET) $(ARGS)
 
-dbt-seed:
-	docker compose run --rm ml-pipeline dbt seed --project-dir dbt --target $(DBT_TARGET) $(ARGS)
+dbt-list: ## List resources selected by ARGS, e.g. ARGS='--select tag:features'
+	docker compose run --rm ml-pipeline dbt list --project-dir dbt --target $(DBT_TARGET) $(ARGS)
 
-dbt-create-table:
-	docker compose run --rm ml-pipeline dbt run-operation --project-dir dbt stage_external_sources --args '{"select": "$(DATABASE).$(TABLE)"}' --target $(DBT_TARGET)
+dbt-snapshot: ## Run snapshots (dbt/snapshots/)
+	docker compose run --rm ml-pipeline dbt snapshot --project-dir dbt --target $(DBT_TARGET) $(ARGS)
+
+dbt-source-freshness: ## Check configured source freshness
+	docker compose run --rm ml-pipeline dbt source freshness --project-dir dbt --target $(DBT_TARGET) $(ARGS)
+
+dbt-clean: ## Remove dbt/target and dbt/dbt_packages via `dbt clean`
+	docker compose run --rm ml-pipeline dbt clean --project-dir dbt
 
 DBT_DOCS_PORT ?= 8080
 
