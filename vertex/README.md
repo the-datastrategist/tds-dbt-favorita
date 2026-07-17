@@ -153,8 +153,6 @@ make vertex-run-docker VERTEX_CONFIG_NAME=favorita_store_n1d_xgboost
 make vertex-submit VERTEX_CONFIG_NAME=favorita_store_n1d_xgboost SYNC=1
 ```
 
-Legacy aliases still work: `make model-train` → `vertex-train-docker`, etc.
-
 Override default config names:
 
 ```bash
@@ -266,7 +264,7 @@ vertex:
   register_model: false      # Vertex AI Model Registry upload (GCS artifact for endpoints)
 ```
 
-Vertex AI Model Registry upload uses `artifacts.register_from_manifest` when `vertex.register_model: true`, not the legacy `VertexModelSaver` path.
+Vertex AI Model Registry upload uses `artifacts.register_from_manifest` when `vertex.register_model: true`.
 
 ### View MLflow runs locally
 

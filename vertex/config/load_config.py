@@ -144,25 +144,13 @@ def apply_job_step(config: dict[str, Any], step: str) -> dict[str, Any]:
 
 def list_run_config_names(
     config_path: str | Path | None = None,
-    *,
-    step: str | None = "train",
-    include_legacy_aliases: bool = False,
 ) -> list[str]:
-    """
-    Return sorted config names with include_in_run: true.
-
-    Unified configs are model-level (no job.step in YAML). When step is set,
-    every include_in_run config is eligible — the step is applied at job runtime.
-    """
-    del step  # retained for API compatibility; step is runtime-only now
+    """Return sorted model config names with include_in_run: true."""
     names: list[str] = []
     for config in load_all_configs(config_path):
         if not config_include_in_run(config):
             continue
-        name = config.get("name", "")
-        if not include_legacy_aliases and name.startswith("train_"):
-            continue
-        names.append(name)
+        names.append(config.get("name", ""))
     return sorted(names)
 
 
@@ -185,18 +173,10 @@ def get_job_spec(config: dict[str, Any]) -> dict[str, Any]:
     """
     Return normalized job routing fields: step, model_type, model_family.
 
-    Step must be set on config.job.step (via apply_job_step or legacy YAML).
+    Step must be set on config.job.step via apply_job_step.
     """
     job = config.get("job") or {}
     step = job.get("step")
-    if not step:
-        name = config.get("name", "")
-        if "_train" in name or name.startswith("train_"):
-            step = "train"
-        elif "_predict" in name or name.startswith("predict_"):
-            step = "predict"
-        elif "_optimize" in name or name.startswith("optimize_"):
-            step = "optimize"
     model_type = get_model_type(config)
     if not step or not model_type:
         raise ValueError(

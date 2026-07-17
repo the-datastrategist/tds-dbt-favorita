@@ -32,7 +32,7 @@ endif
 	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
 	dbt-vertex vertex-bq-ddl vertex-validate-config vertex-validate-configs \
 	vertex-backfill vertex-backtest-plan vertex-backtest prefect-flow-vertex-backfill \
-	model-train model-predict model-optimize docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
+	docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -416,12 +416,6 @@ train_days=$(if $(TRAIN_DAYS),$(TRAIN_DAYS),None), \
 dry_run=$(if $(filter 1 true yes,$(DRY_RUN)),True,False), \
 max_iterations=$(if $(MAX_ITERATIONS),$(MAX_ITERATIONS),None), \
 stop_on_error=$(if $(filter 1 true yes,$(CONTINUE_ON_ERROR)),False,True))"
-
-# --- Backward-compatible aliases ---
-
-model-train: vertex-train-docker ## Alias: train in Docker
-model-predict: vertex-predict-docker ## Alias: predict in Docker
-model-optimize: vertex-optimize-docker ## Alias: optimize in Docker
 
 # --- MLflow / Prefect UIs (localhost only; override ports via MLFLOW_UI_PORT / PREFECT_SERVER_PORT) ---
 # Train jobs log gcs_model_catalog.json to MLflow; set MLFLOW_REGISTER_MODEL=true for Model Registry.

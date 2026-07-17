@@ -49,9 +49,14 @@ class TestLoadConfig:
             load_model_config("does_not_exist")
 
     def test_list_run_config_names(self):
-        names = list_run_config_names(step="train")
+        names = list_run_config_names()
         assert "favorita_store_n1d_xgboost" in names
         assert "favorita_store_n1d_rf" not in names
+
+    def test_job_step_must_be_explicit(self):
+        config = load_model_config("favorita_store_n1d_xgboost")
+        with pytest.raises(ValueError, match="job.step is required"):
+            get_job_spec(config)
 
     def test_explain_enabled_and_top_k_features(self):
         xgboost_config = load_model_config("favorita_store_n1d_xgboost")

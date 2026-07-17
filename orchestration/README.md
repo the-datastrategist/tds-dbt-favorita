@@ -72,11 +72,11 @@ Flow code lives under `orchestration/` (not `prefect/`) so it does not shadow th
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `config_name` | `favorita_store_n1d_xgboost` | Train config name from `model_config.yaml` |
-| `train_all` | `false` | Train every non-legacy train config |
+| `train_all` | `false` | Train every model config with `include_in_run: true` |
 | `vertex_mode` | `docker` (or `PREFECT_DEFAULT_VERTEX_MODE`) | `docker` (in-container job) or `vertex` (Custom Job submit) |
 | `sync` | `false` | With `vertex_mode=vertex`, wait for the Custom Job |
 
-Train configs discovered for `train_all=true` (excluding legacy `train_*` aliases):
+Model configs are discovered for `train_all=true` through `include_in_run: true`.
 
 - `favorita_store_n1d_xgboost`
 - `favorita_store_n1d_rf`

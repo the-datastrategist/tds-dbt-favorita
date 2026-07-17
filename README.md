@@ -362,8 +362,6 @@ make vertex-submit VERTEX_CONFIG_NAME=favorita_store_n1d_xgboost VERTEX_STEP=pre
 make help    # lists all vertex-* targets
 ```
 
-Aliases: `make model-train` → `vertex-train-docker`, etc.
-
 Full detail: **[vertex/README.md](vertex/README.md)**.
 
 ### Local UIs (dbt Docs, MLflow & Prefect)
