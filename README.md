@@ -41,6 +41,69 @@ Product-specific views: [dbt](docs/dbt/consulting_package.md) · [Vertex AI](doc
 
 Browse locally with **`make dbt-ui`** (http://127.0.0.1:8080) or on GitHub after `dbt docs generate` in CI.
 
+## Architecture
+
+### System diagram
+
+```mermaid
+flowchart TB
+  subgraph Dev["Local dev"]
+    Make[Makefile]
+    Compose["docker-compose\nml-pipeline"]
+  end
+
+  subgraph GH["GitHub"]
+    Actions[GitHub Actions CI]
+    Pages["GitHub Pages\ndbt Docs"]
+  end
+
+  subgraph GCP["GCP project"]
+    GCS[("Cloud Storage\nraw data + model artifacts")]
+    BQ[("BigQuery\nraw → staging → intermediate → marts")]
+    Vertex["Vertex AI\nCustom Jobs / Pipelines / Experiments"]
+    AR["Artifact Registry\ntraining image"]
+  end
+
+  Prefect["Prefect OSS\nscheduler + worker"]
+  MLflow["MLflow tracking server"]
+  BI["BI / dashboards\n(client-specific)"]
+
+  Make --> Compose
+  Compose --> BQ
+  Compose --> GCS
+  Compose --> Vertex
+  Compose --> MLflow
+  Prefect --> Compose
+  Vertex --> GCS
+  Vertex --> BQ
+  Vertex --> MLflow
+  Vertex -.pulls image.-> AR
+  Actions -.build & push.-> AR
+  Actions --> Pages
+  BQ --> BI
+```
+
+### Data flow diagram
+
+```mermaid
+flowchart LR
+  Kaggle["Kaggle .csv.7z"] --> GCSRaw[("GCS raw bucket")]
+  GCSRaw --> BQRaw[("BigQuery raw_favorita")]
+  BQRaw --> Stg["staging models"]
+  Stg --> Int["int_sales_* features"]
+  Int --> BQML["BQML train / predict"]
+  Int --> VTrain["Vertex train / optimize"]
+  VTrain --> VPred["Vertex predict"]
+  VTrain --> GCSModel[("GCS model artifacts")]
+  VTrain --> BQMeta[("favorita_model_* tables")]
+  VPred --> BQMeta
+  BQMeta --> StgVertex["stg_vertex_*"]
+  BQML --> BI["BI / dashboards"]
+  StgVertex --> BI
+```
+
+More detail (dual ML path, operational sequence, security/environments, CI/CD): [docs/reference_architecture.md](docs/reference_architecture.md).
+
 ## Project Structure
 
 ```
