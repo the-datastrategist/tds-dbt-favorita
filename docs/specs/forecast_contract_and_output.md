@@ -1,0 +1,177 @@
+{% docs spec_forecast_contract_and_output %}
+
+# SPEC: Forecast contract and canonical output
+
+**Status:** Proposed
+**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P0 "Introduce a forecast contract"
+
+---
+
+## Summary
+
+The current Vertex prediction table is model-run oriented: it records predictions, metadata, and optional actuals after a configured job runs. A demand forecasting platform needs a stronger contract that describes the forecasting problem before any model is trained or scored, and a canonical output table that separates statistical forecasts, planner changes, approvals, and published versions.
+
+This spec introduces `docs/forecast_contract.md`, a validated YAML contract, and canonical BigQuery tables for versioned multi-horizon forecast output.
+
+## Goals
+
+- Define one forecast contract shape for target, grain, schedule, horizons, quantiles, eligibility, covariate availability, hierarchy, and reconciliation.
+- Validate forecast contracts before training, scoring, backtesting, or publishing.
+- Add a canonical output schema keyed by `forecast_run_id`, `forecast_origin`, entity keys, `target_date`, and `horizon`.
+- Persist provenance on every forecast row: model version, feature version, code SHA, data cutoff, config hash, and status.
+- Support separate values for statistical forecast, planner override, approved forecast, and published forecast.
+
+## Non-goals
+
+- Building planner UI workflows. The schema must support them, but workflow implementation belongs in [forecast operations](forecast_operations.md).
+- Implementing reconciliation algorithms. The contract records the reconciliation policy; algorithms belong in [hierarchical reconciliation](hierarchical_reconciliation.md).
+- Replacing existing `favorita_model_predictions` immediately. The first implementation may write both schemas until downstream docs and marts migrate.
+
+## Design
+
+### 1. Forecast contract document
+
+Add `docs/forecast_contract.md` with reader-facing documentation and examples. It should explain required fields, defaults, validation rules, and how the contract maps to dbt, Vertex, and publishing outputs.
+
+Example:
+
+```yaml
+forecast:
+  name: favorita_store_product_daily
+  target: demand_units
+  target_unit: units
+  dimensions: [store_id, product_id]
+  frequency: day
+  timezone: America/Guayaquil
+  issue_schedule: "0 6 * * *"
+  horizons: [1, 2, 3, 4, 5, 6, 7, 14, 28]
+  quantiles: [0.1, 0.5, 0.9]
+  training_window_days: 730
+  known_future_features: [promotion, holiday, planned_price]
+  observed_features: [sales, transactions, inventory_on_hand]
+  hierarchy: [company, store, product_family, product]
+  reconciliation_policy: bottom_up
+```
+
+### 2. Contract schema and loader
+
+Add a Python module under `forecasting_core/contracts/` or, before modularization, `vertex/config/forecast_contract.py`.
+
+Responsibilities:
+
+- Load YAML from a path or named config.
+- Validate required fields and allowed values.
+- Normalize horizons and quantiles.
+- Produce a stable `forecast_contract_hash`.
+- Expose helper methods used by training, scoring, backtesting, and publishing.
+
+Validation should reject:
+
+- Empty horizons.
+- Quantiles outside `(0, 1)`.
+- Observed features listed as known-future features.
+- Missing timezone or frequency.
+- Reconciliation policy without hierarchy when policy is not `none`.
+
+### 3. Canonical tables
+
+Add DDL for forecast contract and output tables, either in `vertex/ddl/vertex_bq_tables.sql` or a new `forecasting_core/ddl/forecast_tables.sql`.
+
+Minimum tables:
+
+| Table | Purpose |
+|-------|---------|
+| `forecast_contracts` | Registered contract versions and config hashes |
+| `forecast_runs` | One row per scoring/backtest/publication run |
+| `forecast_outputs` | One row per entity, origin, target date, horizon, and forecast version |
+| `forecast_status_history` | Audit trail for draft, approved, published, superseded, failed |
+
+Minimum `forecast_outputs` columns:
+
+```text
+forecast_run_id
+forecast_contract_name
+forecast_contract_hash
+forecast_origin
+target_date
+horizon
+grain
+entity_key_json
+prediction_p10
+prediction_p50
+prediction_p90
+statistical_forecast
+planner_override
+approved_forecast
+published_forecast
+forecast_status
+model_run_id
+model_id
+feature_version
+code_sha
+data_cutoff
+created_at
+```
+
+Use a normalized quantile child table if configurable quantiles become too wide for stable table evolution.
+
+### 4. dbt staging and marts
+
+Add dbt source declarations and staging models:
+
+- `stg_forecast_contracts`
+- `stg_forecast_runs`
+- `stg_forecast_outputs`
+- `stg_forecast_status_history`
+
+Add tests:
+
+- `not_null` on run IDs, origin, target date, horizon, status.
+- accepted values for status.
+- uniqueness on `(forecast_run_id, entity_key_json, target_date, horizon)` for draft output rows.
+- no negative horizons.
+
+### 5. Compatibility with existing Vertex predictions
+
+Initial implementation can adapt `favorita_model_predictions` into `forecast_outputs` for the active Favorita config. The adapter should map:
+
+| Existing | Canonical |
+|----------|-----------|
+| `predict_run_id` | `forecast_run_id` |
+| `forecast_date` / `date` | `target_date` |
+| model prediction | `statistical_forecast`, `prediction_p50` |
+| `actual` | retained in evaluation tables, not canonical output |
+| `model_run_id`, `model_id` | same |
+
+## Implementation plan
+
+1. Add reader-facing `docs/forecast_contract.md`.
+2. Add contract loader and validation tests.
+3. Extend DDL with contract/run/output/status tables.
+4. Add dbt sources, staging models, schema docs, and tests.
+5. Add a Vertex prediction writer path that emits canonical forecast output for one default config.
+6. Update `README.md`, `docs/reference_architecture.md`, and `docs/overview.md` to call this a forecast contract.
+
+## Testing & validation
+
+- Unit tests for contract validation and hash stability.
+- DDL applicator test or dry-run validation for new tables.
+- dbt parse/compile/docs generation.
+- A local or GCP smoke test that writes a 7-day forecast and confirms every row has origin, target date, horizon, model version, feature version, code SHA, and data cutoff.
+
+## Acceptance criteria
+
+- A named forecast contract can be validated from YAML.
+- A multi-horizon forecast run records one canonical output row per entity/date/horizon.
+- Every canonical forecast row has provenance and lifecycle status.
+- Existing Favorita predictions can be queried through `stg_forecast_outputs`.
+
+## Related documents
+
+- [Specs index](README.md)
+- [Forecasting methods](forecasting_methods.md)
+- [Backtesting and model lifecycle](backtesting_and_model_lifecycle.md)
+- [Forecast operations](forecast_operations.md)
+- [Integration contracts](integration_contracts.md)
+
+{% enddocs %}
