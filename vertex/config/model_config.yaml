@@ -70,7 +70,7 @@ configs:
       excluded_columns:
         - store_nbr
         - date
-        - sales_store_n1d_same_dow
+        - sales_store_n7d_same_dow
         - sales_store_n1d
         - sales_store_n7d
         - sales_store_n14d
@@ -78,7 +78,7 @@ configs:
         - sales_store_n30d
         - sales_store_n60d
         - sales_store_n90d
-        - sales_company_n1d_same_dow
+        - sales_company_n7d_same_dow
         - sales_company_n1d
         - sales_company_n7d
         - sales_company_n14d
