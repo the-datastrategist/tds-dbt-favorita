@@ -167,7 +167,13 @@ Recommended cron (matches `prefect.yaml` defaults):
 
 From `vertex/ops/README.md`:
 
-- [ ] Service account keys not in repo; prefer **Workload Identity Federation** (design: [specs/workload_identity_federation.md](specs/workload_identity_federation.md))
+- [x] Vertex Custom Jobs authenticate via their attached service account + ADC (no key file
+      propagated into the job container — fixed in `vertex/jobs/gcp.py`)
+- [ ] CI **Workload Identity Federation** for jobs that need real GCP access (design:
+      [specs/workload_identity_federation.md](specs/workload_identity_federation.md); pool/provider
+      Terraform resources blocked on [specs/terraform_modules.md](specs/terraform_modules.md))
+- [ ] Service account keys not in repo for **local dev**; key file remains the supported path
+      there per the WIF spec's non-goals
 - [ ] Artifact Registry **vulnerability scanning** enabled
 - [ ] VPC-SC or private IP for Vertex (enterprise)
 - [ ] **CMEK** on GCS buckets if required

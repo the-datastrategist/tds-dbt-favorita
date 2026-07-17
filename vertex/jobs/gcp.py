@@ -159,14 +159,16 @@ def worker_pool_spec(
         args.append("--no-update-config")
     elif update_config is True:
         args.append("--update-config")
+    # Custom Jobs authenticate via their attached service_account (settings.service_account)
+    # and Google's instance metadata server, not a key file — the submitting machine's local
+    # GOOGLE_APPLICATION_CREDENTIALS path is meaningless inside the job's container and was
+    # previously (harmlessly, but incorrectly) forwarded here. See
+    # docs/specs/workload_identity_federation.md.
     env = [
         {"name": "GOOGLE_PROJECT_ID", "value": settings.project_id},
         {"name": "VERTEX_JOB_RUN_ID", "value": job_run_id},
         {"name": "VERTEX_AI_REGION", "value": settings.region},
     ]
-    creds = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    if creds:
-        env.append({"name": "GOOGLE_APPLICATION_CREDENTIALS", "value": creds})
 
     return [
         {

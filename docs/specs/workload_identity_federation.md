@@ -2,7 +2,7 @@
 
 # SPEC: Workload Identity Federation
 
-**Status:** Proposed
+**Status:** In progress
 **Roadmap reference:** [`iac.md`](../iac.md#security-checklist) security checklist — "Service account keys not in repo; prefer Workload Identity Federation"; [`vertex/ops/README.md`](../../vertex/ops/README.md#security-checklist) same item; [`client_rollout.md`](../client_rollout.md#post-rollout-weeks-58-optional) — "Workload Identity Federation | Replace SA keys"
 
 ---
@@ -31,6 +31,25 @@ The third row is a latent bug worth fixing regardless of WIF: `creds = os.getenv
 
 - Removing key-file support for **local development**. `GOOGLE_APPLICATION_CREDENTIALS` + a downloaded key remains the simplest onboarding path for `make docker-bash` / `make vertex-train` on a laptop; WIF impersonation from a laptop (via `gcloud auth application-default login --impersonate-service-account`) is a nice-to-have, not a requirement, and adds setup friction for a repo whose audience includes prospective clients evaluating the demo.
 - Cloud Scheduler → Cloud Run (`iac.md` Scheduling Pattern A) — once built, that Cloud Run service should run as an attached service account (no key file, no WIF needed — it's already a first-party GCP workload), which is a natural continuation of this spec but out of scope until Cloud Run trigger service exists.
+
+## Implementation notes (as shipped so far)
+
+Rollout step 1 is done; steps 2–4 remain blocked on real GCP org resources this repo can't
+provision from a sandbox (a live WIF pool/provider needs an actual project and either Terraform
+apply or manual `gcloud` calls against a real GCP org):
+
+- **Done:** the dead-code removal in `vertex/jobs/gcp.py` — `worker_pool_spec` no longer
+  propagates `GOOGLE_APPLICATION_CREDENTIALS` into the Custom Job container env. Added
+  `vertex/tests/test_gcp.py` as the regression test called for above, asserting the env spec
+  never contains that key and that the service account continues to flow through
+  `settings.service_account` instead.
+- **Done:** `vertex/ops/README.md` and `iac.md` security checklists updated to reflect this as
+  factual (checked) rather than aspirational, while CI WIF stays unchecked and explicitly
+  flagged as blocked on the [Terraform modules spec](terraform_modules.md).
+- **Not done:** the CI `google-github-actions/auth` step and the WIF pool/provider Terraform
+  resources (rollout steps 2–3) — these require the Terraform modules spec to ship first (for
+  the `iam-vertex-sa` module to extend) and a real GCP project to provision against. Revisit once
+  that spec is implemented and a CI job actually needs live GCP access (e.g. `terraform plan`).
 
 ## Design
 
