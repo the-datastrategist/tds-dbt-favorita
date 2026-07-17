@@ -13,11 +13,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+CALLER_DOCKER_TAG="${DOCKER_TAG:-}"
 if [[ -f .env ]]; then
   set -a
   # shellcheck disable=SC1091
   source .env
   set +a
+fi
+if [[ -n "${CALLER_DOCKER_TAG}" ]]; then
+  DOCKER_TAG="${CALLER_DOCKER_TAG}"
 fi
 
 PROJECT="${GOOGLE_PROJECT_ID:-}"
