@@ -159,6 +159,25 @@ def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         actual_column=target_column if target_column in df.columns else None,
     )
 
+    # Build explanations before any BigQuery writes. Explanation failures should
+    # not leave a predict run partially persisted and force a duplicate retry.
+    explain_table = None
+    explain_rows = None
+    if explain_enabled(config):
+        explain_table = outputs.get("explain_table")
+        if not explain_table:
+            raise ValueError("outputs.explain_table is required when explain.enabled")
+        top_feature_attributions, base_value = compute_tree_shap_top_features(
+            model,
+            model_input,
+            top_k_features=explain_top_k_features(config),
+        )
+        explain_rows = build_explain_rows(
+            prediction_rows,
+            top_feature_attributions=top_feature_attributions,
+            base_value=base_value,
+        )
+
     load_to_bigquery(
         data=prediction_rows,
         table_id=prediction_table,
@@ -184,20 +203,7 @@ def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         )
 
     explain_count = 0
-    if explain_enabled(config):
-        explain_table = outputs.get("explain_table")
-        if not explain_table:
-            raise ValueError("outputs.explain_table is required when explain.enabled")
-        top_feature_attributions, base_value = compute_tree_shap_top_features(
-            model,
-            model_input,
-            top_k_features=explain_top_k_features(config),
-        )
-        explain_rows = build_explain_rows(
-            prediction_rows,
-            top_feature_attributions=top_feature_attributions,
-            base_value=base_value,
-        )
+    if explain_rows is not None and explain_table is not None:
         load_to_bigquery(
             data=explain_rows,
             table_id=explain_table,
