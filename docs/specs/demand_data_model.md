@@ -9,7 +9,7 @@
 
 ## Summary
 
-The public Favorita dataset supports observed sales forecasting, but a demand forecasting platform must distinguish observed sales from unconstrained demand. This spec adds `docs/demand_data_model.md`, optional inventory/availability interfaces, lifecycle policies, and clear public-example language about forecasting sales as a demand proxy.
+Many implementations will start from observed sales, but a demand forecasting platform must distinguish observed sales from unconstrained demand. This spec adds `docs/demand_data_model.md`, optional inventory/availability interfaces, lifecycle policies, and clear language about forecasting sales as a demand proxy when availability data is absent.
 
 ## Goals
 
@@ -17,7 +17,7 @@ The public Favorita dataset supports observed sales forecasting, but a demand fo
 - Distinguish observed sales, constrained demand, estimated lost demand, and unconstrained demand.
 - Add optional interfaces for inventory, in-stock status, assortment, product lifecycle, prices, and promotions.
 - Represent store closures, product launches, retirements, and eligibility dates.
-- Document how Favorita behaves when stock/availability data is unavailable.
+- Document how the platform behaves when stock/availability data is unavailable.
 
 ## Non-goals
 
@@ -33,7 +33,7 @@ Add `docs/demand_data_model.md` with:
 
 - conceptual model
 - required vs optional source tables
-- public Favorita limitations
+- limitations when stock/availability data is unavailable
 - stockout/censoring policies
 - lifecycle/eligibility rules
 - future covariate requirements
@@ -78,7 +78,7 @@ Support policy values:
 - `impute_lost_demand_simple`
 - `external_unconstrained_demand`
 
-Favorita default: `observed_sales_only`.
+Default policy when no availability data exists: `observed_sales_only`.
 
 ### 5. Feature integration
 
@@ -90,7 +90,7 @@ The feature availability registry should mark inventory and actual sales as obse
 2. Add source interface YAML examples.
 3. Add eligibility dbt model and schema tests.
 4. Add exclusion reason persistence to forecast runs/output.
-5. Add Favorita-specific docs stating observed sales are used as demand proxy.
+5. Add docs stating observed sales are used as demand proxy when stockout-adjusted demand is unavailable.
 6. Update forecast contract validation to include demand policy.
 
 ## Testing & validation
@@ -103,7 +103,7 @@ The feature availability registry should mark inventory and actual sales as obse
 ## Acceptance criteria
 
 - Forecast runs can report eligible, forecasted, and excluded entity counts.
-- Favorita docs clearly state that stockout-adjusted unconstrained demand is not available.
+- Docs clearly state when stockout-adjusted unconstrained demand is not available.
 - Demand policy is explicit in the forecast contract.
 
 ## Related documents

@@ -1,6 +1,6 @@
 {% docs vertex_consulting_package %}
 
-# Vertex AI consulting package — Favorita forecasting
+# Vertex AI consulting package — GCP demand forecasting platform
 
 **Vertex AI's role** in this engagement: run **config-driven custom ML** (train, predict, optimize) and **KFP pipelines** on BigQuery features, with GCS artifacts, unified prediction tables, and production IAM/scheduling patterns.
 
@@ -29,7 +29,7 @@ flowchart TB
   end
 
   subgraph L3["Delivery artifacts"]
-    BM[Benchmarks — favorita_model_performance]
+    BM[Benchmarks — model performance]
     RP[Rollout Week 3 ML]
     IAC[IAM + GCS + Scheduler]
     MLf[MLflow catalog pointers]
@@ -48,7 +48,7 @@ flowchart LR
   Run --> Reg[registry model_type × step]
   Reg --> Mod[xgboost / sklearn / timeseries]
   Mod --> GCS[(GCS joblib + manifest)]
-  Mod --> BQ[(favorita_model_*)]
+  Mod --> BQ[(model / forecast tables)]
   Mod --> MLflow[MLflow + Vertex Experiments]
 
   Submit[vertex.jobs.submit] --> CJ[Vertex Custom Job]
@@ -69,9 +69,9 @@ flowchart LR
 
 | Pipeline | Steps |
 |----------|-------|
-| `favorita_xgboost` | optimize → train → predict |
-| `favorita_random_forest` | optimize → train → predict |
-| `favorita_arima` | train → predict |
+| project XGBoost pipeline | optimize → train → predict |
+| project random forest pipeline | optimize → train → predict |
+| project ARIMA pipeline | train → predict |
 
 ---
 
@@ -107,11 +107,11 @@ make vertex-validate-configs
 
 | Table | Contents |
 |-------|----------|
-| `favorita_model_metadata` | Training lineage, artifact URIs |
-| `favorita_model_performance` | Holdout metrics (JSON) |
-| `favorita_model_predictions` | Unified prediction fact |
-| `favorita_model_optimize` | Optuna trials |
-| `favorita_vertex_job_runs` | Orchestration audit |
+| model metadata table | Training lineage, artifact URIs |
+| model performance table | Holdout metrics |
+| prediction / forecast output table | Unified prediction or canonical forecast rows |
+| model optimize table | Optuna trials |
+| Vertex job runs table | Orchestration audit |
 
 dbt staging: `stg_vertex_model_predictions`, `stg_vertex_model_metadata`, `stg_vertex_job_runs` (`make dbt-vertex`).
 
@@ -122,7 +122,7 @@ dbt staging: `stg_vertex_model_predictions`, `stg_vertex_model_metadata`, `stg_v
 | Artifact | Vertex contribution |
 |----------|----------------------|
 | **Case study** | Dual path vs BQML; config-driven ML |
-| **Benchmarks** | Query `favorita_model_performance`; compare model types |
+| **Benchmarks** | Query model performance tables; compare model types |
 | **Dashboard** | `stg_vertex_model_predictions` as primary fact |
 | **Rollout** | Week 3: train/predict; Week 4: pipeline + Scheduler |
 | **IaC** | `vertex/ops/README.md` — SA, buckets, labels, monitoring |
@@ -163,7 +163,7 @@ From `vertex/ops/README.md`:
 
 ## Related documents
 
-- [vertex/README.md](../../../vertex/README.md) — operational detail
+- [vertex/README.md](../../vertex/README.md) — operational detail
 - [Benchmarks](../benchmarks.md)
 - [Reference architecture](../reference_architecture.md)
 - Other products: [dbt](../dbt/consulting_package.md) · [MLflow](../mlflow/consulting_package.md) · [Prefect](../prefect/consulting_package.md)

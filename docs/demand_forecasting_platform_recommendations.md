@@ -2,9 +2,26 @@
 
 ## Purpose
 
-This document turns the architecture review into an implementation roadmap for evolving the Favorita reference repository from a production-style batch sales-forecasting accelerator into an end-to-end, open-source demand forecasting platform.
+This document turns the architecture review into an implementation roadmap for evolving this repository into a production-style GCP demand forecasting platform.
 
 The existing foundation is strong: dbt-based features, BigQuery ML and Vertex model paths, experiment tracking, orchestration, CI, and GCP IaC. The principal gap is between producing a prediction and enabling a planner or downstream system to make an auditable operating decision from it.
+
+## Reuse model
+
+The platform is intentionally **GCP-only**. BigQuery, GCS, Vertex AI, Artifact Registry, Cloud Scheduler / Workflows patterns, and Terraform-managed GCP infrastructure are part of the product boundary.
+
+Reuse across projects comes from contracts, conventions, and operating patterns:
+
+- forecast contracts
+- canonical forecast output and publication semantics
+- evaluation and promotion rules
+- model metadata and artifact tracking
+- orchestration, monitoring, and SLO patterns
+- dbt documentation, tests, lineage, and exposure conventions
+
+Each implementation is expected to create its own dbt project or dbt model layer aligned to its source systems and planning use case. That dbt layer is the canonical adapter from raw business data into forecast-ready features. This is intentional: demand forecasting features vary by industry, inventory availability, promotion planning process, entity hierarchy, and target definition.
+
+Formal third-party plugin / connector interfaces are out of scope for now. New projects should adapt the dbt layer and platform configuration directly.
 
 ## Product boundary
 
@@ -20,7 +37,7 @@ The platform should support the full lifecycle:
 8. Deliver approved forecasts to BI, APIs, and planning/replenishment consumers.
 9. Learn from actuals and planner overrides.
 
-The current repository substantially covers steps 1-4 for a reference data set. The work below fills in the remaining platform capabilities and makes the existing behavior explicit.
+The current repository substantially covers steps 1-4 for a project implementation. The work below fills in the remaining platform capabilities and makes the existing behavior explicit.
 
 ## P0 — Forecasting-engine foundations
 
@@ -178,7 +195,7 @@ Add interfaces and policies for:
 - price and promotion history/plans
 - supplier and capacity constraints where available
 
-For the public Favorita example, state plainly that the system forecasts observed sales as a proxy for demand when stock/availability data is unavailable.
+For implementations without stock/availability data, state plainly that the system forecasts observed sales as a proxy for demand and does not estimate unconstrained demand.
 
 ### 9. Add cold-start and intermittent-demand routing
 
@@ -251,11 +268,11 @@ Support scenario-specific known-future inputs such as planned price, promotion, 
 Create `docs/integration_contracts.md`. Expose standard consumption paths:
 
 - canonical BigQuery tables/views
-- batch export adapter
+- batch export command
 - forecast retrieval API
 - override, approval, and publication APIs
 - event/webhook on successful publication
-- adapters or examples for replenishment, purchasing, staffing, ERP, and BI
+- examples for replenishment, purchasing, staffing, ERP, and BI consumers
 
 Minimum API concepts:
 
@@ -270,20 +287,19 @@ All publish operations should be idempotent and retrieve forecasts by explicit v
 
 ## P3 — Open-source product readiness
 
-### 15. Separate the generic platform from the Favorita example
+### 15. Separate platform contracts from project implementations
 
 Refactor toward a layout such as:
 
 ```text
 forecasting_core/       Generic contracts, evaluation, reconciliation, lifecycle
-connectors/             Source and destination adapters
-examples/favorita/      Public reference implementation
+examples/               Project implementations and demo datasets
 deploy/gcp/             Terraform and GCP deployment modules
 ui/                     Planner and monitoring application
 docs/                   Product and contributor documentation
 ```
 
-Favorita-specific table names, service accounts, models, and configuration should live inside the example rather than define the core platform identity.
+Project-specific table names, service accounts, models, and configuration should live inside project implementations rather than define the core platform identity.
 
 ### 16. Add community and release governance
 
@@ -300,7 +316,7 @@ Add:
 - architectural decision records
 - compatibility matrix for Python, dbt, BigQuery, Vertex, and optional dependencies
 - migration guides for breaking config/schema changes
-- extension guide for models, connectors, and destinations
+- extension guide for model families, dbt project implementations, and forecast destinations
 
 ### 17. Make the first-run experience self-contained
 
@@ -326,13 +342,13 @@ Create the following documents as part of implementation:
 | `demand_data_model.md` | Sales versus demand, inventory/availability, lifecycle, and future covariates |
 | `forecast_operations.md` | Score, review, override, approve, publish, revise, backfill, and rollback workflows |
 | `monitoring_and_slos.md` | Data/model/forecast/pipeline monitoring and operational objectives |
-| `integration_contracts.md` | Warehouse, API, export, webhook, and adapter contracts |
+| `integration_contracts.md` | Warehouse, API, export, webhook, and delivery contracts |
 | `open_source_governance.md` | Contribution, security, releases, compatibility, and extension policy |
 | `product_roadmap.md` | Implemented, in-progress, experimental, planned, and consulting-only scope |
 
 ## Suggested acceptance criteria
 
-The platform should not be labeled end-to-end until it can demonstrate all of the following on the Favorita example or a synthetic reference dataset:
+The platform should not be labeled end-to-end until it can demonstrate all of the following on a project implementation or synthetic reference dataset:
 
 - A versioned 7-, 14-, or 28-day forecast is generated from a documented forecast contract.
 - Every prediction identifies its forecast origin, horizon, model version, feature version, and data cutoff.
@@ -355,12 +371,12 @@ The platform should not be labeled end-to-end until it can demonstrate all of th
 6. Hierarchical reconciliation and intermittent/cold-start routing.
 7. Scheduler redesign, backfill/rollback tooling, and publication contract.
 8. Planner workflow, overrides, approval, and scenario planning.
-9. Generic-core/Favorita-example separation and open-source governance.
+9. Platform-contract / project-implementation separation and open-source governance.
 
 ## Scope clarification
 
 Until the demand-data and decision-workflow capabilities are implemented, describe the repository as:
 
-> A production-style, GCP-based sales forecasting and MLOps reference accelerator.
+> A production-style GCP demand forecasting platform.
 
-After the P0 and P1 work is complete, it can credibly be described as a demand forecasting engine. After P2 is complete, it is an end-to-end demand forecasting platform.
+After the P0 and P1 work is complete, it can credibly be described as a demand forecasting engine with stronger reusable contracts. After P2 is complete, it is an end-to-end demand forecasting platform.

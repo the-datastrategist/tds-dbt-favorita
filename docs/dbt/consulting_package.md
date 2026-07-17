@@ -1,8 +1,10 @@
 {% docs dbt_consulting_package %}
 
-# dbt consulting package — Favorita forecasting
+# dbt consulting package — GCP demand forecasting platform
 
 **dbt's role** in this engagement: govern the **analytics engineering layer** — raw → staging → ML features → BQML marts → Vertex output staging — with tests, lineage, and documented exposures for ML and BI consumers.
+
+The dbt layer is intentionally project-specific. Builders should adapt or replace staging and feature models so their own operational sources map into forecast-ready targets, grains, covariates, eligibility rules, and marts.
 
 Parent overview: [consulting_package.md](../consulting_package.md)
 
@@ -42,8 +44,8 @@ flowchart TB
 
 | Layer | Models | Materialization | Tags |
 |-------|--------|-----------------|------|
-| **Sources** | `raw_favorita.*` | External | — |
-| **Staging** | `stg_favorita_*`, `stg_vertex_*` | Incremental / view | `staging`, `vertex` |
+| **Sources** | project raw dataset | External | — |
+| **Staging** | source-specific staging, `stg_vertex_*` | Incremental / view | `staging`, `vertex` |
 | **Intermediate** | `int_sales_*` | Partitioned table | `train`, `features` |
 | **Marts** | `bqml_model_*` | View (BQML ops) | `bqml` |
 
@@ -51,11 +53,11 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  Raw[(raw_favorita)] --> Stg[staging]
+  Raw[(raw dataset)] --> Stg[staging]
   Stg --> Int[int_sales_*]
   Int --> BQML[bqml_model_train / predict / evaluate]
   Int -.->|SQL in model_config| Vertex[Vertex jobs]
-  Vertex --> BQSrc[(favorita_model_* tables)]
+  Vertex --> BQSrc[(model / forecast tables)]
   BQSrc --> VStg[stg_vertex_*]
   VStg --> BI[Dashboard blueprint]
   Int --> Exp[exposures: ML consumers]
@@ -108,16 +110,16 @@ make dbt-docs-generate    # catalog + lineage
 | **Benchmarks** | Query `bqml_model_evaluate`; join Vertex via sources |
 | **Dashboard** | Expose `stg_vertex_model_predictions` + `int_sales_store_daily` |
 | **Rollout** | Week 2 = dbt staging + tests; Week 4 = `dbt-vertex` |
-| **Lineage** | Exposures: `favorita_company_forecast`, `favorita_vertex_predictions` |
+| **Lineage** | Exposures for forecast, training, prediction, calendar, and master-data consumers |
 
 ### Exposures for client conversations
 
-Open dbt Docs lineage and highlight:
+Open dbt Docs lineage and highlight the project exposures for:
 
-- `favorita_company_forecast` — BQML end-to-end
-- `favorita_vertex_training` — feature tables → Vertex
-- `favorita_vertex_predictions` — unified ML outputs → BI
-- `favorita_operational_calendar` — holiday / oil context
+- BQML end-to-end forecasts
+- feature tables feeding Vertex
+- unified ML outputs feeding BI / planning consumers
+- operational calendar and known-future covariates
 
 ---
 

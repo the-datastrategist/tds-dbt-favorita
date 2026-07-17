@@ -1,6 +1,8 @@
-# Vertex AI — custom model training
+# Vertex AI — custom demand forecasting models
 
-Python training, prediction, and hyperparameter optimization for Favorita forecasting. Jobs are driven by **`config/model_config.yaml`**, executed locally in Docker or submitted as **Vertex AI Custom Jobs**.
+Python training, prediction, and hyperparameter optimization for GCP demand forecasting projects. Jobs are driven by **`config/model_config.yaml`**, executed locally in Docker or submitted as **Vertex AI Custom Jobs**.
+
+The checked-in config names and output table names are implementation defaults. New projects should adapt `model_config.yaml`, BigQuery table names, GCS paths, and dbt feature queries to their forecast contract and project-specific dbt models.
 
 For dbt, data loading, and the full repo workflow, see the [root README](../README.md).
 

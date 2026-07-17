@@ -1,8 +1,10 @@
 {% docs consulting_package %}
 
-# Consulting package — Favorita forecasting on GCP
+# Consulting package — GCP demand forecasting platform
 
-This repository is a **productized engagement** from [The Data Strategist](https://www.thedatastrategist.com): a reference implementation of a modern grocery demand-forecasting stack on Google Cloud, built on public [Favorita competition](https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting) data.
+This repository is a **productized engagement** from [The Data Strategist](https://www.thedatastrategist.com): a production-style demand-forecasting platform pattern for Google Cloud.
+
+It is designed for teams that want a reusable GCP foundation while retaining control of their own dbt feature engineering, business definitions, forecast grains, and planning workflow.
 
 It is designed for three audiences:
 
@@ -81,9 +83,11 @@ Collateral used in sales, kickoff, and handoff:
 
 ## Engagement positioning
 
-**What clients buy:** not a Kaggle notebook, but a **repeatable delivery pattern** — governed features in BigQuery, choice of BQML vs custom Vertex models, orchestrated refresh, auditable predictions, and a path to production IAM/scheduling.
+**What clients buy:** a **repeatable GCP forecasting platform pattern** — governed features in BigQuery, choice of BQML vs custom Vertex models, orchestrated refresh, auditable predictions, and a path to production IAM/scheduling.
 
 **What we customize per client:** dataset and grains, model families, schedules, cost tier (BQML-only vs full Vertex pipelines), BI tool, and enterprise controls (VPC-SC, WIF, CMEK).
+
+**What the client implementation owns:** the dbt models that map raw operational data into forecast-ready staging, feature, eligibility, hierarchy, and mart layers. This is not a gap in reuse; it is the correct boundary because demand forecasting features vary by industry, source-system maturity, inventory availability, and planning process.
 
 **Proof points in this repo:**
 

@@ -9,9 +9,9 @@
 
 ## Summary
 
-The repo is strong as a consulting accelerator, but open-source users need a self-contained first run, contribution and release governance, generic platform boundaries, compatibility promises, and clear scope language.
+The repo is strong as a GCP demand forecasting foundation, but open-source users need a self-contained first run, contribution and release governance, clear platform boundaries, compatibility promises, and clear scope language.
 
-This spec adds `docs/open_source_governance.md`, `docs/product_roadmap.md`, community files, a local quickstart, and a modularization plan that separates generic forecasting platform code from the Favorita example.
+This spec adds `docs/open_source_governance.md`, `docs/product_roadmap.md`, community files, a local quickstart, and a modularization plan that separates reusable platform contracts from project-specific dbt implementations.
 
 ## Goals
 
@@ -20,13 +20,14 @@ This spec adds `docs/open_source_governance.md`, `docs/product_roadmap.md`, comm
 - Provide a completed reference benchmark and expected outputs.
 - Clarify implemented, planned, experimental, and consulting-only scope.
 - Document compatibility across Python, dbt, BigQuery, Vertex, Prefect, Terraform, and optional dependencies.
-- Define extension guides for models, connectors, and destinations.
-- Create a migration path toward generic core plus examples.
+- Define extension guides for model families, dbt project implementations, and forecast destinations.
+- Create a migration path toward platform core plus project examples.
 
 ## Non-goals
 
 - Completing the full modular refactor in one change.
-- Supporting non-GCP production deployment immediately.
+- Supporting non-GCP production deployment.
+- Building a formal third-party plugin / connector framework.
 - Guaranteeing long-term API stability before the first public release policy is written.
 
 ## Design
@@ -72,7 +73,7 @@ Quickstart output should include:
 
 ### 3. Completed reference benchmark
 
-Replace or supplement placeholder benchmark tables with a known reproducible result from the local/synthetic or public Favorita path. Include expected row counts and example output snippets.
+Replace or supplement placeholder benchmark tables with a known reproducible result from the local or synthetic quickstart path. Include expected row counts and example output snippets.
 
 ### 4. Product roadmap
 
@@ -87,8 +88,8 @@ Add `docs/product_roadmap.md` with sections:
 
 Use the recommendation document's scope clarification:
 
-- current repo: production-style GCP sales forecasting and MLOps reference accelerator
-- after P0/P1: demand forecasting engine
+- current repo: production-style GCP demand forecasting platform foundation
+- after P0/P1: demand forecasting engine with stronger reusable contracts
 - after P2: end-to-end demand forecasting platform
 
 ### 5. Modularization plan
@@ -97,8 +98,7 @@ Document target layout:
 
 ```text
 forecasting_core/
-connectors/
-examples/favorita/
+examples/
 deploy/gcp/
 ui/
 docs/
@@ -107,7 +107,7 @@ docs/
 Implementation should proceed gradually:
 
 1. Move generic contract/evaluation utilities first.
-2. Keep Favorita dbt and configs working.
+2. Keep the current dbt models and configs working while re-labeling them as a project implementation.
 3. Add compatibility shims for old import paths.
 4. Move GCP-specific Terraform under `deploy/gcp/` only when docs and CI are updated.
 
@@ -117,7 +117,7 @@ Implementation should proceed gradually:
 2. Add `docs/open_source_governance.md` and `docs/product_roadmap.md`.
 3. Add local quickstart design and minimal implementation.
 4. Add compatibility matrix.
-5. Add extension guides for model families, source connectors, and destination adapters.
+5. Add extension guides for model families, dbt project implementations, and forecast destinations.
 6. Start modularization with generic contracts/evaluation code.
 
 ## Testing & validation
@@ -133,7 +133,7 @@ Implementation should proceed gradually:
 - A new contributor can run a forecast example without manually provisioning GCP.
 - Public contribution/security/support policies exist.
 - Roadmap language does not overclaim end-to-end platform status before P0/P2 work lands.
-- The repo has an explicit extension path for models, connectors, and destinations.
+- The repo has an explicit extension path for model families, dbt project implementations, and forecast destinations.
 
 ## Related documents
 

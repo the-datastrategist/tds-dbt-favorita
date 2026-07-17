@@ -36,7 +36,7 @@ Example:
 features:
   promotion:
     availability: known_future
-    source_model: stg_favorita_sales_fct
+    source_model: stg_sales_fct
     timestamp_column: promotion_plan_updated_at
   sales_store_l7d:
     availability: observed_lagged
@@ -44,7 +44,7 @@ features:
     max_target_lag_days: 1
   transactions:
     availability: observed_after_period
-    source_model: stg_favorita_transactions
+    source_model: stg_transactions
   planned_price:
     availability: planned_revisable
     source_model: stg_price_plan
@@ -109,7 +109,7 @@ Add registry-driven docs to staging/intermediate schema descriptions where pract
 
 ## Acceptance criteria
 
-- Every feature used by the default Favorita forecast contract is registered.
+- Every feature used by the default forecast contract is registered.
 - Backtests and production scoring both record feature availability hash and source cutoffs.
 - At least one automated test catches a deliberately leaking feature.
 

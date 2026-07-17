@@ -25,7 +25,7 @@ This spec introduces `docs/forecast_contract.md`, a validated YAML contract, and
 
 - Building planner UI workflows. The schema must support them, but workflow implementation belongs in [forecast operations](forecast_operations.md).
 - Implementing reconciliation algorithms. The contract records the reconciliation policy; algorithms belong in [hierarchical reconciliation](hierarchical_reconciliation.md).
-- Replacing existing `favorita_model_predictions` immediately. The first implementation may write both schemas until downstream docs and marts migrate.
+- Replacing existing model prediction tables immediately. The first implementation may write both schemas until downstream docs and marts migrate.
 
 ## Design
 
@@ -37,7 +37,7 @@ Example:
 
 ```yaml
 forecast:
-  name: favorita_store_product_daily
+  name: store_product_daily
   target: demand_units
   target_unit: units
   dimensions: [store_id, product_id]
@@ -133,7 +133,7 @@ Add tests:
 
 ### 5. Compatibility with existing Vertex predictions
 
-Initial implementation can adapt `favorita_model_predictions` into `forecast_outputs` for the active Favorita config. The adapter should map:
+Initial implementation can adapt the existing model prediction fact table into `forecast_outputs` for the active project config. The mapping should use:
 
 | Existing | Canonical |
 |----------|-----------|
@@ -164,7 +164,7 @@ Initial implementation can adapt `favorita_model_predictions` into `forecast_out
 - A named forecast contract can be validated from YAML.
 - A multi-horizon forecast run records one canonical output row per entity/date/horizon.
 - Every canonical forecast row has provenance and lifecycle status.
-- Existing Favorita predictions can be queried through `stg_forecast_outputs`.
+- Existing model predictions can be queried through `stg_forecast_outputs`.
 
 ## Related documents
 

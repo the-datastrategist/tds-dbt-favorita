@@ -43,7 +43,7 @@ Example:
 
 ```yaml
 hierarchy:
-  name: favorita_retail
+  name: retail_demand
   levels:
     - name: company
       keys: []
@@ -91,7 +91,7 @@ Add dbt tests:
 
 1. Add `docs/hierarchical_reconciliation.md`.
 2. Add hierarchy config loader and validation.
-3. Add dbt models for hierarchy nodes/edges for Favorita.
+3. Add dbt models for hierarchy nodes/edges for the current project implementation.
 4. Implement bottom-up reconciliation first.
 5. Add top-down and middle-out allocation.
 6. Add MinT once backtest residual covariance is available.
@@ -106,7 +106,7 @@ Add dbt tests:
 
 ## Acceptance criteria
 
-- A Favorita hierarchy config can be validated.
+- A hierarchy config can be validated for the current project implementation.
 - Published forecasts reconcile from lowest available level to company total.
 - Reconciled and unreconciled forecasts are separately queryable.
 

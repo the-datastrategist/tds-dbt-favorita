@@ -11,12 +11,12 @@
 
 The current consumption layer is mostly BI/dashboard staging. A platform needs stable contracts for downstream systems: warehouse views, batch exports, retrieval APIs, override/approval/publication APIs, and publication events.
 
-This spec adds `docs/integration_contracts.md`, versioned table/view contracts, export adapters, API concepts, and idempotent publication semantics.
+This spec adds `docs/integration_contracts.md`, versioned table/view contracts, export commands, API concepts, and idempotent publication semantics.
 
 ## Goals
 
 - Define stable warehouse consumption views for published forecasts.
-- Add batch export adapters for common downstream paths.
+- Add batch export commands for common downstream paths.
 - Define forecast retrieval, override, approval, and publication API contracts.
 - Emit a publication event/webhook after successful publication.
 - Require explicit forecast version/run IDs for all publish and retrieval operations.
@@ -24,7 +24,7 @@ This spec adds `docs/integration_contracts.md`, versioned table/view contracts, 
 
 ## Non-goals
 
-- Building every enterprise adapter in the first cut.
+- Building every enterprise integration in the first cut.
 - Implementing authentication/authorization for a public API beyond local/service-account patterns.
 - Replacing dbt Docs lineage; this adds operational contracts.
 
@@ -72,7 +72,7 @@ API behavior:
 - approval/publish endpoints reject invalid status transitions.
 - responses include contract name/hash and publication version.
 
-### 4. Batch export adapter
+### 4. Batch export command
 
 Provide a generic export command:
 
@@ -105,7 +105,7 @@ Emit event rows and optional webhook payload:
 
 1. Add `docs/integration_contracts.md`.
 2. Add stable dbt views for published forecasts.
-3. Add export command and adapter interface.
+3. Add export command and destination configuration.
 4. Add minimal FastAPI or Cloud Run-ready API skeleton.
 5. Add idempotency keys and publication event table.
 6. Add examples for BI and replenishment-style consumers.

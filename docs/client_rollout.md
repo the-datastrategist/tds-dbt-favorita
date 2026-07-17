@@ -2,7 +2,7 @@
 
 # Client rollout playbook
 
-Four-week template for deploying the Favorita forecasting **accelerator pattern** on a client GCP organization. Adjust duration based on data readiness and enterprise gates (IAM, VPC-SC, InfoSec review).
+Four-week template for deploying the GCP demand forecasting platform in a client GCP organization. Adjust duration based on data readiness, dbt feature-model complexity, and enterprise gates (IAM, VPC-SC, InfoSec review).
 
 ---
 
@@ -60,14 +60,14 @@ gantt
 
 ### Goals
 
-- Land raw data (or Favorita demo data for POC)
+- Land raw data or approved demo data for POC
 - Run dbt staging + intermediate through first successful `dbt test`
 
 ### Activities
 
 | Day | Activity | Commands / artifacts |
 |-----|----------|---------------------|
-| 1–2 | Adapt load script or client ingest | `scripts/load_favorita_to_bigquery.py` or client ETL |
+| 1–2 | Adapt load script or client ingest | Project loader or client ETL |
 | 2–3 | Customize staging models if source differs | `dbt/models/staging/` |
 | 3–4 | Build / validate `int_sales_*` grains | `make dbt-run`, `make dbt-test` |
 | 4 | Apply Vertex output DDL | `make vertex-bq-ddl` |
@@ -75,7 +75,7 @@ gantt
 
 ### Exit criteria
 
-- [ ] `raw_favorita` (or client raw dataset) populated
+- [ ] Client raw dataset populated
 - [ ] `int_sales_store_daily` (or chosen grain) passes tests
 - [ ] Vertex BQ tables exist
 
@@ -103,7 +103,7 @@ gantt
 
 ### Exit criteria
 
-- [ ] Rows in `favorita_model_metadata` and `favorita_model_predictions`
+- [ ] Rows in model metadata and prediction / forecast output tables
 - [ ] At least one BQML and one Vertex model with documented test metrics
 - [ ] Client agrees on champion candidate
 
@@ -124,7 +124,7 @@ gantt
 | 1 | Prefect or Cloud Scheduler setup | `make prefect-deploy` or [iac.md](iac.md) Scheduler |
 | 1–2 | Wire dbt → Vertex order (features before train) | Prefect pipeline flow or Workflows YAML |
 | 2 | CI in client GitHub | `.github/workflows/ci.yml` |
-| 3 | Monitoring queries | `favorita_vertex_job_runs` FAILED filter |
+| 3 | Monitoring queries | Vertex job-runs FAILED filter |
 | 3–4 | Dashboard POC (optional) | Looker Studio on `stg_vertex_model_predictions` |
 | 4–5 | Handoff session: Makefile, YAML configs, ops README | `vertex/ops/README.md` |
 | 5 | Backlog: champion mart, Terraform, WIF | Prioritized with client |
@@ -166,7 +166,7 @@ gantt
 
 | Enhancement | Accelerator base | Spec |
 |-------------|------------------|------|
-| Model leaderboard mart ✅ shipped | `favorita_model_performance` + dbt mart | [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md) |
+| Model leaderboard mart ✅ shipped | model performance + dbt mart | [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md) |
 | Drift / accuracy monitoring ✅ shipped | dbt tests on prediction vs actual | [specs/prediction_accuracy_monitoring.md](specs/prediction_accuracy_monitoring.md) |
 | Terraform modules ✅ shipped | [iac.md](iac.md) roadmap | [specs/terraform_modules.md](specs/terraform_modules.md) |
 | Workload Identity Federation 🔧 in progress | Replace SA keys | [specs/workload_identity_federation.md](specs/workload_identity_federation.md) |

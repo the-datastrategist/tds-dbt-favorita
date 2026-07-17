@@ -213,7 +213,7 @@ See [iac.md](iac.md) for production cost controls (reservations, labels, schedul
 
 - [Case study](case_study.md)
 - [Delivery artifacts — dashboard blueprint](delivery_artifacts.md#dashboard-blueprint)
-- [Vertex experiment tracking](../../vertex/README.md) (repo)
+- [Vertex experiment tracking](../vertex/README.md) (repo)
 - [Model leaderboard mart spec](specs/model_leaderboard_mart.md) — design behind `favorita_model_leaderboard` / `favorita_model_champion`
 - [Prediction accuracy monitoring spec](specs/prediction_accuracy_monitoring.md) — design behind `favorita_prediction_accuracy_rolling`
 
