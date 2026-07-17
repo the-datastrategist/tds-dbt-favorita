@@ -26,7 +26,7 @@ These are **internal implementation specs**, not client-facing collateral — co
 | [Prediction accuracy monitoring](prediction_accuracy_monitoring.md) | Shipped | `client_rollout.md` → "Drift / accuracy monitoring" | dbt tests + mart that catch production accuracy degradation vs. training-time metrics |
 | [Terraform modules](terraform_modules.md) | Shipped | `iac.md` → "Terraform roadmap" | Codify the manual GCP setup scripts as reviewable, per-environment IaC |
 | [Workload Identity Federation](workload_identity_federation.md) | In progress | `iac.md` → security checklist "prefer WIF" | Remove long-lived SA key files from CI, local dev, and Vertex Custom Jobs |
-| [Prophet model family](prophet_model_family.md) | Proposed | `vertex/README.md` → "Planned: prophet" | Add `prophet` as a third time-series family via the existing registry pattern |
+| [Prophet model family](prophet_model_family.md) | Shipped | `vertex/README.md` → "Planned: prophet" | Add `prophet` as a third time-series family via the existing registry pattern |
 
 ---
 

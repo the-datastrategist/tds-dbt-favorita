@@ -20,10 +20,16 @@ class TestRegistry:
         assert get_runner("arima", "predict")
         assert get_runner("sarima", "optimize")
 
+    def test_prophet_registered(self):
+        ensure_registered()
+        assert get_runner("prophet", "train")
+        assert get_runner("prophet", "predict")
+        assert get_runner("prophet", "optimize")
+
     def test_unknown_runner_raises(self):
         ensure_registered()
         with pytest.raises(ValueError, match="No runner"):
-            get_runner("prophet", "train")
+            get_runner("nonexistent_model_type", "train")
 
     def test_train_config_has_runner(self):
         ensure_registered()

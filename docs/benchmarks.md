@@ -11,8 +11,9 @@ Compare **BigQuery ML** and **Vertex AI** models on shared holdout metrics. Use 
 | Dimension | Values in this repo |
 |-----------|---------------------|
 | **Platform** | `bqml`, `vertex` |
-| **Model type** | `BOOSTED_TREE_REGRESSOR`, `xgboost`, `random_forest`, `arima`, `sarima` |
+| **Model type** | `BOOSTED_TREE_REGRESSOR`, `xgboost`, `random_forest`, `arima`, `sarima`, `prophet` |
 | **Explainability** | SHAP top-K feature attributions (xgboost, random_forest only; `explain.enabled` in config) |
+| **Uncertainty intervals** | `prediction_lower`/`prediction_upper` (Prophet only — native `yhat_lower`/`yhat_upper`; unused by ARIMA/SARIMA) |
 | **Grain** | company-day (`int_sales_daily`), store-day (`int_sales_store_daily`) |
 | **Metrics** | MAE, RMSE, WAPE, R² (where applicable) |
 | **Split** | Chronological holdout (`test_size: 0.2`, `train_days: 180` in Vertex configs) |
@@ -31,6 +32,7 @@ Populate after running pipelines in your GCP project. Replace `{values}` with me
 | vertex | random_forest | `favorita_store_n1d_rf` | `{fill}` | `{fill}` | `{fill}` | `{fill}` | Same features as XGBoost |
 | vertex | arima | `favorita_store_n1d_arima` | `{fill}` | `{fill}` | `{fill}` | `{fill}` | Per-entity time series |
 | vertex | sarima | `favorita_store_n1d_sarima` | `{fill}` | `{fill}` | `{fill}` | `{fill}` | Seasonal order in YAML |
+| vertex | prophet | `favorita_store_n1d_prophet` | `{fill}` | `{fill}` | `{fill}` | `{fill}` | Additive seasonality; emits `prediction_lower`/`prediction_upper` |
 
 ### Company-day grain (BQML default — `bqml_sales_forecast`)
 
@@ -176,7 +178,7 @@ ORDER BY run_at DESC
 LIMIT 50;
 ```
 
-Only populated for configs with `explain.enabled: true` (xgboost, random_forest); ARIMA/SARIMA are not tree models and have no explain path.
+Only populated for configs with `explain.enabled: true` (xgboost, random_forest); ARIMA/SARIMA/Prophet are not tree models and have no explain path — Prophet's `prediction_lower`/`prediction_upper` on `favorita_model_predictions` is its (non-SHAP) analog.
 
 ### MLflow (local)
 
@@ -204,7 +206,7 @@ See [iac.md](iac.md) for production cost controls (reservations, labels, schedul
 
 1. **Start with BQML** on company-day — establishes a SQL-native baseline in hours.
 2. **Move to Vertex XGBoost** on store-day — tests whether finer grain + tuning beats baseline.
-3. **Add ARIMA/SARIMA** where series are short or highly seasonal per store.
+3. **Add ARIMA/SARIMA/Prophet** where series are short or highly seasonal per store — Prophet's native uncertainty interval is a differentiator when a client wants forecast bands, not just a point estimate.
 4. **Query the champion** from `favorita_model_champion` and wire to dashboard / alerting (see [delivery_artifacts.md](delivery_artifacts.md)).
 
 ---
