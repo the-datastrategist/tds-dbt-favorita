@@ -40,12 +40,12 @@ models:
           - unique
           - not_null
       - name: date
-        description: Calendar date of the holiday or event.
+        description: >
+          Calendar date of the holiday or event. The source spans a wider range than the
+          train/test date spine, so some holidays legitimately fall outside it (not a data
+          quality issue; they simply won't join to any modeling day).
         data_tests:
           - not_null
-          - relationships:
-              to: ref('stg_favorita_date_spine')
-              field: date
       - name: event_type
         description: Holiday event type from source (type column).
         data_tests:
@@ -57,6 +57,7 @@ models:
                   - Bridge
                   - Work Day
                   - Additional
+                  - Event
 
   - name: stg_favorita_oil
     description: >
@@ -108,15 +109,15 @@ models:
               to: source('favorita_raw', 'raw_favorita_items')
               field: item_nbr
       - name: sales
-        description: Unit sales for the store-product-day.
-        data_tests:
-          - dbt_utils.accepted_range:
-              min_value: 0
+        description: >
+          Unit sales for the store-product-day. Negative values represent returns of that
+          item, so they are valid and expected (not a data quality issue).
       - name: on_promotion
         description: Whether the product was on promotion (0 or 1).
         data_tests:
           - accepted_values:
               values: [0, 1]
+              quote: false
 
   - name: stg_favorita_sales_fct
     description: >
@@ -153,17 +154,15 @@ models:
               to: source('favorita_raw', 'raw_favorita_items')
               field: item_nbr
       - name: sales
-        description: Unit sales; null on test-period rows without labels.
-        data_tests:
-          - dbt_utils.accepted_range:
-              min_value: 0
-              config:
-                where: sales is not null
+        description: >
+          Unit sales; null on test-period rows without labels. Negative values represent
+          returns of that item, so they are valid and expected (not a data quality issue).
       - name: on_promotion
         description: Whether the product was on promotion (0 or 1).
         data_tests:
           - accepted_values:
               values: [0, 1]
+              quote: false
 
   - name: stg_favorita_test
     description: >
@@ -248,12 +247,11 @@ models:
               to: ref('stg_favorita_stores')
               field: store_nbr
       - name: date
-        description: Calendar date.
+        description: >
+          Calendar date. The holiday events source spans a wider range than the train/test
+          date spine, so some rows legitimately fall outside it (not a data quality issue).
         data_tests:
           - not_null
-          - relationships:
-              to: ref('stg_favorita_date_spine')
-              field: date
 
   - name: stg_vertex_model_predictions
     description: >

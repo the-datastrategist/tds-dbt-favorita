@@ -65,6 +65,7 @@ sources:
                       - Bridge
                       - Work Day
                       - Additional
+                      - Event
 
       - name: raw_favorita_train
         description: >
@@ -73,6 +74,7 @@ sources:
           - `family` identifies the type of product sold.
           - `sales` gives the total sales for a product family at a particular store at a given date. Fractional values are possible since products can be sold in fractional units (1.5 kg of cheese, for instance, as opposed to 1 bag of chips).
           - `onpromotion` gives the total number of items in a product family that were being promoted at a store at a given date.
+          - Negative `unit_sales` values represent returns of that particular item, so they are valid and expected (not a data quality issue).
         columns:
           - name: date
             data_tests:
@@ -83,10 +85,6 @@ sources:
           - name: item_nbr
             data_tests:
               - not_null
-          - name: unit_sales
-            data_tests:
-              - dbt_utils.accepted_range:
-                  min_value: 0
 
       - name: raw_favorita_test
         description: >

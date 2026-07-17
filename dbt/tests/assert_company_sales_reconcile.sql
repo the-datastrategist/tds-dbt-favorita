@@ -1,4 +1,6 @@
 -- Daily company sales in int_sales_daily must match staged train aggregates.
+-- Scoped to train-period dates only; test-period dates have no staged sales to reconcile
+-- against (labels are intentionally withheld).
 {{ config(tags=['data_quality', 'features']) }}
 
 with staged as (
@@ -14,6 +16,7 @@ intermediate as (
         date,
         sales_company_l1d as sales_company_int
     from {{ ref('int_sales_daily') }}
+    where data_split_source = 'train'
 )
 
 select

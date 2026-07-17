@@ -22,11 +22,13 @@ models:
         data_tests:
           - not_null
       - name: sales_company_l1d
-        description: Label column representing daily company sales.
+        description: >
+          Label column representing daily company sales. Null on test-period rows without
+          labels; negative values represent returns and are valid.
         data_tests:
-          - not_null
-          - dbt_utils.accepted_range:
-              min_value: 0
+          - not_null:
+              config:
+                where: "data_split_source = 'train'"
 
   - name: int_sales_store_daily
     description: >
@@ -56,11 +58,13 @@ models:
         data_tests:
           - not_null
       - name: sales_store_l1d
-        description: Label column representing daily store sales.
+        description: >
+          Label column representing daily store sales. Null on test-period rows without
+          labels; negative values represent returns and are valid.
         data_tests:
-          - not_null
-          - dbt_utils.accepted_range:
-              min_value: 0
+          - not_null:
+              config:
+                where: "data_split_source = 'train'"
 
   - name: int_sales_store_product_daily
     description: >
@@ -97,11 +101,13 @@ models:
         data_tests:
           - not_null
       - name: sales_store_product_l1d
-        description: Label column representing daily store-product sales.
+        description: >
+          Label column representing daily store-product sales. Null on test-period rows
+          without labels; negative values represent returns and are valid.
         data_tests:
-          - not_null
-          - dbt_utils.accepted_range:
-              min_value: 0
+          - not_null:
+              config:
+                where: "data_split_source = 'train'"
 
   - name: int_sales_store_product_family_daily
     description: >
@@ -135,8 +141,10 @@ models:
         data_tests:
           - not_null
       - name: sales_store_family_l1d
-        description: Label column representing daily store-product-family sales.
+        description: >
+          Label column representing daily store-product-family sales. Null on test-period
+          rows without labels; negative values represent returns and are valid.
         data_tests:
-          - not_null
-          - dbt_utils.accepted_range:
-              min_value: 0
+          - not_null:
+              config:
+                where: "data_split_source = 'train'"
