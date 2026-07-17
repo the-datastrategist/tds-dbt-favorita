@@ -113,6 +113,8 @@ The checked-in dbt project names these models with `int_sales_*` conventions. A 
 4. **Vertex path:** `make vertex-train` / `make vertex-predict` (see `vertex/config/model_config.yaml`)
 5. **Vertex staging in dbt:** `make dbt-vertex`
 
+For a controlled reset or recovery that preserves the raw dataset and reconstructs the derived dataset, use the [Clean Rebuild Runbook](clean_rebuild.md). Do not use dataset deletion for routine deployments or maintenance.
+
 Generate this site locally: `make dbt-ui` (http://127.0.0.1:8080).
 
 ## Data quality notes

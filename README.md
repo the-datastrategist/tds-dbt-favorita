@@ -239,6 +239,8 @@ For Vertex-specific setup, configs, and GCP submit: **[vertex/README.md](vertex/
 
 For Prefect (scheduled / manual dbt, Vertex training, and ML pipelines): **[orchestration/README.md](orchestration/README.md)**.
 
+For an intentional reset or recovery that preserves raw data and reconstructs the derived dataset, follow **[docs/clean_rebuild.md](docs/clean_rebuild.md)**. This is an exceptional procedure, not routine maintenance.
+
 Interactive shell inside the same image:
 
 ```bash
