@@ -17,6 +17,7 @@ from vertex.config.load_config import (
     get_job_spec,
     load_model_config,
 )
+from vertex.config.feature_availability import validate_model_features_from_config
 from vertex.utils.artifacts import load_joblib_from_gcs, resolve_latest_artifact
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config
@@ -104,6 +105,11 @@ def run_predict_random_forest(config: dict[str, Any]) -> dict[str, Any]:
     bool_cols = model_input.select_dtypes(include="bool").columns
     if len(bool_cols) > 0:
         model_input[bool_cols] = model_input[bool_cols].astype(int)
+    validate_model_features_from_config(
+        config,
+        list(model_input.columns),
+        context=f"{config_name} prediction features",
+    )
     predictions = pd.Series(model.predict(model_input), index=X.index)
 
     run_at = dt.utcnow()

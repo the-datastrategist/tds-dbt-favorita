@@ -19,6 +19,7 @@ defaults:
     forecast_output_table: tds-favorita.favorita.forecast_outputs
     forecast_status_history_table: tds-favorita.favorita.forecast_status_history
     forecast_contract_path: vertex/config/forecast_contract.yaml
+    feature_availability_path: vertex/config/feature_availability.yaml
     optimize_table: tds-favorita.favorita.favorita_model_optimize
     job_runs_table: tds-favorita.favorita.favorita_vertex_job_runs
     # SHAP feature attributions on predict; only used when a config sets explain.enabled.

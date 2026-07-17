@@ -1,0 +1,43 @@
+features:
+  promotion:
+    availability: known_future
+    source_model: stg_favorita_sales_fct
+    timestamp_column: promotion_plan_updated_at
+  holiday:
+    availability: known_future
+    source_model: stg_favorita_holiday_events
+    source_cutoff_column: calendar_version_loaded_at
+  sales:
+    availability: observed_after_period
+    source_model: stg_favorita_sales_fct
+  transactions:
+    availability: observed_after_period
+    source_model: stg_favorita_transactions
+
+patterns:
+  - pattern: "^(day_of_month|day_of_week|iso_week_of_year|month|quarter|year|week_of_month|iso_year|iso_week)$"
+    availability: static_master_data
+    source_model: date_spine
+  - pattern: "^(sales|products|product_families)_(company|store|store_product|store_family)$"
+    availability: observed_lagged
+    source_model: int_sales_daily
+    max_target_lag_days: 0
+  - pattern: "^(sales|avg_sales|stddev_sales|pct_sales|avg_pct_sales|stddev_pct_sales|pct_products|avg_pct_products|stddev_pct_products|pct_product_families|avg_pct_product_families|stddev_pct_product_families)_(company|store|store_product|store_family).*_(l|p)\\d+d.*$"
+    availability: observed_lagged
+    source_model: int_sales
+    max_target_lag_days: 0
+  - pattern: "^avg_sales_(company|store|store_product|store_family)_dow_l\\d+d$"
+    availability: observed_lagged
+    source_model: int_sales
+    max_target_lag_days: 0
+  - pattern: "^.*_(l\\d+d|p\\d+d)_.*_(pct_diff|abs_diff)$"
+    availability: observed_lagged
+    source_model: int_sales
+    max_target_lag_days: 0
+  - pattern: "^.*_on_promotion.*$"
+    availability: observed_lagged
+    source_model: int_sales
+    max_target_lag_days: 0
+  - pattern: "^sales_(company|store|store_product|store_family)_n\\d+d(_same_dow)?$"
+    availability: observed_after_period
+    source_model: int_sales

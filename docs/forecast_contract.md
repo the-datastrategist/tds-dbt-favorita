@@ -63,12 +63,18 @@ Canonical rows include:
 
 Initial prediction jobs write `forecast_status = 'draft'`. Approval, publication, supersession, and rollback are handled by the forecast operations layer.
 
+## Feature Availability
+
+Forecast contract feature declarations are validated against `vertex/config/feature_availability.yaml`. `known_future_features` must resolve to features classified as `known_future`, `forecasted_external`, `planned_revisable`, or `static_master_data`, and future-known or planned features must include cutoff/version metadata. `observed_features` must resolve to observed feature classes.
+
+Concrete model input features are validated after the training or scoring feature matrix is built. Features classified as `observed_after_period` are rejected as model inputs, which prevents target-derived future labels from leaking into training, optimization, or prediction.
+
 ## Project Adaptation
 
 New projects should:
 
 1. Create or update `vertex/config/forecast_contract.yaml`.
-2. Build dbt staging and feature models that match the contract's dimensions, target, covariates, and horizons.
-3. Point `model_config.yaml` training and prediction SQL at those dbt models.
-4. Keep `outputs.forecast_output_table` enabled so every prediction has canonical forecast output.
-
+2. Create or update `vertex/config/feature_availability.yaml`.
+3. Build dbt staging and feature models that match the contract's dimensions, target, covariates, and horizons.
+4. Point `model_config.yaml` training and prediction SQL at those dbt models.
+5. Keep `outputs.forecast_output_table` enabled so every prediction has canonical forecast output.

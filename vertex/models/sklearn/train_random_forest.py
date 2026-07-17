@@ -15,6 +15,7 @@ from typing import Any, Optional
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 
+from vertex.config.feature_availability import validate_model_features_from_config
 from vertex.config.load_config import DEFAULT_CONFIG_PATH, get_job_spec, load_model_config
 from vertex.utils.artifacts import register_from_manifest, save_joblib_artifacts
 from vertex.utils.bigquery_utils import load_to_bigquery
@@ -101,6 +102,11 @@ def run_train_random_forest(
         excluded_columns=excluded_columns,
         categorical_columns=categorical_columns,
         date_column=date_column,
+    )
+    validate_model_features_from_config(
+        config,
+        features,
+        context=f"{config_name} training features",
     )
 
     sort_column = date_column if date_column in df_features.columns else None

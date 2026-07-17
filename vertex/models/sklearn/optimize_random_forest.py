@@ -13,6 +13,7 @@ from typing import Any
 import optuna
 import pandas as pd
 
+from vertex.config.feature_availability import validate_model_features_from_config
 from vertex.config.load_config import DEFAULT_CONFIG_PATH, get_job_spec, load_model_config
 from vertex.models.sklearn.train_random_forest import (
     ARTIFACT_MODEL_TYPE,
@@ -82,6 +83,11 @@ def run_optimize_random_forest(config: dict[str, Any]) -> dict[str, Any]:
         excluded_columns=excluded_columns,
         categorical_columns=categorical_columns,
         date_column=date_column,
+    )
+    validate_model_features_from_config(
+        config,
+        features,
+        context=f"{config_name} optimization features",
     )
     sort_column = date_column if date_column in df_features.columns else None
     X_train, X_test, y_train, y_test = chronological_train_test_split(

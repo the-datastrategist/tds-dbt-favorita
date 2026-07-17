@@ -8,6 +8,7 @@ from typing import Any, Optional
 import pandas as pd
 
 from vertex.config.forecast_contract import ForecastContract, load_forecast_contract
+from vertex.config.feature_availability import feature_cutoff_metadata_from_frame
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_utils import get_hash
 from vertex.utils.run_context import get_git_sha
@@ -164,12 +165,18 @@ def write_forecast_outputs_if_configured(
         or inputs.get("forecast_contract_path")
     )
     contract = load_forecast_contract(contract_path)
+    cutoff_metadata = feature_cutoff_metadata_from_frame(
+        prediction_rows,
+        date_column="date",
+    )
     rows = build_forecast_output_rows(
         prediction_rows,
         contract=contract,
         feature_version=inputs.get("feature_version") or inputs.get("feature_table_version"),
         code_sha=get_git_sha(),
-        data_cutoff=inputs.get("data_cutoff") or prediction_rows["run_at"].max(),
+        data_cutoff=inputs.get("data_cutoff")
+        or cutoff_metadata.get("data_cutoff")
+        or prediction_rows["run_at"].max(),
         forecast_status=outputs.get("forecast_status", "draft"),
     )
     load_to_bigquery(

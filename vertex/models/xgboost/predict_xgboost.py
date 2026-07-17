@@ -21,6 +21,7 @@ from vertex.config.load_config import (
     get_job_spec,
     load_model_config,
 )
+from vertex.config.feature_availability import validate_model_features_from_config
 from vertex.utils.artifacts import load_xgboost_from_gcs, resolve_latest_artifact
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config
@@ -114,6 +115,11 @@ def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         date_column=date_column,
     )
     model_input = prepare_model_input(X)
+    validate_model_features_from_config(
+        config,
+        list(model_input.columns),
+        context=f"{config_name} prediction features",
+    )
     predictions = pd.Series(model.predict(model_input), index=X.index)
 
     run_at = dt.utcnow()

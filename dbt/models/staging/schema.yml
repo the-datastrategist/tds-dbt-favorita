@@ -515,8 +515,14 @@ models:
         description: Current run status.
       - name: forecast_origin
         description: Forecast origin timestamp.
+      - name: data_cutoff
+        description: Latest source feature timestamp available to this run.
       - name: source_cutoff_json
         description: JSON object recording source cutoffs available to this run.
+      - name: feature_availability_hash
+        description: Hash of the feature availability registry used to validate this run.
+      - name: feature_materialization_id
+        description: Optional feature materialization or plan version identifier.
 
   - name: stg_forecast_outputs
     description: >
