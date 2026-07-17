@@ -47,7 +47,7 @@ models:
         description: "Full weekday name for `date` (e.g. Monday)."
       - name: month_name
         description: "Full month name for `date` (e.g. January)."
-      - name: sales_company_n1d_same_dow
+      - name: sales_company_n7d_same_dow
         description: "Company-wide sales exactly 7 days after `date` (same day of week, the following week); used to sanity-check/label same-day-of-week comparisons."
       - name: sales_company_n1d
         description: "Sum of company-wide sales over the 1 day(s) after `date` (day 1 through day 1 following); a forward-looking window, distinct from the training label."
@@ -248,7 +248,7 @@ models:
         description: "Share of distinct products at the store on `date` that were on promotion."
       - name: pct_product_families_store_on_promotion
         description: "Share of distinct product families at the store on `date` that were on promotion."
-      - name: sales_store_n1d_same_dow
+      - name: sales_store_n7d_same_dow
         description: "Store-level sales exactly 7 days after `date` (same day of week, the following week); used to sanity-check/label same-day-of-week comparisons."
       - name: sales_store_n1d
         description: "Sum of store-level sales over the 1 day(s) after `date` (day 1 through day 1 following); a forward-looking window, distinct from the training label."
@@ -558,7 +558,7 @@ models:
         description: "Store-product sales on `date` when the item was on promotion."
       - name: pct_sales_store_product_on_promotion
         description: "Share of store-product sales on `date` made on promotion (`sales_store_product_on_promotion` / `sales_store_product`)."
-      - name: sales_store_product_n1d_same_dow
+      - name: sales_store_product_n7d_same_dow
         description: "Store-product sales exactly 7 days after `date` (same day of week, the following week); used to sanity-check/label same-day-of-week comparisons."
       - name: sales_store_product_n1d
         description: "Sum of store-product sales over the 1 day(s) after `date` (day 1 through day 1 following); a forward-looking window, distinct from the training label."
@@ -831,7 +831,7 @@ models:
         description: "Share of store-product-family sales on `date` made on promotion (`sales_store_family_on_promotion` / `sales_store_family`)."
       - name: pct_products_store_family_on_promotion
         description: "Share of distinct products within the family, at the store, that were on promotion on `date`."
-      - name: sales_store_family_n1d_same_dow
+      - name: sales_store_family_n7d_same_dow
         description: "Store-product-family sales exactly 7 days after `date` (same day of week, the following week); used to sanity-check/label same-day-of-week comparisons."
       - name: sales_store_family_n1d
         description: "Sum of store-product-family sales over the 1 day(s) after `date` (day 1 through day 1 following); a forward-looking window, distinct from the training label."
