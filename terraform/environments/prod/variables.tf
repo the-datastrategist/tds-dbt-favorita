@@ -12,6 +12,12 @@ variable "region" {
   default     = "us-central1"
 }
 
+variable "bucket_location" {
+  description = "GCS bucket location, separate from the Vertex compute region."
+  type        = string
+  default     = "us-central1"
+}
+
 variable "environment" {
   description = "Maps to GCP_ENVIRONMENT."
   type        = string

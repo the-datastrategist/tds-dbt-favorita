@@ -9,7 +9,11 @@ module "artifact_registry" {
   region     = var.region
   repo_name  = var.repo_name
 
-  depends_on = [module.gcp_apis]
+  depends_on = [
+    module.gcp_apis,
+    module.bigquery_datasets,
+    module.gcs_buckets,
+  ]
 }
 
 module "iam_vertex_sa" {
@@ -17,16 +21,18 @@ module "iam_vertex_sa" {
   project_id    = var.project_id
   sa_id         = var.sa_id
   caller_member = var.caller_member
-  bucket_names = concat(
-    values(module.gcs_buckets.bucket_names),
-    compact([module.gcs_buckets.mlflow_bucket_name]),
-  )
-  dataset_ids = [
-    module.bigquery_datasets.raw_dataset_id,
-    module.bigquery_datasets.analytics_dataset_id,
+  bucket_names = [
+    "${var.client_label}-raw",
+    "${var.client_label}-vertex-staging",
+    "${var.client_label}-vertex-models",
+    "${var.client_label}-mlflow",
   ]
-  prediction_bucket_names = [module.gcs_buckets.bucket_names["models"]]
-  prediction_dataset_ids  = [module.bigquery_datasets.analytics_dataset_id]
+  dataset_ids = [
+    var.raw_dataset,
+    var.dbt_dataset,
+  ]
+  prediction_bucket_names = ["${var.client_label}-vertex-models"]
+  prediction_dataset_ids  = [var.dbt_dataset]
 
   depends_on = [module.gcp_apis]
 }
@@ -45,7 +51,7 @@ module "bigquery_datasets" {
 module "gcs_buckets" {
   source        = "../../modules/gcs-buckets"
   project_id    = var.project_id
-  region        = var.region
+  region        = var.bucket_location
   client_label  = var.client_label
   environment   = var.environment
   force_destroy = false
