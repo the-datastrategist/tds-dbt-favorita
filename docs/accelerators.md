@@ -79,7 +79,7 @@ mindmap
 | Explainability | `vertex/utils/explain.py`, `stg_vertex_model_explain` | Per-prediction SHAP top-K feature attributions (xgboost, random_forest) |
 | Experiment tracking | `vertex/utils/experiment_tracking.py` | MLflow + Vertex Experiments |
 | MLflow catalog | `vertex/utils/mlflow_catalog.py` | GCS pointer artifacts |
-| BQ DDL | `vertex/ddl/vertex_bq_tables.sql` | Metadata, performance, predictions, job runs |
+| BQ DDL | `vertex/ddl/vertex_bq_tables.sql` | Metadata, performance, predictions, backtest records, job runs |
 | Ops runbook | `vertex/ops/README.md` | IAM, GCS layout, Scheduler, monitoring |
 | KFP compile | `vertex/pipelines/compile.py` | CI-validated pipeline JSON |
 

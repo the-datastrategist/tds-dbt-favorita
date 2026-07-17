@@ -48,7 +48,7 @@ Run baseline scoring against a local history extract containing the configured e
 make vertex-backtest VERTEX_BACKTEST_INPUT=path/to/history.csv
 ```
 
-The command prints a stable backtest run ID and aggregate/segment metric records. BigQuery persistence is deferred until baseline and model-scoring records share the same contract.
+The command prints a stable backtest run ID and aggregate/segment metric records. Append-only BigQuery table contracts for these records are defined in `vertex/ddl/vertex_bq_tables.sql` as `backtest_predictions` and `backtest_metrics`. Apply them with `make vertex-bq-ddl`; persistence from the runner remains a follow-on.
 
 ## Metric Policy
 

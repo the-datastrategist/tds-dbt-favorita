@@ -141,6 +141,48 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_predictions` (
 PARTITION BY run_date
 CLUSTER BY model_family, model_type, config_name;
 
+-- Append-only rolling-origin backtest predictions. prediction_id is a stable
+-- logical key; writers must append new records and must not update prior runs.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_predictions` (
+  prediction_id STRING NOT NULL,
+  backtest_run_id STRING NOT NULL,
+  backtest_contract_name STRING NOT NULL,
+  backtest_contract_hash STRING NOT NULL,
+  forecast_origin DATE NOT NULL,
+  target_date DATE NOT NULL,
+  horizon INT64 NOT NULL,
+  entity_key_json STRING NOT NULL,
+  segment_key_json STRING NOT NULL,
+  baseline_name STRING NOT NULL,
+  actual FLOAT64,
+  prediction FLOAT64,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP()
+)
+PARTITION BY forecast_origin
+CLUSTER BY backtest_contract_name, horizon, baseline_name, backtest_run_id;
+
+-- Append-only metrics derived from backtest_predictions. metric_id is stable
+-- for a run/origin/horizon/baseline/segment metric record.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_metrics` (
+  metric_id STRING NOT NULL,
+  backtest_run_id STRING NOT NULL,
+  backtest_contract_name STRING NOT NULL,
+  backtest_contract_hash STRING NOT NULL,
+  forecast_origin DATE NOT NULL,
+  horizon INT64 NOT NULL,
+  baseline_name STRING NOT NULL,
+  segment_key_json STRING NOT NULL,
+  eligible_count INT64 NOT NULL,
+  prediction_count INT64 NOT NULL,
+  wape FLOAT64,
+  mae FLOAT64,
+  bias FLOAT64,
+  prediction_completeness FLOAT64,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP()
+)
+PARTITION BY forecast_origin
+CLUSTER BY backtest_contract_name, horizon, baseline_name, backtest_run_id;
+
 -- SHAP feature attributions for tree-based Vertex predictions (xgboost, random_forest);
 -- one row per prediction_id in favorita_model_predictions when explain.enabled is set.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_explain` (
