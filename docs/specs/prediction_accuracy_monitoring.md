@@ -2,7 +2,7 @@
 
 # SPEC: Prediction accuracy monitoring
 
-**Status:** Proposed
+**Status:** Shipped
 **Roadmap reference:** [`client_rollout.md`](../client_rollout.md#post-rollout-weeks-58-optional) — "Drift / accuracy monitoring | dbt tests on prediction vs actual"
 
 ---
@@ -28,6 +28,14 @@
 - Feature/input drift (population stability index on the feature distributions feeding the model) — this spec is **prediction accuracy** (output vs. ground truth) only. A follow-on could reuse `top_feature_attributions` from [`stg_vertex_model_explain`](../../dbt/models/staging/stg_vertex_model_explain.sql) (shipped) to approximate feature-importance drift, but that's materially harder to make robust and is deferred.
 - Automated retraining or alerting integration (PagerDuty/Slack) — this spec produces a **queryable/testable signal**; wiring it to a notification channel is a Prefect/ops follow-on (see `orchestration/README.md`).
 - BQML accuracy monitoring — `bqml_model_predict` has no `actual` column; adding one is a prerequisite not covered here (see Open questions).
+
+## Implementation notes (as shipped)
+
+- `int_vertex_prediction_accuracy_daily` and `favorita_prediction_accuracy_rolling` live in `dbt/models/marts/ml_models/` (not `dbt/models/intermediate/`) — that folder is reserved for training feature tables (`int_sales_*`) per its config comment in `dbt_project.yml`; this pair depends on Vertex prediction outputs, not raw features, so it's colocated with the other ML-output-derived marts (`int_bqml_model_wape`, `favorita_model_leaderboard`) from the [model leaderboard mart spec](model_leaderboard_mart.md).
+- `favorita_prediction_accuracy_rolling` also computes 28-day trailing MAE/WAPE (`mae_28d`, `wape_28d`), not just 7-day, matching this section's own heading even though the original SQL sketch only showed the 7-day window.
+- `int_vertex_prediction_accuracy_daily` uses `safe_divide()` for WAPE (project convention, e.g. `int_sales_daily`) rather than the `nullif()` pattern originally sketched — same result, more consistent with the rest of the codebase.
+- Added two dbt unit tests (`dbt/models/marts/schema.yml`) covering the MAE/WAPE/bias aggregation and the rolling-window join, per this doc's own "Testing & validation" guidance.
+- BQML accuracy monitoring remains out of scope, per the non-goals above — `bqml_model_predict` still has no `actual` column.
 
 ## Design
 

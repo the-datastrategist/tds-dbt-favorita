@@ -150,6 +150,16 @@ ORDER BY abs_error DESC
 LIMIT 100;
 ```
 
+### Rolling accuracy / drift monitoring (Vertex)
+
+```sql
+SELECT config_name, forecast_date, wape_7d, wape_28d, train_test_wape
+FROM `{project}.{dataset}.favorita_prediction_accuracy_rolling`
+ORDER BY config_name, forecast_date DESC;
+```
+
+Automated via `assert_no_material_accuracy_drift` (warns when `wape_7d` exceeds `train_test_wape` by more than `accuracy_drift_tolerance_pct`, default 25%) — see [specs/prediction_accuracy_monitoring.md](specs/prediction_accuracy_monitoring.md). Run on its own cadence with `make selector-accuracy-monitoring`.
+
 ### Top feature attributions (Vertex, tree models)
 
 ```sql
@@ -205,5 +215,6 @@ See [iac.md](iac.md) for production cost controls (reservations, labels, schedul
 - [Delivery artifacts — dashboard blueprint](delivery_artifacts.md#dashboard-blueprint)
 - [Vertex experiment tracking](../../vertex/README.md) (repo)
 - [Model leaderboard mart spec](specs/model_leaderboard_mart.md) — design behind `favorita_model_leaderboard` / `favorita_model_champion`
+- [Prediction accuracy monitoring spec](specs/prediction_accuracy_monitoring.md) — design behind `favorita_prediction_accuracy_rolling`
 
 {% enddocs %}

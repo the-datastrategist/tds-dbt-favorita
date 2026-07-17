@@ -251,3 +251,93 @@ models:
           (wape for store-day, mae for company-day, by default).
         data_tests:
           - not_null
+
+  - name: int_vertex_prediction_accuracy_daily
+    description: >
+      One row per (config_name, forecast_date): live prediction accuracy for Vertex models,
+      aggregated from stg_vertex_model_predictions rows where the actual is now known.
+      forecast_date (not run_date) is the grouping key, so this table fills in retroactively
+      as actuals land. See docs/specs/prediction_accuracy_monitoring.md.
+    columns:
+      - name: config_name
+        description: Name of the model configuration (from model_config.yaml) used for this run.
+        data_tests:
+          - not_null
+      - name: model_family
+        description: Model family (e.g. xgboost, random_forest, arima, sarima).
+      - name: model_type
+        description: Model type/algorithm used for prediction.
+      - name: model_run_id
+        description: Training run whose model produced these predictions.
+      - name: forecast_date
+        description: Date being forecasted; the date the actual became known and checkable.
+        data_tests:
+          - not_null
+      - name: n_predictions
+        description: Number of predictions with a known actual, aggregated into this row.
+      - name: mae
+        description: Mean absolute error for this config_name/forecast_date.
+      - name: wape
+        description: Weighted absolute percentage error for this config_name/forecast_date.
+      - name: bias
+        description: Mean signed error (prediction minus actual); positive means over-forecasting.
+
+  - name: favorita_prediction_accuracy_rolling
+    description: >
+      Rolling 7-day and 28-day trailing accuracy per config_name, joined to the model_run_id's
+      training-time (test) performance for comparison. Powers assert_no_material_accuracy_drift.
+    columns:
+      - name: config_name
+        description: Name of the model configuration (from model_config.yaml) used for this run.
+        data_tests:
+          - not_null
+      - name: forecast_date
+        description: Date being forecasted; the date the actual became known and checkable.
+        data_tests:
+          - not_null
+      - name: mae_7d
+        description: Trailing 7-day average of daily MAE for this config_name.
+      - name: wape_7d
+        description: Trailing 7-day average of daily WAPE for this config_name.
+      - name: mae_28d
+        description: Trailing 28-day average of daily MAE for this config_name.
+      - name: wape_28d
+        description: Trailing 28-day average of daily WAPE for this config_name.
+      - name: train_test_mae
+        description: MAE recorded on the held-out test set at training time for this model_run_id.
+      - name: train_test_wape
+        description: WAPE recorded on the held-out test set at training time for this model_run_id.
+
+unit_tests:
+  - name: test_int_vertex_prediction_accuracy_daily_aggregates_correctly
+    description: >
+      Two predictions with known actuals on the same forecast_date should aggregate into one
+      row with correctly computed mae/wape/bias; a row with a null actual must be excluded.
+    model: int_vertex_prediction_accuracy_daily
+    given:
+      - input: ref('stg_vertex_model_predictions')
+        rows:
+          - {config_name: cfg_a, model_run_id: run1, forecast_date: 2024-01-01, actual: 100, prediction: 110}
+          - {config_name: cfg_a, model_run_id: run1, forecast_date: 2024-01-01, actual: 200, prediction: 180}
+          - {config_name: cfg_a, model_run_id: run1, forecast_date: 2024-01-02, actual: null, prediction: 150}
+    expect:
+      rows:
+        - {config_name: cfg_a, forecast_date: 2024-01-01, n_predictions: 2, mae: 15, wape: 0.1, bias: -5}
+
+  - name: test_favorita_prediction_accuracy_rolling_computes_trailing_average
+    description: >
+      wape_7d should be the trailing average of daily wape within the lookback window, and
+      train_test_wape should come from the joined training-time performance row.
+    model: favorita_prediction_accuracy_rolling
+    given:
+      - input: ref('int_vertex_prediction_accuracy_daily')
+        rows:
+          - {config_name: cfg_a, model_run_id: run1, forecast_date: 2024-01-01, mae: 10, wape: 0.1, bias: 1, n_predictions: 5}
+          - {config_name: cfg_a, model_run_id: run1, forecast_date: 2024-01-02, mae: 20, wape: 0.3, bias: 1, n_predictions: 5}
+      - input: ref('stg_vertex_model_performance')
+        rows:
+          - {model_run_id: run1, metric_set: test, mae: 12, wape: 0.15}
+    expect:
+      rows:
+        - {config_name: cfg_a, forecast_date: 2024-01-01, wape_7d: 0.1, train_test_wape: 0.15}
+        - {config_name: cfg_a, forecast_date: 2024-01-02, wape_7d: 0.2, train_test_wape: 0.15}
