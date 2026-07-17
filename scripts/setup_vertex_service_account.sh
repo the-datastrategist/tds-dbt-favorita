@@ -3,6 +3,10 @@
 # admin account, not the Cursor/CI SA — it needs iam.serviceAccounts.create and
 # resourcemanager.projects.setIamPolicy).
 #
+# Prefer terraform/modules/iam-vertex-sa for new environments (see terraform/README.md) — this
+# script remains useful for quick bootstrap or as the `terraform import` source for environments
+# provisioned before Terraform adoption.
+#
 #   gcloud auth login
 #   bash scripts/setup_vertex_service_account.sh
 #

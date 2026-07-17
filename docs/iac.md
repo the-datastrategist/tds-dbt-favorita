@@ -2,7 +2,7 @@
 
 # Infrastructure as code and GCP operations
 
-Guidance for provisioning and operating this forecasting stack in a **client GCP organization**. Operational runbooks are **available today**; full **Terraform modules are roadmapped**.
+Guidance for provisioning and operating this forecasting stack in a **client GCP organization**. Operational runbooks and **Terraform modules** are both **available today**.
 
 ---
 
@@ -16,6 +16,7 @@ Guidance for provisioning and operating this forecasting stack in a **client GCP
 | **DDL applicator** | `scripts/apply_vertex_bq_ddl.py` | `make vertex-bq-ddl` |
 | **Docker image** | `Dockerfile`, `docker-compose.yml` | Reproducible runtime |
 | **CI pipeline** | `.github/workflows/ci.yml` | Validate without live GCP |
+| **Terraform modules** | `terraform/` | Versioned, reviewable GCP provisioning (see below) |
 
 ---
 
@@ -170,8 +171,9 @@ From `vertex/ops/README.md`:
 - [x] Vertex Custom Jobs authenticate via their attached service account + ADC (no key file
       propagated into the job container — fixed in `vertex/jobs/gcp.py`)
 - [ ] CI **Workload Identity Federation** for jobs that need real GCP access (design:
-      [specs/workload_identity_federation.md](specs/workload_identity_federation.md); pool/provider
-      Terraform resources blocked on [specs/terraform_modules.md](specs/terraform_modules.md))
+      [specs/workload_identity_federation.md](specs/workload_identity_federation.md); the
+      `iam-vertex-sa` Terraform module it extends now exists — see [specs/terraform_modules.md](specs/terraform_modules.md)
+      — but the pool/provider resources themselves still require a real GCP org to provision)
 - [ ] Service account keys not in repo for **local dev**; key file remains the supported path
       there per the WIF spec's non-goals
 - [ ] Artifact Registry **vulnerability scanning** enabled
@@ -182,9 +184,9 @@ From `vertex/ops/README.md`:
 
 ---
 
-## Terraform roadmap
+## Terraform
 
-Planned modules (not yet in repo) — structure for client engagements. Full design: [specs/terraform_modules.md](specs/terraform_modules.md).
+`terraform/` now codifies the sections above as versioned modules. Full design: [specs/terraform_modules.md](specs/terraform_modules.md); usage: [`terraform/README.md`](../terraform/README.md).
 
 ```text
 terraform/
@@ -194,13 +196,24 @@ terraform/
     gcs-buckets/        # raw, staging, models, mlflow
     artifact-registry/  # Docker repository
     iam-vertex-sa/      # SA + custom bucket/dataset bindings
-    cloud-scheduler/    # Optional HTTP jobs
+    cloud-scheduler/    # Optional HTTP jobs, disabled by default
   environments/
     dev/
     prod/
 ```
 
-**Manual steps today:** create resources per sections above, then `make vertex-bq-ddl` and push Docker image to Artifact Registry.
+CI runs `fmt`/`validate` on every PR touching `terraform/` (`.github/workflows/terraform.yml`);
+`plan`/`apply` stay manual/local until CI has a way to authenticate to GCP at all (see
+[Workload Identity Federation](specs/workload_identity_federation.md)).
+
+**New environments:** `terraform apply` from `terraform/environments/{dev,prod}`, then
+`make vertex-bq-ddl` for table schemas (kept out of Terraform — see the spec's Non-goals) and
+push the Docker image to Artifact Registry.
+
+**Existing environments (already provisioned via the shell scripts):** `terraform import` each
+resource before ever running `apply` — see the spec's Migration plan. The shell scripts
+(`scripts/setup_vertex_*.sh`) remain the quickest path for a brand-new environment or as the
+source of truth to import from; they are not being retired.
 
 **Variables to parameterize in Terraform:**
 

@@ -1,0 +1,42 @@
+name: Terraform
+
+on:
+  push:
+    branches: [main, master]
+    paths: ["terraform/**", ".github/workflows/terraform.yml"]
+  pull_request:
+    branches: [main, master]
+    paths: ["terraform/**", ".github/workflows/terraform.yml"]
+
+concurrency:
+  group: terraform-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fmt-validate:
+    name: fmt/validate (${{ matrix.environment }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [dev, prod]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: fmt check (whole repo, once — redundant across matrix legs but cheap)
+        run: terraform fmt -check -recursive terraform/
+
+      - name: init (no backend — CI never touches remote state)
+        working-directory: terraform/environments/${{ matrix.environment }}
+        run: terraform init -backend=false
+
+      - name: validate
+        working-directory: terraform/environments/${{ matrix.environment }}
+        run: terraform validate
+
+      # No `plan`/`apply` against a live project — CI has no GCP credentials at all (see
+      # .github/workflows/ci.yml's placeholder key). Gate live `plan` behind
+      # docs/specs/workload_identity_federation.md landing first.

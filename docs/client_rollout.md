@@ -168,7 +168,7 @@ gantt
 |-------------|------------------|------|
 | Model leaderboard mart ✅ shipped | `favorita_model_performance` + dbt mart | [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md) |
 | Drift / accuracy monitoring ✅ shipped | dbt tests on prediction vs actual | [specs/prediction_accuracy_monitoring.md](specs/prediction_accuracy_monitoring.md) |
-| Terraform modules | [iac.md](iac.md) roadmap | [specs/terraform_modules.md](specs/terraform_modules.md) |
+| Terraform modules ✅ shipped | [iac.md](iac.md) roadmap | [specs/terraform_modules.md](specs/terraform_modules.md) |
 | Workload Identity Federation 🔧 in progress | Replace SA keys | [specs/workload_identity_federation.md](specs/workload_identity_federation.md) |
 | Prophet / deep learning family | `vertex/models/registry.py` pattern | [specs/prophet_model_family.md](specs/prophet_model_family.md) |
 

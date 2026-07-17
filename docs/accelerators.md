@@ -40,6 +40,7 @@ mindmap
       docker-compose ml-pipeline
       GitHub Actions CI
       env.example contract
+      Terraform GCP provisioning
 ```
 
 ---
@@ -139,6 +140,8 @@ GCS remains **canonical** for model binaries; MLflow stores pointers, not duplic
 | `.github/workflows/docs.yml` | Hosted dbt Docs on GitHub Pages |
 | `scripts/load_favorita_to_bigquery.py` | GCS → raw BigQuery ingestion |
 | `scripts/apply_vertex_bq_ddl.py` | Apply Vertex output DDL |
+| `terraform/` | Versioned GCP provisioning: APIs, IAM, BigQuery datasets, GCS buckets, Artifact Registry per environment |
+| `.github/workflows/terraform.yml` | `fmt`/`validate` on every PR touching `terraform/` |
 
 ---
 
