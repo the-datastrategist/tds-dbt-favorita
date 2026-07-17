@@ -101,7 +101,7 @@ exit(1 if missing else 0)" \
 	|| (echo "" && echo "Missing Vertex env in container. Set in .env and recreate: docker compose run ..." && exit 1)
 
 vertex-docker-push: ## Build and push a Git-SHA-tagged production image; print its immutable digest
-	DOCKER_TAG="$(or $(DOCKER_TAG),$(shell git rev-parse --verify HEAD))" bash scripts/push_vertex_training_image.sh
+	DOCKER_TAG="$(shell git rev-parse --verify HEAD)" bash scripts/push_vertex_training_image.sh
 
 vertex-gcp-setup: ## One-time: enable APIs + create Artifact Registry repo (requires gcloud admin login)
 	bash scripts/setup_vertex_artifact_registry.sh
