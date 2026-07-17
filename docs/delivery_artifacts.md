@@ -69,7 +69,7 @@ Give merchandising / planning teams a **forecast vs actual** view without openin
 
 1. **Executive summary** — company-day forecast, WAPE trend, last successful pipeline run
 2. **Store drill-down** — store-day actual vs predicted, top errors
-3. **Model leaderboard** — rank by `test_mae` / `test_wape` from performance tables (see [benchmarks.md](benchmarks.md))
+3. **Model leaderboard** — source from `favorita_model_champion` / `favorita_model_leaderboard` (see [benchmarks.md](benchmarks.md), [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md))
 4. **Operations** — job run status from `stg_vertex_job_runs`
 
 ### Implementation options (client-specific)

@@ -16,6 +16,7 @@ mindmap
       int_sales_* feature grains
       BQML macros + marts
       stg_vertex_* over ML outputs
+      model leaderboard + champion
       exposures + schema tests
       selectors daily_refresh
     Vertex
@@ -50,6 +51,7 @@ mindmap
 | Feature tables | `dbt/models/intermediate/int_sales_*.sql` | Partitioned ML features at four grains |
 | BQML marts | `dbt/models/marts/ml_models/` | Train, predict, evaluate, explain via macros |
 | Vertex staging | `dbt/models/staging/stg_vertex_*.sql` | Views over Vertex-written BQ tables |
+| Model leaderboard | `favorita_model_leaderboard`, `favorita_model_champion` | Unified BQML + Vertex metrics, ranked, champion-flagged per grain |
 | Sources | `dbt/models/sources/vertex.yml` | Contract for ML output tables |
 | Selectors | `dbt/selectors.yml` | `daily_refresh`, `ml_features`, `bqml_train`, `bqml_score` |
 | Exposures | `dbt/models/exposures.yml` | Lineage to ML, dashboard, and app consumers |

@@ -40,12 +40,18 @@ Populate after running pipelines in your GCP project. Replace `{values}` with me
 | bqml | BOOSTED_TREE_REGRESSOR | `bqml_sales_forecast` | mean_squared_error | `{fill}` | |
 | bqml | BOOSTED_TREE_REGRESSOR | `bqml_sales_forecast` | r2_score | `{fill}` | |
 
-### Champion selection (recommended)
+### Champion selection
 
-| Grain | Champion platform | Champion model | Primary metric | Selected date |
-|-------|-------------------|----------------|----------------|---------------|
-| store-day | `{fill}` | `{fill}` | test_wape | `{fill}` |
-| company-day | `{fill}` | `{fill}` | test_mae | `{fill}` |
+Automated via `favorita_model_champion` (see [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md)) — no more hand-filled table. Query it directly:
+
+```sql
+SELECT grain, platform, config_name, model_type, mae, rmse, wape, run_at
+FROM `{project}.{dataset}.favorita_model_champion`
+WHERE is_champion
+ORDER BY grain;
+```
+
+Primary metric per grain (`wape` for store-day, `mae` for company-day) is set by the `leaderboard_primary_metric_by_grain` dbt var — override per client engagement if a different metric fits the sales pattern better.
 
 ---
 
@@ -92,19 +98,29 @@ SELECT
   config_name,
   model_type,
   model_family,
-  JSON_VALUE(test_performance, '$.mae') AS test_mae,
-  JSON_VALUE(test_performance, '$.wape') AS test_wape,
-  JSON_VALUE(test_performance, '$.rmse') AS test_rmse,
+  mae AS test_mae,
+  wape AS test_wape,
+  rmse AS test_rmse,
   run_at
-FROM `{project}.{dataset}.favorita_model_performance`
+FROM `{project}.{dataset}.stg_vertex_model_performance`
 QUALIFY ROW_NUMBER() OVER (
   PARTITION BY config_name
   ORDER BY run_at DESC
 ) = 1
-ORDER BY CAST(JSON_VALUE(test_performance, '$.mae') AS FLOAT64);
+ORDER BY mae;
 ```
 
 Replace `{project}` and `{dataset}` with your `GOOGLE_PROJECT_ID` and `DBT_DATASET`.
+
+### Full leaderboard (BQML + Vertex, normalized)
+
+```sql
+SELECT platform, config_name, model_type, grain, mae, rmse, r2, wape, run_at
+FROM `{project}.{dataset}.favorita_model_leaderboard`
+ORDER BY grain, run_at DESC;
+```
+
+`favorita_model_leaderboard` unions both platforms on a shared column set — see [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md). `favorita_model_champion` (used above) is derived from this.
 
 ### BQML evaluation
 
@@ -179,7 +195,7 @@ See [iac.md](iac.md) for production cost controls (reservations, labels, schedul
 1. **Start with BQML** on company-day — establishes a SQL-native baseline in hours.
 2. **Move to Vertex XGBoost** on store-day — tests whether finer grain + tuning beats baseline.
 3. **Add ARIMA/SARIMA** where series are short or highly seasonal per store.
-4. **Document champion** in the table above and wire to dashboard / alerting (see [delivery_artifacts.md](delivery_artifacts.md)).
+4. **Query the champion** from `favorita_model_champion` and wire to dashboard / alerting (see [delivery_artifacts.md](delivery_artifacts.md)).
 
 ---
 
@@ -188,5 +204,6 @@ See [iac.md](iac.md) for production cost controls (reservations, labels, schedul
 - [Case study](case_study.md)
 - [Delivery artifacts — dashboard blueprint](delivery_artifacts.md#dashboard-blueprint)
 - [Vertex experiment tracking](../../vertex/README.md) (repo)
+- [Model leaderboard mart spec](specs/model_leaderboard_mart.md) — design behind `favorita_model_leaderboard` / `favorita_model_champion`
 
 {% enddocs %}

@@ -2,7 +2,7 @@
 
 # SPEC: Model leaderboard mart
 
-**Status:** Proposed
+**Status:** Shipped
 **Roadmap reference:** [`client_rollout.md`](../client_rollout.md#post-rollout-weeks-58-optional) — "Model leaderboard mart | `favorita_model_performance` + dbt mart"; [`delivery_artifacts.md`](../delivery_artifacts.md#dashboard-blueprint) dashboard page 3 "Model leaderboard"
 
 ---
@@ -28,6 +28,12 @@ Today, comparing BQML and Vertex models means manually filling in `{fill}` place
 
 - Automatically promoting a new champion into production scoring — this spec only *identifies* the champion; wiring predict jobs to always use "the champion config" is a separate, later change.
 - Backfilling WAPE for historical BQML `ML.EVALUATE` runs — `ML.EVALUATE` doesn't return WAPE natively (see below); this spec computes it going forward only, from `bqml_model_predict` actuals.
+
+## Implementation notes (as shipped)
+
+- `favorita_model_champion`'s ranking is two-step rather than the single combined `row_number()` sketched below: first pick each `config_name`'s own latest run (`is_latest_run`), then rank *those* rows per `grain` by the primary metric. This avoids a subtle bug in the original sketch, where partitioning "latest run" by `grain` alone (rather than by `config_name`) would silently drop all but one config's history from champion contention.
+- `favorita_model_leaderboard` includes a `model_run_id` column (null for BQML rows) beyond the columns tabulated below — kept for potential future joins (e.g. back to `stg_vertex_model_metadata`), not required by this spec's own consumers.
+- Materialized as a `table`, not a `snapshot` (see "Open questions" — deferred until champion-change history is an actual client deliverable).
 
 ## Design
 

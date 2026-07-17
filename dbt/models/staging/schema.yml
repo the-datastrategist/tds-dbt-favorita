@@ -415,6 +415,57 @@ models:
       - name: model_artifact_uri
         description: GCS URI of the model artifact used to generate this prediction.
 
+  - name: stg_vertex_model_performance
+    description: >
+      Vertex AI holdout performance metrics (all model types) from favorita_model_performance.
+      metric_set is currently always 'test'; train-set metrics are not written to this table
+      today (see favorita_model_metadata.train_performance JSON instead).
+    columns:
+      - name: model_run_id
+        description: Identifier for the training run these metrics were computed from.
+        data_tests:
+          - not_null
+      - name: model_id
+        description: Identifier of the model artifact evaluated.
+        data_tests:
+          - not_null
+      - name: config_name
+        description: Name of the model configuration (from model_config.yaml) used for this run.
+        data_tests:
+          - not_null
+      - name: model_family
+        description: Model family (e.g. xgboost, random_forest, arima, sarima).
+      - name: model_type
+        description: Model type/algorithm evaluated.
+      - name: run_at
+        description: Timestamp the training job executed.
+        data_tests:
+          - not_null
+      - name: metric_set
+        description: Which split the metrics were computed on (currently always 'test').
+      - name: mean_pred
+        description: Mean predicted value over the metric_set.
+      - name: mean_actual
+        description: Mean actual value over the metric_set.
+      - name: mae
+        description: Mean absolute error.
+      - name: rmse
+        description: Root mean squared error.
+      - name: mse
+        description: Mean squared error.
+      - name: r2
+        description: R-squared (coefficient of determination).
+      - name: mape
+        description: Mean absolute percentage error.
+      - name: wape
+        description: Weighted absolute percentage error (sum of absolute errors / sum of absolute actuals).
+      - name: smape
+        description: Symmetric mean absolute percentage error.
+      - name: bias
+        description: Mean signed error (prediction minus actual); positive means over-forecasting.
+      - name: median_ae
+        description: Median absolute error.
+
   - name: stg_vertex_model_explain
     description: >
       SHAP feature attributions for tree-based Vertex predictions (xgboost, random_forest)
