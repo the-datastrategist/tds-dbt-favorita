@@ -345,8 +345,8 @@ vertex-pipeline-train-only: ## Pipeline without optimize/predict steps
 
 # --- dbt + BigQuery ops ---
 
-dbt-vertex: ## Build staging views over Vertex output tables
-	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:vertex $(ARGS)
+dbt-vertex: ## Build Vertex-only staging and monitoring models (exclude cross-platform BQML marts)
+	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:vertex --exclude tag:bqml $(ARGS)
 
 vertex-bq-ddl: ## Create BigQuery tables for Vertex ML outputs (once per environment)
 	docker compose run --rm ml-pipeline python scripts/apply_vertex_bq_ddl.py
