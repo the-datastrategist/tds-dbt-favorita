@@ -26,6 +26,14 @@ models:
         data_tests:
           - unique
           - not_null
+      - name: city
+        description: City where the store is located.
+      - name: state
+        description: State where the store is located.
+      - name: type
+        description: Store type/format code assigned by Favorita (e.g. A-E).
+      - name: cluster
+        description: Grouping of similar stores, used for clustering-based analysis.
 
   - name: stg_favorita_holiday_events
     description: >
@@ -40,12 +48,12 @@ models:
           - unique
           - not_null
       - name: date
-        description: Calendar date of the holiday or event.
+        description: >
+          Calendar date of the holiday or event. The source spans a wider range than the
+          train/test date spine, so some holidays legitimately fall outside it (not a data
+          quality issue; they simply won't join to any modeling day).
         data_tests:
           - not_null
-          - relationships:
-              to: ref('stg_favorita_date_spine')
-              field: date
       - name: event_type
         description: Holiday event type from source (type column).
         data_tests:
@@ -57,6 +65,42 @@ models:
                   - Bridge
                   - Work Day
                   - Additional
+                  - Event
+      - name: event_locale
+        description: Scope of the event (National, Regional, or Local); from source `locale` column.
+      - name: locale_name
+        description: >
+          Name of the region or city the event applies to when `event_locale` is Regional or
+          Local; not meaningful for National events.
+      - name: description
+        description: Free-text name/description of the holiday or event.
+      - name: transferred
+        description: >
+          Whether the holiday was officially moved to another calendar date by the government
+          (true/false); see the model-level note on interpreting transferred holidays alongside
+          the corresponding Transfer-type row.
+      - name: day_of_month
+        description: Day of the month for `date` (1-31).
+      - name: day_of_week
+        description: Day of week for `date` (1 = Sunday, 7 = Saturday).
+      - name: iso_week_of_year
+        description: ISO 8601 week number of the year for `date`.
+      - name: month
+        description: Month number for `date` (1-12).
+      - name: quarter
+        description: Calendar quarter for `date` (1-4).
+      - name: year
+        description: Calendar year for `date`.
+      - name: week_of_month
+        description: Week of the month for `date`, computed as ceil(day_of_month / 7).
+      - name: iso_year
+        description: ISO 8601 year for `date`; can differ from calendar `year` near year boundaries.
+      - name: iso_week
+        description: ISO 8601 week number for `date`.
+      - name: day_name
+        description: Full weekday name for `date` (e.g. Monday).
+      - name: month_name
+        description: Full month name for `date` (e.g. January).
 
   - name: stg_favorita_oil
     description: >
@@ -73,6 +117,11 @@ models:
           - relationships:
               to: ref('stg_favorita_date_spine')
               field: date
+      - name: dcoilwtico
+        description: >
+          Daily WTI crude oil price in USD. Null on days without a published price (e.g.
+          weekends/holidays) and on date-spine days added beyond the source's coverage; not a
+          data quality issue.
 
   - name: stg_favorita_train
     description: >
@@ -107,16 +156,18 @@ models:
           - relationships:
               to: source('favorita_raw', 'raw_favorita_items')
               field: item_nbr
+      - name: product_family
+        description: Product family/category (e.g. GROCERY I, BEVERAGES), joined in from item metadata.
       - name: sales
-        description: Unit sales for the store-product-day.
-        data_tests:
-          - dbt_utils.accepted_range:
-              min_value: 0
+        description: >
+          Unit sales for the store-product-day. Negative values represent returns of that
+          item, so they are valid and expected (not a data quality issue).
       - name: on_promotion
         description: Whether the product was on promotion (0 or 1).
         data_tests:
           - accepted_values:
               values: [0, 1]
+              quote: false
 
   - name: stg_favorita_sales_fct
     description: >
@@ -152,18 +203,23 @@ models:
           - relationships:
               to: source('favorita_raw', 'raw_favorita_items')
               field: item_nbr
+      - name: product_family
+        description: Product family/category (e.g. GROCERY I, BEVERAGES), joined in from item metadata.
       - name: sales
-        description: Unit sales; null on test-period rows without labels.
-        data_tests:
-          - dbt_utils.accepted_range:
-              min_value: 0
-              config:
-                where: sales is not null
+        description: >
+          Unit sales; null on test-period rows without labels. Negative values represent
+          returns of that item, so they are valid and expected (not a data quality issue).
       - name: on_promotion
         description: Whether the product was on promotion (0 or 1).
         data_tests:
           - accepted_values:
               values: [0, 1]
+              quote: false
+      - name: data_split_source
+        description: Indicates whether the row comes from the training period (`train`) or the test/scoring grid (`test`).
+        data_tests:
+          - accepted_values:
+              values: [train, test]
 
   - name: stg_favorita_test
     description: >
@@ -198,6 +254,14 @@ models:
           - relationships:
               to: source('favorita_raw', 'raw_favorita_items')
               field: item_nbr
+      - name: product_family
+        description: Product family/category (e.g. GROCERY I, BEVERAGES), joined in from item metadata.
+      - name: on_promotion
+        description: Whether the product was on promotion (0 or 1).
+        data_tests:
+          - accepted_values:
+              values: [0, 1]
+              quote: false
 
   - name: stg_favorita_transactions
     description: >
@@ -248,31 +312,242 @@ models:
               to: ref('stg_favorita_stores')
               field: store_nbr
       - name: date
-        description: Calendar date.
+        description: >
+          Calendar date. The holiday events source spans a wider range than the train/test
+          date spine, so some rows legitimately fall outside it (not a data quality issue).
         data_tests:
           - not_null
-          - relationships:
-              to: ref('stg_favorita_date_spine')
-              field: date
+      - name: day_of_month
+        description: Day of the month for `date` (1-31).
+      - name: day_of_week
+        description: Day of week for `date` (1 = Sunday, 7 = Saturday).
+      - name: iso_week_of_year
+        description: ISO 8601 week number of the year for `date`.
+      - name: month
+        description: Month number for `date` (1-12).
+      - name: quarter
+        description: Calendar quarter for `date` (1-4).
+      - name: year
+        description: Calendar year for `date`.
+      - name: week_of_month
+        description: Week of the month for `date`, computed as ceil(day_of_month / 7).
+      - name: iso_year
+        description: ISO 8601 year for `date`; can differ from calendar `year` near year boundaries.
+      - name: iso_week
+        description: ISO 8601 week number for `date`.
+      - name: day_name
+        description: Full weekday name for `date` (e.g. Monday).
+      - name: month_name
+        description: Full month name for `date` (e.g. January).
+      - name: is_national_holiday
+        description: True if a National-locale Holiday event falls on this date.
+      - name: is_national_event
+        description: True if a National-locale Event falls on this date.
+      - name: is_national_additional
+        description: True if a National-locale Additional holiday falls on this date.
+      - name: is_national_bridge
+        description: True if a National-locale Bridge day falls on this date.
+      - name: is_national_work_day
+        description: True if a National-locale Work Day (payback for a Bridge day) falls on this date.
+      - name: is_national_transfer
+        description: True if a National-locale Transfer event falls on this date.
+      - name: is_regional_holiday
+        description: True if a Regional-locale Holiday event applicable to this store's city/state falls on this date.
+      - name: is_local_holiday
+        description: True if a Local-locale Holiday event applicable to this store's city/state falls on this date.
+      - name: is_local_additional
+        description: True if a Local-locale Additional holiday applicable to this store's city/state falls on this date.
+      - name: is_local_transfer
+        description: True if a Local-locale Transfer event applicable to this store's city/state falls on this date.
 
   - name: stg_vertex_model_predictions
     description: >
       Vertex AI predictions (all model types) from favorita_model_predictions.
     columns:
       - name: prediction_id
+        description: Unique identifier for the prediction row.
         data_tests:
           - not_null
+      - name: predict_run_id
+        description: Identifier for the predict job run that produced this row.
       - name: model_run_id
+        description: Identifier for the training run whose model produced this prediction.
         data_tests:
           - not_null:
               config:
                 severity: warn
+      - name: model_id
+        description: Identifier of the model artifact used for prediction.
+      - name: config_name
+        description: Name of the model configuration (from model_config.yaml) used for this run.
+      - name: model_family
+        description: Model family (e.g. xgboost, random_forest, arima, sarima).
       - name: model_type
+        description: Model type/algorithm used for prediction.
         data_tests:
           - not_null
+      - name: run_at
+        description: Timestamp the predict job executed.
+      - name: run_date
+        description: Calendar date the predict job executed.
+      - name: target_column
+        description: Name of the label/target column the model was trained to predict.
+      - name: entity_id
+        description: Identifier for the forecasted entity (e.g. store or store-product), as defined by the model config's grain.
+      - name: store_id
+        description: Store identifier for the prediction, when applicable to the model's grain.
+      - name: product_id
+        description: Product identifier for the prediction, when applicable to the model's grain.
+      - name: date
+        description: Date the prediction feature row corresponds to.
+      - name: forecast_date
+        description: Date being forecasted (`date` plus the model's forecast horizon).
+      - name: forecast_horizon
+        description: Number of days ahead being forecasted.
+      - name: actual
+        description: Observed actual value for `forecast_date`, when available (e.g. backtesting), else null.
+      - name: prediction
+        description: Predicted value for `forecast_date`.
+      - name: prediction_lower
+        description: Lower bound of the prediction interval, when the model produces uncertainty estimates.
+      - name: prediction_upper
+        description: Upper bound of the prediction interval, when the model produces uncertainty estimates.
+      - name: model_artifact_uri
+        description: GCS URI of the model artifact used to generate this prediction.
+
+  - name: stg_vertex_model_explain
+    description: >
+      SHAP feature attributions for tree-based Vertex predictions (xgboost, random_forest)
+      from favorita_model_explain; one row per prediction_id when the model config sets
+      explain.enabled.
+    columns:
+      - name: explanation_id
+        description: Unique identifier for the explanation row.
+        data_tests:
+          - not_null
+      - name: prediction_id
+        description: Joins 1:1 to stg_vertex_model_predictions.prediction_id.
+        data_tests:
+          - not_null
+      - name: predict_run_id
+        description: Identifier for the predict job run that produced this row.
+      - name: model_run_id
+        description: Identifier for the training run whose model produced this prediction.
+      - name: model_id
+        description: Identifier of the model artifact used for prediction.
+      - name: config_name
+        description: Name of the model configuration (from model_config.yaml) used for this run.
+      - name: model_family
+        description: Model family (e.g. xgboost, random_forest).
+      - name: model_type
+        description: Model type/algorithm used for prediction. SHAP is only supported for tree models.
+        data_tests:
+          - not_null
+      - name: run_at
+        description: Timestamp the predict job executed.
+      - name: run_date
+        description: Calendar date the predict job executed.
+      - name: entity_id
+        description: Identifier for the forecasted entity, as defined by the model config's grain.
+      - name: store_id
+        description: Store identifier for the prediction, when applicable to the model's grain.
+      - name: product_id
+        description: Product identifier for the prediction, when applicable to the model's grain.
+      - name: date
+        description: Date the prediction feature row corresponds to.
+      - name: predicted_value
+        description: Predicted value the SHAP attributions explain (matches favorita_model_predictions.prediction).
+      - name: base_value
+        description: shap.TreeExplainer expected_value; the model's average output before feature attributions.
+      - name: top_feature_attributions
+        description: >
+          Top-K feature attributions (SHAP values) driving this prediction, as an array of
+          {feature, attribution} objects sorted by |attribution| descending; K is controlled
+          by the config's explain.top_k_features.
+      - name: model_artifact_uri
+        description: GCS URI of the model artifact used to generate this prediction.
 
   - name: stg_vertex_model_metadata
     description: Training metadata for Vertex model runs.
+    columns:
+      - name: model_run_id
+        description: Identifier for the training run.
+      - name: model_id
+        description: Identifier of the resulting model artifact.
+      - name: parameter_id
+        description: Identifier for the hyperparameter set used to train the model.
+      - name: config_name
+        description: Name of the model configuration (from model_config.yaml) used for this run.
+      - name: model_family
+        description: Model family (e.g. xgboost, random_forest, arima, sarima).
+      - name: model_type
+        description: Model type/algorithm trained.
+      - name: run_at
+        description: Timestamp the training job executed.
+      - name: target_column
+        description: Name of the label/target column the model was trained to predict.
+      - name: gcs_uri
+        description: GCS URI of the primary trained model artifact.
+      - name: joblib_gcs_uri
+        description: GCS URI of the joblib-serialized model artifact, when applicable.
+      - name: manifest_gcs_uri
+        description: GCS URI of the model manifest describing the trained artifact(s).
+      - name: entity_count
+        description: Number of distinct entities (e.g. stores or store-products) considered for training.
+      - name: entities_fitted
+        description: Number of distinct entities successfully fitted by the model.
+      - name: train_row_count
+        description: Number of rows used for training.
+      - name: test_row_count
+        description: Number of rows held out for testing/evaluation.
+      - name: parameters
+        description: Hyperparameters used to train the model, serialized as JSON.
+      - name: test_performance
+        description: Test-set performance metrics for the trained model, serialized as JSON.
 
   - name: stg_vertex_job_runs
     description: Audit log for Vertex Custom Jobs and PipelineJobs.
+    columns:
+      - name: job_run_id
+        description: Unique identifier for the job run (jobs upsert via MERGE on this key).
+        data_tests:
+          - unique
+          - not_null
+      - name: config_name
+        description: Name of the model configuration (from model_config.yaml) used for this run.
+      - name: model_family
+        description: Model family (e.g. xgboost, random_forest, arima, sarima).
+      - name: model_type
+        description: Model type/algorithm used for the job.
+      - name: job_step
+        description: Pipeline step executed by the job (e.g. train, predict, optimize).
+      - name: status
+        description: Terminal or in-progress status of the job (e.g. running, succeeded, failed).
+      - name: vertex_job_resource
+        description: Resource name/identifier of the underlying Vertex AI Custom Job or PipelineJob.
+      - name: vertex_experiment
+        description: Name of the Vertex AI Experiment the run was logged to, when applicable.
+      - name: error_message
+        description: Error message captured if the job failed, else null.
+      - name: started_at
+        description: Timestamp the job started.
+      - name: finished_at
+        description: Timestamp the job finished, else null while still running.
+      - name: duration_sec
+        description: Job duration in seconds, computed once `finished_at` is set.
+      - name: row_count
+        description: Number of rows processed by the job step, when applicable.
+      - name: artifact_uri
+        description: GCS URI of the primary artifact produced by the job, when applicable.
+      - name: git_sha
+        description: Git commit SHA of the code that ran the job, for reproducibility.
+      - name: image_uri
+        description: Container image URI used to run the job.
+      - name: pipeline_run_id
+        description: Identifier of the parent PipelineJob run, when the job was launched as part of a pipeline.
+      - name: optimize_run_id
+        description: Identifier of the related hyperparameter optimization run, when applicable.
+      - name: project_id
+        description: GCP project the job ran in.
+      - name: region
+        description: GCP region the job ran in.

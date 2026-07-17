@@ -18,6 +18,11 @@ _ENV_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 VALID_STEPS = frozenset({"train", "predict", "optimize"})
 
+# Tree ensembles supported by shap.TreeExplainer; ARIMA/SARIMA are not tree models
+# and do not have a supported explain path.
+SHAP_SUPPORTED_MODEL_TYPES = frozenset({"xgboost", "xgboost_sklearn", "random_forest"})
+DEFAULT_EXPLAIN_TOP_K_FEATURES = 20
+
 
 def _resolve_env_strings(value: Any) -> Any:
     """Replace ${ENV_VAR} placeholders when the variable is set."""
@@ -97,6 +102,21 @@ def get_model_type(config: dict[str, Any]) -> str | None:
     job = config.get("job") or {}
     inputs = config.get("inputs") or {}
     return config.get("model_type") or job.get("model_type") or inputs.get("model_type")
+
+
+def get_explain_config(config: dict[str, Any]) -> dict[str, Any]:
+    """Return the `explain` block for a model config, or {} when absent."""
+    return config.get("explain") or {}
+
+
+def explain_enabled(config: dict[str, Any]) -> bool:
+    """True when config.explain.enabled is set (SHAP feature attributions on predict)."""
+    return bool(get_explain_config(config).get("enabled"))
+
+
+def explain_top_k_features(config: dict[str, Any]) -> int:
+    """Number of top SHAP feature attributions to keep per prediction row."""
+    return int(get_explain_config(config).get("top_k_features", DEFAULT_EXPLAIN_TOP_K_FEATURES))
 
 
 def apply_job_step(config: dict[str, Any], step: str) -> dict[str, Any]:
@@ -229,6 +249,17 @@ def validate_config_for_step(
         if not inputs.get("artifact_config_name") and not inputs.get("model_run_id"):
             # Unified configs default artifact lookup to the same config name.
             pass
+        if explain_enabled(config):
+            explain_model_type = get_model_type(config)
+            if explain_model_type not in SHAP_SUPPORTED_MODEL_TYPES:
+                raise ValueError(
+                    f"{config_name}: explain.enabled requires model_type in "
+                    f"{sorted(SHAP_SUPPORTED_MODEL_TYPES)}, got {explain_model_type!r}"
+                )
+            if not outputs.get("explain_table"):
+                raise ValueError(
+                    f"{config_name}: outputs.explain_table required when explain.enabled"
+                )
 
     if step == "optimize":
         if not outputs.get("optimize_table"):

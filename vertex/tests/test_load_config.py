@@ -4,6 +4,8 @@ import pytest
 
 from vertex.config.load_config import (
     apply_job_step,
+    explain_enabled,
+    explain_top_k_features,
     get_job_spec,
     list_run_config_names,
     load_model_config,
@@ -50,3 +52,31 @@ class TestLoadConfig:
         names = list_run_config_names(step="train")
         assert "favorita_store_n1d_xgboost" in names
         assert "favorita_store_n1d_rf" not in names
+
+    def test_explain_enabled_and_top_k_features(self):
+        xgboost_config = load_model_config("favorita_store_n1d_xgboost")
+        assert explain_enabled(xgboost_config) is True
+        assert explain_top_k_features(xgboost_config) == 20
+
+        rf_config = load_model_config("favorita_store_n1d_rf")
+        assert explain_enabled(rf_config) is True
+        assert explain_top_k_features(rf_config) == 20
+
+        arima_config = load_model_config("favorita_store_n1d_arima")
+        assert explain_enabled(arima_config) is False
+        assert explain_top_k_features(arima_config) == 20
+
+    def test_validate_predict_step_with_explain_requires_supported_model_type(self):
+        arima_config = dict(load_model_config("favorita_store_n1d_arima"))
+        arima_config["explain"] = {"enabled": True}
+        arima_config["outputs"] = {**arima_config["outputs"], "explain_table": "p.d.t"}
+        with pytest.raises(ValueError, match="explain.enabled requires model_type"):
+            validate_config_for_step(arima_config, step="predict")
+
+    def test_validate_predict_step_with_explain_requires_explain_table(self):
+        xgboost_config = dict(load_model_config("favorita_store_n1d_xgboost"))
+        xgboost_config["outputs"] = {
+            key: value for key, value in xgboost_config["outputs"].items() if key != "explain_table"
+        }
+        with pytest.raises(ValueError, match="outputs.explain_table required"):
+            validate_config_for_step(xgboost_config, step="predict")

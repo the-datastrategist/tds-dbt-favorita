@@ -7,8 +7,6 @@ models:
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns: ['date']
-      - dbt_utils.expression_is_true:
-          expression: "feature_as_of_date = date_sub(date, interval 1 day)"
     columns:
       - name: date
         description: Date of the sales label.
@@ -17,25 +15,174 @@ models:
           - relationships:
               to: ref('stg_favorita_date_spine')
               field: date
-      - name: feature_as_of_date
-        description: Date that feature windows are calculated as of.
-        data_tests:
-          - not_null
       - name: sales_company_l1d
-        description: Label column representing daily company sales.
+        description: >
+          Label column representing daily company sales. Null on test-period rows without
+          labels; negative values represent returns and are valid.
         data_tests:
-          - not_null
-          - dbt_utils.accepted_range:
-              min_value: 0
-
+          - not_null:
+              config:
+                where: "data_split_source = 'train'"
+      - name: data_split_source
+        description: "Indicates whether the row aggregates training-period data (`train`, with a populated label) or test-period data (`test`, label withheld); taken from the underlying store-product rows."
+      - name: day_of_month
+        description: "Day of the month for `date` (1-31)."
+      - name: day_of_week
+        description: "Day of week for `date` (1 = Sunday, 7 = Saturday)."
+      - name: iso_week_of_year
+        description: "ISO 8601 week number of the year for `date`."
+      - name: month
+        description: "Month number for `date` (1-12)."
+      - name: quarter
+        description: "Calendar quarter for `date` (1-4)."
+      - name: year
+        description: "Calendar year for `date`."
+      - name: week_of_month
+        description: "Week of the month for `date`, computed as ceil(day_of_month / 7)."
+      - name: iso_year
+        description: "ISO 8601 year for `date`; can differ from calendar `year` near year boundaries."
+      - name: iso_week
+        description: "ISO 8601 week number for `date`."
+      - name: day_name
+        description: "Full weekday name for `date` (e.g. Monday)."
+      - name: month_name
+        description: "Full month name for `date` (e.g. January)."
+      - name: sales_company_n1d_same_dow
+        description: "Company-wide sales exactly 7 days after `date` (same day of week, the following week); used to sanity-check/label same-day-of-week comparisons."
+      - name: sales_company_n1d
+        description: "Sum of company-wide sales over the 1 day(s) after `date` (day 1 through day 1 following); a forward-looking window, distinct from the training label."
+      - name: sales_company_n7d
+        description: "Sum of company-wide sales over the 7 day(s) after `date` (day 1 through day 7 following); a forward-looking window, distinct from the training label."
+      - name: sales_company_n14d
+        description: "Sum of company-wide sales over the 14 day(s) after `date` (day 1 through day 14 following); a forward-looking window, distinct from the training label."
+      - name: sales_company_n28d
+        description: "Sum of company-wide sales over the 28 day(s) after `date` (day 1 through day 28 following); a forward-looking window, distinct from the training label."
+      - name: sales_company_n30d
+        description: "Sum of company-wide sales over the 30 day(s) after `date` (day 1 through day 30 following); a forward-looking window, distinct from the training label."
+      - name: sales_company_n60d
+        description: "Sum of company-wide sales over the 60 day(s) after `date` (day 1 through day 60 following); a forward-looking window, distinct from the training label."
+      - name: sales_company_n90d
+        description: "Sum of company-wide sales over the 90 day(s) after `date` (day 1 through day 90 following); a forward-looking window, distinct from the training label."
+      - name: sales_company_l3d
+        description: "Sum of company-wide sales over the trailing 3 days (2 day(s) before through `date`, inclusive)."
+      - name: sales_company_l7d
+        description: "Sum of company-wide sales over the trailing 7 days (6 day(s) before through `date`, inclusive)."
+      - name: sales_company_l14d
+        description: "Sum of company-wide sales over the trailing 14 days (13 day(s) before through `date`, inclusive)."
+      - name: sales_company_l28d
+        description: "Sum of company-wide sales over the trailing 28 days (27 day(s) before through `date`, inclusive)."
+      - name: sales_company_l30d
+        description: "Sum of company-wide sales over the trailing 30 days (29 day(s) before through `date`, inclusive)."
+      - name: sales_company_l60d
+        description: "Sum of company-wide sales over the trailing 60 days (59 day(s) before through `date`, inclusive)."
+      - name: sales_company_l90d
+        description: "Sum of company-wide sales over the trailing 90 days (89 day(s) before through `date`, inclusive)."
+      - name: avg_sales_company_l3d
+        description: "Rolling average daily company-wide sales over the trailing 3 days (2 day(s) before through `date`, inclusive)."
+      - name: avg_sales_company_l7d
+        description: "Rolling average daily company-wide sales over the trailing 7 days (6 day(s) before through `date`, inclusive)."
+      - name: avg_sales_company_l14d
+        description: "Rolling average daily company-wide sales over the trailing 14 days (13 day(s) before through `date`, inclusive)."
+      - name: avg_sales_company_l28d
+        description: "Rolling average daily company-wide sales over the trailing 28 days (27 day(s) before through `date`, inclusive)."
+      - name: avg_sales_company_l30d
+        description: "Rolling average daily company-wide sales over the trailing 30 days (29 day(s) before through `date`, inclusive)."
+      - name: avg_sales_company_l60d
+        description: "Rolling average daily company-wide sales over the trailing 60 days (59 day(s) before through `date`, inclusive)."
+      - name: avg_sales_company_l90d
+        description: "Rolling average daily company-wide sales over the trailing 90 days (89 day(s) before through `date`, inclusive)."
+      - name: avg_sales_company_l180d
+        description: "Rolling average daily company-wide sales over the trailing 180 days (179 day(s) before through `date`, inclusive)."
+      - name: avg_sales_company_l270d
+        description: "Rolling average daily company-wide sales over the trailing 270 days (269 day(s) before through `date`, inclusive)."
+      - name: avg_sales_company_l360d
+        description: "Rolling average daily company-wide sales over the trailing 360 days (359 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_company_l3d
+        description: "Rolling standard deviation of daily company-wide sales over the trailing 3 days (2 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_company_l7d
+        description: "Rolling standard deviation of daily company-wide sales over the trailing 7 days (6 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_company_l14d
+        description: "Rolling standard deviation of daily company-wide sales over the trailing 14 days (13 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_company_l28d
+        description: "Rolling standard deviation of daily company-wide sales over the trailing 28 days (27 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_company_l30d
+        description: "Rolling standard deviation of daily company-wide sales over the trailing 30 days (29 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_company_l60d
+        description: "Rolling standard deviation of daily company-wide sales over the trailing 60 days (59 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_company_l90d
+        description: "Rolling standard deviation of daily company-wide sales over the trailing 90 days (89 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_company_l180d
+        description: "Rolling standard deviation of daily company-wide sales over the trailing 180 days (179 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_company_l270d
+        description: "Rolling standard deviation of daily company-wide sales over the trailing 270 days (269 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_company_l360d
+        description: "Rolling standard deviation of daily company-wide sales over the trailing 360 days (359 day(s) before through `date`, inclusive)."
+      - name: sales_company_p1d
+        description: "Sum of company-wide sales over the 1-day period immediately preceding the trailing 1-day window (`sales_company_l1d`); the comparison baseline for `sales_company_l1d_p1d_pct_diff`."
+      - name: sales_company_p3d
+        description: "Sum of company-wide sales over the 3-day period immediately preceding the trailing 3-day window (`sales_company_l3d`); the comparison baseline for `sales_company_l3d_p3d_pct_diff`."
+      - name: sales_company_p7d
+        description: "Sum of company-wide sales over the 7-day period immediately preceding the trailing 7-day window (`sales_company_l7d`); the comparison baseline for `sales_company_l7d_p7d_pct_diff`."
+      - name: sales_company_p14d
+        description: "Sum of company-wide sales over the 14-day period immediately preceding the trailing 14-day window (`sales_company_l14d`); the comparison baseline for `sales_company_l14d_p14d_pct_diff`."
+      - name: sales_company_p28d
+        description: "Sum of company-wide sales over the 28-day period immediately preceding the trailing 28-day window (`sales_company_l28d`); the comparison baseline for `sales_company_l28d_p28d_pct_diff`."
+      - name: sales_company_p30d
+        description: "Sum of company-wide sales over the 30-day period immediately preceding the trailing 30-day window (`sales_company_l30d`); the comparison baseline for `sales_company_l30d_p30d_pct_diff`."
+      - name: sales_company_p60d
+        description: "Sum of company-wide sales over the 60-day period immediately preceding the trailing 60-day window (`sales_company_l60d`); the comparison baseline for `sales_company_l60d_p60d_pct_diff`."
+      - name: sales_company_p90d
+        description: "Sum of company-wide sales over the 90-day period immediately preceding the trailing 90-day window (`sales_company_l90d`); the comparison baseline for `sales_company_l90d_p90d_pct_diff`."
+      - name: avg_sales_company_l1d_l3d_pct_diff
+        description: "Percentage difference between `sales_company_l1d` and the trailing 3-day average (`avg_sales_company_l3d`); (numerator / denominator) - 1."
+      - name: avg_sales_company_l1d_l7d_pct_diff
+        description: "Percentage difference between `sales_company_l1d` and the trailing 7-day average (`avg_sales_company_l7d`); (numerator / denominator) - 1."
+      - name: avg_sales_company_l1d_l14d_pct_diff
+        description: "Percentage difference between `sales_company_l1d` and the trailing 14-day average (`avg_sales_company_l14d`); (numerator / denominator) - 1."
+      - name: avg_sales_company_l1d_l28d_pct_diff
+        description: "Percentage difference between `sales_company_l1d` and the trailing 28-day average (`avg_sales_company_l28d`); (numerator / denominator) - 1."
+      - name: avg_sales_company_l3d_l7d_pct_diff
+        description: "Percentage difference between the trailing 3-day average (`avg_sales_company_l3d`) and the trailing 7-day average (`avg_sales_company_l7d`); (numerator / denominator) - 1."
+      - name: avg_sales_company_l3d_l14d_pct_diff
+        description: "Percentage difference between the trailing 3-day average (`avg_sales_company_l3d`) and the trailing 14-day average (`avg_sales_company_l14d`); (numerator / denominator) - 1."
+      - name: avg_sales_company_l3d_l28d_pct_diff
+        description: "Percentage difference between the trailing 3-day average (`avg_sales_company_l3d`) and the trailing 28-day average (`avg_sales_company_l28d`); (numerator / denominator) - 1."
+      - name: avg_sales_company_l7d_l14d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_company_l7d`) and the trailing 14-day average (`avg_sales_company_l14d`); (numerator / denominator) - 1."
+      - name: avg_sales_company_l7d_l28d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_company_l7d`) and the trailing 28-day average (`avg_sales_company_l28d`); (numerator / denominator) - 1."
+      - name: avg_sales_company_l7d_l30d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_company_l7d`) and the trailing 30-day average (`avg_sales_company_l30d`); (numerator / denominator) - 1."
+      - name: avg_sales_company_l7d_l60d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_company_l7d`) and the trailing 60-day average (`avg_sales_company_l60d`); (numerator / denominator) - 1."
+      - name: avg_sales_company_l7d_l90d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_company_l7d`) and the trailing 90-day average (`avg_sales_company_l90d`); (numerator / denominator) - 1."
+      - name: avg_sales_company_l7d_l180d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_company_l7d`) and the trailing 180-day average (`avg_sales_company_l180d`); (numerator / denominator) - 1."
+      - name: avg_sales_company_l7d_l360d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_company_l7d`) and the trailing 360-day average (`avg_sales_company_l360d`); (numerator / denominator) - 1."
+      - name: sales_company_l1d_p1d_pct_diff
+        description: "Period-over-period percentage change between the trailing 1-day sum (`sales_company_l1d`) and the immediately preceding 1-day period (`sales_company_p1d`); (l1d / p1d) - 1."
+      - name: sales_company_l3d_p3d_pct_diff
+        description: "Period-over-period percentage change between the trailing 3-day sum (`sales_company_l3d`) and the immediately preceding 3-day period (`sales_company_p3d`); (l3d / p3d) - 1."
+      - name: sales_company_l7d_p7d_pct_diff
+        description: "Period-over-period percentage change between the trailing 7-day sum (`sales_company_l7d`) and the immediately preceding 7-day period (`sales_company_p7d`); (l7d / p7d) - 1."
+      - name: sales_company_l14d_p14d_pct_diff
+        description: "Period-over-period percentage change between the trailing 14-day sum (`sales_company_l14d`) and the immediately preceding 14-day period (`sales_company_p14d`); (l14d / p14d) - 1."
+      - name: sales_company_l28d_p28d_pct_diff
+        description: "Period-over-period percentage change between the trailing 28-day sum (`sales_company_l28d`) and the immediately preceding 28-day period (`sales_company_p28d`); (l28d / p28d) - 1."
+      - name: sales_company_l30d_p30d_pct_diff
+        description: "Period-over-period percentage change between the trailing 30-day sum (`sales_company_l30d`) and the immediately preceding 30-day period (`sales_company_p30d`); (l30d / p30d) - 1."
+      - name: sales_company_l60d_p60d_pct_diff
+        description: "Period-over-period percentage change between the trailing 60-day sum (`sales_company_l60d`) and the immediately preceding 60-day period (`sales_company_p60d`); (l60d / p60d) - 1."
+      - name: sales_company_l90d_p90d_pct_diff
+        description: "Period-over-period percentage change between the trailing 90-day sum (`sales_company_l90d`) and the immediately preceding 90-day period (`sales_company_p90d`); (l90d / p90d) - 1."
   - name: int_sales_store_daily
     description: >
       Store-level daily training features and labels for forecasting models.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns: ['date', 'store_nbr']
-      - dbt_utils.expression_is_true:
-          expression: "feature_as_of_date = date_sub(date, interval 1 day)"
     columns:
       - name: date
         description: Date of the sales label.
@@ -51,25 +198,306 @@ models:
           - relationships:
               to: ref('stg_favorita_stores')
               field: store_nbr
-      - name: feature_as_of_date
-        description: Date that feature windows are calculated as of.
-        data_tests:
-          - not_null
       - name: sales_store_l1d
-        description: Label column representing daily store sales.
+        description: >
+          Label column representing daily store sales. Null on test-period rows without
+          labels; negative values represent returns and are valid.
         data_tests:
-          - not_null
-          - dbt_utils.accepted_range:
-              min_value: 0
-
+          - not_null:
+              config:
+                where: "data_split_source = 'train'"
+      - name: data_split_source
+        description: "Indicates whether the row aggregates training-period data (`train`, with a populated label) or test-period data (`test`, label withheld); taken from the underlying store-product rows."
+      - name: day_of_month
+        description: "Day of the month for `date` (1-31)."
+      - name: day_of_week
+        description: "Day of week for `date` (1 = Sunday, 7 = Saturday)."
+      - name: iso_week_of_year
+        description: "ISO 8601 week number of the year for `date`."
+      - name: month
+        description: "Month number for `date` (1-12)."
+      - name: quarter
+        description: "Calendar quarter for `date` (1-4)."
+      - name: year
+        description: "Calendar year for `date`."
+      - name: week_of_month
+        description: "Week of the month for `date`, computed as ceil(day_of_month / 7)."
+      - name: iso_year
+        description: "ISO 8601 year for `date`; can differ from calendar `year` near year boundaries."
+      - name: iso_week
+        description: "ISO 8601 week number for `date`."
+      - name: day_name
+        description: "Full weekday name for `date` (e.g. Monday)."
+      - name: month_name
+        description: "Full month name for `date` (e.g. January)."
+      - name: sales_store
+        description: "Total store sales on `date` (base metric before windowing)."
+      - name: products_store
+        description: "Count of distinct products sold at the store on `date`."
+      - name: product_families_store
+        description: "Count of distinct product families sold at the store on `date`."
+      - name: sales_store_on_promotion
+        description: "Store sales on `date` for items that were on promotion."
+      - name: products_store_on_promotion
+        description: "Count of distinct products on promotion at the store on `date`."
+      - name: product_families_store_on_promotion
+        description: "Count of distinct product families on promotion at the store on `date`."
+      - name: pct_sales_store_on_promotion
+        description: "Share of store sales on `date` made on promotion (`sales_store_on_promotion` / `sales_store`)."
+      - name: pct_products_store_on_promotion
+        description: "Share of distinct products at the store on `date` that were on promotion."
+      - name: pct_product_families_store_on_promotion
+        description: "Share of distinct product families at the store on `date` that were on promotion."
+      - name: sales_store_n1d_same_dow
+        description: "Store-level sales exactly 7 days after `date` (same day of week, the following week); used to sanity-check/label same-day-of-week comparisons."
+      - name: sales_store_n1d
+        description: "Sum of store-level sales over the 1 day(s) after `date` (day 1 through day 1 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_n7d
+        description: "Sum of store-level sales over the 7 day(s) after `date` (day 1 through day 7 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_n14d
+        description: "Sum of store-level sales over the 14 day(s) after `date` (day 1 through day 14 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_n28d
+        description: "Sum of store-level sales over the 28 day(s) after `date` (day 1 through day 28 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_n30d
+        description: "Sum of store-level sales over the 30 day(s) after `date` (day 1 through day 30 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_n60d
+        description: "Sum of store-level sales over the 60 day(s) after `date` (day 1 through day 60 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_n90d
+        description: "Sum of store-level sales over the 90 day(s) after `date` (day 1 through day 90 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_l3d
+        description: "Sum of store-level sales over the trailing 3 days (2 day(s) before through `date`, inclusive)."
+      - name: sales_store_l7d
+        description: "Sum of store-level sales over the trailing 7 days (6 day(s) before through `date`, inclusive)."
+      - name: sales_store_l14d
+        description: "Sum of store-level sales over the trailing 14 days (13 day(s) before through `date`, inclusive)."
+      - name: sales_store_l28d
+        description: "Sum of store-level sales over the trailing 28 days (27 day(s) before through `date`, inclusive)."
+      - name: sales_store_l30d
+        description: "Sum of store-level sales over the trailing 30 days (29 day(s) before through `date`, inclusive)."
+      - name: sales_store_l60d
+        description: "Sum of store-level sales over the trailing 60 days (59 day(s) before through `date`, inclusive)."
+      - name: sales_store_l90d
+        description: "Sum of store-level sales over the trailing 90 days (89 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_l3d
+        description: "Rolling average daily store-level sales over the trailing 3 days (2 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_l7d
+        description: "Rolling average daily store-level sales over the trailing 7 days (6 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_l14d
+        description: "Rolling average daily store-level sales over the trailing 14 days (13 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_l28d
+        description: "Rolling average daily store-level sales over the trailing 28 days (27 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_l30d
+        description: "Rolling average daily store-level sales over the trailing 30 days (29 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_l60d
+        description: "Rolling average daily store-level sales over the trailing 60 days (59 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_l90d
+        description: "Rolling average daily store-level sales over the trailing 90 days (89 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_l180d
+        description: "Rolling average daily store-level sales over the trailing 180 days (179 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_l270d
+        description: "Rolling average daily store-level sales over the trailing 270 days (269 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_l360d
+        description: "Rolling average daily store-level sales over the trailing 360 days (359 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_l3d
+        description: "Rolling standard deviation of daily store-level sales over the trailing 3 days (2 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_l7d
+        description: "Rolling standard deviation of daily store-level sales over the trailing 7 days (6 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_l14d
+        description: "Rolling standard deviation of daily store-level sales over the trailing 14 days (13 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_l28d
+        description: "Rolling standard deviation of daily store-level sales over the trailing 28 days (27 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_l30d
+        description: "Rolling standard deviation of daily store-level sales over the trailing 30 days (29 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_l60d
+        description: "Rolling standard deviation of daily store-level sales over the trailing 60 days (59 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_l90d
+        description: "Rolling standard deviation of daily store-level sales over the trailing 90 days (89 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_l180d
+        description: "Rolling standard deviation of daily store-level sales over the trailing 180 days (179 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_l270d
+        description: "Rolling standard deviation of daily store-level sales over the trailing 270 days (269 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_l360d
+        description: "Rolling standard deviation of daily store-level sales over the trailing 360 days (359 day(s) before through `date`, inclusive)."
+      - name: sales_store_p1d
+        description: "Sum of store-level sales over the 1-day period immediately preceding the trailing 1-day window (`sales_store_l1d`); the comparison baseline for `sales_store_l1d_p1d_pct_diff`."
+      - name: sales_store_p3d
+        description: "Sum of store-level sales over the 3-day period immediately preceding the trailing 3-day window (`sales_store_l3d`); the comparison baseline for `sales_store_l3d_p3d_pct_diff`."
+      - name: sales_store_p7d
+        description: "Sum of store-level sales over the 7-day period immediately preceding the trailing 7-day window (`sales_store_l7d`); the comparison baseline for `sales_store_l7d_p7d_pct_diff`."
+      - name: sales_store_p14d
+        description: "Sum of store-level sales over the 14-day period immediately preceding the trailing 14-day window (`sales_store_l14d`); the comparison baseline for `sales_store_l14d_p14d_pct_diff`."
+      - name: sales_store_p28d
+        description: "Sum of store-level sales over the 28-day period immediately preceding the trailing 28-day window (`sales_store_l28d`); the comparison baseline for `sales_store_l28d_p28d_pct_diff`."
+      - name: sales_store_p30d
+        description: "Sum of store-level sales over the 30-day period immediately preceding the trailing 30-day window (`sales_store_l30d`); the comparison baseline for `sales_store_l30d_p30d_pct_diff`."
+      - name: sales_store_p60d
+        description: "Sum of store-level sales over the 60-day period immediately preceding the trailing 60-day window (`sales_store_l60d`); the comparison baseline for `sales_store_l60d_p60d_pct_diff`."
+      - name: sales_store_p90d
+        description: "Sum of store-level sales over the 90-day period immediately preceding the trailing 90-day window (`sales_store_l90d`); the comparison baseline for `sales_store_l90d_p90d_pct_diff`."
+      - name: avg_pct_sales_store_on_promotion_l3d
+        description: "Rolling 3-day average of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: avg_pct_sales_store_on_promotion_l7d
+        description: "Rolling 7-day average of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: avg_pct_sales_store_on_promotion_l14d
+        description: "Rolling 14-day average of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: avg_pct_sales_store_on_promotion_l28d
+        description: "Rolling 28-day average of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: avg_pct_sales_store_on_promotion_l30d
+        description: "Rolling 30-day average of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: avg_pct_sales_store_on_promotion_l60d
+        description: "Rolling 60-day average of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: avg_pct_sales_store_on_promotion_l90d
+        description: "Rolling 90-day average of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: avg_pct_sales_store_on_promotion_l180d
+        description: "Rolling 180-day average of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: avg_pct_sales_store_on_promotion_l270d
+        description: "Rolling 270-day average of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: avg_pct_sales_store_on_promotion_l360d
+        description: "Rolling 360-day average of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: stddev_pct_sales_store_on_promotion_l3d
+        description: "Rolling 3-day standard deviation of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: stddev_pct_sales_store_on_promotion_l7d
+        description: "Rolling 7-day standard deviation of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: stddev_pct_sales_store_on_promotion_l14d
+        description: "Rolling 14-day standard deviation of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: stddev_pct_sales_store_on_promotion_l28d
+        description: "Rolling 28-day standard deviation of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: stddev_pct_sales_store_on_promotion_l30d
+        description: "Rolling 30-day standard deviation of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: stddev_pct_sales_store_on_promotion_l60d
+        description: "Rolling 60-day standard deviation of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: stddev_pct_sales_store_on_promotion_l90d
+        description: "Rolling 90-day standard deviation of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: stddev_pct_sales_store_on_promotion_l180d
+        description: "Rolling 180-day standard deviation of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: stddev_pct_sales_store_on_promotion_l270d
+        description: "Rolling 270-day standard deviation of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: stddev_pct_sales_store_on_promotion_l360d
+        description: "Rolling 360-day standard deviation of `pct_sales_store_on_promotion` (the daily share of the store sales made on promotion)."
+      - name: avg_pct_products_store_on_promotion_l3d
+        description: "Rolling 3-day average of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: avg_pct_products_store_on_promotion_l7d
+        description: "Rolling 7-day average of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: avg_pct_products_store_on_promotion_l14d
+        description: "Rolling 14-day average of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: avg_pct_products_store_on_promotion_l28d
+        description: "Rolling 28-day average of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: avg_pct_products_store_on_promotion_l30d
+        description: "Rolling 30-day average of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: avg_pct_products_store_on_promotion_l60d
+        description: "Rolling 60-day average of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: avg_pct_products_store_on_promotion_l90d
+        description: "Rolling 90-day average of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: avg_pct_products_store_on_promotion_l180d
+        description: "Rolling 180-day average of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: avg_pct_products_store_on_promotion_l270d
+        description: "Rolling 270-day average of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: avg_pct_products_store_on_promotion_l360d
+        description: "Rolling 360-day average of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: stddev_pct_products_store_on_promotion_l3d
+        description: "Rolling 3-day standard deviation of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: stddev_pct_products_store_on_promotion_l7d
+        description: "Rolling 7-day standard deviation of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: stddev_pct_products_store_on_promotion_l14d
+        description: "Rolling 14-day standard deviation of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: stddev_pct_products_store_on_promotion_l28d
+        description: "Rolling 28-day standard deviation of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: stddev_pct_products_store_on_promotion_l30d
+        description: "Rolling 30-day standard deviation of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: stddev_pct_products_store_on_promotion_l60d
+        description: "Rolling 60-day standard deviation of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: stddev_pct_products_store_on_promotion_l90d
+        description: "Rolling 90-day standard deviation of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: stddev_pct_products_store_on_promotion_l180d
+        description: "Rolling 180-day standard deviation of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: stddev_pct_products_store_on_promotion_l270d
+        description: "Rolling 270-day standard deviation of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: stddev_pct_products_store_on_promotion_l360d
+        description: "Rolling 360-day standard deviation of `pct_products_store_on_promotion` (the daily share of distinct products at the store on promotion)."
+      - name: avg_sales_store_dow_l14d
+        description: "Rolling average store sales for the same day of week as `date`, looking back 14 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_dow_l28d
+        description: "Rolling average store sales for the same day of week as `date`, looking back 28 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_dow_l60d
+        description: "Rolling average store sales for the same day of week as `date`, looking back 60 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_dow_l90d
+        description: "Rolling average store sales for the same day of week as `date`, looking back 90 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_dow_l180d
+        description: "Rolling average store sales for the same day of week as `date`, looking back 180 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_dow_l270d
+        description: "Rolling average store sales for the same day of week as `date`, looking back 270 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_dow_l360d
+        description: "Rolling average store sales for the same day of week as `date`, looking back 360 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_l1d_l3d_pct_diff
+        description: "Percentage difference between `sales_store_l1d` and the trailing 3-day average (`avg_sales_store_l3d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_l1d_l7d_pct_diff
+        description: "Percentage difference between `sales_store_l1d` and the trailing 7-day average (`avg_sales_store_l7d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_l1d_l14d_pct_diff
+        description: "Percentage difference between `sales_store_l1d` and the trailing 14-day average (`avg_sales_store_l14d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_l1d_l28d_pct_diff
+        description: "Percentage difference between `sales_store_l1d` and the trailing 28-day average (`avg_sales_store_l28d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_l3d_l7d_pct_diff
+        description: "Percentage difference between the trailing 3-day average (`avg_sales_store_l3d`) and the trailing 7-day average (`avg_sales_store_l7d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_l3d_l14d_pct_diff
+        description: "Percentage difference between the trailing 3-day average (`avg_sales_store_l3d`) and the trailing 14-day average (`avg_sales_store_l14d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_l3d_l28d_pct_diff
+        description: "Percentage difference between the trailing 3-day average (`avg_sales_store_l3d`) and the trailing 28-day average (`avg_sales_store_l28d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_l7d_l14d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_l7d`) and the trailing 14-day average (`avg_sales_store_l14d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_l7d_l28d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_l7d`) and the trailing 28-day average (`avg_sales_store_l28d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_l7d_l30d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_l7d`) and the trailing 30-day average (`avg_sales_store_l30d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_l7d_l60d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_l7d`) and the trailing 60-day average (`avg_sales_store_l60d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_l7d_l90d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_l7d`) and the trailing 90-day average (`avg_sales_store_l90d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_l7d_l180d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_l7d`) and the trailing 180-day average (`avg_sales_store_l180d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_l7d_l360d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_l7d`) and the trailing 360-day average (`avg_sales_store_l360d`); (numerator / denominator) - 1."
+      - name: sales_store_l1d_p1d_pct_diff
+        description: "Period-over-period percentage change between the trailing 1-day sum (`sales_store_l1d`) and the immediately preceding 1-day period (`sales_store_p1d`); (l1d / p1d) - 1."
+      - name: sales_store_l3d_p3d_pct_diff
+        description: "Period-over-period percentage change between the trailing 3-day sum (`sales_store_l3d`) and the immediately preceding 3-day period (`sales_store_p3d`); (l3d / p3d) - 1."
+      - name: sales_store_l7d_p7d_pct_diff
+        description: "Period-over-period percentage change between the trailing 7-day sum (`sales_store_l7d`) and the immediately preceding 7-day period (`sales_store_p7d`); (l7d / p7d) - 1."
+      - name: sales_store_l14d_p14d_pct_diff
+        description: "Period-over-period percentage change between the trailing 14-day sum (`sales_store_l14d`) and the immediately preceding 14-day period (`sales_store_p14d`); (l14d / p14d) - 1."
+      - name: sales_store_l28d_p28d_pct_diff
+        description: "Period-over-period percentage change between the trailing 28-day sum (`sales_store_l28d`) and the immediately preceding 28-day period (`sales_store_p28d`); (l28d / p28d) - 1."
+      - name: sales_store_l30d_p30d_pct_diff
+        description: "Period-over-period percentage change between the trailing 30-day sum (`sales_store_l30d`) and the immediately preceding 30-day period (`sales_store_p30d`); (l30d / p30d) - 1."
+      - name: sales_store_l60d_p60d_pct_diff
+        description: "Period-over-period percentage change between the trailing 60-day sum (`sales_store_l60d`) and the immediately preceding 60-day period (`sales_store_p60d`); (l60d / p60d) - 1."
+      - name: sales_store_l90d_p90d_pct_diff
+        description: "Period-over-period percentage change between the trailing 90-day sum (`sales_store_l90d`) and the immediately preceding 90-day period (`sales_store_p90d`); (l90d / p90d) - 1."
+      - name: avg_sales_store_dow_l14d_pct_diff
+        description: "Ratio of the same-day-of-week rolling 14-day average (`avg_sales_store_dow_l14d`) to the overall trailing 14-day average (`avg_sales_store_l14d`); indicates whether this day of week over/under-sells relative to the recent baseline."
+      - name: avg_sales_store_dow_l28d_pct_diff
+        description: "Ratio of the same-day-of-week rolling 28-day average (`avg_sales_store_dow_l28d`) to the overall trailing 28-day average (`avg_sales_store_l28d`); indicates whether this day of week over/under-sells relative to the recent baseline."
+      - name: avg_sales_store_dow_l60d_pct_diff
+        description: "Ratio of the same-day-of-week rolling 60-day average (`avg_sales_store_dow_l60d`) to the overall trailing 60-day average (`avg_sales_store_l60d`); indicates whether this day of week over/under-sells relative to the recent baseline."
+      - name: avg_sales_store_dow_l90d_pct_diff
+        description: "Ratio of the same-day-of-week rolling 90-day average (`avg_sales_store_dow_l90d`) to the overall trailing 90-day average (`avg_sales_store_l90d`); indicates whether this day of week over/under-sells relative to the recent baseline."
+      - name: avg_sales_store_dow_l14d_l28d_diff
+        description: "Ratio of the 14-day same-day-of-week average (`avg_sales_store_dow_l14d`) to the 28-day same-day-of-week average (`avg_sales_store_dow_l28d`); indicates whether the day-of-week pattern is trending up or down."
+      - name: avg_sales_store_dow_l14d_l60d_diff
+        description: "Ratio of the 14-day same-day-of-week average (`avg_sales_store_dow_l14d`) to the 60-day same-day-of-week average (`avg_sales_store_dow_l60d`); indicates whether the day-of-week pattern is trending up or down."
+      - name: avg_sales_store_dow_l14d_l90d_diff
+        description: "Ratio of the 14-day same-day-of-week average (`avg_sales_store_dow_l14d`) to the 90-day same-day-of-week average (`avg_sales_store_dow_l90d`); indicates whether the day-of-week pattern is trending up or down."
+      - name: avg_sales_store_dow_l28d_l60d_diff
+        description: "Ratio of the 28-day same-day-of-week average (`avg_sales_store_dow_l28d`) to the 60-day same-day-of-week average (`avg_sales_store_dow_l60d`); indicates whether the day-of-week pattern is trending up or down."
+      - name: avg_sales_store_dow_l28d_l90d_diff
+        description: "Ratio of the 28-day same-day-of-week average (`avg_sales_store_dow_l28d`) to the 90-day same-day-of-week average (`avg_sales_store_dow_l90d`); indicates whether the day-of-week pattern is trending up or down."
+      - name: avg_sales_store_dow_l60d_l90d_diff
+        description: "Ratio of the 60-day same-day-of-week average (`avg_sales_store_dow_l60d`) to the 90-day same-day-of-week average (`avg_sales_store_dow_l90d`); indicates whether the day-of-week pattern is trending up or down."
   - name: int_sales_store_product_daily
     description: >
       Store-product daily training features and labels for forecasting models.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns: ['date', 'store_nbr', 'product_id']
-      - dbt_utils.expression_is_true:
-          expression: "feature_as_of_date = date_sub(date, interval 1 day)"
     columns:
       - name: date
         description: Date of the sales label.
@@ -92,25 +520,254 @@ models:
           - relationships:
               to: source('favorita_raw', 'raw_favorita_items')
               field: item_nbr
-      - name: feature_as_of_date
-        description: Date that feature windows are calculated as of.
-        data_tests:
-          - not_null
       - name: sales_store_product_l1d
-        description: Label column representing daily store-product sales.
+        description: >
+          Label column representing daily store-product sales. Null on test-period rows
+          without labels; negative values represent returns and are valid.
         data_tests:
-          - not_null
-          - dbt_utils.accepted_range:
-              min_value: 0
-
+          - not_null:
+              config:
+                where: "data_split_source = 'train'"
+      - name: data_split_source
+        description: "Indicates whether the row aggregates training-period data (`train`, with a populated label) or test-period data (`test`, label withheld); taken from the underlying store-product rows."
+      - name: day_of_month
+        description: "Day of the month for `date` (1-31)."
+      - name: day_of_week
+        description: "Day of week for `date` (1 = Sunday, 7 = Saturday)."
+      - name: iso_week_of_year
+        description: "ISO 8601 week number of the year for `date`."
+      - name: month
+        description: "Month number for `date` (1-12)."
+      - name: quarter
+        description: "Calendar quarter for `date` (1-4)."
+      - name: year
+        description: "Calendar year for `date`."
+      - name: week_of_month
+        description: "Week of the month for `date`, computed as ceil(day_of_month / 7)."
+      - name: iso_year
+        description: "ISO 8601 year for `date`; can differ from calendar `year` near year boundaries."
+      - name: iso_week
+        description: "ISO 8601 week number for `date`."
+      - name: day_name
+        description: "Full weekday name for `date` (e.g. Monday)."
+      - name: month_name
+        description: "Full month name for `date` (e.g. January)."
+      - name: sales_store_product
+        description: "Total sales for the store-product on `date` (base metric before windowing)."
+      - name: sales_store_product_on_promotion
+        description: "Store-product sales on `date` when the item was on promotion."
+      - name: pct_sales_store_product_on_promotion
+        description: "Share of store-product sales on `date` made on promotion (`sales_store_product_on_promotion` / `sales_store_product`)."
+      - name: sales_store_product_n1d_same_dow
+        description: "Store-product sales exactly 7 days after `date` (same day of week, the following week); used to sanity-check/label same-day-of-week comparisons."
+      - name: sales_store_product_n1d
+        description: "Sum of store-product sales over the 1 day(s) after `date` (day 1 through day 1 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_product_n7d
+        description: "Sum of store-product sales over the 7 day(s) after `date` (day 1 through day 7 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_product_n14d
+        description: "Sum of store-product sales over the 14 day(s) after `date` (day 1 through day 14 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_product_n28d
+        description: "Sum of store-product sales over the 28 day(s) after `date` (day 1 through day 28 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_product_n30d
+        description: "Sum of store-product sales over the 30 day(s) after `date` (day 1 through day 30 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_product_n60d
+        description: "Sum of store-product sales over the 60 day(s) after `date` (day 1 through day 60 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_product_n90d
+        description: "Sum of store-product sales over the 90 day(s) after `date` (day 1 through day 90 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_product_l3d
+        description: "Sum of store-product sales over the trailing 3 days (2 day(s) before through `date`, inclusive)."
+      - name: sales_store_product_l7d
+        description: "Sum of store-product sales over the trailing 7 days (6 day(s) before through `date`, inclusive)."
+      - name: sales_store_product_l14d
+        description: "Sum of store-product sales over the trailing 14 days (13 day(s) before through `date`, inclusive)."
+      - name: sales_store_product_l28d
+        description: "Sum of store-product sales over the trailing 28 days (27 day(s) before through `date`, inclusive)."
+      - name: sales_store_product_l30d
+        description: "Sum of store-product sales over the trailing 30 days (29 day(s) before through `date`, inclusive)."
+      - name: sales_store_product_l60d
+        description: "Sum of store-product sales over the trailing 60 days (59 day(s) before through `date`, inclusive)."
+      - name: sales_store_product_l90d
+        description: "Sum of store-product sales over the trailing 90 days (89 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_product_l3d
+        description: "Rolling average daily store-product sales over the trailing 3 days (2 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_product_l7d
+        description: "Rolling average daily store-product sales over the trailing 7 days (6 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_product_l14d
+        description: "Rolling average daily store-product sales over the trailing 14 days (13 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_product_l28d
+        description: "Rolling average daily store-product sales over the trailing 28 days (27 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_product_l30d
+        description: "Rolling average daily store-product sales over the trailing 30 days (29 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_product_l60d
+        description: "Rolling average daily store-product sales over the trailing 60 days (59 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_product_l90d
+        description: "Rolling average daily store-product sales over the trailing 90 days (89 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_product_l180d
+        description: "Rolling average daily store-product sales over the trailing 180 days (179 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_product_l270d
+        description: "Rolling average daily store-product sales over the trailing 270 days (269 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_product_l360d
+        description: "Rolling average daily store-product sales over the trailing 360 days (359 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_product_l3d
+        description: "Rolling standard deviation of daily store-product sales over the trailing 3 days (2 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_product_l7d
+        description: "Rolling standard deviation of daily store-product sales over the trailing 7 days (6 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_product_l14d
+        description: "Rolling standard deviation of daily store-product sales over the trailing 14 days (13 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_product_l28d
+        description: "Rolling standard deviation of daily store-product sales over the trailing 28 days (27 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_product_l30d
+        description: "Rolling standard deviation of daily store-product sales over the trailing 30 days (29 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_product_l60d
+        description: "Rolling standard deviation of daily store-product sales over the trailing 60 days (59 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_product_l90d
+        description: "Rolling standard deviation of daily store-product sales over the trailing 90 days (89 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_product_l180d
+        description: "Rolling standard deviation of daily store-product sales over the trailing 180 days (179 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_product_l270d
+        description: "Rolling standard deviation of daily store-product sales over the trailing 270 days (269 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_product_l360d
+        description: "Rolling standard deviation of daily store-product sales over the trailing 360 days (359 day(s) before through `date`, inclusive)."
+      - name: sales_store_product_p1d
+        description: "Sum of store-product sales over the 1-day period immediately preceding the trailing 1-day window (`sales_store_product_l1d`); the comparison baseline for `sales_store_product_l1d_p1d_pct_diff`."
+      - name: sales_store_product_p3d
+        description: "Sum of store-product sales over the 3-day period immediately preceding the trailing 3-day window (`sales_store_product_l3d`); the comparison baseline for `sales_store_product_l3d_p3d_pct_diff`."
+      - name: sales_store_product_p7d
+        description: "Sum of store-product sales over the 7-day period immediately preceding the trailing 7-day window (`sales_store_product_l7d`); the comparison baseline for `sales_store_product_l7d_p7d_pct_diff`."
+      - name: sales_store_product_p14d
+        description: "Sum of store-product sales over the 14-day period immediately preceding the trailing 14-day window (`sales_store_product_l14d`); the comparison baseline for `sales_store_product_l14d_p14d_pct_diff`."
+      - name: sales_store_product_p28d
+        description: "Sum of store-product sales over the 28-day period immediately preceding the trailing 28-day window (`sales_store_product_l28d`); the comparison baseline for `sales_store_product_l28d_p28d_pct_diff`."
+      - name: sales_store_product_p30d
+        description: "Sum of store-product sales over the 30-day period immediately preceding the trailing 30-day window (`sales_store_product_l30d`); the comparison baseline for `sales_store_product_l30d_p30d_pct_diff`."
+      - name: sales_store_product_p60d
+        description: "Sum of store-product sales over the 60-day period immediately preceding the trailing 60-day window (`sales_store_product_l60d`); the comparison baseline for `sales_store_product_l60d_p60d_pct_diff`."
+      - name: sales_store_product_p90d
+        description: "Sum of store-product sales over the 90-day period immediately preceding the trailing 90-day window (`sales_store_product_l90d`); the comparison baseline for `sales_store_product_l90d_p90d_pct_diff`."
+      - name: avg_pct_sales_store_product_on_promotion_l3d
+        description: "Rolling 3-day average of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: avg_pct_sales_store_product_on_promotion_l7d
+        description: "Rolling 7-day average of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: avg_pct_sales_store_product_on_promotion_l14d
+        description: "Rolling 14-day average of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: avg_pct_sales_store_product_on_promotion_l28d
+        description: "Rolling 28-day average of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: avg_pct_sales_store_product_on_promotion_l30d
+        description: "Rolling 30-day average of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: avg_pct_sales_store_product_on_promotion_l60d
+        description: "Rolling 60-day average of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: avg_pct_sales_store_product_on_promotion_l90d
+        description: "Rolling 90-day average of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: avg_pct_sales_store_product_on_promotion_l180d
+        description: "Rolling 180-day average of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: avg_pct_sales_store_product_on_promotion_l270d
+        description: "Rolling 270-day average of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: avg_pct_sales_store_product_on_promotion_l360d
+        description: "Rolling 360-day average of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: stddev_pct_sales_store_product_on_promotion_l3d
+        description: "Rolling 3-day standard deviation of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: stddev_pct_sales_store_product_on_promotion_l7d
+        description: "Rolling 7-day standard deviation of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: stddev_pct_sales_store_product_on_promotion_l14d
+        description: "Rolling 14-day standard deviation of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: stddev_pct_sales_store_product_on_promotion_l28d
+        description: "Rolling 28-day standard deviation of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: stddev_pct_sales_store_product_on_promotion_l30d
+        description: "Rolling 30-day standard deviation of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: stddev_pct_sales_store_product_on_promotion_l60d
+        description: "Rolling 60-day standard deviation of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: stddev_pct_sales_store_product_on_promotion_l90d
+        description: "Rolling 90-day standard deviation of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: stddev_pct_sales_store_product_on_promotion_l180d
+        description: "Rolling 180-day standard deviation of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: stddev_pct_sales_store_product_on_promotion_l270d
+        description: "Rolling 270-day standard deviation of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: stddev_pct_sales_store_product_on_promotion_l360d
+        description: "Rolling 360-day standard deviation of `pct_sales_store_product_on_promotion` (the daily share of the store-product sales made on promotion)."
+      - name: avg_sales_store_product_dow_l14d
+        description: "Rolling average store-product sales for the same day of week as `date`, looking back 14 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_product_dow_l28d
+        description: "Rolling average store-product sales for the same day of week as `date`, looking back 28 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_product_dow_l60d
+        description: "Rolling average store-product sales for the same day of week as `date`, looking back 60 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_product_dow_l90d
+        description: "Rolling average store-product sales for the same day of week as `date`, looking back 90 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_product_dow_l180d
+        description: "Rolling average store-product sales for the same day of week as `date`, looking back 180 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_product_dow_l270d
+        description: "Rolling average store-product sales for the same day of week as `date`, looking back 270 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_product_dow_l360d
+        description: "Rolling average store-product sales for the same day of week as `date`, looking back 360 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_product_l1d_l3d_pct_diff
+        description: "Percentage difference between `sales_store_product_l1d` and the trailing 3-day average (`avg_sales_store_product_l3d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_product_l1d_l7d_pct_diff
+        description: "Percentage difference between `sales_store_product_l1d` and the trailing 7-day average (`avg_sales_store_product_l7d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_product_l1d_l14d_pct_diff
+        description: "Percentage difference between `sales_store_product_l1d` and the trailing 14-day average (`avg_sales_store_product_l14d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_product_l1d_l28d_pct_diff
+        description: "Percentage difference between `sales_store_product_l1d` and the trailing 28-day average (`avg_sales_store_product_l28d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_product_l3d_l7d_pct_diff
+        description: "Percentage difference between the trailing 3-day average (`avg_sales_store_product_l3d`) and the trailing 7-day average (`avg_sales_store_product_l7d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_product_l3d_l14d_pct_diff
+        description: "Percentage difference between the trailing 3-day average (`avg_sales_store_product_l3d`) and the trailing 14-day average (`avg_sales_store_product_l14d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_product_l3d_l28d_pct_diff
+        description: "Percentage difference between the trailing 3-day average (`avg_sales_store_product_l3d`) and the trailing 28-day average (`avg_sales_store_product_l28d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_product_l7d_l14d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_product_l7d`) and the trailing 14-day average (`avg_sales_store_product_l14d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_product_l7d_l28d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_product_l7d`) and the trailing 28-day average (`avg_sales_store_product_l28d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_product_l7d_l30d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_product_l7d`) and the trailing 30-day average (`avg_sales_store_product_l30d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_product_l7d_l60d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_product_l7d`) and the trailing 60-day average (`avg_sales_store_product_l60d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_product_l7d_l90d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_product_l7d`) and the trailing 90-day average (`avg_sales_store_product_l90d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_product_l7d_l180d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_product_l7d`) and the trailing 180-day average (`avg_sales_store_product_l180d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_product_l7d_l360d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_product_l7d`) and the trailing 360-day average (`avg_sales_store_product_l360d`); (numerator / denominator) - 1."
+      - name: sales_store_product_l1d_p1d_pct_diff
+        description: "Period-over-period percentage change between the trailing 1-day sum (`sales_store_product_l1d`) and the immediately preceding 1-day period (`sales_store_product_p1d`); (l1d / p1d) - 1."
+      - name: sales_store_product_l3d_p3d_pct_diff
+        description: "Period-over-period percentage change between the trailing 3-day sum (`sales_store_product_l3d`) and the immediately preceding 3-day period (`sales_store_product_p3d`); (l3d / p3d) - 1."
+      - name: sales_store_product_l7d_p7d_pct_diff
+        description: "Period-over-period percentage change between the trailing 7-day sum (`sales_store_product_l7d`) and the immediately preceding 7-day period (`sales_store_product_p7d`); (l7d / p7d) - 1."
+      - name: sales_store_product_l14d_p14d_pct_diff
+        description: "Period-over-period percentage change between the trailing 14-day sum (`sales_store_product_l14d`) and the immediately preceding 14-day period (`sales_store_product_p14d`); (l14d / p14d) - 1."
+      - name: sales_store_product_l28d_p28d_pct_diff
+        description: "Period-over-period percentage change between the trailing 28-day sum (`sales_store_product_l28d`) and the immediately preceding 28-day period (`sales_store_product_p28d`); (l28d / p28d) - 1."
+      - name: sales_store_product_l30d_p30d_pct_diff
+        description: "Period-over-period percentage change between the trailing 30-day sum (`sales_store_product_l30d`) and the immediately preceding 30-day period (`sales_store_product_p30d`); (l30d / p30d) - 1."
+      - name: sales_store_product_l60d_p60d_pct_diff
+        description: "Period-over-period percentage change between the trailing 60-day sum (`sales_store_product_l60d`) and the immediately preceding 60-day period (`sales_store_product_p60d`); (l60d / p60d) - 1."
+      - name: sales_store_product_l90d_p90d_pct_diff
+        description: "Period-over-period percentage change between the trailing 90-day sum (`sales_store_product_l90d`) and the immediately preceding 90-day period (`sales_store_product_p90d`); (l90d / p90d) - 1."
+      - name: avg_sales_store_product_dow_l14d_pct_diff
+        description: "Ratio of the same-day-of-week rolling 14-day average (`avg_sales_store_product_dow_l14d`) to the overall trailing 14-day average (`avg_sales_store_product_l14d`); indicates whether this day of week over/under-sells relative to the recent baseline."
+      - name: avg_sales_store_product_dow_l28d_pct_diff
+        description: "Ratio of the same-day-of-week rolling 28-day average (`avg_sales_store_product_dow_l28d`) to the overall trailing 28-day average (`avg_sales_store_product_l28d`); indicates whether this day of week over/under-sells relative to the recent baseline."
+      - name: avg_sales_store_product_dow_l60d_pct_diff
+        description: "Ratio of the same-day-of-week rolling 60-day average (`avg_sales_store_product_dow_l60d`) to the overall trailing 60-day average (`avg_sales_store_product_l60d`); indicates whether this day of week over/under-sells relative to the recent baseline."
+      - name: avg_sales_store_product_dow_l90d_pct_diff
+        description: "Ratio of the same-day-of-week rolling 90-day average (`avg_sales_store_product_dow_l90d`) to the overall trailing 90-day average (`avg_sales_store_product_l90d`); indicates whether this day of week over/under-sells relative to the recent baseline."
+      - name: avg_sales_store_product_dow_l14d_l28d_diff
+        description: "Ratio of the 14-day same-day-of-week average (`avg_sales_store_product_dow_l14d`) to the 28-day same-day-of-week average (`avg_sales_store_product_dow_l28d`); indicates whether the day-of-week pattern is trending up or down."
+      - name: avg_sales_store_product_dow_l14d_l60d_diff
+        description: "Ratio of the 14-day same-day-of-week average (`avg_sales_store_product_dow_l14d`) to the 60-day same-day-of-week average (`avg_sales_store_product_dow_l60d`); indicates whether the day-of-week pattern is trending up or down."
+      - name: avg_sales_store_product_dow_l14d_l90d_diff
+        description: "Ratio of the 14-day same-day-of-week average (`avg_sales_store_product_dow_l14d`) to the 90-day same-day-of-week average (`avg_sales_store_product_dow_l90d`); indicates whether the day-of-week pattern is trending up or down."
+      - name: avg_sales_store_product_dow_l28d_l60d_diff
+        description: "Ratio of the 28-day same-day-of-week average (`avg_sales_store_product_dow_l28d`) to the 60-day same-day-of-week average (`avg_sales_store_product_dow_l60d`); indicates whether the day-of-week pattern is trending up or down."
+      - name: avg_sales_store_product_dow_l28d_l90d_diff
+        description: "Ratio of the 28-day same-day-of-week average (`avg_sales_store_product_dow_l28d`) to the 90-day same-day-of-week average (`avg_sales_store_product_dow_l90d`); indicates whether the day-of-week pattern is trending up or down."
+      - name: avg_sales_store_product_dow_l60d_l90d_diff
+        description: "Ratio of the 60-day same-day-of-week average (`avg_sales_store_product_dow_l60d`) to the 90-day same-day-of-week average (`avg_sales_store_product_dow_l90d`); indicates whether the day-of-week pattern is trending up or down."
   - name: int_sales_store_product_family_daily
     description: >
       Store-product-family daily training features and labels for forecasting models.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns: ['date', 'store_nbr', 'product_family']
-      - dbt_utils.expression_is_true:
-          expression: "feature_as_of_date = date_sub(date, interval 1 day)"
     columns:
       - name: date
         description: Date of the sales label.
@@ -130,13 +787,291 @@ models:
         description: Product family identifier.
         data_tests:
           - not_null
-      - name: feature_as_of_date
-        description: Date that feature windows are calculated as of.
-        data_tests:
-          - not_null
       - name: sales_store_family_l1d
-        description: Label column representing daily store-product-family sales.
+        description: >
+          Label column representing daily store-product-family sales. Null on test-period
+          rows without labels; negative values represent returns and are valid.
         data_tests:
-          - not_null
-          - dbt_utils.accepted_range:
-              min_value: 0
+          - not_null:
+              config:
+                where: "data_split_source = 'train'"
+      - name: data_split_source
+        description: "Indicates whether the row aggregates training-period data (`train`, with a populated label) or test-period data (`test`, label withheld); taken from the underlying store-product rows."
+      - name: day_of_month
+        description: "Day of the month for `date` (1-31)."
+      - name: day_of_week
+        description: "Day of week for `date` (1 = Sunday, 7 = Saturday)."
+      - name: iso_week_of_year
+        description: "ISO 8601 week number of the year for `date`."
+      - name: month
+        description: "Month number for `date` (1-12)."
+      - name: quarter
+        description: "Calendar quarter for `date` (1-4)."
+      - name: year
+        description: "Calendar year for `date`."
+      - name: week_of_month
+        description: "Week of the month for `date`, computed as ceil(day_of_month / 7)."
+      - name: iso_year
+        description: "ISO 8601 year for `date`; can differ from calendar `year` near year boundaries."
+      - name: iso_week
+        description: "ISO 8601 week number for `date`."
+      - name: day_name
+        description: "Full weekday name for `date` (e.g. Monday)."
+      - name: month_name
+        description: "Full month name for `date` (e.g. January)."
+      - name: sales_store_family
+        description: "Total sales for the store-product-family on `date` (base metric before windowing)."
+      - name: products_store_family
+        description: "Count of distinct products within the family sold at the store on `date`."
+      - name: sales_store_family_on_promotion
+        description: "Store-product-family sales on `date` for items that were on promotion."
+      - name: products_store_family_on_promotion
+        description: "Count of distinct products within the family, at the store, on promotion on `date`."
+      - name: pct_sales_store_family_on_promotion
+        description: "Share of store-product-family sales on `date` made on promotion (`sales_store_family_on_promotion` / `sales_store_family`)."
+      - name: pct_products_store_family_on_promotion
+        description: "Share of distinct products within the family, at the store, that were on promotion on `date`."
+      - name: sales_store_family_n1d_same_dow
+        description: "Store-product-family sales exactly 7 days after `date` (same day of week, the following week); used to sanity-check/label same-day-of-week comparisons."
+      - name: sales_store_family_n1d
+        description: "Sum of store-product-family sales over the 1 day(s) after `date` (day 1 through day 1 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_family_n7d
+        description: "Sum of store-product-family sales over the 7 day(s) after `date` (day 1 through day 7 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_family_n14d
+        description: "Sum of store-product-family sales over the 14 day(s) after `date` (day 1 through day 14 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_family_n28d
+        description: "Sum of store-product-family sales over the 28 day(s) after `date` (day 1 through day 28 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_family_n30d
+        description: "Sum of store-product-family sales over the 30 day(s) after `date` (day 1 through day 30 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_family_n60d
+        description: "Sum of store-product-family sales over the 60 day(s) after `date` (day 1 through day 60 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_family_n90d
+        description: "Sum of store-product-family sales over the 90 day(s) after `date` (day 1 through day 90 following); a forward-looking window, distinct from the training label."
+      - name: sales_store_family_l3d
+        description: "Sum of store-product-family sales over the trailing 3 days (2 day(s) before through `date`, inclusive)."
+      - name: sales_store_family_l7d
+        description: "Sum of store-product-family sales over the trailing 7 days (6 day(s) before through `date`, inclusive)."
+      - name: sales_store_family_l14d
+        description: "Sum of store-product-family sales over the trailing 14 days (13 day(s) before through `date`, inclusive)."
+      - name: sales_store_family_l28d
+        description: "Sum of store-product-family sales over the trailing 28 days (27 day(s) before through `date`, inclusive)."
+      - name: sales_store_family_l30d
+        description: "Sum of store-product-family sales over the trailing 30 days (29 day(s) before through `date`, inclusive)."
+      - name: sales_store_family_l60d
+        description: "Sum of store-product-family sales over the trailing 60 days (59 day(s) before through `date`, inclusive)."
+      - name: sales_store_family_l90d
+        description: "Sum of store-product-family sales over the trailing 90 days (89 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_family_l3d
+        description: "Rolling average daily store-product-family sales over the trailing 3 days (2 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_family_l7d
+        description: "Rolling average daily store-product-family sales over the trailing 7 days (6 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_family_l14d
+        description: "Rolling average daily store-product-family sales over the trailing 14 days (13 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_family_l28d
+        description: "Rolling average daily store-product-family sales over the trailing 28 days (27 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_family_l30d
+        description: "Rolling average daily store-product-family sales over the trailing 30 days (29 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_family_l60d
+        description: "Rolling average daily store-product-family sales over the trailing 60 days (59 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_family_l90d
+        description: "Rolling average daily store-product-family sales over the trailing 90 days (89 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_family_l180d
+        description: "Rolling average daily store-product-family sales over the trailing 180 days (179 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_family_l270d
+        description: "Rolling average daily store-product-family sales over the trailing 270 days (269 day(s) before through `date`, inclusive)."
+      - name: avg_sales_store_family_l360d
+        description: "Rolling average daily store-product-family sales over the trailing 360 days (359 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_family_l3d
+        description: "Rolling standard deviation of daily store-product-family sales over the trailing 3 days (2 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_family_l7d
+        description: "Rolling standard deviation of daily store-product-family sales over the trailing 7 days (6 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_family_l14d
+        description: "Rolling standard deviation of daily store-product-family sales over the trailing 14 days (13 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_family_l28d
+        description: "Rolling standard deviation of daily store-product-family sales over the trailing 28 days (27 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_family_l30d
+        description: "Rolling standard deviation of daily store-product-family sales over the trailing 30 days (29 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_family_l60d
+        description: "Rolling standard deviation of daily store-product-family sales over the trailing 60 days (59 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_family_l90d
+        description: "Rolling standard deviation of daily store-product-family sales over the trailing 90 days (89 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_family_l180d
+        description: "Rolling standard deviation of daily store-product-family sales over the trailing 180 days (179 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_family_l270d
+        description: "Rolling standard deviation of daily store-product-family sales over the trailing 270 days (269 day(s) before through `date`, inclusive)."
+      - name: stddev_sales_store_family_l360d
+        description: "Rolling standard deviation of daily store-product-family sales over the trailing 360 days (359 day(s) before through `date`, inclusive)."
+      - name: sales_store_family_p1d
+        description: "Sum of store-product-family sales over the 1-day period immediately preceding the trailing 1-day window (`sales_store_family_l1d`); the comparison baseline for `sales_store_family_l1d_p1d_pct_diff`."
+      - name: sales_store_family_p3d
+        description: "Sum of store-product-family sales over the 3-day period immediately preceding the trailing 3-day window (`sales_store_family_l3d`); the comparison baseline for `sales_store_family_l3d_p3d_pct_diff`."
+      - name: sales_store_family_p7d
+        description: "Sum of store-product-family sales over the 7-day period immediately preceding the trailing 7-day window (`sales_store_family_l7d`); the comparison baseline for `sales_store_family_l7d_p7d_pct_diff`."
+      - name: sales_store_family_p14d
+        description: "Sum of store-product-family sales over the 14-day period immediately preceding the trailing 14-day window (`sales_store_family_l14d`); the comparison baseline for `sales_store_family_l14d_p14d_pct_diff`."
+      - name: sales_store_family_p28d
+        description: "Sum of store-product-family sales over the 28-day period immediately preceding the trailing 28-day window (`sales_store_family_l28d`); the comparison baseline for `sales_store_family_l28d_p28d_pct_diff`."
+      - name: sales_store_family_p30d
+        description: "Sum of store-product-family sales over the 30-day period immediately preceding the trailing 30-day window (`sales_store_family_l30d`); the comparison baseline for `sales_store_family_l30d_p30d_pct_diff`."
+      - name: sales_store_family_p60d
+        description: "Sum of store-product-family sales over the 60-day period immediately preceding the trailing 60-day window (`sales_store_family_l60d`); the comparison baseline for `sales_store_family_l60d_p60d_pct_diff`."
+      - name: sales_store_family_p90d
+        description: "Sum of store-product-family sales over the 90-day period immediately preceding the trailing 90-day window (`sales_store_family_l90d`); the comparison baseline for `sales_store_family_l90d_p90d_pct_diff`."
+      - name: avg_pct_sales_store_family_on_promotion_l3d
+        description: "Rolling 3-day average of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: avg_pct_sales_store_family_on_promotion_l7d
+        description: "Rolling 7-day average of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: avg_pct_sales_store_family_on_promotion_l14d
+        description: "Rolling 14-day average of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: avg_pct_sales_store_family_on_promotion_l28d
+        description: "Rolling 28-day average of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: avg_pct_sales_store_family_on_promotion_l30d
+        description: "Rolling 30-day average of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: avg_pct_sales_store_family_on_promotion_l60d
+        description: "Rolling 60-day average of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: avg_pct_sales_store_family_on_promotion_l90d
+        description: "Rolling 90-day average of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: avg_pct_sales_store_family_on_promotion_l180d
+        description: "Rolling 180-day average of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: avg_pct_sales_store_family_on_promotion_l270d
+        description: "Rolling 270-day average of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: avg_pct_sales_store_family_on_promotion_l360d
+        description: "Rolling 360-day average of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: stddev_pct_sales_store_family_on_promotion_l3d
+        description: "Rolling 3-day standard deviation of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: stddev_pct_sales_store_family_on_promotion_l7d
+        description: "Rolling 7-day standard deviation of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: stddev_pct_sales_store_family_on_promotion_l14d
+        description: "Rolling 14-day standard deviation of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: stddev_pct_sales_store_family_on_promotion_l28d
+        description: "Rolling 28-day standard deviation of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: stddev_pct_sales_store_family_on_promotion_l30d
+        description: "Rolling 30-day standard deviation of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: stddev_pct_sales_store_family_on_promotion_l60d
+        description: "Rolling 60-day standard deviation of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: stddev_pct_sales_store_family_on_promotion_l90d
+        description: "Rolling 90-day standard deviation of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: stddev_pct_sales_store_family_on_promotion_l180d
+        description: "Rolling 180-day standard deviation of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: stddev_pct_sales_store_family_on_promotion_l270d
+        description: "Rolling 270-day standard deviation of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: stddev_pct_sales_store_family_on_promotion_l360d
+        description: "Rolling 360-day standard deviation of `pct_sales_store_family_on_promotion` (the daily share of the store-product-family sales made on promotion)."
+      - name: avg_pct_products_store_family_on_promotion_l3d
+        description: "Rolling 3-day average of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: avg_pct_products_store_family_on_promotion_l7d
+        description: "Rolling 7-day average of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: avg_pct_products_store_family_on_promotion_l14d
+        description: "Rolling 14-day average of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: avg_pct_products_store_family_on_promotion_l28d
+        description: "Rolling 28-day average of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: avg_pct_products_store_family_on_promotion_l30d
+        description: "Rolling 30-day average of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: avg_pct_products_store_family_on_promotion_l60d
+        description: "Rolling 60-day average of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: avg_pct_products_store_family_on_promotion_l90d
+        description: "Rolling 90-day average of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: avg_pct_products_store_family_on_promotion_l180d
+        description: "Rolling 180-day average of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: avg_pct_products_store_family_on_promotion_l270d
+        description: "Rolling 270-day average of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: avg_pct_products_store_family_on_promotion_l360d
+        description: "Rolling 360-day average of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: stddev_pct_products_store_family_on_promotion_l3d
+        description: "Rolling 3-day standard deviation of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: stddev_pct_products_store_family_on_promotion_l7d
+        description: "Rolling 7-day standard deviation of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: stddev_pct_products_store_family_on_promotion_l14d
+        description: "Rolling 14-day standard deviation of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: stddev_pct_products_store_family_on_promotion_l28d
+        description: "Rolling 28-day standard deviation of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: stddev_pct_products_store_family_on_promotion_l30d
+        description: "Rolling 30-day standard deviation of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: stddev_pct_products_store_family_on_promotion_l60d
+        description: "Rolling 60-day standard deviation of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: stddev_pct_products_store_family_on_promotion_l90d
+        description: "Rolling 90-day standard deviation of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: stddev_pct_products_store_family_on_promotion_l180d
+        description: "Rolling 180-day standard deviation of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: stddev_pct_products_store_family_on_promotion_l270d
+        description: "Rolling 270-day standard deviation of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: stddev_pct_products_store_family_on_promotion_l360d
+        description: "Rolling 360-day standard deviation of `pct_products_store_family_on_promotion` (the daily share of distinct products at the store-product-family on promotion)."
+      - name: avg_sales_store_family_dow_l14d
+        description: "Rolling average store-product-family sales for the same day of week as `date`, looking back 14 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_family_dow_l28d
+        description: "Rolling average store-product-family sales for the same day of week as `date`, looking back 28 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_family_dow_l60d
+        description: "Rolling average store-product-family sales for the same day of week as `date`, looking back 60 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_family_dow_l90d
+        description: "Rolling average store-product-family sales for the same day of week as `date`, looking back 90 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_family_dow_l180d
+        description: "Rolling average store-product-family sales for the same day of week as `date`, looking back 180 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_family_dow_l270d
+        description: "Rolling average store-product-family sales for the same day of week as `date`, looking back 270 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_family_dow_l360d
+        description: "Rolling average store-product-family sales for the same day of week as `date`, looking back 360 days (partitioned by `day_of_week`)."
+      - name: avg_sales_store_family_l1d_l3d_pct_diff
+        description: "Percentage difference between `sales_store_family_l1d` and the trailing 3-day average (`avg_sales_store_family_l3d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_family_l1d_l7d_pct_diff
+        description: "Percentage difference between `sales_store_family_l1d` and the trailing 7-day average (`avg_sales_store_family_l7d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_family_l1d_l14d_pct_diff
+        description: "Percentage difference between `sales_store_family_l1d` and the trailing 14-day average (`avg_sales_store_family_l14d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_family_l1d_l28d_pct_diff
+        description: "Percentage difference between `sales_store_family_l1d` and the trailing 28-day average (`avg_sales_store_family_l28d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_family_l3d_l7d_pct_diff
+        description: "Percentage difference between the trailing 3-day average (`avg_sales_store_family_l3d`) and the trailing 7-day average (`avg_sales_store_family_l7d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_family_l3d_l14d_pct_diff
+        description: "Percentage difference between the trailing 3-day average (`avg_sales_store_family_l3d`) and the trailing 14-day average (`avg_sales_store_family_l14d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_family_l3d_l28d_pct_diff
+        description: "Percentage difference between the trailing 3-day average (`avg_sales_store_family_l3d`) and the trailing 28-day average (`avg_sales_store_family_l28d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_family_l7d_l14d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_family_l7d`) and the trailing 14-day average (`avg_sales_store_family_l14d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_family_l7d_l28d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_family_l7d`) and the trailing 28-day average (`avg_sales_store_family_l28d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_family_l7d_l30d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_family_l7d`) and the trailing 30-day average (`avg_sales_store_family_l30d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_family_l7d_l60d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_family_l7d`) and the trailing 60-day average (`avg_sales_store_family_l60d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_family_l7d_l90d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_family_l7d`) and the trailing 90-day average (`avg_sales_store_family_l90d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_family_l7d_l180d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_family_l7d`) and the trailing 180-day average (`avg_sales_store_family_l180d`); (numerator / denominator) - 1."
+      - name: avg_sales_store_family_l7d_l360d_pct_diff
+        description: "Percentage difference between the trailing 7-day average (`avg_sales_store_family_l7d`) and the trailing 360-day average (`avg_sales_store_family_l360d`); (numerator / denominator) - 1."
+      - name: sales_store_family_l1d_p1d_pct_diff
+        description: "Period-over-period percentage change between the trailing 1-day sum (`sales_store_family_l1d`) and the immediately preceding 1-day period (`sales_store_family_p1d`); (l1d / p1d) - 1."
+      - name: sales_store_family_l3d_p3d_pct_diff
+        description: "Period-over-period percentage change between the trailing 3-day sum (`sales_store_family_l3d`) and the immediately preceding 3-day period (`sales_store_family_p3d`); (l3d / p3d) - 1."
+      - name: sales_store_family_l7d_p7d_pct_diff
+        description: "Period-over-period percentage change between the trailing 7-day sum (`sales_store_family_l7d`) and the immediately preceding 7-day period (`sales_store_family_p7d`); (l7d / p7d) - 1."
+      - name: sales_store_family_l14d_p14d_pct_diff
+        description: "Period-over-period percentage change between the trailing 14-day sum (`sales_store_family_l14d`) and the immediately preceding 14-day period (`sales_store_family_p14d`); (l14d / p14d) - 1."
+      - name: sales_store_family_l28d_p28d_pct_diff
+        description: "Period-over-period percentage change between the trailing 28-day sum (`sales_store_family_l28d`) and the immediately preceding 28-day period (`sales_store_family_p28d`); (l28d / p28d) - 1."
+      - name: sales_store_family_l30d_p30d_pct_diff
+        description: "Period-over-period percentage change between the trailing 30-day sum (`sales_store_family_l30d`) and the immediately preceding 30-day period (`sales_store_family_p30d`); (l30d / p30d) - 1."
+      - name: sales_store_family_l60d_p60d_pct_diff
+        description: "Period-over-period percentage change between the trailing 60-day sum (`sales_store_family_l60d`) and the immediately preceding 60-day period (`sales_store_family_p60d`); (l60d / p60d) - 1."
+      - name: sales_store_family_l90d_p90d_pct_diff
+        description: "Period-over-period percentage change between the trailing 90-day sum (`sales_store_family_l90d`) and the immediately preceding 90-day period (`sales_store_family_p90d`); (l90d / p90d) - 1."
+      - name: avg_sales_store_family_dow_l14d_pct_diff
+        description: "Ratio of the same-day-of-week rolling 14-day average (`avg_sales_store_family_dow_l14d`) to the overall trailing 14-day average (`avg_sales_store_family_l14d`); indicates whether this day of week over/under-sells relative to the recent baseline."
+      - name: avg_sales_store_family_dow_l28d_pct_diff
+        description: "Ratio of the same-day-of-week rolling 28-day average (`avg_sales_store_family_dow_l28d`) to the overall trailing 28-day average (`avg_sales_store_family_l28d`); indicates whether this day of week over/under-sells relative to the recent baseline."
+      - name: avg_sales_store_family_dow_l60d_pct_diff
+        description: "Ratio of the same-day-of-week rolling 60-day average (`avg_sales_store_family_dow_l60d`) to the overall trailing 60-day average (`avg_sales_store_family_l60d`); indicates whether this day of week over/under-sells relative to the recent baseline."
+      - name: avg_sales_store_family_dow_l90d_pct_diff
+        description: "Ratio of the same-day-of-week rolling 90-day average (`avg_sales_store_family_dow_l90d`) to the overall trailing 90-day average (`avg_sales_store_family_l90d`); indicates whether this day of week over/under-sells relative to the recent baseline."
+      - name: avg_sales_store_family_dow_l14d_l28d_diff
+        description: "Ratio of the 14-day same-day-of-week average (`avg_sales_store_family_dow_l14d`) to the 28-day same-day-of-week average (`avg_sales_store_family_dow_l28d`); indicates whether the day-of-week pattern is trending up or down."
+      - name: avg_sales_store_family_dow_l14d_l60d_diff
+        description: "Ratio of the 14-day same-day-of-week average (`avg_sales_store_family_dow_l14d`) to the 60-day same-day-of-week average (`avg_sales_store_family_dow_l60d`); indicates whether the day-of-week pattern is trending up or down."
+      - name: avg_sales_store_family_dow_l14d_l90d_diff
+        description: "Ratio of the 14-day same-day-of-week average (`avg_sales_store_family_dow_l14d`) to the 90-day same-day-of-week average (`avg_sales_store_family_dow_l90d`); indicates whether the day-of-week pattern is trending up or down."
+      - name: avg_sales_store_family_dow_l28d_l60d_diff
+        description: "Ratio of the 28-day same-day-of-week average (`avg_sales_store_family_dow_l28d`) to the 60-day same-day-of-week average (`avg_sales_store_family_dow_l60d`); indicates whether the day-of-week pattern is trending up or down."
+      - name: avg_sales_store_family_dow_l28d_l90d_diff
+        description: "Ratio of the 28-day same-day-of-week average (`avg_sales_store_family_dow_l28d`) to the 90-day same-day-of-week average (`avg_sales_store_family_dow_l90d`); indicates whether the day-of-week pattern is trending up or down."
+      - name: avg_sales_store_family_dow_l60d_l90d_diff
+        description: "Ratio of the 60-day same-day-of-week average (`avg_sales_store_family_dow_l60d`) to the 90-day same-day-of-week average (`avg_sales_store_family_dow_l90d`); indicates whether the day-of-week pattern is trending up or down."

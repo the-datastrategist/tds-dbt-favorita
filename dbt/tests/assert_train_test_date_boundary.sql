@@ -1,4 +1,5 @@
--- Test period starts the day after training ends and spans 15 days (Kaggle rules).
+-- Test period starts the day after training ends and spans 16 days (2017-08-16 through
+-- 2017-08-31, inclusive; matches the actual Favorita raw test data).
 {{ config(tags=['data_quality', 'staging']) }}
 
 with bounds as (
@@ -11,4 +12,4 @@ with bounds as (
 select *
 from bounds
 where min_test_date != date_add(max_train_date, interval 1 day)
-    or test_day_count != 15
+    or test_day_count != 16

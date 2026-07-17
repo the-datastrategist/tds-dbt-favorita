@@ -156,7 +156,7 @@ Legacy aliases still work: `make model-train` → `vertex-train-docker`, etc.
 Override default config names:
 
 ```bash
-make vertex-train VERTEX_TRAIN_CONFIG=my_custom_train
+make vertex-train VERTEX_CONFIG=my_custom_train
 ```
 
 ### Walk-forward backfill
@@ -353,9 +353,9 @@ Example configs:
 | Optimize | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` |
 
 ```bash
-make vertex-train VERTEX_TRAIN_CONFIG=favorita_store_n1d_xgboost
-make vertex-predict VERTEX_PREDICT_CONFIG=favorita_store_n1d_xgboost
-make vertex-optimize VERTEX_OPTIMIZE_CONFIG=favorita_store_n1d_xgboost
+make vertex-train VERTEX_CONFIG=favorita_store_n1d_xgboost
+make vertex-predict VERTEX_CONFIG=favorita_store_n1d_xgboost
+make vertex-optimize VERTEX_CONFIG=favorita_store_n1d_xgboost
 ```
 
 ### Time-series predict scopes

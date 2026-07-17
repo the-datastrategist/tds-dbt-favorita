@@ -37,7 +37,6 @@ store_sales_daily_window as (
     store_nbr,
     product_family,
     data_split_source,
-    date_sub(date, interval 1 day) as feature_as_of_date,
 
     -- DATE TRANSFORMATIONS
 

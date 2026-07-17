@@ -61,11 +61,9 @@ FROM ML.EXPLAIN_PREDICT(
   (
     SELECT
       date,
-      feature_as_of_date,
       {{ prediction_features }}
     FROM {{ ref(predict_ref) }}
     WHERE date >= DATE_SUB(CURRENT_DATE(), INTERVAL 14 DAY)  -- Explain predictions for last 14 days
-      AND feature_as_of_date = DATE_SUB(date, INTERVAL 1 DAY)
   ),
   STRUCT({{ top_k_features }} AS top_k_features)  -- Return top N most important features per prediction
 ) AS explain

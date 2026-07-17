@@ -20,7 +20,6 @@ company_sales_daily_agg as (
 company_sales_daily_window as (
   select 
     date,
-    date_sub(date, interval 1 day) as feature_as_of_date,
     data_split_source,
 
     -- Date Transformations

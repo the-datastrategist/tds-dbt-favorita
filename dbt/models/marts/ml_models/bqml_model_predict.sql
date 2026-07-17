@@ -53,17 +53,15 @@ SELECT
   '{{ model_config.lifecycle if "lifecycle" in model_config else "unknown" }}' AS lifecycle,
   '{{ model_config.metric if "metric" in model_config else "unknown" }}'  AS metric,
   '{{ model_config.interval if "interval" in model_config else "unknown" }}' AS `interval`,
-  * EXCEPT(date, feature_as_of_date)
+  * EXCEPT(date)
 FROM ML.PREDICT(
   MODEL `{{ var('project_id') }}.{{ var('dataset') }}.{{ model_name }}`,
   (
     SELECT
       date,
-      feature_as_of_date,
       {{ prediction_features }}
     FROM {{ ref(predict_ref) }}
     WHERE date >= DATE_SUB(CURRENT_DATE(), INTERVAL 14 DAY)  -- Predict for last 14 days
-      AND feature_as_of_date = DATE_SUB(date, INTERVAL 1 DAY)
   )
 )
       {%- endset -%}
