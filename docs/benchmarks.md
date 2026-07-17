@@ -12,6 +12,7 @@ Compare **BigQuery ML** and **Vertex AI** models on shared holdout metrics. Use 
 |-----------|---------------------|
 | **Platform** | `bqml`, `vertex` |
 | **Model type** | `BOOSTED_TREE_REGRESSOR`, `xgboost`, `random_forest`, `arima`, `sarima` |
+| **Explainability** | SHAP top-K feature attributions (xgboost, random_forest only; `explain.enabled` in config) |
 | **Grain** | company-day (`int_sales_daily`), store-day (`int_sales_store_daily`) |
 | **Metrics** | MAE, RMSE, WAPE, R² (where applicable) |
 | **Split** | Chronological holdout (`test_size: 0.2`, `train_days: 180` in Vertex configs) |
@@ -132,6 +133,24 @@ WHERE actual IS NOT NULL
 ORDER BY abs_error DESC
 LIMIT 100;
 ```
+
+### Top feature attributions (Vertex, tree models)
+
+```sql
+SELECT
+  config_name,
+  model_type,
+  entity_id,
+  date,
+  predicted_value,
+  base_value,
+  top_feature_attributions
+FROM `{project}.{dataset}.stg_vertex_model_explain`
+ORDER BY run_at DESC
+LIMIT 50;
+```
+
+Only populated for configs with `explain.enabled: true` (xgboost, random_forest); ARIMA/SARIMA are not tree models and have no explain path.
 
 ### MLflow (local)
 

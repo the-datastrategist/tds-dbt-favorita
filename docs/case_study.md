@@ -64,7 +64,7 @@ flowchart LR
 ```
 
 - **BQML** — fastest path to a boosted-tree baseline with `EVALUATE` and global feature attribution in SQL
-- **Vertex** — Optuna hyperparameter search, multi-algorithm registry, KFP pipelines, GCS model artifacts
+- **Vertex** — Optuna hyperparameter search, multi-algorithm registry, KFP pipelines, GCS model artifacts, and per-prediction SHAP explainability for tree models
 
 *Why:* Clients rarely commit to one ML platform on day one. This architecture supports a phased roadmap.
 
@@ -92,6 +92,7 @@ Outcomes below reflect **architectural deliverables**. Numeric benchmarks are po
 | BQML baseline | `make dbt-train`, `bqml_model_evaluate` |
 | Four Vertex model families | XGBoost, RF, ARIMA, SARIMA configs in YAML |
 | Hyperparameter search | Optuna optimize step + `favorita_model_optimize` table |
+| Per-prediction explainability | SHAP top-feature attributions for tree models (`favorita_model_explain`) |
 | Unified predictions | `favorita_model_predictions` + `stg_vertex_model_predictions` |
 | Experiment tracking | MLflow UI (`make mlflow-ui`), Vertex Experiments |
 | CI without GCP | GitHub Actions: lint, test, config validate, KFP compile |
