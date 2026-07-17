@@ -42,7 +42,8 @@ company_sales_daily_window as (
     FORMAT_DATE('%B', date) AS month_name,
 
     -- Company sales on the same day of week one calendar week later (e.g. Mon -> next Mon)
-    sum(sales_company) over (order by date rows between 7 following and 7 following)    as sales_company_n1d_same_dow,
+    -- RANGE (keyed on unix_date) rather than ROWS so this is exact even if a calendar date is missing from the data
+    sum(sales_company) over (order by unix_date(date) range between 7 following and 7 following)    as sales_company_n7d_same_dow,
 
     -- Next N-day sales (from the day after date through N days forward)
     sum(sales_company) over (order by date rows between 1 following and 1 following)    as sales_company_n1d,
