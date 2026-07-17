@@ -237,11 +237,6 @@ credentials/
 *.swo
 *~
 
-# Coverage reports
-.coverage
-htmlcov/
-.pytest_cache/
-
 # Local test data
 test_data/
 data/
