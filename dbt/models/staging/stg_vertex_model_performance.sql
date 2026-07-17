@@ -7,7 +7,7 @@
   Canonical view over Vertex-written holdout performance table.
   metric_set is currently always 'test' (see vertex/utils/metadata.py
   performance_row_from_metadata); 'train' metrics live only in
-  favorita_model_metadata.train_performance (JSON) today.
+  ml_model_metadata.train_performance (JSON) today.
 */
 select
     model_run_id,
@@ -28,4 +28,4 @@ select
     smape,
     bias,
     median_ae
-from {{ source('vertex_ml', 'favorita_model_performance') }}
+from {{ source('vertex_ml', 'ml_model_performance') }}

@@ -2,7 +2,7 @@
 -- Run manually or via your infra pipeline against project tds-favorita.
 
 -- Job orchestration audit trail
-CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_vertex_job_runs` (
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.ml_vertex_job_runs` (
   job_run_id STRING NOT NULL,
   config_name STRING NOT NULL,
   model_family STRING,
@@ -30,14 +30,14 @@ PARTITION BY DATE(started_at)
 CLUSTER BY config_name, job_step, status;
 
 -- Idempotent migrations for tables created before mlflow / experiment columns existed
-ALTER TABLE `tds-favorita.favorita.favorita_vertex_job_runs`
+ALTER TABLE `tds-favorita.favorita.ml_vertex_job_runs`
   ADD COLUMN IF NOT EXISTS mlflow_run_id STRING;
 
-ALTER TABLE `tds-favorita.favorita.favorita_vertex_job_runs`
+ALTER TABLE `tds-favorita.favorita.ml_vertex_job_runs`
   ADD COLUMN IF NOT EXISTS vertex_experiment_run STRING;
 
 -- Training metadata (one row per training run)
-CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_metadata` (
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.ml_model_metadata` (
   model_run_id STRING NOT NULL,
   model_id STRING NOT NULL,
   parameter_id STRING,
@@ -69,7 +69,7 @@ PARTITION BY DATE(run_at)
 CLUSTER BY model_family, model_type, config_name;
 
 -- Holdout / evaluation metrics
-CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_performance` (
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.ml_model_performance` (
   model_run_id STRING NOT NULL,
   model_id STRING NOT NULL,
   config_name STRING,
@@ -93,7 +93,7 @@ PARTITION BY DATE(run_at)
 CLUSTER BY model_family, model_type;
 
 -- Hyperparameter optimization trials
-CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_optimize` (
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.ml_model_optimize` (
   optimize_run_id STRING NOT NULL,
   trial_number INT64 NOT NULL,
   config_name STRING NOT NULL,
@@ -115,7 +115,7 @@ PARTITION BY run_date
 CLUSTER BY config_name, model_family;
 
 -- Unified predictions across model types
-CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_predictions` (
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.ml_model_predictions` (
   prediction_id STRING NOT NULL,
   predict_run_id STRING NOT NULL,
   model_run_id STRING,
@@ -142,7 +142,7 @@ PARTITION BY run_date
 CLUSTER BY model_family, model_type, config_name;
 
 -- SHAP feature attributions for tree-based Vertex predictions (xgboost, random_forest);
--- one row per prediction_id in favorita_model_predictions when explain.enabled is set.
+-- one row per prediction_id in ml_model_predictions when explain.enabled is set.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_explain` (
   explanation_id STRING NOT NULL,
   prediction_id STRING NOT NULL,

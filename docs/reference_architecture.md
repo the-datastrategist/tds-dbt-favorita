@@ -122,7 +122,7 @@ flowchart TB
     XGB[xgboost / random_forest]
     TS[arima / sarima]
     GCSArt[GCS artifacts]
-    Unified[favorita_model_predictions]
+    Unified[ml_model_predictions]
   end
 
   BQMLPath --> BQPred

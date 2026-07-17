@@ -61,7 +61,7 @@ sequenceDiagram
 |-------|-------|
 | **GCS** | `model.joblib`, `manifest.json`, `latest_best_params.json` |
 | **MLflow** | Params, metrics, tags, `gcs_model_catalog.json` sidecar |
-| **BigQuery** | `favorita_model_metadata`, `mlflow_run_id` on job runs |
+| **BigQuery** | `ml_model_metadata`, `mlflow_run_id` on job runs |
 | **Vertex Experiments** | Duplicate metrics for GCP-native UI |
 
 Registered MLflow models are **lightweight pointers** (kilobytes), not duplicate joblib copies.
@@ -126,11 +126,11 @@ make vertex-train VERTEX_CONFIG=favorita_store_n1d_rf
 make mlflow-ui
 ```
 
-Compare runs in the Experiments view; cross-check with [benchmarks.md](../benchmarks.md) SQL on `favorita_model_performance`.
+Compare runs in the Experiments view; cross-check with [benchmarks.md](../benchmarks.md) SQL on `ml_model_performance`.
 
 ### Cross-system join
 
-BigQuery `favorita_vertex_job_runs` stores `mlflow_run_id` and `vertex_experiment_run` for joining warehouse audit to MLflow UI.
+BigQuery `ml_vertex_job_runs` stores `mlflow_run_id` and `vertex_experiment_run` for joining warehouse audit to MLflow UI.
 
 ---
 

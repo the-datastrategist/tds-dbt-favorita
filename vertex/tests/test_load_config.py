@@ -21,7 +21,7 @@ class TestLoadConfig:
         assert config["name"] == "favorita_store_n1d_xgboost"
         assert config["model_family"] == "favorita_store_daily"
         assert config["model_type"] == "xgboost"
-        assert config["outputs"]["metadata_table"].endswith("favorita_model_metadata")
+        assert config["outputs"]["metadata_table"].endswith("ml_model_metadata")
 
     def test_load_rf_and_arima_configs(self):
         rf = load_model_config("favorita_store_n1d_rf")

@@ -11,11 +11,11 @@ defaults:
     register_model: false
     registered_model_prefix: favorita
   outputs:
-    metadata_table: tds-favorita.favorita.favorita_model_metadata
-    performance_table: tds-favorita.favorita.favorita_model_performance
-    prediction_table: tds-favorita.favorita.favorita_model_predictions
-    optimize_table: tds-favorita.favorita.favorita_model_optimize
-    job_runs_table: tds-favorita.favorita.favorita_vertex_job_runs
+    metadata_table: tds-favorita.favorita.ml_model_metadata
+    performance_table: tds-favorita.favorita.ml_model_performance
+    prediction_table: tds-favorita.favorita.ml_model_predictions
+    optimize_table: tds-favorita.favorita.ml_model_optimize
+    job_runs_table: tds-favorita.favorita.ml_vertex_job_runs
     # SHAP feature attributions on predict; only used when a config sets explain.enabled.
     explain_table: tds-favorita.favorita.favorita_model_explain
 

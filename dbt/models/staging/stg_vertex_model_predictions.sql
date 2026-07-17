@@ -29,4 +29,4 @@ select
     prediction_lower,
     prediction_upper,
     model_artifact_uri
-from {{ source('vertex_ml', 'favorita_model_predictions') }}
+from {{ source('vertex_ml', 'ml_model_predictions') }}
