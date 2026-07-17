@@ -36,6 +36,8 @@ models:
       # Vertex ML outputs (views over favorita_model_* tables)
       stg_vertex_model_predictions:
         +tags: [staging, vertex]
+      stg_vertex_model_performance:
+        +tags: [staging, vertex]
       stg_vertex_model_metadata:
         +tags: [staging, vertex]
       stg_vertex_job_runs:
@@ -60,6 +62,12 @@ vars:
   dataset: "{{ env_var('DBT_DATASET', 'favorita') }}"
   bq_raw_dataset: "{{ env_var('BQ_RAW_DATASET', 'raw_favorita') }}"
   bqml_explain_top_k_features: 20
+
+  # Primary metric used to select favorita_model_champion per grain. Override per client
+  # engagement if a different metric better fits the sales pattern for that grain.
+  leaderboard_primary_metric_by_grain:
+    store-day: wape
+    company-day: mae
 
   # Reusable column groups for get_bqml_feature_columns / get_bqml_prediction_features.
   feature_sets:

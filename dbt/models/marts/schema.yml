@@ -167,3 +167,87 @@ models:
           Array of the top-K feature attributions (SHAP values) driving this prediction,
           as returned by `ML.EXPLAIN_PREDICT`; K is controlled by the
           `bqml_explain_top_k_features` dbt var.
+
+  - name: int_bqml_model_wape
+    description: >
+      WAPE per BigQuery ML model_name/run_date, joined from bqml_model_predict back to the
+      actuals in each model_config's feature table. Fills the gap left by ML.EVALUATE, which
+      doesn't return WAPE natively. Feeds favorita_model_leaderboard.
+    columns:
+      - name: model_name
+        description: BigQuery ML model name.
+        data_tests:
+          - not_null
+      - name: run_date
+        description: Date the prediction job that produced these rows was executed.
+        data_tests:
+          - not_null
+      - name: wape
+        description: Weighted absolute percentage error over all predictions for this run_date.
+
+  - name: favorita_model_leaderboard
+    description: >
+      Unified BQML + Vertex holdout metrics, one row per (platform, config, run), normalized
+      to a shared column set (mae, rmse, r2, wape) so both platforms are directly comparable.
+      See docs/specs/model_leaderboard_mart.md.
+    columns:
+      - name: platform
+        description: Which platform produced this run.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [bqml, vertex]
+      - name: config_name
+        description: Model configuration name (Vertex config_name, or BQML model_name).
+        data_tests:
+          - not_null
+      - name: model_run_id
+        description: Vertex training run identifier; null for BQML rows (no equivalent concept).
+      - name: model_family
+        description: Model family (Vertex model_family, or 'bqml' as a coarse stand-in).
+      - name: model_type
+        description: Model type/algorithm (e.g. xgboost, random_forest, BOOSTED_TREE_REGRESSOR).
+      - name: grain
+        description: Forecast grain, e.g. store-day (Vertex) or company-day (BQML).
+        data_tests:
+          - not_null
+      - name: run_at
+        description: Timestamp the training/evaluation run completed.
+        data_tests:
+          - not_null
+      - name: mae
+        description: Mean absolute error.
+      - name: rmse
+        description: Root mean squared error.
+      - name: r2
+        description: R-squared (coefficient of determination).
+      - name: wape
+        description: >
+          Weighted absolute percentage error. For BQML, computed from int_bqml_model_wape
+          since ML.EVALUATE doesn't return it natively.
+
+  - name: favorita_model_champion
+    description: >
+      Current champion config per grain: the best config (by leaderboard_primary_metric_by_grain)
+      among each config's own latest run. Table-materialized snapshot of "now" only — see
+      docs/specs/model_leaderboard_mart.md for the case to promote this to a dbt snapshot for
+      full champion-change history.
+    columns:
+      - name: platform
+        description: Which platform produced this run.
+        data_tests:
+          - not_null
+      - name: config_name
+        description: Model configuration name.
+        data_tests:
+          - not_null
+      - name: grain
+        description: Forecast grain, e.g. store-day or company-day.
+        data_tests:
+          - not_null
+      - name: is_champion
+        description: >
+          True for the single best config per grain, ranked by leaderboard_primary_metric_by_grain
+          (wape for store-day, mae for company-day, by default).
+        data_tests:
+          - not_null

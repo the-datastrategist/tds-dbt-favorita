@@ -166,7 +166,7 @@ gantt
 
 | Enhancement | Accelerator base | Spec |
 |-------------|------------------|------|
-| Model leaderboard mart | `favorita_model_performance` + dbt mart | [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md) |
+| Model leaderboard mart ✅ shipped | `favorita_model_performance` + dbt mart | [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md) |
 | Drift / accuracy monitoring | dbt tests on prediction vs actual | [specs/prediction_accuracy_monitoring.md](specs/prediction_accuracy_monitoring.md) |
 | Terraform modules | [iac.md](iac.md) roadmap | [specs/terraform_modules.md](specs/terraform_modules.md) |
 | Workload Identity Federation | Replace SA keys | [specs/workload_identity_federation.md](specs/workload_identity_federation.md) |
