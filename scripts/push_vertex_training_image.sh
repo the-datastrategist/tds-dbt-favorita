@@ -62,7 +62,19 @@ echo "=== Docker login (${REGISTRY_HOST}) ==="
 gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin "https://${REGISTRY_HOST}"
 
 echo "=== Build and push immutable release image ==="
+BUILDER_NAME="${DOCKER_BUILDX_BUILDER:-tds-favorita-release}"
+if ! docker buildx inspect "${BUILDER_NAME}" >/dev/null 2>&1; then
+  docker buildx create \
+    --name "${BUILDER_NAME}" \
+    --driver docker-container \
+    --use >/dev/null
+else
+  docker buildx use "${BUILDER_NAME}"
+fi
+docker buildx inspect --bootstrap "${BUILDER_NAME}" >/dev/null
+
 if ! docker buildx build \
+  --builder "${BUILDER_NAME}" \
   --target production \
   --tag "${REMOTE_IMAGE}" \
   --label "org.opencontainers.image.revision=${GIT_SHA}" \
