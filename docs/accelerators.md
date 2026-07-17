@@ -21,6 +21,7 @@ mindmap
     Vertex
       model_config.yaml
       registry train predict optimize
+      SHAP explainability
       KFP pipelines
       BQ DDL metadata predictions
       Docker + Custom Jobs
@@ -70,6 +71,7 @@ mindmap
 | Model registry | `vertex/models/registry.py` | `(model_type, step)` → Python module |
 | Families | `vertex/models/xgboost/`, `sklearn/`, `timeseries/` | XGBoost, RF, ARIMA, SARIMA |
 | Predictions schema | `vertex/utils/predictions.py` | Unified prediction fact rows |
+| Explainability | `vertex/utils/explain.py`, `stg_vertex_model_explain` | Per-prediction SHAP top-K feature attributions (xgboost, random_forest) |
 | Experiment tracking | `vertex/utils/experiment_tracking.py` | MLflow + Vertex Experiments |
 | MLflow catalog | `vertex/utils/mlflow_catalog.py` | GCS pointer artifacts |
 | BQ DDL | `vertex/ddl/vertex_bq_tables.sql` | Metadata, performance, predictions, job runs |

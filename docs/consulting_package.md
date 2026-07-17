@@ -104,6 +104,7 @@ Collateral used in sales, kickoff, and handoff:
 | Model benchmarks | [benchmarks.md](benchmarks.md) |
 | 4-week rollout | [client_rollout.md](client_rollout.md) |
 | GCP IAM, scheduling, IaC | [iac.md](iac.md) |
+| Roadmap / engineering specs | [specs/README.md](specs/README.md) |
 | dbt-only view | [dbt/consulting_package.md](dbt/consulting_package.md) |
 | Vertex-only view | [vertex/consulting_package.md](vertex/consulting_package.md) |
 | MLflow-only view | [mlflow/consulting_package.md](mlflow/consulting_package.md) |

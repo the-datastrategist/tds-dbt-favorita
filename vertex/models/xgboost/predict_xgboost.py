@@ -68,12 +68,6 @@ def prepare_model_input(X: pd.DataFrame) -> pd.DataFrame:
     return model_input
 
 
-def get_predictions(model, X: pd.DataFrame) -> pd.Series:
-    model_input = prepare_model_input(X)
-    predictions = model.predict(model_input)
-    return pd.Series(predictions, index=X.index)
-
-
 def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
     spec = get_job_spec(config)
     if spec["model_type"] not in ("xgboost", "xgboost_sklearn"):

@@ -59,9 +59,11 @@ exposures:
     maturity: medium
     description: >
       Unified prediction outputs from Vertex custom jobs and pipelines
-      (xgboost, random_forest, ARIMA, SARIMA). Staged for BI and downstream marts.
+      (xgboost, random_forest, ARIMA, SARIMA), plus SHAP feature-attribution
+      explanations for tree models. Staged for BI and downstream marts.
     depends_on:
       - ref('stg_vertex_model_predictions')
+      - ref('stg_vertex_model_explain')
       - ref('stg_vertex_model_metadata')
       - ref('stg_vertex_job_runs')
     owner:

@@ -404,7 +404,7 @@ dbt models: `stg_vertex_model_predictions`, `stg_vertex_model_metadata`, `stg_ve
 3. Add three config blocks to `model_config.yaml` (`job.step`, shared `model_family`).
 4. Extend tests under `vertex/tests/`.
 
-Planned: `prophet`.
+Planned: `prophet` (design: [../docs/specs/prophet_model_family.md](../docs/specs/prophet_model_family.md)).
 
 ## Troubleshooting
 
