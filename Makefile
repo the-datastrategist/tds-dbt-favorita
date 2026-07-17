@@ -30,7 +30,7 @@ endif
 	vertex-train-docker vertex-predict-docker vertex-optimize-docker \
 	vertex-submit-train vertex-submit-predict vertex-submit-optimize \
 	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
-	dbt-vertex vertex-bq-ddl vertex-validate-config vertex-validate-configs \
+	dbt-vertex dbt-backtest vertex-bq-ddl vertex-validate-config vertex-validate-configs \
 	vertex-backfill vertex-backtest-plan vertex-backtest prefect-flow-vertex-backfill \
 	docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
 
@@ -272,7 +272,7 @@ vertex-train: ## Train all include_in_run configs, or one if VERTEX_CONFIG_NAME 
 	fi
 
 vertex-predict: ## Predict (VERTEX_MODE=docker|vertex; VERTEX_CONFIG, VERTEX_STEP=predict)
-	@$(MAKE) vertex-run VERTEX_CONFIG_NAME=$(or $(VERTEX_CONFIG),$(VERTEX_CONFIG_DEFAULT)) VERTEX_STEP=predict VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC)
+	@$(MAKE) vertex-run VERTEX_CONFIG_NAME=$(or $(VERTEX_CONFIG_NAME),$(VERTEX_CONFIG),$(VERTEX_CONFIG_DEFAULT)) VERTEX_STEP=predict VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC)
 
 vertex-optimize: ## Hyperparameter search (VERTEX_CONFIG; UPDATE_CONFIG=1 writes model_config.yaml)
 	@$(MAKE) vertex-run VERTEX_CONFIG_NAME=$(or $(VERTEX_CONFIG),$(VERTEX_CONFIG_DEFAULT)) VERTEX_STEP=optimize VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC) UPDATE_CONFIG=$(UPDATE_CONFIG)
@@ -289,7 +289,7 @@ vertex-train-docker: ## Train in Docker (all include_in_run when VERTEX_CONFIG u
 	fi
 
 vertex-predict-docker: ## Predict in Docker
-	@$(MAKE) vertex-run-docker VERTEX_CONFIG_NAME=$(or $(VERTEX_CONFIG),$(VERTEX_CONFIG_DEFAULT)) VERTEX_STEP=predict
+	@$(MAKE) vertex-run-docker VERTEX_CONFIG_NAME=$(or $(VERTEX_CONFIG_NAME),$(VERTEX_CONFIG),$(VERTEX_CONFIG_DEFAULT)) VERTEX_STEP=predict
 
 vertex-optimize-docker: ## Optimize in Docker
 	@$(MAKE) vertex-run-docker VERTEX_CONFIG_NAME=$(or $(VERTEX_CONFIG),$(VERTEX_CONFIG_DEFAULT)) VERTEX_STEP=optimize
@@ -344,7 +344,10 @@ vertex-pipeline-train-only: ## Pipeline without optimize/predict steps
 # --- dbt + BigQuery ops ---
 
 dbt-vertex: vertex-bq-ddl ## Ensure Vertex tables exist, then build Vertex-only staging and monitoring models
-	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:vertex --exclude tag:bqml $(ARGS)
+	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:vertex --exclude tag:bqml tag:backtest $(ARGS)
+
+dbt-backtest: vertex-bq-ddl ## Build optional backtest staging and leaderboard models after applying their DDL
+	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:backtest $(ARGS)
 
 vertex-bq-ddl: ## Create BigQuery tables for Vertex ML outputs (once per environment)
 	docker compose run --rm ml-pipeline python scripts/apply_vertex_bq_ddl.py
