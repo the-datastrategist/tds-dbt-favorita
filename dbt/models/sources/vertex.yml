@@ -19,6 +19,18 @@ sources:
           - name: model_type
             description: xgboost, random_forest, arima, sarima, etc.
 
+      - name: favorita_model_explain
+        description: >
+          SHAP feature attributions for tree-based predictions (xgboost, random_forest),
+          one row per prediction_id when the model config sets explain.enabled.
+        columns:
+          - name: explanation_id
+            description: Stable hash per explanation row
+          - name: prediction_id
+            description: Joins 1:1 to favorita_model_predictions.prediction_id
+          - name: top_feature_attributions
+            description: Top-K [{feature, attribution}] SHAP values, sorted by |attribution| desc
+
       - name: favorita_model_metadata
         description: Training run metadata and GCS artifact URIs
 

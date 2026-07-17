@@ -14,11 +14,18 @@ from typing import Any, Optional
 
 import pandas as pd
 
-from vertex.config.load_config import DEFAULT_CONFIG_PATH, get_job_spec, load_model_config
+from vertex.config.load_config import (
+    DEFAULT_CONFIG_PATH,
+    explain_enabled,
+    explain_top_k_features,
+    get_job_spec,
+    load_model_config,
+)
 from vertex.utils.artifacts import load_xgboost_from_gcs, resolve_latest_artifact
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config
 from vertex.utils.data_utils import get_hash
+from vertex.utils.explain import build_explain_rows, compute_tree_shap_top_features
 from vertex.utils.features import prepare_feature_matrix
 from vertex.utils.ml_utils import sanitize_feature_columns
 from vertex.utils.predictions import build_standard_prediction_rows, new_predict_run_id
@@ -111,7 +118,8 @@ def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         categorical_columns=categorical_columns,
         date_column=date_column,
     )
-    predictions = get_predictions(model, X)
+    model_input = prepare_model_input(X)
+    predictions = pd.Series(model.predict(model_input), index=X.index)
 
     run_at = dt.utcnow()
     features = manifest.get("features", [])
@@ -163,11 +171,41 @@ def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         predict_run_id,
     )
 
+    explain_count = 0
+    if explain_enabled(config):
+        explain_table = outputs.get("explain_table")
+        if not explain_table:
+            raise ValueError("outputs.explain_table is required when explain.enabled")
+        top_feature_attributions, base_value = compute_tree_shap_top_features(
+            model,
+            model_input,
+            top_k_features=explain_top_k_features(config),
+        )
+        explain_rows = build_explain_rows(
+            prediction_rows,
+            top_feature_attributions=top_feature_attributions,
+            base_value=base_value,
+        )
+        load_to_bigquery(
+            data=explain_rows,
+            table_id=explain_table,
+            project_id=project_id,
+            if_exists="append",
+        )
+        explain_count = len(explain_rows)
+        logger.info(
+            "Wrote %s SHAP explanations to %s (predict_run_id=%s)",
+            explain_count,
+            explain_table,
+            predict_run_id,
+        )
+
     return {
         "predict_run_id": predict_run_id,
         "model_id": model_id,
         "model_run_id": resolved_run_id,
         "prediction_count": len(prediction_rows),
+        "explain_count": explain_count,
         "model_gcs_uri": model_gcs_uri,
     }
 

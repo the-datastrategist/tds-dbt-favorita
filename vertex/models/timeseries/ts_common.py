@@ -27,18 +27,30 @@ def normalize_order(value: Any, length: int) -> tuple[int, ...]:
 
 
 def default_model_params(model_type: str) -> dict[str, Any]:
+    common = {
+        "trend": "c",
+        "enforce_stationarity": False,
+        "enforce_invertibility": False,
+        "concentrate_scale": False,
+        "trend_offset": 1,
+        "measurement_error": False,
+        "time_varying_regression": False,
+        "mle_regression": True,
+        "simple_differencing": False,
+        "method": "lbfgs",
+        "maxiter": 50,
+        "disp": False,
+    }
     if model_type == "sarima":
         return {
             "order": [1, 1, 1],
             "seasonal_order": [1, 1, 1, 7],
-            "trend": "c",
-            "maxiter": 50,
+            **common,
         }
     return {
         "order": [2, 1, 2],
         "seasonal_order": [0, 0, 0, 0],
-        "trend": "c",
-        "maxiter": 50,
+        **common,
     }
 
 
@@ -78,16 +90,32 @@ def fit_sarimax(
     seasonal_order: tuple[int, int, int, int],
     trend: str,
     maxiter: int,
+    enforce_stationarity: bool = False,
+    enforce_invertibility: bool = False,
+    concentrate_scale: bool = False,
+    trend_offset: int = 1,
+    measurement_error: bool = False,
+    time_varying_regression: bool = False,
+    mle_regression: bool = True,
+    simple_differencing: bool = False,
+    method: str = "lbfgs",
+    disp: bool = False,
 ) -> Any:
     model = SARIMAX(
         endog.astype(float),
         order=order,
         seasonal_order=seasonal_order,
         trend=trend,
-        enforce_stationarity=False,
-        enforce_invertibility=False,
+        enforce_stationarity=enforce_stationarity,
+        enforce_invertibility=enforce_invertibility,
+        concentrate_scale=concentrate_scale,
+        trend_offset=trend_offset,
+        measurement_error=measurement_error,
+        time_varying_regression=time_varying_regression,
+        mle_regression=mle_regression,
+        simple_differencing=simple_differencing,
     )
-    return model.fit(disp=False, maxiter=maxiter)
+    return model.fit(method=method, disp=disp, maxiter=maxiter)
 
 
 def fit_entity_models(
@@ -115,6 +143,16 @@ def fit_entity_models(
     )
     trend = str(model_params.get("trend", "c"))
     maxiter = int(model_params.get("maxiter", 50))
+    method = str(model_params.get("method", "lbfgs"))
+    disp = bool(model_params.get("disp", False))
+    enforce_stationarity = bool(model_params.get("enforce_stationarity", False))
+    enforce_invertibility = bool(model_params.get("enforce_invertibility", False))
+    concentrate_scale = bool(model_params.get("concentrate_scale", False))
+    trend_offset = int(model_params.get("trend_offset", 1))
+    measurement_error = bool(model_params.get("measurement_error", False))
+    time_varying_regression = bool(model_params.get("time_varying_regression", False))
+    mle_regression = bool(model_params.get("mle_regression", True))
+    simple_differencing = bool(model_params.get("simple_differencing", False))
 
     entities = panel[entity_column].drop_duplicates().tolist()
     if max_entities is not None:
@@ -152,6 +190,16 @@ def fit_entity_models(
                 seasonal_order=seasonal_order,
                 trend=trend,
                 maxiter=maxiter,
+                enforce_stationarity=enforce_stationarity,
+                enforce_invertibility=enforce_invertibility,
+                concentrate_scale=concentrate_scale,
+                trend_offset=trend_offset,
+                measurement_error=measurement_error,
+                time_varying_regression=time_varying_regression,
+                mle_regression=mle_regression,
+                simple_differencing=simple_differencing,
+                method=method,
+                disp=disp,
             )
         except Exception as exc:
             logger.warning("Fit failed for entity %s: %s", entity, exc)

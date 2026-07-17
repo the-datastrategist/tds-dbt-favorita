@@ -16,6 +16,8 @@ defaults:
     prediction_table: tds-favorita.favorita.favorita_model_predictions
     optimize_table: tds-favorita.favorita.favorita_model_optimize
     job_runs_table: tds-favorita.favorita.favorita_vertex_job_runs
+    # SHAP feature attributions on predict; only used when a config sets explain.enabled.
+    explain_table: tds-favorita.favorita.favorita_model_explain
 
 # Vertex Pipelines (KFP): optimize → train → predict (one model config per pipeline)
 pipelines:
@@ -35,9 +37,9 @@ pipelines:
 
 configs:
 
-
   - name: favorita_store_n1d_xgboost
-    description: XGBoost on store daily sales (train, predict, optimize share model_params)
+    description: XGBoost on store daily sales (train, predict, optimize share 
+      model_params)
     model_family: favorita_store_daily
     model_type: xgboost
     include_in_run: true
@@ -60,6 +62,8 @@ configs:
       id_columns:
         - store_nbr
       excluded_columns:
+        - store_nbr
+        - date
         - sales_store_n1d_same_dow
         - sales_store_n1d
         - sales_store_n7d
@@ -76,23 +80,46 @@ configs:
         - sales_company_n30d
         - sales_company_n60d
         - sales_company_n90d
-        - store_nbr
-        - date
-        - sales_store_l1d
       gcs_model_path: gs://favorita-vertex-models/
       use_optimized_params: true
       forecast_horizon: 7
       train_days: 180
       test_size: 0.2
-      trial_count: 20
+      trial_count: 50
       objective_metric: mae
-      model_run_id: null
+      model_run_id:
       model_params:
-        n_estimators: 100
+        # Core boosting
+        n_estimators: 297
+        learning_rate: 0.02078105860964659
+        booster: gbtree
+        objective: reg:squarederror
+        eval_metric: mae
+        # Tree structure / complexity control
         max_depth: 8
-        learning_rate: 0.036
-        subsample: 0.852
-        colsample_bytree: 0.845
+        max_leaves: 0
+        grow_policy: depthwise
+        min_child_weight: 1
+        gamma: 0
+        max_delta_step: 0
+        # Row / column sampling
+        subsample: 0.7721383354386099
+        colsample_bytree: 0.6280688080579032
+        colsample_bylevel: 1.0
+        colsample_bynode: 1.0
+        # Regularization
+        reg_alpha: 0
+        reg_lambda: 1
+        # Misc / reproducibility
+        scale_pos_weight: 1
+        base_score: 0.5
+        tree_method: auto
+        random_state: 42
+        n_jobs: -1
+    explain:
+      enabled: true
+      # Top-N SHAP feature attributions kept per prediction row (shap.TreeExplainer).
+      top_k_features: 20
     outputs: {}
 
 
@@ -136,10 +163,30 @@ configs:
       trial_count: 15
       objective_metric: mae
       model_params:
+        # Ensemble size
         n_estimators: 360
+        criterion: squared_error
+        # Tree structure / complexity control
         max_depth: 24
         min_samples_split: 13
         min_samples_leaf: 7
+        min_weight_fraction_leaf: 0.0
+        max_features: 1.0
+        max_leaf_nodes:
+        min_impurity_decrease: 0.0
+        ccp_alpha: 0.0
+        # Bagging
+        bootstrap: true
+        oob_score: false
+        max_samples:
+        # Misc / reproducibility
+        random_state: 42
+        n_jobs: -1
+        warm_start: false
+    explain:
+      enabled: true
+      # Top-N SHAP feature attributions kept per prediction row (shap.TreeExplainer).
+      top_k_features: 20
     outputs: {}
 
 
@@ -155,12 +202,12 @@ configs:
         select *
         from `tds-favorita.favorita.int_sales_store_daily`
         qualify ntile(5) over (order by date desc) > 1
-        
+
       predict_sql_query: |
         select *
         from `tds-favorita.favorita.int_sales_store_daily`
         qualify ntile(5) over (order by date desc) = 1
-        
+
       target_column: sales_store_n1d
       date_column: date
       entity_column: store_nbr
@@ -187,10 +234,23 @@ configs:
       trial_count: 10
       objective_metric: mae
       model_params:
+        # ARIMA(p,d,q); seasonal_order zeroed out (non-seasonal)
         order: [2, 1, 2]
         seasonal_order: [0, 0, 0, 0]
         trend: c
+        trend_offset: 1
+        # SARIMAX model structure
+        enforce_stationarity: false
+        enforce_invertibility: false
+        concentrate_scale: false
+        measurement_error: false
+        time_varying_regression: false
+        mle_regression: true
+        simple_differencing: false
+        # Fit / optimizer
+        method: lbfgs
         maxiter: 50
+        disp: false
     outputs: {}
 
 
@@ -235,8 +295,21 @@ configs:
       trial_count: 8
       objective_metric: mae
       model_params:
+        # SARIMA(p,d,q)(P,D,Q,s); s=7 for weekly seasonality
         order: [1, 1, 1]
         seasonal_order: [1, 1, 1, 7]
         trend: c
+        trend_offset: 1
+        # SARIMAX model structure
+        enforce_stationarity: false
+        enforce_invertibility: false
+        concentrate_scale: false
+        measurement_error: false
+        time_varying_regression: false
+        mle_regression: true
+        simple_differencing: false
+        # Fit / optimizer
+        method: lbfgs
         maxiter: 50
+        disp: false
     outputs: {}

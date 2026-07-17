@@ -32,7 +32,7 @@ endif
 	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
 	dbt-vertex vertex-bq-ddl vertex-validate-config vertex-validate-configs \
 	vertex-backfill prefect-flow-vertex-backfill \
-	model-train model-predict model-optimize docker-build docker-bash vertex-gcp-setup vertex-docker-push vertex-gcp-check
+	model-train model-predict model-optimize docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -107,6 +107,9 @@ vertex-docker-push: docker-build ## Tag and push tds-favorita image to Artifact 
 
 vertex-gcp-setup: ## One-time: enable APIs + create Artifact Registry repo (requires gcloud admin login)
 	bash scripts/setup_vertex_artifact_registry.sh
+
+vertex-gcp-setup-sa: ## One-time: create VERTEX_PIPELINE_SERVICE_ACCOUNT + grant IAM (requires gcloud admin login)
+	bash scripts/setup_vertex_service_account.sh
 
 
 # DBT COMMANDS

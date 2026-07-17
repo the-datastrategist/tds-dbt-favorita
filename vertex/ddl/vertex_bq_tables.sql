@@ -140,3 +140,28 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_predictions` (
 )
 PARTITION BY run_date
 CLUSTER BY model_family, model_type, config_name;
+
+-- SHAP feature attributions for tree-based Vertex predictions (xgboost, random_forest);
+-- one row per prediction_id in favorita_model_predictions when explain.enabled is set.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_explain` (
+  explanation_id STRING NOT NULL,
+  prediction_id STRING NOT NULL,
+  predict_run_id STRING NOT NULL,
+  model_run_id STRING,
+  model_id STRING NOT NULL,
+  config_name STRING NOT NULL,
+  model_family STRING,
+  model_type STRING NOT NULL,
+  run_at TIMESTAMP NOT NULL,
+  run_date DATE NOT NULL,
+  entity_id STRING,
+  store_id INT64,
+  product_id INT64,
+  date DATE,
+  predicted_value FLOAT64,
+  base_value FLOAT64,
+  top_feature_attributions JSON,
+  model_artifact_uri STRING
+)
+PARTITION BY run_date
+CLUSTER BY model_family, model_type, config_name;

@@ -415,6 +415,58 @@ models:
       - name: model_artifact_uri
         description: GCS URI of the model artifact used to generate this prediction.
 
+  - name: stg_vertex_model_explain
+    description: >
+      SHAP feature attributions for tree-based Vertex predictions (xgboost, random_forest)
+      from favorita_model_explain; one row per prediction_id when the model config sets
+      explain.enabled.
+    columns:
+      - name: explanation_id
+        description: Unique identifier for the explanation row.
+        data_tests:
+          - not_null
+      - name: prediction_id
+        description: Joins 1:1 to stg_vertex_model_predictions.prediction_id.
+        data_tests:
+          - not_null
+      - name: predict_run_id
+        description: Identifier for the predict job run that produced this row.
+      - name: model_run_id
+        description: Identifier for the training run whose model produced this prediction.
+      - name: model_id
+        description: Identifier of the model artifact used for prediction.
+      - name: config_name
+        description: Name of the model configuration (from model_config.yaml) used for this run.
+      - name: model_family
+        description: Model family (e.g. xgboost, random_forest).
+      - name: model_type
+        description: Model type/algorithm used for prediction. SHAP is only supported for tree models.
+        data_tests:
+          - not_null
+      - name: run_at
+        description: Timestamp the predict job executed.
+      - name: run_date
+        description: Calendar date the predict job executed.
+      - name: entity_id
+        description: Identifier for the forecasted entity, as defined by the model config's grain.
+      - name: store_id
+        description: Store identifier for the prediction, when applicable to the model's grain.
+      - name: product_id
+        description: Product identifier for the prediction, when applicable to the model's grain.
+      - name: date
+        description: Date the prediction feature row corresponds to.
+      - name: predicted_value
+        description: Predicted value the SHAP attributions explain (matches favorita_model_predictions.prediction).
+      - name: base_value
+        description: shap.TreeExplainer expected_value; the model's average output before feature attributions.
+      - name: top_feature_attributions
+        description: >
+          Top-K feature attributions (SHAP values) driving this prediction, as an array of
+          {feature, attribution} objects sorted by |attribution| descending; K is controlled
+          by the config's explain.top_k_features.
+      - name: model_artifact_uri
+        description: GCS URI of the model artifact used to generate this prediction.
+
   - name: stg_vertex_model_metadata
     description: Training metadata for Vertex model runs.
     columns:
