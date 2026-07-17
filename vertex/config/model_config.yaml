@@ -14,6 +14,11 @@ defaults:
     metadata_table: tds-favorita.favorita.favorita_model_metadata
     performance_table: tds-favorita.favorita.favorita_model_performance
     prediction_table: tds-favorita.favorita.favorita_model_predictions
+    forecast_contract_table: tds-favorita.favorita.forecast_contracts
+    forecast_runs_table: tds-favorita.favorita.forecast_runs
+    forecast_output_table: tds-favorita.favorita.forecast_outputs
+    forecast_status_history_table: tds-favorita.favorita.forecast_status_history
+    forecast_contract_path: vertex/config/forecast_contract.yaml
     optimize_table: tds-favorita.favorita.favorita_model_optimize
     job_runs_table: tds-favorita.favorita.favorita_vertex_job_runs
     # SHAP feature attributions on predict; only used when a config sets explain.enabled.

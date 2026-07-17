@@ -7,6 +7,7 @@ from vertex.jobs.gcp import resolve_gcp_settings, worker_pool_spec
 
 @pytest.fixture
 def gcp_env(monkeypatch):
+    monkeypatch.delenv("VERTEX_AI_PROJECT_ID", raising=False)
     monkeypatch.setenv("GOOGLE_PROJECT_ID", "test-project")
     monkeypatch.setenv("VERTEX_AI_STAGING_BUCKET", "gs://test-bucket")
     monkeypatch.setenv("VERTEX_TRAINING_IMAGE", "us-central1-docker.pkg.dev/test/test:latest")

@@ -42,3 +42,15 @@ sources:
 
       - name: favorita_vertex_job_runs
         description: Custom Job and pipeline orchestration audit log
+
+      - name: forecast_contracts
+        description: Versioned forecast contract definitions registered by platform implementations
+
+      - name: forecast_runs
+        description: Forecast scoring / publication run audit records keyed by forecast_run_id
+
+      - name: forecast_outputs
+        description: Canonical forecast output rows with horizon, provenance, and lifecycle status
+
+      - name: forecast_status_history
+        description: Forecast lifecycle transition history for approval, publication, supersession, and failure events

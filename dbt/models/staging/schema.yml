@@ -466,6 +466,168 @@ models:
       - name: median_ae
         description: Median absolute error.
 
+  - name: stg_forecast_contracts
+    description: >
+      Validated forecast contracts registered by platform implementations. These
+      define the target, grain, horizon set, quantiles, feature availability classes,
+      hierarchy, reconciliation policy, and demand policy for forecast runs.
+    columns:
+      - name: forecast_contract_name
+        description: Stable contract name.
+        data_tests:
+          - not_null
+      - name: forecast_contract_hash
+        description: Stable hash of the contract content.
+        data_tests:
+          - not_null
+      - name: registered_at
+        description: Timestamp when this contract version was registered.
+      - name: target
+        description: Business metric being forecasted.
+      - name: dimensions
+        description: Entity keys that define the contract grain.
+      - name: horizons
+        description: Forecast horizons required by the contract.
+      - name: quantiles
+        description: Probabilistic forecast quantiles requested by the contract.
+      - name: is_active
+        description: True when this contract version is the active default.
+
+  - name: stg_forecast_runs
+    description: >
+      Forecast scoring, backtest, approval, or publication run records.
+    columns:
+      - name: forecast_run_id
+        description: Unique identifier for the forecast run.
+        data_tests:
+          - not_null
+      - name: forecast_contract_name
+        description: Contract name used by the run.
+        data_tests:
+          - not_null
+      - name: forecast_contract_hash
+        description: Contract hash used by the run.
+        data_tests:
+          - not_null
+      - name: run_type
+        description: Type of run, such as score, backtest, approve, or publish.
+      - name: run_status
+        description: Current run status.
+      - name: forecast_origin
+        description: Forecast origin timestamp.
+      - name: source_cutoff_json
+        description: JSON object recording source cutoffs available to this run.
+
+  - name: stg_forecast_outputs
+    description: >
+      Canonical forecast output rows. Initial model predict jobs write draft
+      statistical forecasts; later operations can add planner overrides, approvals,
+      publication values, and supersession history.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - forecast_run_id
+            - entity_key_json
+            - target_date
+            - horizon
+            - forecast_status
+          config:
+            where: "forecast_status = 'draft'"
+    columns:
+      - name: forecast_output_id
+        description: Stable unique identifier for the forecast output row.
+        data_tests:
+          - not_null
+      - name: source_prediction_id
+        description: Legacy model prediction row identifier, when produced from model predictions.
+      - name: forecast_run_id
+        description: Forecast run that produced this row.
+        data_tests:
+          - not_null
+      - name: forecast_contract_name
+        description: Contract name used to produce this forecast.
+        data_tests:
+          - not_null
+      - name: forecast_contract_hash
+        description: Contract hash used to produce this forecast.
+        data_tests:
+          - not_null
+      - name: forecast_origin
+        description: Timestamp when the forecast was issued.
+        data_tests:
+          - not_null
+      - name: target_date
+        description: Business date being forecasted.
+        data_tests:
+          - not_null
+      - name: horizon
+        description: Number of periods ahead being forecasted.
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false
+      - name: grain
+        description: Comma-delimited contract dimensions for the forecast grain.
+      - name: entity_key_json
+        description: JSON object of entity key values at the forecast grain.
+        data_tests:
+          - not_null
+      - name: prediction_p10
+        description: P10 forecast, when available.
+      - name: prediction_p50
+        description: P50 forecast; defaults to the point prediction for deterministic models.
+      - name: prediction_p90
+        description: P90 forecast, when available.
+      - name: statistical_forecast
+        description: Raw model/statistical forecast before planner overrides.
+      - name: planner_override
+        description: Planner override value, when entered.
+      - name: approved_forecast
+        description: Approved consensus forecast value.
+      - name: published_forecast
+        description: Final downstream-published forecast value.
+      - name: forecast_status
+        description: Lifecycle status for this forecast row.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['draft', 'approved', 'published', 'superseded', 'failed']
+      - name: model_run_id
+        description: Model training run used for this forecast.
+      - name: model_id
+        description: Model artifact identifier.
+      - name: feature_version
+        description: Feature definition or materialization version, when configured.
+      - name: code_sha
+        description: Source code SHA used for the forecast job.
+      - name: data_cutoff
+        description: Latest source data cutoff represented in the forecast.
+
+  - name: stg_forecast_status_history
+    description: Forecast lifecycle transition events.
+    columns:
+      - name: status_event_id
+        description: Unique identifier for the status transition event.
+        data_tests:
+          - not_null
+      - name: forecast_output_id
+        description: Forecast output row affected by the transition, when row-specific.
+      - name: forecast_run_id
+        description: Forecast run affected by the transition.
+        data_tests:
+          - not_null
+      - name: previous_status
+        description: Status before transition.
+      - name: new_status
+        description: Status after transition.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['draft', 'approved', 'published', 'superseded', 'failed']
+      - name: changed_at
+        description: Timestamp when the status changed.
+
   - name: stg_vertex_model_explain
     description: >
       SHAP feature attributions for tree-based Vertex predictions (xgboost, random_forest)

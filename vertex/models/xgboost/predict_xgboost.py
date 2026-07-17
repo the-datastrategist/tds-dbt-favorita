@@ -27,6 +27,7 @@ from vertex.utils.data_loading import load_data_from_config
 from vertex.utils.data_utils import get_hash
 from vertex.utils.explain import build_explain_rows, compute_tree_shap_top_features
 from vertex.utils.features import prepare_feature_matrix
+from vertex.utils.forecast_outputs import write_forecast_outputs_if_configured
 from vertex.utils.ml_utils import sanitize_feature_columns
 from vertex.utils.predictions import build_standard_prediction_rows, new_predict_run_id
 
@@ -164,6 +165,17 @@ def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         prediction_table,
         predict_run_id,
     )
+    forecast_output_count = write_forecast_outputs_if_configured(
+        config=config,
+        prediction_rows=prediction_rows,
+        project_id=project_id,
+    )
+    if forecast_output_count:
+        logger.info(
+            "Wrote %s canonical forecast outputs (predict_run_id=%s)",
+            forecast_output_count,
+            predict_run_id,
+        )
 
     explain_count = 0
     if explain_enabled(config):
@@ -199,6 +211,7 @@ def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         "model_id": model_id,
         "model_run_id": resolved_run_id,
         "prediction_count": len(prediction_rows),
+        "forecast_output_count": forecast_output_count,
         "explain_count": explain_count,
         "model_gcs_uri": model_gcs_uri,
     }

@@ -165,3 +165,101 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_explain` (
 )
 PARTITION BY run_date
 CLUSTER BY model_family, model_type, config_name;
+
+-- Forecast contracts registered by platform implementations.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_contracts` (
+  forecast_contract_name STRING NOT NULL,
+  forecast_contract_hash STRING NOT NULL,
+  registered_at TIMESTAMP NOT NULL,
+  target STRING NOT NULL,
+  target_unit STRING,
+  frequency STRING NOT NULL,
+  timezone STRING NOT NULL,
+  issue_schedule STRING,
+  dimensions ARRAY<STRING>,
+  horizons ARRAY<INT64>,
+  quantiles ARRAY<FLOAT64>,
+  training_window_days INT64,
+  known_future_features ARRAY<STRING>,
+  observed_features ARRAY<STRING>,
+  hierarchy ARRAY<STRING>,
+  reconciliation_policy STRING,
+  demand_policy STRING,
+  contract_json JSON,
+  is_active BOOL
+)
+PARTITION BY DATE(registered_at)
+CLUSTER BY forecast_contract_name, forecast_contract_hash;
+
+-- Forecast scoring / publication run audit.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_runs` (
+  forecast_run_id STRING NOT NULL,
+  forecast_contract_name STRING NOT NULL,
+  forecast_contract_hash STRING NOT NULL,
+  run_type STRING NOT NULL,
+  run_status STRING NOT NULL,
+  forecast_origin TIMESTAMP NOT NULL,
+  started_at TIMESTAMP NOT NULL,
+  finished_at TIMESTAMP,
+  source_cutoff_json JSON,
+  feature_version STRING,
+  code_sha STRING,
+  model_run_id STRING,
+  model_id STRING,
+  config_name STRING,
+  row_count INT64,
+  error_message STRING
+)
+PARTITION BY DATE(started_at)
+CLUSTER BY forecast_contract_name, run_type, run_status;
+
+-- Canonical forecast output rows. Initial predict jobs write draft statistical forecasts.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_outputs` (
+  forecast_output_id STRING NOT NULL,
+  source_prediction_id STRING,
+  forecast_run_id STRING NOT NULL,
+  forecast_contract_name STRING NOT NULL,
+  forecast_contract_hash STRING NOT NULL,
+  forecast_origin TIMESTAMP NOT NULL,
+  target_date DATE,
+  horizon INT64,
+  grain STRING,
+  entity_key_json STRING,
+  target STRING,
+  target_unit STRING,
+  prediction_p10 FLOAT64,
+  prediction_p50 FLOAT64,
+  prediction_p90 FLOAT64,
+  statistical_forecast FLOAT64,
+  planner_override FLOAT64,
+  approved_forecast FLOAT64,
+  published_forecast FLOAT64,
+  forecast_status STRING NOT NULL,
+  model_run_id STRING,
+  model_id STRING,
+  config_name STRING,
+  model_family STRING,
+  model_type STRING,
+  feature_version STRING,
+  code_sha STRING,
+  data_cutoff TIMESTAMP,
+  model_artifact_uri STRING,
+  created_at TIMESTAMP NOT NULL
+)
+PARTITION BY DATE(forecast_origin)
+CLUSTER BY forecast_contract_name, forecast_status, config_name;
+
+-- Forecast status transition history.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_status_history` (
+  status_event_id STRING NOT NULL,
+  forecast_output_id STRING,
+  forecast_run_id STRING NOT NULL,
+  previous_status STRING,
+  new_status STRING NOT NULL,
+  changed_at TIMESTAMP NOT NULL,
+  changed_by STRING,
+  reason_code STRING,
+  comment STRING
+)
+PARTITION BY DATE(changed_at)
+CLUSTER BY forecast_run_id, new_status;
