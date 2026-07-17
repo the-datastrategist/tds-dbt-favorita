@@ -73,7 +73,7 @@ Collateral used in sales, kickoff, and handoff:
 | Benchmarks | [benchmarks.md](benchmarks.md) | Template + query recipes |
 | Dashboard blueprint | [delivery_artifacts.md](delivery_artifacts.md#dashboard-blueprint) | Blueprint (BI layer planned) |
 | Client rollout playbook | [client_rollout.md](client_rollout.md) | Available |
-| IaC / GCP ops | [iac.md](iac.md) + `vertex/ops/README.md` | Runbook available; Terraform roadmap |
+| IaC / GCP ops | [iac.md](iac.md) + `vertex/ops/README.md` | Runbook + Terraform modules available |
 
 → Index: [delivery_artifacts.md](delivery_artifacts.md)
 

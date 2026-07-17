@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # One-time GCP setup for Vertex pipeline submit (run with a user or admin account, not the Cursor SA).
 #
+# Prefer terraform/modules/gcp-apis + terraform/modules/artifact-registry for new environments
+# (see terraform/README.md) — this script remains useful for quick bootstrap or as the
+# `terraform import` source for environments provisioned before Terraform adoption.
+#
 #   gcloud auth login
 #   bash scripts/setup_vertex_artifact_registry.sh
 #

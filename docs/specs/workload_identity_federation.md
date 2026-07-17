@@ -34,9 +34,10 @@ The third row is a latent bug worth fixing regardless of WIF: `creds = os.getenv
 
 ## Implementation notes (as shipped so far)
 
-Rollout step 1 is done; steps 2–4 remain blocked on real GCP org resources this repo can't
-provision from a sandbox (a live WIF pool/provider needs an actual project and either Terraform
-apply or manual `gcloud` calls against a real GCP org):
+Rollout step 1 is done. Steps 2–4 are no longer blocked on tooling (the [Terraform modules
+spec](terraform_modules.md) has since shipped, so `iam-vertex-sa` exists to extend) — they're
+blocked purely on having a real GCP project/org to provision the WIF pool/provider against,
+which this repo doesn't have:
 
 - **Done:** the dead-code removal in `vertex/jobs/gcp.py` — `worker_pool_spec` no longer
   propagates `GOOGLE_APPLICATION_CREDENTIALS` into the Custom Job container env. Added
@@ -44,12 +45,14 @@ apply or manual `gcloud` calls against a real GCP org):
   never contains that key and that the service account continues to flow through
   `settings.service_account` instead.
 - **Done:** `vertex/ops/README.md` and `iac.md` security checklists updated to reflect this as
-  factual (checked) rather than aspirational, while CI WIF stays unchecked and explicitly
-  flagged as blocked on the [Terraform modules spec](terraform_modules.md).
+  factual (checked) rather than aspirational.
+- **Done:** [Terraform modules](terraform_modules.md) shipped, including `iam-vertex-sa`, so the
+  `google_iam_workload_identity_pool*` resources this spec calls for have a module to live in —
+  removing that tooling blocker on steps 2–3.
 - **Not done:** the CI `google-github-actions/auth` step and the WIF pool/provider Terraform
-  resources (rollout steps 2–3) — these require the Terraform modules spec to ship first (for
-  the `iam-vertex-sa` module to extend) and a real GCP project to provision against. Revisit once
-  that spec is implemented and a CI job actually needs live GCP access (e.g. `terraform plan`).
+  resources themselves (rollout steps 2–3) — creating a WIF pool/provider requires a real GCP
+  project. Revisit once a CI job actually needs live GCP access (e.g. `terraform plan` against a
+  real project).
 
 ## Design
 

@@ -2,7 +2,7 @@
 
 # SPEC: Terraform modules for GCP provisioning
 
-**Status:** Proposed
+**Status:** Shipped
 **Roadmap reference:** [`iac.md`](../iac.md#terraform-roadmap) — "Terraform roadmap"; [`client_rollout.md`](../client_rollout.md#post-rollout-weeks-58-optional) — "Terraform modules"
 
 ---
@@ -48,6 +48,38 @@ terraform/
 - Managing the BigQuery **table schemas** themselves (`vertex/ddl/vertex_bq_tables.sql`) in Terraform. Table DDL changes frequently as new columns are added (e.g. the recent `favorita_model_explain` table) and is naturally expressed as SQL with `IF NOT EXISTS`/`ADD COLUMN IF NOT EXISTS` semantics that `apply_vertex_bq_ddl.py` already handles well. Terraform's `google_bigquery_table` resource would fight dbt/DDL-script ownership of schema. Scope Terraform to **datasets** (location, labels, retention), not tables.
 - Workload Identity Federation resources (`google_iam_workload_identity_pool*`) — covered in the separate [WIF spec](workload_identity_federation.md); this spec's `iam-vertex-sa` module should be written so WIF bindings can be added later without restructuring it.
 - Multi-cloud or non-GCP support.
+
+## Implementation notes (as shipped)
+
+All six modules and both environments below shipped as designed; two things deviated from the
+letter of the spec, both because they're activities a sandboxed repo can't perform against a
+real GCP org rather than design changes:
+
+- **`terraform fmt`/`init -backend=false`/`validate` pass locally and in CI** (new
+  `.github/workflows/terraform.yml`, matrixed over `dev`/`prod`) exactly as scoped — no live
+  `plan`/`apply` in CI, per Goals and the CI section below. This required no `.tf` design changes,
+  just building the modules to match `terraform validate`'s bar (valid HCL, resolvable module
+  graph, no unset required variables without defaults).
+- **The Migration plan (`terraform import` against a real client project) is documentation, not
+  code** — it can't be executed or tested here since it requires an actual GCP project with
+  resources the shell scripts already created. The plan as written in this doc is the
+  deliverable; there was nothing to "ship" beyond writing it accurately, which the original spec
+  already did.
+- **`cloud-scheduler` ships as scaffolding only** (`enabled = false`, empty `jobs` map by
+  default in both environments) exactly as the Design section calls for — no Cloud Run trigger
+  service exists yet, so there's nothing real to point it at. This isn't a deviation, just
+  confirming the "leave disabled" instruction was followed rather than skipped.
+- **`bigquery-datasets`, `gcs-buckets`, `iam-vertex-sa`, `artifact-registry`, `gcp-apis` are wired
+  into both `environments/dev` and `environments/prod`** with `depends_on = [module.gcp_apis]` on
+  every module that needs an enabled API first — not called out explicitly in the original
+  per-module Design snippets, but necessary for `terraform apply` ordering on a brand-new
+  project (APIs must be enabled before e.g. `google_bigquery_dataset` can be created).
+- `terraform/README.md` was added (not called for explicitly in the spec) as the one-paragraph
+  "how do I actually run this" entry point, since the spec itself is a design doc, not a runbook.
+
+Genuinely not done, as scoped by Non-goals and the CI section: no WIF pool/provider resources in
+`iam-vertex-sa` (separate spec), and no live `plan`/`apply` — either locally against a real
+project or in CI. Both require a real GCP org this repo doesn't have.
 
 ## Design
 

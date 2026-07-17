@@ -23,6 +23,12 @@ VERTEX_PIPELINE_SERVICE_ACCOUNT=sa-vertex-ml@PROJECT.iam.gserviceaccount.com
 
 Custom Jobs and PipelineJobs use this account when set.
 
+Provision this (and the rest of this runbook's resources) via versioned Terraform instead of
+by hand — see [`terraform/README.md`](../../terraform/README.md) and
+[`docs/specs/terraform_modules.md`](../../docs/specs/terraform_modules.md). The
+`scripts/setup_vertex_*.sh` shell scripts remain for quick bootstrap or as the import source for
+environments Terraform is adopting.
+
 ## GCS layout (recommended)
 
 ```text
@@ -78,7 +84,8 @@ Alternative: **Workflows** orchestrating dbt Cloud job → Vertex PipelineJob AP
       metadata server) — no key file is propagated into the job container
       (`vertex/jobs/gcp.py`). See `docs/specs/workload_identity_federation.md`.
 - [ ] CI Workload Identity Federation for jobs that need real GCP access (design in the spec
-      above; the pool/provider Terraform resources are blocked on the Terraform modules spec)
+      above; `iam-vertex-sa` Terraform module exists to extend — see `docs/specs/terraform_modules.md`
+      — but the pool/provider resources still need a real GCP project to provision)
 - [ ] Service account keys not stored in repo for **local dev** submission identity; key file
       remains the supported path there (see spec's non-goals) — Secret Manager as an alternative
 - [ ] Artifact Registry image scanning enabled

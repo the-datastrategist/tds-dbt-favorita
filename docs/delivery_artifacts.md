@@ -106,7 +106,7 @@ Four-week engagement template from discovery through first production refresh.
 
 ## Infrastructure as code
 
-GCP provisioning guidance, IAM matrix, GCS layout, and Scheduler patterns. Full Terraform modules are **roadmapped**; operational runbook is **available today**.
+GCP provisioning guidance, IAM matrix, GCS layout, and Scheduler patterns. Both **Terraform modules** (`terraform/`) and the operational runbook are **available today**.
 
 → [iac.md](iac.md)
 

@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars (gitignored) and fill in per-client values before `terraform apply`.
+project_id    = "my-client-prod"
+region        = "us-central1"
+environment   = "prod"
+client_label  = "acme-corp"
+caller_member = "user:you@example.com"
