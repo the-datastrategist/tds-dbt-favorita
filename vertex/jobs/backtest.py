@@ -10,7 +10,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from vertex.config.backtest_contract import DEFAULT_BACKTEST_CONTRACT_PATH, load_backtest_contract
+from vertex.config.backtest_contract import (
+    DEFAULT_BACKTEST_CONTRACT_PATH,
+    BacktestContract,
+    load_backtest_contract,
+)
 from vertex.evaluation.backtesting import BaselineBacktestResult, score_baselines
 from vertex.evaluation.persistence import persist_backtest_result
 from vertex.utils.bigquery_utils import run_query, validate_bq_identifier
@@ -24,6 +28,55 @@ def build_backtest_plan(contract_path: str | Path | None = None) -> list[dict[st
     return contract.origin_plan_rows()
 
 
+def build_bigquery_history_query(contract: BacktestContract) -> str:
+    """Build a bounded, column-pruned history query for a backtest contract."""
+    columns = list(
+        dict.fromkeys(
+            [
+                *contract.entity_columns,
+                *contract.segment_columns,
+                contract.date_column,
+                contract.actual_column,
+            ]
+        )
+    )
+    validated_columns = [
+        validate_bq_identifier(column, label="history column") for column in columns
+    ]
+    selected = ", ".join(f"`{column}`" for column in validated_columns)
+    date_column = validate_bq_identifier(contract.date_column, label="history date column")
+    history_start = min(contract.origins) - timedelta(days=contract.train_window_days)
+    history_end = max(contract.origins) + timedelta(days=max(contract.horizons))
+    bounded_history = (
+        f"SELECT {selected} FROM `{contract.history_table}` "
+        f"WHERE `{date_column}` BETWEEN DATE '{history_start.isoformat()}' "
+        f"AND DATE '{history_end.isoformat()}'"
+    )
+    if contract.max_entities is None:
+        return bounded_history
+
+    entity_columns = [
+        validate_bq_identifier(column, label="history entity column")
+        for column in contract.entity_columns
+    ]
+    entity_select = ", ".join(f"`{column}`" for column in entity_columns)
+    entity_order = ", ".join(f"`{column}`" for column in entity_columns)
+    join_condition = " AND ".join(
+        f"history.`{column}` = entities.`{column}`" for column in entity_columns
+    )
+    return (
+        "WITH bounded_history AS ("
+        f"{bounded_history}"
+        "), selected_entities AS ("
+        f"SELECT DISTINCT {entity_select} FROM bounded_history "
+        f"ORDER BY {entity_order} LIMIT {contract.max_entities}"
+        ") "
+        f"SELECT {', '.join(f'history.`{column}`' for column in validated_columns)} "
+        "FROM bounded_history AS history "
+        f"INNER JOIN selected_entities AS entities ON {join_condition}"
+    )
+
+
 def run_baseline_backtest(
     input_csv: str | Path | None = None,
     contract_path: str | Path | None = None,
@@ -34,27 +87,7 @@ def run_baseline_backtest(
     """Load history from CSV or configured BigQuery table and score baselines."""
     contract = load_backtest_contract(contract_path)
     if use_bigquery:
-        columns = list(
-            dict.fromkeys(
-                [
-                    *contract.entity_columns,
-                    *contract.segment_columns,
-                    contract.date_column,
-                    contract.actual_column,
-                ]
-            )
-        )
-        selected = ", ".join(
-            f"`{validate_bq_identifier(column, label='history column')}`" for column in columns
-        )
-        history_start = min(contract.origins) - timedelta(days=contract.train_window_days)
-        history_end = max(contract.origins) + timedelta(days=max(contract.horizons))
-        query = (
-            f"SELECT {selected} FROM `{contract.history_table}` "
-            f"WHERE `{contract.date_column}` BETWEEN DATE '{history_start.isoformat()}' "
-            f"AND DATE '{history_end.isoformat()}'"
-        )
-        history = run_query(query, project_id=project_id)
+        history = run_query(build_bigquery_history_query(contract), project_id=project_id)
     else:
         if input_csv is None:
             raise ValueError("input_csv is required when BigQuery input is not selected")

@@ -48,7 +48,7 @@ Run baseline scoring directly from the configured BigQuery history table:
 make vertex-backtest
 ```
 
-The runner selects only the configured entity, date, actual, and segment columns and bounds the query to the training and evaluation window. For local testing, retain the CSV path:
+The runner selects only the configured entity, date, actual, and segment columns and bounds the query to the training and evaluation window. When `max_entities` is set, a deterministic entity-selection CTE applies that limit before history is downloaded. For local testing, retain the CSV path:
 
 ```bash
 make vertex-backtest VERTEX_BACKTEST_INPUT_MODE=csv VERTEX_BACKTEST_INPUT=path/to/history.csv
