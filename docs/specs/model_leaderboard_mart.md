@@ -31,8 +31,8 @@ Today, comparing BQML and Vertex models means manually filling in `{fill}` place
 
 ## Implementation notes (as shipped)
 
-- `favorita_model_champion`'s ranking is two-step rather than the single combined `row_number()` sketched below: first pick each `config_name`'s own latest run (`is_latest_run`), then rank *those* rows per `grain` by the primary metric. This avoids a subtle bug in the original sketch, where partitioning "latest run" by `grain` alone (rather than by `config_name`) would silently drop all but one config's history from champion contention.
-- `favorita_model_leaderboard` includes a `model_run_id` column (null for BQML rows) beyond the columns tabulated below — kept for potential future joins (e.g. back to `stg_vertex_model_metadata`), not required by this spec's own consumers.
+- `ml_model_champion`'s ranking is two-step rather than the single combined `row_number()` sketched below: first pick each `config_name`'s own latest run (`is_latest_run`), then rank *those* rows per `grain` by the primary metric. This avoids a subtle bug in the original sketch, where partitioning "latest run" by `grain` alone (rather than by `config_name`) would silently drop all but one config's history from champion contention.
+- `ml_model_leaderboard` includes a `model_run_id` column (null for BQML rows) beyond the columns tabulated below — kept for potential future joins (e.g. back to `stg_vertex_model_metadata`), not required by this spec's own consumers.
 - Materialized as a `table`, not a `snapshot` (see "Open questions" — deferred until champion-change history is an actual client deliverable).
 
 ## Design
@@ -75,9 +75,9 @@ Add `dbt/models/staging/schema.yml` column docs + `not_null` tests on `model_run
 - (a) Leave `wape` null for BQML rows in the leaderboard — simplest, but `benchmarks.md`'s company-day champion is selected on `test_mae`, so this is workable for that grain but not comparable to Vertex's WAPE-based store-day selection.
 - (b) **Compute WAPE for BQML from `bqml_model_predict`** (`SUM(ABS(actual - prediction)) / SUM(ABS(actual))`), joined by `run_date`/`model_name`, in a small intermediate model `int_bqml_model_wape.sql`. This makes BQML and Vertex genuinely comparable on the metric `benchmarks.md` already recommends as the primary store/company-day metric.
 
-### 3. Mart: `favorita_model_leaderboard`
+### 3. Mart: `ml_model_leaderboard`
 
-New model in `dbt/models/marts/ml_models/favorita_model_leaderboard.sql` (materialized `table`, tagged `bqml, vertex` — depends on both), unioning:
+New model in `dbt/models/marts/ml_models/ml_model_leaderboard.sql` (materialized `table`, tagged `bqml, vertex` — depends on both), unioning:
 
 | Column | From Vertex (`stg_vertex_model_performance`) | From BQML (`bqml_model_evaluate` + `int_bqml_model_wape`) |
 |--------|-----------------------------------------------|-------------------------------------------------------------|
@@ -92,7 +92,7 @@ New model in `dbt/models/marts/ml_models/favorita_model_leaderboard.sql` (materi
 | `r2` | `r2` | `r2_score` |
 | `wape` | `wape` | from `int_bqml_model_wape` |
 
-### 4. Champion flag model: `favorita_model_champion`
+### 4. Champion flag model: `ml_model_champion`
 
 ```sql
 {% raw %}select
@@ -109,7 +109,7 @@ New model in `dbt/models/marts/ml_models/favorita_model_leaderboard.sql` (materi
                 else mae
             end asc
     ) = 1 and is_latest_run as is_champion
-from {{ ref('favorita_model_leaderboard') }}{% endraw %}
+from {{ ref('ml_model_leaderboard') }}{% endraw %}
 ```
 
 Primary metric per grain matches `benchmarks.md`'s existing recommendation (`test_wape` for store-day, `test_mae` for company-day) — expose as a dbt var (`leaderboard_primary_metric_by_grain`) rather than hardcoding, so a client engagement can override it.
@@ -124,15 +124,15 @@ Primary metric per grain matches `benchmarks.md`'s existing recommendation (`tes
 
 1. `stg_vertex_model_performance` + schema/tests (small, unblocks everything else).
 2. `int_bqml_model_wape` (BQML WAPE calc from predict/actuals).
-3. `favorita_model_leaderboard` union mart.
-4. `favorita_model_champion` + singular test.
-5. Update `benchmarks.md` "Champion selection" section to a query against `favorita_model_champion` instead of a manually filled table; update `delivery_artifacts.md` dashboard blueprint's leaderboard page source to `favorita_model_champion`.
-6. Add `favorita_model_leaderboard` / `favorita_model_champion` to `dbt/models/exposures.yml` if/when a dashboard consumes them.
+3. `ml_model_leaderboard` union mart.
+4. `ml_model_champion` + singular test.
+5. Update `benchmarks.md` "Champion selection" section to a query against `ml_model_champion` instead of a manually filled table; update `delivery_artifacts.md` dashboard blueprint's leaderboard page source to `ml_model_champion`.
+6. Add `ml_model_leaderboard` / `ml_model_champion` to `dbt/models/exposures.yml` if/when a dashboard consumes them.
 
 ## Open questions
 
 - `model_family` for BQML rows: `model_configs` in `dbt_project.yml` doesn't currently have a `model_family` field (it has `metric`, `interval`, `model_name`) — either add one to `model_configs`, or accept `'bqml'` as a coarse stand-in until multiple BQML configs with different grains exist.
-- Should `favorita_model_champion` be `materialized='table'` (snapshot per run) or an actual dbt `snapshot` (full history via `dbt snapshot`)? A snapshot gives "when did the champion change" for free via `dbt_valid_from`/`dbt_valid_to`; a table only shows the current champion. Recommend snapshot if champion-change history becomes a client deliverable.
+- Should `ml_model_champion` be `materialized='table'` (snapshot per run) or an actual dbt `snapshot` (full history via `dbt snapshot`)? A snapshot gives "when did the champion change" for free via `dbt_valid_from`/`dbt_valid_to`; a table only shows the current champion. Recommend snapshot if champion-change history becomes a client deliverable.
 
 ## Related documents
 

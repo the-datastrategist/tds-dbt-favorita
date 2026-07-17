@@ -31,8 +31,8 @@
 
 ## Implementation notes (as shipped)
 
-- `int_vertex_prediction_accuracy_daily` and `favorita_prediction_accuracy_rolling` live in `dbt/models/marts/ml_models/` (not `dbt/models/intermediate/`) — that folder is reserved for training feature tables (`int_sales_*`) per its config comment in `dbt_project.yml`; this pair depends on Vertex prediction outputs, not raw features, so it's colocated with the other ML-output-derived marts (`int_bqml_model_wape`, `favorita_model_leaderboard`) from the [model leaderboard mart spec](model_leaderboard_mart.md).
-- `favorita_prediction_accuracy_rolling` also computes 28-day trailing MAE/WAPE (`mae_28d`, `wape_28d`), not just 7-day, matching this section's own heading even though the original SQL sketch only showed the 7-day window.
+- `int_vertex_prediction_accuracy_daily` and `ml_prediction_accuracy_rolling` live in `dbt/models/marts/ml_models/` (not `dbt/models/intermediate/`) — that folder is reserved for training feature tables (`int_sales_*`) per its config comment in `dbt_project.yml`; this pair depends on Vertex prediction outputs, not raw features, so it's colocated with the other ML-output-derived marts (`int_bqml_model_wape`, `ml_model_leaderboard`) from the [model leaderboard mart spec](model_leaderboard_mart.md).
+- `ml_prediction_accuracy_rolling` also computes 28-day trailing MAE/WAPE (`mae_28d`, `wape_28d`), not just 7-day, matching this section's own heading even though the original SQL sketch only showed the 7-day window.
 - `int_vertex_prediction_accuracy_daily` uses `safe_divide()` for WAPE (project convention, e.g. `int_sales_daily`) rather than the `nullif()` pattern originally sketched — same result, more consistent with the rest of the codebase.
 - Added two dbt unit tests (`dbt/models/marts/schema.yml`) covering the MAE/WAPE/bias aggregation and the rolling-window join, per this doc's own "Testing & validation" guidance.
 - BQML accuracy monitoring remains out of scope, per the non-goals above — `bqml_model_predict` still has no `actual` column.
@@ -63,7 +63,7 @@ group by config_name, model_family, model_type, model_run_id, forecast_date{% en
 
 `forecast_date` (not `run_date`) is the grouping key: a prediction made on day T for T+7 only becomes checkable on T+7 once `actual` lands, so this table is inherently append-only as actuals arrive, matching the existing `insert_overwrite` staging pattern used elsewhere in this project.
 
-### 2. Rolling window mart: `favorita_prediction_accuracy_rolling`
+### 2. Rolling window mart: `ml_prediction_accuracy_rolling`
 
 7-day and 28-day trailing MAE/WAPE per `config_name`, plus the `model_run_id`'s original `test_performance` for comparison:
 
@@ -95,7 +95,7 @@ A singular dbt test (`tests/singular/assert_no_material_accuracy_drift.sql`) fla
 
 ```sql
 {% raw %}select *
-from {{ ref('favorita_prediction_accuracy_rolling') }}
+from {{ ref('ml_prediction_accuracy_rolling') }}
 where train_test_wape is not null
   and wape_7d > train_test_wape * (1 + {{ var('accuracy_drift_tolerance_pct', 0.25) }}){% endraw %}
 ```
@@ -111,7 +111,7 @@ Add to `dbt/selectors.yml` as `daily_refresh_tests` additions, or a new selector
 accuracy_monitoring:
   definition:
     method: fqn
-    value: favorita_prediction_accuracy_rolling
+    value: ml_prediction_accuracy_rolling
     children: true
 ```
 

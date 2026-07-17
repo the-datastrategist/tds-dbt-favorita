@@ -42,11 +42,11 @@ Populate after running pipelines in your GCP project. Replace `{values}` with me
 
 ### Champion selection
 
-Automated via `favorita_model_champion` (see [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md)) — no more hand-filled table. Query it directly:
+Automated via `ml_model_champion` (see [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md)) — no more hand-filled table. Query it directly:
 
 ```sql
 SELECT grain, platform, config_name, model_type, mae, rmse, wape, run_at
-FROM `{project}.{dataset}.favorita_model_champion`
+FROM `{project}.{dataset}.ml_model_champion`
 WHERE is_champion
 ORDER BY grain;
 ```
@@ -116,11 +116,11 @@ Replace `{project}` and `{dataset}` with your `GOOGLE_PROJECT_ID` and `DBT_DATAS
 
 ```sql
 SELECT platform, config_name, model_type, grain, mae, rmse, r2, wape, run_at
-FROM `{project}.{dataset}.favorita_model_leaderboard`
+FROM `{project}.{dataset}.ml_model_leaderboard`
 ORDER BY grain, run_at DESC;
 ```
 
-`favorita_model_leaderboard` unions both platforms on a shared column set — see [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md). `favorita_model_champion` (used above) is derived from this.
+`ml_model_leaderboard` unions both platforms on a shared column set — see [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md). `ml_model_champion` (used above) is derived from this.
 
 ### BQML evaluation
 
@@ -154,7 +154,7 @@ LIMIT 100;
 
 ```sql
 SELECT config_name, forecast_date, wape_7d, wape_28d, train_test_wape
-FROM `{project}.{dataset}.favorita_prediction_accuracy_rolling`
+FROM `{project}.{dataset}.ml_prediction_accuracy_rolling`
 ORDER BY config_name, forecast_date DESC;
 ```
 
@@ -205,7 +205,7 @@ See [iac.md](iac.md) for production cost controls (reservations, labels, schedul
 1. **Start with BQML** on company-day — establishes a SQL-native baseline in hours.
 2. **Move to Vertex XGBoost** on store-day — tests whether finer grain + tuning beats baseline.
 3. **Add ARIMA/SARIMA** where series are short or highly seasonal per store.
-4. **Query the champion** from `favorita_model_champion` and wire to dashboard / alerting (see [delivery_artifacts.md](delivery_artifacts.md)).
+4. **Query the champion** from `ml_model_champion` and wire to dashboard / alerting (see [delivery_artifacts.md](delivery_artifacts.md)).
 
 ---
 
@@ -214,7 +214,7 @@ See [iac.md](iac.md) for production cost controls (reservations, labels, schedul
 - [Case study](case_study.md)
 - [Delivery artifacts — dashboard blueprint](delivery_artifacts.md#dashboard-blueprint)
 - [Vertex experiment tracking](../../vertex/README.md) (repo)
-- [Model leaderboard mart spec](specs/model_leaderboard_mart.md) — design behind `favorita_model_leaderboard` / `favorita_model_champion`
-- [Prediction accuracy monitoring spec](specs/prediction_accuracy_monitoring.md) — design behind `favorita_prediction_accuracy_rolling`
+- [Model leaderboard mart spec](specs/model_leaderboard_mart.md) — design behind `ml_model_leaderboard` / `ml_model_champion`
+- [Prediction accuracy monitoring spec](specs/prediction_accuracy_monitoring.md) — design behind `ml_prediction_accuracy_rolling`
 
 {% enddocs %}
