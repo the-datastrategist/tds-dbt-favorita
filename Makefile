@@ -160,8 +160,8 @@ dbt-predict: ## Run BQML predict/evaluate/explain models (tag:predict)
 dbt-build: ## Run + test (+ seed/snapshot) in DAG order, excluding BQML (tag:bqml)
 	docker compose run --rm ml-pipeline dbt build --project-dir dbt --target $(DBT_TARGET) --exclude tag:bqml $(ARGS)
 
-dbt-test: ## Run data tests (all, or --select via ARGS)
-	docker compose run --rm ml-pipeline dbt test --project-dir dbt --target $(DBT_TARGET) $(ARGS)
+dbt-test: ## Run data tests, excluding BQML (tag:bqml); pass ARGS to override, e.g. ARGS='--select tag:bqml'
+	docker compose run --rm ml-pipeline dbt test --project-dir dbt --target $(DBT_TARGET) --exclude tag:bqml $(ARGS)
 
 dbt-compile: ## Compile models to SQL without executing (dbt/target/compiled)
 	docker compose run --rm ml-pipeline dbt compile --project-dir dbt --target $(DBT_TARGET) $(ARGS)
@@ -346,8 +346,8 @@ vertex-pipeline-train-only: ## Pipeline without optimize/predict steps
 dbt-vertex: vertex-bq-ddl ## Ensure Vertex tables exist, then build Vertex-only staging and monitoring models
 	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:vertex --exclude tag:bqml tag:backtest $(ARGS)
 
-dbt-backtest: vertex-bq-ddl ## Build optional backtest staging and leaderboard models after applying their DDL
-	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:backtest $(ARGS)
+dbt-backtest: vertex-bq-ddl ## Build optional backtest staging models after applying their DDL
+	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:backtest --exclude tag:bqml $(ARGS)
 
 vertex-bq-ddl: ## Create BigQuery tables for Vertex ML outputs (once per environment)
 	docker compose run --rm ml-pipeline python scripts/apply_vertex_bq_ddl.py
