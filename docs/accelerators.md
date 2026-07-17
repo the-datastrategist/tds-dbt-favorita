@@ -74,7 +74,7 @@ mindmap
 | Job configs | `vertex/config/model_config.yaml` | Named train / predict / optimize + pipelines |
 | Runners | `vertex/jobs/run.py`, `submit.py`, `submit_pipeline.py` | Docker, Custom Job, PipelineJob entrypoints |
 | Model registry | `vertex/models/registry.py` | `(model_type, step)` → Python module |
-| Families | `vertex/models/xgboost/`, `sklearn/`, `timeseries/` | XGBoost, RF, ARIMA, SARIMA |
+| Families | `vertex/models/xgboost/`, `sklearn/`, `timeseries/`, `prophet/` | XGBoost, RF, ARIMA, SARIMA, Prophet |
 | Predictions schema | `vertex/utils/predictions.py` | Unified prediction fact rows |
 | Explainability | `vertex/utils/explain.py`, `stg_vertex_model_explain` | Per-prediction SHAP top-K feature attributions (xgboost, random_forest) |
 | Experiment tracking | `vertex/utils/experiment_tracking.py` | MLflow + Vertex Experiments |
@@ -85,7 +85,7 @@ mindmap
 
 **Commands:** `make vertex-train`, `make vertex-predict`, `make vertex-optimize`, `make vertex-pipeline-submit`, `make vertex-bq-ddl`
 
-**Model types:** `xgboost`, `random_forest`, `arima`, `sarima`
+**Model types:** `xgboost`, `random_forest`, `arima`, `sarima`, `prophet`
 
 → Product view: [vertex/consulting_package.md](vertex/consulting_package.md)
 

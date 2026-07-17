@@ -343,14 +343,15 @@ docker run --rm -v "$(pwd)":/app -w /app tds-favorita:latest \
 | `random_forest` | `models/sklearn/` | joblib | Same feature path as XGBoost |
 | `arima` | `models/timeseries/` | joblib bundle per entity | `inputs.entity_column`, `min_train_obs` |
 | `sarima` | `models/timeseries/` | joblib bundle per entity | `seasonal_order` in `model_params` |
+| `prophet` | `models/prophet/` | joblib bundle per entity | Additive seasonality only; emits `prediction_lower`/`prediction_upper` from Prophet's native uncertainty interval; no SHAP (`explain.enabled` must stay unset — see [prophet_model_family.md](../docs/specs/prophet_model_family.md)) |
 
 Example configs:
 
-| Step | XGBoost | Random Forest | ARIMA | SARIMA |
-|------|---------|---------------|-------|--------|
-| Train | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` |
-| Predict | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` |
-| Optimize | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` |
+| Step | XGBoost | Random Forest | ARIMA | SARIMA | Prophet |
+|------|---------|---------------|-------|--------|---------|
+| Train | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` | `favorita_store_n1d_prophet` |
+| Predict | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` | `favorita_store_n1d_prophet` |
+| Optimize | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` | `favorita_store_n1d_prophet` |
 
 ```bash
 make vertex-train VERTEX_CONFIG=favorita_store_n1d_xgboost
@@ -376,6 +377,7 @@ End-to-end **optimize → train → predict** runs as a Vertex AI **PipelineJob*
 | `favorita_xgboost` | XGBoost | optimize, train, predict |
 | `favorita_random_forest` | Random Forest | optimize, train, predict |
 | `favorita_arima` | ARIMA | train, predict (no optimize) |
+| `favorita_prophet` | Prophet | train, predict (no optimize) |
 
 ```bash
 # Compile KFP JSON (checked in CI; artifacts gitignored)
@@ -401,10 +403,10 @@ dbt models: `stg_vertex_model_predictions`, `stg_vertex_model_metadata`, `stg_ve
 
 1. Add train / predict / optimize modules under `vertex/models/<family>/`.
 2. Register runners in `models/registry.py` for `(model_type, step)`.
-3. Add three config blocks to `model_config.yaml` (`job.step`, shared `model_family`).
+3. Add a config block to `model_config.yaml` (unified — `model_type`, shared `model_family`; step is set at runtime, not in YAML).
 4. Extend tests under `vertex/tests/`.
 
-Planned: `prophet` (design: [../docs/specs/prophet_model_family.md](../docs/specs/prophet_model_family.md)).
+`prophet` (design: [../docs/specs/prophet_model_family.md](../docs/specs/prophet_model_family.md)) is the most recent family shipped via this exact pattern — zero changes needed to `vertex/jobs/run.py`, `submit.py`, or `pipelines/compile.py`.
 
 ## Troubleshooting
 
