@@ -17,6 +17,14 @@ module "iam_vertex_sa" {
   project_id    = var.project_id
   sa_id         = var.sa_id
   caller_member = var.caller_member
+  bucket_names = concat(
+    values(module.gcs_buckets.bucket_names),
+    compact([module.gcs_buckets.mlflow_bucket_name]),
+  )
+  dataset_ids = [
+    module.bigquery_datasets.raw_dataset_id,
+    module.bigquery_datasets.analytics_dataset_id,
+  ]
 
   depends_on = [module.gcp_apis]
 }

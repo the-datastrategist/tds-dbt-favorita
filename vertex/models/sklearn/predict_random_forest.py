@@ -10,6 +10,7 @@ from typing import Any, Optional
 
 import pandas as pd
 
+from vertex.config.feature_availability import validate_model_features_from_config
 from vertex.config.load_config import (
     DEFAULT_CONFIG_PATH,
     explain_enabled,
@@ -17,7 +18,6 @@ from vertex.config.load_config import (
     get_job_spec,
     load_model_config,
 )
-from vertex.config.feature_availability import validate_model_features_from_config
 from vertex.utils.artifacts import load_joblib_from_gcs, resolve_latest_artifact
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config
@@ -89,7 +89,10 @@ def run_predict_random_forest(config: dict[str, Any]) -> dict[str, Any]:
         model_run_id=model_run_id,
     )
     joblib_uri = manifest.get("joblib_gcs_uri") or artifact_uri
-    model = load_joblib_from_gcs(joblib_uri)
+    model = load_joblib_from_gcs(
+        joblib_uri,
+        expected_sha256=manifest.get("joblib_sha256"),
+    )
 
     df = load_data_from_config(config)
     manifest_target = manifest.get("target_column", target_column)

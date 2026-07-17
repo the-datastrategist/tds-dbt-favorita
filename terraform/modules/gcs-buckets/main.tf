@@ -1,7 +1,6 @@
 # One bucket per purpose per docs/iac.md's GCS layout table (raw, staging, models), plus an
-# optional mlflow bucket. Bucket-level IAM (not project-wide storage admin) is granted by
-# iam-vertex-sa's roles/storage.objectAdmin at the SA level; per-bucket bindings can be added
-# here later if a client needs tighter scoping than project-wide storage.objectAdmin.
+# optional mlflow bucket. The environment passes these bucket names to iam-vertex-sa so
+# object access is granted only on platform-owned buckets.
 
 locals {
   labels = {

@@ -13,10 +13,20 @@ variable "roles" {
   type        = list(string)
   default = [
     "roles/aiplatform.user",
-    "roles/storage.objectAdmin",
-    "roles/bigquery.dataEditor",
     "roles/bigquery.jobUser",
   ]
+}
+
+variable "bucket_names" {
+  description = "Buckets where the Vertex service account may read and write objects."
+  type        = set(string)
+  default     = []
+}
+
+variable "dataset_ids" {
+  description = "BigQuery dataset IDs where the Vertex service account may edit data."
+  type        = set(string)
+  default     = []
 }
 
 variable "caller_member" {

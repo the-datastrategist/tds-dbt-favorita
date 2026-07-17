@@ -52,7 +52,7 @@ echo "=== Docker login (${REGISTRY_HOST}) ==="
 gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin "https://${REGISTRY_HOST}"
 
 echo "=== Build ==="
-docker compose build
+docker build --target production --tag "${LOCAL_IMAGE}" .
 
 echo "=== Tag ==="
 echo "${LOCAL_IMAGE} -> ${REMOTE_IMAGE}"

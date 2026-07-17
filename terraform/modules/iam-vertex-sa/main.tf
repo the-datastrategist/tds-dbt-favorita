@@ -17,3 +17,20 @@ resource "google_service_account_iam_member" "caller_act_as" {
   role               = "roles/iam.serviceAccountUser"
   member             = var.caller_member
 }
+
+resource "google_storage_bucket_iam_member" "vertex_objects" {
+  for_each = var.bucket_names
+
+  bucket = each.value
+  role   = "roles/storage.objectUser"
+  member = "serviceAccount:${google_service_account.vertex_ml.email}"
+}
+
+resource "google_bigquery_dataset_iam_member" "vertex_data" {
+  for_each = var.dataset_ids
+
+  project    = var.project_id
+  dataset_id = each.value
+  role       = "roles/bigquery.dataEditor"
+  member     = "serviceAccount:${google_service_account.vertex_ml.email}"
+}

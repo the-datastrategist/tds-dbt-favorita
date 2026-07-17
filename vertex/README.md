@@ -412,6 +412,8 @@ Planned: `prophet` (design: [../docs/specs/prophet_model_family.md](../docs/spec
 |-------|--------|
 | `Config with name '…' not found` | Config `name` in YAML matches `--config-name` / `VERTEX_*_CONFIG` |
 | `No model artifacts` | Run train first; GCS path matches `inputs.gcs_model_path` and `artifact_config_name` |
+| `without manifest joblib_sha256` | Retrain or republish the legacy joblib model; unverified pickle artifacts are rejected |
+| `checksum mismatch` | Do not load the artifact; investigate replacement/corruption and bucket writers |
 | `VERTEX_AI_STAGING_BUCKET must be set` | `.env` or `vertex.staging_bucket` in config |
 | `VERTEX_TRAINING_IMAGE` | Image exists in Artifact Registry and job SA can pull it |
 | BigQuery load errors | Tables created from `ddl/vertex_bq_tables.sql`; SA has `bigquery.dataEditor` |

@@ -168,6 +168,8 @@ Recommended cron (matches `prefect.yaml` defaults):
 
 From `vertex/ops/README.md`:
 
+- [x] Production container runs as a non-root user and excludes compilers, Git, and curl;
+      CI actions and the Python base image are pinned to immutable revisions
 - [x] Vertex Custom Jobs authenticate via their attached service account + ADC (no key file
       propagated into the job container — fixed in `vertex/jobs/gcp.py`)
 - [ ] CI **Workload Identity Federation** for jobs that need real GCP access (design:
