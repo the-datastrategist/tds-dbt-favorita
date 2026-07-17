@@ -37,10 +37,12 @@ def test_backtest_tables_match_normalized_record_contracts():
 
     assert "CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_predictions`" in ddl
     assert "CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_metrics`" in ddl
+    assert "CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_runs`" in ddl
     ddl_lines = {line.strip() for line in ddl.replace(",", "").splitlines()}
     assert prediction_columns.issubset(ddl_lines)
     assert metric_columns.issubset(ddl_lines)
     assert ddl.count("PARTITION BY forecast_origin") == 2
+    assert "PARTITION BY origin_start" in ddl
     assert (
         ddl.count("CLUSTER BY backtest_contract_name, horizon, baseline_name, backtest_run_id") == 2
     )

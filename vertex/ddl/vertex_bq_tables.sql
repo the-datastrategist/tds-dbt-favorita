@@ -141,6 +141,23 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_predictions` (
 PARTITION BY run_date
 CLUSTER BY model_family, model_type, config_name;
 
+-- One immutable record per logical rolling-origin execution. Re-running the
+-- same contract and input fingerprint produces the same backtest_run_id.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_runs` (
+  backtest_run_id STRING NOT NULL,
+  backtest_contract_name STRING NOT NULL,
+  backtest_contract_hash STRING NOT NULL,
+  model_config_name STRING NOT NULL,
+  origin_start DATE NOT NULL,
+  origin_end DATE NOT NULL,
+  prediction_count INT64 NOT NULL,
+  metric_count INT64 NOT NULL,
+  status STRING NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP()
+)
+PARTITION BY origin_start
+CLUSTER BY backtest_contract_name, model_config_name, backtest_run_id;
+
 -- Append-only rolling-origin backtest predictions. prediction_id is a stable
 -- logical key; writers must append new records and must not update prior runs.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_predictions` (

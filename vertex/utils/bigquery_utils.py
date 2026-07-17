@@ -195,6 +195,16 @@ def _bq_param(
     *,
     bq_type: Optional[str] = None,
 ) -> bigquery.ScalarQueryParameter:
+    if bq_type == "DATE":
+        if isinstance(value, pd.Timestamp):
+            value = value.date()
+        elif isinstance(value, datetime):
+            value = value.date()
+        return bigquery.ScalarQueryParameter(name, "DATE", value)
+    if bq_type == "TIMESTAMP":
+        if isinstance(value, pd.Timestamp):
+            value = value.to_pydatetime()
+        return bigquery.ScalarQueryParameter(name, "TIMESTAMP", value)
     if value is None:
         return bigquery.ScalarQueryParameter(name, bq_type or "STRING", None)
     if isinstance(value, bool):
@@ -216,12 +226,14 @@ def merge_row_to_bigquery(
     *,
     merge_key: str = "job_run_id",
     project_id: Optional[str] = None,
+    update_matched: bool = True,
 ) -> None:
     """
-    Upsert one row via MERGE (single source of truth per job_run_id).
+    Merge one row using a stable logical key.
 
-    Only non-None fields in ``row`` participate in UPDATE assignments.
-    Columns not present on the destination table are ignored.
+    By default, non-None fields participate in UPDATE assignments. Set
+    ``update_matched=False`` for immutable insert-once records. Columns not
+    present on the destination table are ignored.
     """
     project_id = project_id or os.getenv("GOOGLE_PROJECT_ID")
     if not project_id:
@@ -243,9 +255,11 @@ def merge_row_to_bigquery(
     param_names = [f"p_{col}" for col in columns]
     select_params = ", ".join(f"@{pname} AS {col}" for col, pname in zip(columns, param_names))
 
-    update_assignments = [
-        f"{col} = S.{col}" for col in columns if col != merge_key and row[col] is not None
-    ]
+    update_assignments = (
+        [f"{col} = S.{col}" for col in columns if col != merge_key and row[col] is not None]
+        if update_matched
+        else []
+    )
     insert_cols = ", ".join(columns)
     insert_vals = ", ".join(f"S.{col}" for col in columns)
 
@@ -269,6 +283,35 @@ def merge_row_to_bigquery(
     client = bigquery.Client(project=project_id)
     job_config = bigquery.QueryJobConfig(query_parameters=params)
     client.query(query, job_config=job_config).result()
+
+
+def insert_rows_idempotent(
+    data: Union[list[dict[str, Any]], pd.DataFrame],
+    table_id: str,
+    *,
+    id_column: str,
+    project_id: Optional[str] = None,
+) -> None:
+    """Insert immutable rows once, using a stable logical ID as the merge key.
+
+    Existing rows are deliberately left unchanged. This makes retries safe while
+    preserving the append-only contract for audit records.
+    """
+    records = data if isinstance(data, list) else data.to_dict(orient="records")
+    ids = [row.get(id_column) for row in records]
+    if any(not value for value in ids):
+        raise ValueError(f"Every row must include non-empty id column {id_column!r}")
+    if len(ids) != len(set(ids)):
+        raise ValueError(f"Duplicate {id_column!r} values in persistence batch")
+
+    for row in records:
+        merge_row_to_bigquery(
+            row,
+            table_id,
+            merge_key=id_column,
+            project_id=project_id,
+            update_matched=False,
+        )
 
 
 def vertex_safe_run_id(*parts: str) -> str:

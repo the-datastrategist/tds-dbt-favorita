@@ -11,6 +11,7 @@ import pandas as pd
 
 from vertex.config.backtest_contract import DEFAULT_BACKTEST_CONTRACT_PATH, load_backtest_contract
 from vertex.evaluation.backtesting import BaselineBacktestResult, score_baselines
+from vertex.evaluation.persistence import persist_backtest_result
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,11 @@ def main() -> None:
         action="store_true",
         help="Print planned origin/horizon rows and exit",
     )
+    parser.add_argument("--persist", action="store_true", help="Persist records to BigQuery")
+    parser.add_argument("--project-id", help="BigQuery billing project (defaults to environment)")
+    parser.add_argument("--run-table", default="tds-favorita.favorita.backtest_runs")
+    parser.add_argument("--prediction-table", default="tds-favorita.favorita.backtest_predictions")
+    parser.add_argument("--metric-table", default="tds-favorita.favorita.backtest_metrics")
     args = parser.parse_args()
 
     plan = build_backtest_plan(args.contract_path)
@@ -59,7 +65,17 @@ def main() -> None:
         return
     if not args.input_csv:
         parser.error("--input-csv is required unless --dry-run is used")
-    result = run_baseline_backtest(args.input_csv, args.contract_path)
+    contract = load_backtest_contract(args.contract_path)
+    result = score_baselines(pd.read_csv(args.input_csv), contract)
+    if args.persist:
+        persist_backtest_result(
+            result,
+            contract,
+            run_table=args.run_table,
+            prediction_table=args.prediction_table,
+            metric_table=args.metric_table,
+            project_id=args.project_id,
+        )
     metric_records = json.loads(result.metrics.to_json(orient="records"))
     print(
         json.dumps(

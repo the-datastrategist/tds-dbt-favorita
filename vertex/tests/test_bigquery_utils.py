@@ -8,9 +8,11 @@ import pytest
 
 from vertex.utils.bigquery_utils import (
     INSERT_ROWS_BATCH_SIZE,
+    _bq_param,
     _coerce_value_for_bq_type,
     _json_safe,
     _prepare_row_for_insert,
+    insert_rows_idempotent,
     load_to_bigquery,
     validate_bq_identifier,
     validate_bq_table_id,
@@ -62,6 +64,14 @@ class TestBigQueryUtils:
         assert prepared["config_name"] == "favorita_store_n1d_xgboost"
         assert "unknown_col" not in prepared
 
+    def test_query_parameter_honors_date_schema(self):
+        value = pd.Timestamp("2024-01-02")
+
+        parameter = _bq_param("origin_start", value, bq_type="DATE")
+
+        assert parameter.type_ == "DATE"
+        assert parameter.value.isoformat() == "2024-01-02"
+
     def test_validate_bq_table_id_accepts_two_and_three_part_refs(self):
         assert validate_bq_table_id("favorita.int_sales_daily") == "favorita.int_sales_daily"
         assert (
@@ -104,3 +114,25 @@ class TestBigQueryUtils:
         first_batch, second_batch = mock_client.insert_rows_json.call_args_list
         assert len(first_batch.args[1]) == INSERT_ROWS_BATCH_SIZE
         assert len(second_batch.args[1]) == 50
+
+    @patch("vertex.utils.bigquery_utils.merge_row_to_bigquery")
+    def test_idempotent_insert_uses_stable_id_without_updates(self, merge_row):
+        rows = [{"prediction_id": "p-1", "prediction": 10.0}]
+
+        insert_rows_idempotent(
+            rows, "proj.ds.predictions", id_column="prediction_id", project_id="proj"
+        )
+
+        merge_row.assert_called_once_with(
+            rows[0],
+            "proj.ds.predictions",
+            merge_key="prediction_id",
+            project_id="proj",
+            update_matched=False,
+        )
+
+    def test_idempotent_insert_rejects_duplicate_ids(self):
+        rows = [{"metric_id": "m-1"}, {"metric_id": "m-1"}]
+
+        with pytest.raises(ValueError, match="Duplicate 'metric_id'"):
+            insert_rows_idempotent(rows, "proj.ds.metrics", id_column="metric_id")
