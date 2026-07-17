@@ -25,7 +25,7 @@ These are **internal implementation specs**, not client-facing collateral — co
 | [Model leaderboard mart](model_leaderboard_mart.md) | Shipped | `client_rollout.md` → "Model leaderboard mart" | Unify BQML + Vertex holdout metrics into one ranked, champion-flagged mart |
 | [Prediction accuracy monitoring](prediction_accuracy_monitoring.md) | Shipped | `client_rollout.md` → "Drift / accuracy monitoring" | dbt tests + mart that catch production accuracy degradation vs. training-time metrics |
 | [Terraform modules](terraform_modules.md) | Proposed | `iac.md` → "Terraform roadmap" | Codify the manual GCP setup scripts as reviewable, per-environment IaC |
-| [Workload Identity Federation](workload_identity_federation.md) | Proposed | `iac.md` → security checklist "prefer WIF" | Remove long-lived SA key files from CI, local dev, and Vertex Custom Jobs |
+| [Workload Identity Federation](workload_identity_federation.md) | In progress | `iac.md` → security checklist "prefer WIF" | Remove long-lived SA key files from CI, local dev, and Vertex Custom Jobs |
 | [Prophet model family](prophet_model_family.md) | Proposed | `vertex/README.md` → "Planned: prophet" | Add `prophet` as a third time-series family via the existing registry pattern |
 
 ---

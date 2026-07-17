@@ -74,7 +74,13 @@ Alternative: **Workflows** orchestrating dbt Cloud job → Vertex PipelineJob AP
 
 ## Security checklist
 
-- [ ] Service account keys not stored in repo; use WIF or Secret Manager
+- [x] Vertex Custom Jobs authenticate via their attached service account + ADC (instance
+      metadata server) — no key file is propagated into the job container
+      (`vertex/jobs/gcp.py`). See `docs/specs/workload_identity_federation.md`.
+- [ ] CI Workload Identity Federation for jobs that need real GCP access (design in the spec
+      above; the pool/provider Terraform resources are blocked on the Terraform modules spec)
+- [ ] Service account keys not stored in repo for **local dev** submission identity; key file
+      remains the supported path there (see spec's non-goals) — Secret Manager as an alternative
 - [ ] Artifact Registry image scanning enabled
 - [ ] VPC-SC or private IP for Vertex (enterprise)
 - [ ] CMEK on GCS buckets (if required)
