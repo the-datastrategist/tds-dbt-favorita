@@ -58,6 +58,14 @@ The command prints a stable backtest run ID and aggregate/segment metric records
 
 Pass `--persist` to write them. Persistence uses insert-only `MERGE` statements keyed by `backtest_run_id`, `prediction_id`, and `metric_id`. The same contract and input fingerprint therefore produce a no-op retry: existing immutable rows are neither duplicated nor updated.
 
+The dbt staging layer exposes these records through `stg_backtest_runs`,
+`stg_backtest_predictions`, and `stg_backtest_metrics`. The model leaderboard and champion
+mart partition candidates by target, grain, horizon, segment, and the complete metric policy.
+Rolling-origin results therefore cannot compete with legacy holdout results, and company-day
+models cannot displace store-day models. Backtest runs written before these semantic columns
+were introduced remain immutable and are excluded from the comparison marts; rerun those
+contracts to produce eligible leaderboard records.
+
 ## Metric Policy
 
 Backtest selection should use comparable keys:

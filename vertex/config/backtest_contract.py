@@ -111,6 +111,24 @@ class BacktestContract:
     def primary_metric(self) -> str:
         return str(self.spec["metric_policy"]["primary_metric"])
 
+    @property
+    def target(self) -> str:
+        return self.forecast_contract.target
+
+    @property
+    def grain(self) -> str:
+        dimensions = [
+            dimension.removesuffix("_id") for dimension in self.forecast_contract.dimensions
+        ]
+        return "-".join([*dimensions, self.forecast_contract.frequency])
+
+    @property
+    def metric_policy(self) -> dict[str, Any]:
+        return {
+            "evaluation_protocol": "rolling_origin",
+            **cast(dict[str, Any], self.spec["metric_policy"]),
+        }
+
     def origin_plan_rows(self) -> list[dict[str, Any]]:
         """Return serializable origin/horizon rows for dry-run planning and tests."""
         rows: list[dict[str, Any]] = []

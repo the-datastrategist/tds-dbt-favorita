@@ -1,6 +1,44 @@
 version: 2
 
 models:
+  - name: stg_backtest_runs
+    description: Backtest execution records enriched with explicit comparison semantics.
+    columns:
+      - name: backtest_run_id
+        data_tests: [unique, not_null]
+      - name: target
+        data_tests: [not_null]
+      - name: grain
+        data_tests: [not_null]
+      - name: primary_metric
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [mae, wape]
+
+  - name: stg_backtest_predictions
+    description: Canonical staging view over append-only rolling-origin predictions.
+    columns:
+      - name: prediction_id
+        data_tests: [unique, not_null]
+      - name: backtest_run_id
+        data_tests: [not_null]
+
+  - name: stg_backtest_metrics
+    description: Backtest metrics joined to run-level target, grain, and metric-policy semantics.
+    columns:
+      - name: metric_id
+        data_tests: [unique, not_null]
+      - name: backtest_run_id
+        data_tests: [not_null]
+      - name: target
+        data_tests: [not_null]
+      - name: grain
+        data_tests: [not_null]
+      - name: horizon
+        data_tests: [not_null]
+
   - name: stg_favorita_date_spine
     description: >
       One row per calendar day from the first training date through the last test date.

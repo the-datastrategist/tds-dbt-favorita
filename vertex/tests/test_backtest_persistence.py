@@ -27,6 +27,9 @@ def test_persistence_uses_stable_run_prediction_and_metric_ids(insert_rows):
 
     run_row = insert_rows.call_args_list[0].args[0][0]
     assert run_row["backtest_run_id"] == "stable-run"
+    assert run_row["target"] == "demand_units"
+    assert run_row["grain"] == "store-day"
+    assert '"primary_metric":"wape"' in run_row["metric_policy_json"]
     assert insert_rows.call_args_list == [
         call([run_row], "p.d.runs", id_column="backtest_run_id", project_id="p"),
         call(

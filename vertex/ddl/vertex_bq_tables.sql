@@ -148,15 +148,30 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_runs` (
   backtest_contract_name STRING NOT NULL,
   backtest_contract_hash STRING NOT NULL,
   model_config_name STRING NOT NULL,
+  target STRING NOT NULL,
+  grain STRING NOT NULL,
+  metric_policy_json STRING NOT NULL,
   origin_start DATE NOT NULL,
   origin_end DATE NOT NULL,
   prediction_count INT64 NOT NULL,
   metric_count INT64 NOT NULL,
   status STRING NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP()
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
 )
 PARTITION BY origin_start
 CLUSTER BY backtest_contract_name, model_config_name, backtest_run_id;
+
+-- Forward-compatible migration for datasets created before comparison semantics
+-- were persisted on the run record. BigQuery adds these as nullable on existing
+-- tables; all new writers populate them.
+ALTER TABLE `tds-favorita.favorita.backtest_runs`
+ADD COLUMN IF NOT EXISTS target STRING;
+
+ALTER TABLE `tds-favorita.favorita.backtest_runs`
+ADD COLUMN IF NOT EXISTS grain STRING;
+
+ALTER TABLE `tds-favorita.favorita.backtest_runs`
+ADD COLUMN IF NOT EXISTS metric_policy_json STRING;
 
 -- Append-only rolling-origin backtest predictions. prediction_id is a stable
 -- logical key; writers must append new records and must not update prior runs.
@@ -173,7 +188,7 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_predictions` (
   baseline_name STRING NOT NULL,
   actual FLOAT64,
   prediction FLOAT64,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP()
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
 )
 PARTITION BY forecast_origin
 CLUSTER BY backtest_contract_name, horizon, baseline_name, backtest_run_id;
@@ -195,7 +210,7 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_metrics` (
   mae FLOAT64,
   bias FLOAT64,
   prediction_completeness FLOAT64,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP()
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
 )
 PARTITION BY forecast_origin
 CLUSTER BY backtest_contract_name, horizon, baseline_name, backtest_run_id;

@@ -56,6 +56,9 @@ class TestBacktestContract:
         assert contract.horizons == [7]
         assert contract.history_table.endswith("int_sales_store_daily")
         assert contract.forecast_contract.name == "store_daily_demand"
+        assert contract.target == "demand_units"
+        assert contract.grain == "store-day"
+        assert contract.primary_metric == "wape"
         assert len(contract.origin_plan_rows()) == len(contract.origins)
 
     def test_origin_policy_generates_sorted_dates(self):

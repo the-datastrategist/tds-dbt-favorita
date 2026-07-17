@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from vertex.config.backtest_contract import BacktestContract
@@ -15,6 +16,11 @@ def _run_row(result: BaselineBacktestResult, contract: BacktestContract) -> dict
         "backtest_contract_name": contract.name,
         "backtest_contract_hash": contract.hash,
         "model_config_name": contract.model_config_name,
+        "target": contract.target,
+        "grain": contract.grain,
+        "metric_policy_json": json.dumps(
+            contract.metric_policy, sort_keys=True, separators=(",", ":")
+        ),
         "origin_start": min(contract.origins),
         "origin_end": max(contract.origins),
         "prediction_count": len(result.predictions),

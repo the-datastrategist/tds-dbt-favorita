@@ -54,3 +54,12 @@ sources:
 
       - name: forecast_status_history
         description: Forecast lifecycle transition history for approval, publication, supersession, and failure events
+
+      - name: backtest_runs
+        description: Immutable rolling-origin backtest executions and their comparison semantics
+
+      - name: backtest_predictions
+        description: Append-only baseline and model predictions produced by rolling-origin backtests
+
+      - name: backtest_metrics
+        description: Append-only horizon and segment metrics produced by rolling-origin backtests

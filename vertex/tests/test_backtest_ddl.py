@@ -34,6 +34,11 @@ def test_backtest_tables_match_normalized_record_contracts():
         "bias FLOAT64",
         "prediction_completeness FLOAT64",
     }
+    run_columns = {
+        "target STRING NOT NULL",
+        "grain STRING NOT NULL",
+        "metric_policy_json STRING NOT NULL",
+    }
 
     assert "CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_predictions`" in ddl
     assert "CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_metrics`" in ddl
@@ -41,6 +46,7 @@ def test_backtest_tables_match_normalized_record_contracts():
     ddl_lines = {line.strip() for line in ddl.replace(",", "").splitlines()}
     assert prediction_columns.issubset(ddl_lines)
     assert metric_columns.issubset(ddl_lines)
+    assert run_columns.issubset(ddl_lines)
     assert ddl.count("PARTITION BY forecast_origin") == 2
     assert "PARTITION BY origin_start" in ddl
     assert (
