@@ -21,7 +21,7 @@ with latest_run_per_config as (
             partition by config_name
             order by run_at desc
         ) = 1 as is_latest_run
-    from {{ ref('favorita_model_leaderboard') }}
+    from {{ ref('ml_model_leaderboard') }}
 ),
 
 champion as (
