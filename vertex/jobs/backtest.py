@@ -1,8 +1,4 @@
-"""Backtest contract planning CLI.
-
-This module intentionally stops at contract resolution and dry-run planning. The
-scoring/evaluation runner will consume the same BacktestContract in the next slice.
-"""
+"""Backtest contract planning and local deterministic-baseline scoring CLI."""
 
 from __future__ import annotations
 
@@ -11,7 +7,10 @@ import json
 import logging
 from pathlib import Path
 
+import pandas as pd
+
 from vertex.config.backtest_contract import DEFAULT_BACKTEST_CONTRACT_PATH, load_backtest_contract
+from vertex.evaluation.backtesting import BaselineBacktestResult, score_baselines
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +19,15 @@ def build_backtest_plan(contract_path: str | Path | None = None) -> list[dict[st
     """Return one origin/horizon plan row per required backtest score."""
     contract = load_backtest_contract(contract_path)
     return contract.origin_plan_rows()
+
+
+def run_baseline_backtest(
+    input_csv: str | Path,
+    contract_path: str | Path | None = None,
+) -> BaselineBacktestResult:
+    """Load local history and score all baselines declared by the contract."""
+    contract = load_backtest_contract(contract_path)
+    return score_baselines(pd.read_csv(input_csv), contract)
 
 
 def main() -> None:
@@ -35,6 +43,10 @@ def main() -> None:
         help="Path to backtest contract YAML",
     )
     parser.add_argument(
+        "--input-csv",
+        help="Local historical actuals used to execute deterministic baseline scoring",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print planned origin/horizon rows and exit",
@@ -45,7 +57,21 @@ def main() -> None:
     if args.dry_run:
         print(json.dumps(plan, indent=2, sort_keys=True))
         return
-    logger.info("Resolved %s backtest origin/horizon rows", len(plan))
+    if not args.input_csv:
+        parser.error("--input-csv is required unless --dry-run is used")
+    result = run_baseline_backtest(args.input_csv, args.contract_path)
+    metric_records = json.loads(result.metrics.to_json(orient="records"))
+    print(
+        json.dumps(
+            {
+                "backtest_run_id": result.backtest_run_id,
+                "prediction_count": len(result.predictions),
+                "metrics": metric_records,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
 
 
 if __name__ == "__main__":

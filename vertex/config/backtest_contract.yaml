@@ -8,12 +8,17 @@ backtest:
     interval_days: 7
   horizons: [7]
   train_window_days: 180
+  entity_columns: [store_nbr]
+  date_column: date
+  actual_column: sales_store
   segment_columns: []
+  moving_average_window: 7
   max_entities:
   baselines:
     - zero_demand
     - last_observation
     - seasonal_naive_7d
+    - moving_average
   metric_policy:
     primary_metric: wape
     lower_is_better: true

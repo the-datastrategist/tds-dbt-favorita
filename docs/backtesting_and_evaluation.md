@@ -40,7 +40,15 @@ The first supported baseline names are:
 - `moving_average`
 - `croston_sba_tsb`
 
-Baseline scoring and metric persistence are implemented after the contract layer, but contract validation already prevents misspelled or unsupported baseline names.
+Local deterministic scoring is implemented for `zero_demand`, `last_observation`, `seasonal_naive_7d`, and `moving_average`. Scoring uses actuals available through each origin and evaluates against the actual at `origin + horizon`. Baselines that lack sufficient history emit a null prediction so prediction completeness remains auditable.
+
+Run baseline scoring against a local history extract containing the configured entity, date, actual, and segment columns:
+
+```bash
+make vertex-backtest VERTEX_BACKTEST_INPUT=path/to/history.csv
+```
+
+The command prints a stable backtest run ID and aggregate/segment metric records. BigQuery persistence is deferred until baseline and model-scoring records share the same contract.
 
 ## Metric Policy
 
@@ -51,3 +59,5 @@ target x grain x horizon x segment_key_json x metric_policy
 ```
 
 R2 is not a primary model-selection metric for demand forecasting because demand series are often intermittent, sparse, and scale-dependent. Prefer WAPE, MAE, scaled errors, bias, completeness, and quantile calibration metrics.
+
+The first scoring slice calculates WAPE, MAE, mean signed error (`bias`), and prediction completeness. WAPE is null when the sum of absolute actual demand is zero; completeness still reports normally.

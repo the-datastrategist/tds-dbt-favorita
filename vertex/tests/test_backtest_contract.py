@@ -24,7 +24,11 @@ def _valid_contract():
             },
             "horizons": [7],
             "train_window_days": 180,
+            "entity_columns": ["store_nbr"],
+            "date_column": "date",
+            "actual_column": "sales_store",
             "segment_columns": ["store_id"],
+            "moving_average_window": 7,
             "max_entities": 10,
             "baselines": ["seasonal_naive_7d", "zero_demand"],
             "metric_policy": {

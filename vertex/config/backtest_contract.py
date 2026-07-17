@@ -78,6 +78,27 @@ class BacktestContract:
         return list(self.spec.get("segment_columns") or [])
 
     @property
+    def entity_columns(self) -> list[str]:
+        return list(self.spec["entity_columns"])
+
+    @property
+    def date_column(self) -> str:
+        return str(self.spec["date_column"])
+
+    @property
+    def actual_column(self) -> str:
+        return str(self.spec["actual_column"])
+
+    @property
+    def moving_average_window(self) -> int:
+        return int(self.spec.get("moving_average_window", 7))
+
+    @property
+    def max_entities(self) -> int | None:
+        value = self.spec.get("max_entities")
+        return int(value) if value is not None else None
+
+    @property
     def baselines(self) -> list[str]:
         return list(self.spec["baselines"])
 
@@ -202,6 +223,16 @@ def validate_backtest_contract(raw: dict[str, Any]) -> BacktestContract:
     if not all(isinstance(item, str) and item for item in segment_columns):
         raise ValueError("backtest.segment_columns must contain non-empty strings")
     spec["segment_columns"] = segment_columns
+
+    for field in ("entity_columns",):
+        values = _require_list(spec, field)
+        if not all(isinstance(item, str) and item for item in values):
+            raise ValueError(f"backtest.{field} must contain non-empty strings")
+    for field in ("date_column", "actual_column"):
+        if not isinstance(spec.get(field), str) or not spec[field]:
+            raise ValueError(f"backtest.{field} must be a non-empty string")
+    if int(spec.get("moving_average_window", 7)) < 1:
+        raise ValueError("backtest.moving_average_window must be positive")
 
     max_entities = spec.get("max_entities")
     if max_entities is not None and int(max_entities) < 1:
