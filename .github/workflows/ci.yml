@@ -49,6 +49,9 @@ jobs:
       - name: Validate model configs
         run: python -m vertex.config.validate_all
 
+      - name: Validate rolling-origin backtest plan
+        run: python -m vertex.jobs.backtest --dry-run
+
       - name: Unit tests
         run: pytest -m unit --cov-fail-under=65
 

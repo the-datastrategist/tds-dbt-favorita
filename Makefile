@@ -31,7 +31,7 @@ endif
 	vertex-submit-train vertex-submit-predict vertex-submit-optimize \
 	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
 	dbt-vertex vertex-bq-ddl vertex-validate-config vertex-validate-configs \
-	vertex-backfill prefect-flow-vertex-backfill \
+	vertex-backfill vertex-backtest-plan prefect-flow-vertex-backfill \
 	model-train model-predict model-optimize docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
 
 help: ## Show this help message
@@ -361,6 +361,13 @@ print('OK')"
 
 vertex-validate-configs: ## Validate all model configs in model_config.yaml
 	$(DOCKER_RUN) python -m $(VERTEX_DIR).config.validate_all
+
+VERTEX_BACKTEST_CONTRACT ?= $(VERTEX_DIR)/config/backtest_contract.yaml
+
+vertex-backtest-plan: ## Validate a backtest contract and print its rolling-origin plan
+	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.backtest \
+		--contract-path $(VERTEX_BACKTEST_CONTRACT) \
+		--dry-run
 
 # Walk-forward backfill: train + predict per anchor date (see vertex/jobs/backfill.py)
 VERTEX_BACKFILL_CONFIG ?= favorita_store_n1d_xgboost
