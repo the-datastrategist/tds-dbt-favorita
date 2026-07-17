@@ -167,7 +167,7 @@ Recommended cron (matches `prefect.yaml` defaults):
 
 From `vertex/ops/README.md`:
 
-- [ ] Service account keys not in repo; prefer **Workload Identity Federation**
+- [ ] Service account keys not in repo; prefer **Workload Identity Federation** (design: [specs/workload_identity_federation.md](specs/workload_identity_federation.md))
 - [ ] Artifact Registry **vulnerability scanning** enabled
 - [ ] VPC-SC or private IP for Vertex (enterprise)
 - [ ] **CMEK** on GCS buckets if required
@@ -178,7 +178,7 @@ From `vertex/ops/README.md`:
 
 ## Terraform roadmap
 
-Planned modules (not yet in repo) — structure for client engagements:
+Planned modules (not yet in repo) — structure for client engagements. Full design: [specs/terraform_modules.md](specs/terraform_modules.md).
 
 ```text
 terraform/
@@ -225,5 +225,6 @@ terraform/
 - `vertex/ops/README.md` — operational detail
 - [Client rollout](client_rollout.md) — when to provision each resource
 - [Reference architecture](reference_architecture.md)
+- [Engineering specs](specs/README.md) — Terraform modules, Workload Identity Federation
 
 {% enddocs %}

@@ -164,13 +164,13 @@ gantt
 
 ## Post-rollout (weeks 5–8 optional)
 
-| Enhancement | Accelerator base |
-|-------------|------------------|
-| Model leaderboard mart | `favorita_model_performance` + dbt mart |
-| Drift / accuracy monitoring | dbt tests on prediction vs actual |
-| Terraform modules | [iac.md](iac.md) roadmap |
-| Workload Identity Federation | Replace SA keys |
-| Prophet / deep learning family | `vertex/models/registry.py` pattern |
+| Enhancement | Accelerator base | Spec |
+|-------------|------------------|------|
+| Model leaderboard mart | `favorita_model_performance` + dbt mart | [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md) |
+| Drift / accuracy monitoring | dbt tests on prediction vs actual | [specs/prediction_accuracy_monitoring.md](specs/prediction_accuracy_monitoring.md) |
+| Terraform modules | [iac.md](iac.md) roadmap | [specs/terraform_modules.md](specs/terraform_modules.md) |
+| Workload Identity Federation | Replace SA keys | [specs/workload_identity_federation.md](specs/workload_identity_federation.md) |
+| Prophet / deep learning family | `vertex/models/registry.py` pattern | [specs/prophet_model_family.md](specs/prophet_model_family.md) |
 
 ---
 
@@ -180,5 +180,6 @@ gantt
 - [IaC](iac.md)
 - [Delivery artifacts](delivery_artifacts.md)
 - [Case study](case_study.md)
+- [Engineering specs](specs/README.md) — designs for the post-rollout enhancements above
 
 {% enddocs %}
