@@ -12,6 +12,7 @@ import yaml
 from vertex.config.backfill import iter_backfill_dates, parse_backfill_date
 from vertex.config.forecast_contract import ForecastContract, load_forecast_contract
 from vertex.config.load_config import load_model_config
+from vertex.utils.bigquery_utils import validate_bq_table_id
 from vertex.utils.data_utils import get_hash
 
 DEFAULT_BACKTEST_CONTRACT_PATH = Path(__file__).resolve().parent / "backtest_contract.yaml"
@@ -88,6 +89,10 @@ class BacktestContract:
     @property
     def actual_column(self) -> str:
         return str(self.spec["actual_column"])
+
+    @property
+    def history_table(self) -> str:
+        return str(self.spec["history_table"])
 
     @property
     def moving_average_window(self) -> int:
@@ -228,9 +233,10 @@ def validate_backtest_contract(raw: dict[str, Any]) -> BacktestContract:
         values = _require_list(spec, field)
         if not all(isinstance(item, str) and item for item in values):
             raise ValueError(f"backtest.{field} must contain non-empty strings")
-    for field in ("date_column", "actual_column"):
+    for field in ("date_column", "actual_column", "history_table"):
         if not isinstance(spec.get(field), str) or not spec[field]:
             raise ValueError(f"backtest.{field} must be a non-empty string")
+    validate_bq_table_id(str(spec["history_table"]))
     if int(spec.get("moving_average_window", 7)) < 1:
         raise ValueError("backtest.moving_average_window must be positive")
 

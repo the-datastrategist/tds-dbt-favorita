@@ -27,6 +27,7 @@ def _valid_contract():
             "entity_columns": ["store_nbr"],
             "date_column": "date",
             "actual_column": "sales_store",
+            "history_table": "tds-favorita.favorita.int_sales_store_daily",
             "segment_columns": ["store_id"],
             "moving_average_window": 7,
             "max_entities": 10,
@@ -53,6 +54,7 @@ class TestBacktestContract:
         assert contract.name == "store_daily_rolling_origin"
         assert contract.model_config_name == "favorita_store_h7_xgboost"
         assert contract.horizons == [7]
+        assert contract.history_table.endswith("int_sales_store_daily")
         assert contract.forecast_contract.name == "store_daily_demand"
         assert len(contract.origin_plan_rows()) == len(contract.origins)
 

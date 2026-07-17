@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+from datetime import timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -12,6 +13,7 @@ import pandas as pd
 from vertex.config.backtest_contract import DEFAULT_BACKTEST_CONTRACT_PATH, load_backtest_contract
 from vertex.evaluation.backtesting import BaselineBacktestResult, score_baselines
 from vertex.evaluation.persistence import persist_backtest_result
+from vertex.utils.bigquery_utils import run_query, validate_bq_identifier
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +25,41 @@ def build_backtest_plan(contract_path: str | Path | None = None) -> list[dict[st
 
 
 def run_baseline_backtest(
-    input_csv: str | Path,
+    input_csv: str | Path | None = None,
     contract_path: str | Path | None = None,
+    *,
+    use_bigquery: bool = False,
+    project_id: str | None = None,
 ) -> BaselineBacktestResult:
-    """Load local history and score all baselines declared by the contract."""
+    """Load history from CSV or configured BigQuery table and score baselines."""
     contract = load_backtest_contract(contract_path)
-    return score_baselines(pd.read_csv(input_csv), contract)
+    if use_bigquery:
+        columns = list(
+            dict.fromkeys(
+                [
+                    *contract.entity_columns,
+                    *contract.segment_columns,
+                    contract.date_column,
+                    contract.actual_column,
+                ]
+            )
+        )
+        selected = ", ".join(
+            f"`{validate_bq_identifier(column, label='history column')}`" for column in columns
+        )
+        history_start = min(contract.origins) - timedelta(days=contract.train_window_days)
+        history_end = max(contract.origins) + timedelta(days=max(contract.horizons))
+        query = (
+            f"SELECT {selected} FROM `{contract.history_table}` "
+            f"WHERE `{contract.date_column}` BETWEEN DATE '{history_start.isoformat()}' "
+            f"AND DATE '{history_end.isoformat()}'"
+        )
+        history = run_query(query, project_id=project_id)
+    else:
+        if input_csv is None:
+            raise ValueError("input_csv is required when BigQuery input is not selected")
+        history = pd.read_csv(input_csv)
+    return score_baselines(history, contract)
 
 
 def main() -> None:
@@ -43,9 +74,15 @@ def main() -> None:
         default=str(DEFAULT_BACKTEST_CONTRACT_PATH),
         help="Path to backtest contract YAML",
     )
-    parser.add_argument(
+    input_group = parser.add_mutually_exclusive_group()
+    input_group.add_argument(
         "--input-csv",
         help="Local historical actuals used to execute deterministic baseline scoring",
+    )
+    input_group.add_argument(
+        "--input-bigquery",
+        action="store_true",
+        help="Load history from backtest.history_table in BigQuery",
     )
     parser.add_argument(
         "--dry-run",
@@ -63,10 +100,15 @@ def main() -> None:
     if args.dry_run:
         print(json.dumps(plan, indent=2, sort_keys=True))
         return
-    if not args.input_csv:
-        parser.error("--input-csv is required unless --dry-run is used")
+    if not args.input_csv and not args.input_bigquery:
+        parser.error("--input-csv or --input-bigquery is required unless --dry-run is used")
     contract = load_backtest_contract(args.contract_path)
-    result = score_baselines(pd.read_csv(args.input_csv), contract)
+    result = run_baseline_backtest(
+        args.input_csv,
+        args.contract_path,
+        use_bigquery=args.input_bigquery,
+        project_id=args.project_id,
+    )
     if args.persist:
         persist_backtest_result(
             result,

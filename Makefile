@@ -162,8 +162,8 @@ dbt-predict: ## Run BQML predict/evaluate/explain models (tag:predict)
 dbt-build: ## Run + test (+ seed/snapshot) in DAG order, excluding BQML (tag:bqml)
 	docker compose run --rm ml-pipeline dbt build --project-dir dbt --target $(DBT_TARGET) --exclude tag:bqml $(ARGS)
 
-dbt-test: ## Run data tests, excluding BQML (tag:bqml); pass ARGS to override, e.g. ARGS='--select tag:bqml'
-	docker compose run --rm ml-pipeline dbt test --project-dir dbt --target $(DBT_TARGET) --exclude tag:bqml $(ARGS)
+dbt-test: ## Run data tests (all, or --select via ARGS)
+	docker compose run --rm ml-pipeline dbt test --project-dir dbt --target $(DBT_TARGET) $(ARGS)
 
 dbt-compile: ## Compile models to SQL without executing (dbt/target/compiled)
 	docker compose run --rm ml-pipeline dbt compile --project-dir dbt --target $(DBT_TARGET) $(ARGS)
@@ -364,17 +364,21 @@ vertex-validate-configs: ## Validate all model configs in model_config.yaml
 
 VERTEX_BACKTEST_CONTRACT ?= $(VERTEX_DIR)/config/backtest_contract.yaml
 VERTEX_BACKTEST_INPUT ?=
+VERTEX_BACKTEST_INPUT_MODE ?= bigquery
+VERTEX_BACKTEST_PROJECT ?=
+VERTEX_BACKTEST_INPUT_FLAG = $(if $(filter csv,$(VERTEX_BACKTEST_INPUT_MODE)),--input-csv $(VERTEX_BACKTEST_INPUT),--input-bigquery)
 
 vertex-backtest-plan: ## Validate a backtest contract and print its rolling-origin plan
 	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.backtest \
 		--contract-path $(VERTEX_BACKTEST_CONTRACT) \
 		--dry-run
 
-vertex-backtest: ## Score deterministic baselines from CSV (VERTEX_BACKTEST_INPUT=path.csv)
-	@test -n "$(VERTEX_BACKTEST_INPUT)" || (echo "Set VERTEX_BACKTEST_INPUT to a CSV path" && exit 1)
+vertex-backtest: ## Score baselines from BigQuery (default) or CSV (VERTEX_BACKTEST_INPUT_MODE=csv)
+	@if [ "$(VERTEX_BACKTEST_INPUT_MODE)" = "csv" ]; then test -n "$(VERTEX_BACKTEST_INPUT)" || (echo "Set VERTEX_BACKTEST_INPUT to a CSV path" && exit 1); fi
 	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.backtest \
 		--contract-path $(VERTEX_BACKTEST_CONTRACT) \
-		--input-csv $(VERTEX_BACKTEST_INPUT)
+		$(VERTEX_BACKTEST_INPUT_FLAG) \
+		$(if $(VERTEX_BACKTEST_PROJECT),--project-id $(VERTEX_BACKTEST_PROJECT),)
 
 # Walk-forward backfill: train + predict per anchor date (see vertex/jobs/backfill.py)
 VERTEX_BACKFILL_CONFIG ?= favorita_store_n1d_xgboost

@@ -42,10 +42,16 @@ The first supported baseline names are:
 
 Local deterministic scoring is implemented for `zero_demand`, `last_observation`, `seasonal_naive_7d`, and `moving_average`. Scoring uses actuals available through each origin and evaluates against the actual at `origin + horizon`. Baselines that lack sufficient history emit a null prediction so prediction completeness remains auditable.
 
-Run baseline scoring against a local history extract containing the configured entity, date, actual, and segment columns:
+Run baseline scoring directly from the configured BigQuery history table:
 
 ```bash
-make vertex-backtest VERTEX_BACKTEST_INPUT=path/to/history.csv
+make vertex-backtest
+```
+
+The runner selects only the configured entity, date, actual, and segment columns and bounds the query to the training and evaluation window. For local testing, retain the CSV path:
+
+```bash
+make vertex-backtest VERTEX_BACKTEST_INPUT_MODE=csv VERTEX_BACKTEST_INPUT=path/to/history.csv
 ```
 
 The command prints a stable backtest run ID and aggregate/segment metric records. Append-only BigQuery table contracts are defined in `vertex/ddl/vertex_bq_tables.sql` as `backtest_runs`, `backtest_predictions`, and `backtest_metrics`. Apply them with `make vertex-bq-ddl`.
