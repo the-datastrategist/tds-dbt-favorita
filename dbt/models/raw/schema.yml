@@ -32,9 +32,18 @@ sources:
           Store metadata, including city, state, type, and cluster. `cluster` is a grouping of similar stores.
         columns:
           - name: store_nbr
+            description: Store identifier.
             data_tests:
               - unique
               - not_null
+          - name: city
+            description: City where the store is located.
+          - name: state
+            description: State where the store is located.
+          - name: type
+            description: Store type/format code assigned by Favorita (e.g. A-E).
+          - name: cluster
+            description: Grouping of similar stores, used for clustering-based analysis.
 
       - name: raw_favorita_oil
         description: >
@@ -43,9 +52,15 @@ sources:
           to shocks in oil prices.)
         columns:
           - name: date
+            description: Calendar date of the oil price observation.
             data_tests:
               - unique
               - not_null
+          - name: dcoilwtico
+            description: >
+              Daily WTI (West Texas Intermediate) crude oil price in USD. Null on days without a
+              published price (e.g. weekends/holidays), which is expected and not a data quality
+              issue.
 
       - name: raw_favorita_holiday_events
         description: >
@@ -54,9 +69,11 @@ sources:
           - Additional holidays are days added a regular calendar holiday, for example, as typically happens around Christmas (making Christmas Eve a holiday).
         columns:
           - name: date
+            description: Calendar date of the holiday or event.
             data_tests:
               - not_null
           - name: type
+            description: Event type (Holiday, Transfer, Bridge, Work Day, Additional, or Event).
             data_tests:
               - accepted_values:
                   values:
@@ -66,6 +83,19 @@ sources:
                       - Work Day
                       - Additional
                       - Event
+          - name: locale
+            description: Scope of the event (National, Regional, or Local).
+          - name: locale_name
+            description: >
+              Name of the region or city the event applies to when `locale` is Regional or
+              Local; not meaningful for National events.
+          - name: description
+            description: Free-text name/description of the holiday or event.
+          - name: transferred
+            description: >
+              Whether the holiday was officially moved to another calendar date by the
+              government (true/false). See the model-level note on interpreting transferred
+              holidays alongside the corresponding Transfer-type row.
 
       - name: raw_favorita_train
         description: >
@@ -76,43 +106,74 @@ sources:
           - `onpromotion` gives the total number of items in a product family that were being promoted at a store at a given date.
           - Negative `unit_sales` values represent returns of that particular item, so they are valid and expected (not a data quality issue).
         columns:
+          - name: id
+            description: Row identifier for the training observation.
           - name: date
+            description: Sales date.
             data_tests:
               - not_null
           - name: store_nbr
+            description: Store identifier.
             data_tests:
               - not_null
           - name: item_nbr
+            description: Product (item) identifier.
             data_tests:
               - not_null
+          - name: unit_sales
+            description: >
+              Unit sales for the store-item-day. Negative values represent returns of that
+              item, so they are valid and expected (not a data quality issue).
+          - name: onpromotion
+            description: Whether the item was on promotion at the store on that date.
 
       - name: raw_favorita_test
         description: >
           - The test data, having the same features as the training data. You will predict the target sales for the dates in this file.
           - The dates in the test data are for the 15 days after the last date in the training data.
         columns:
+          - name: id
+            description: Row identifier for the test observation (used to join predictions to the submission format).
           - name: date
+            description: Forecast date.
             data_tests:
               - not_null
           - name: store_nbr
+            description: Store identifier.
             data_tests:
               - not_null
           - name: item_nbr
+            description: Product (item) identifier.
             data_tests:
               - not_null
+          - name: onpromotion
+            description: Whether the item is scheduled to be on promotion at the store on that date.
 
       - name: raw_favorita_items
         description: >
           Product metadata: item identifiers and attributes (e.g. family, class) for items sold at Favorita stores.
         columns:
           - name: item_nbr
+            description: Product (item) identifier.
             data_tests:
               - unique
               - not_null
           - name: family
+            description: Product family/category (e.g. GROCERY I, BEVERAGES).
             data_tests:
               - not_null
+          - name: class
+            description: Numeric product classification code, a finer-grained grouping within `family`.
+          - name: perishable
+            description: >
+              Whether the item is perishable (1) or not (0). Perishable items are weighted more
+              heavily in the competition's scoring metric.
 
       - name: raw_favorita_sample_submission
         description: >
           Competition submission template with id and sales columns for the Favorita forecasting leaderboard.
+        columns:
+          - name: id
+            description: Row identifier matching `raw_favorita_test.id`.
+          - name: unit_sales
+            description: Placeholder/predicted unit sales value to populate for submission.

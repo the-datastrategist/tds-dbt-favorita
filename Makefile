@@ -482,6 +482,7 @@ clean: ## Clean generated files and artifacts
 	rm -rf $(DBT_DIR)/target
 	rm -rf $(DBT_DIR)/dbt_packages
 	rm -rf $(VERTEX_DIR)/models/tmp
+	rm -rf mlruns
 	find . -type d -name __pycache__ -exec rm -r {} +
 	find . -type f -name "*.pyc" -delete
 
