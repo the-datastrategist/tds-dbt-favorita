@@ -91,15 +91,13 @@ class TestLoadConfigFromYaml:
     def test_load_first_config(self, tmp_path):
         """Test loading first config when no name specified."""
         config_file = tmp_path / "test_config.yaml"
-        config_file.write_text(
-            """
+        config_file.write_text("""
 configs:
   - name: config1
     value: 1
   - name: config2
     value: 2
-"""
-        )
+""")
 
         config = load_config_from_yaml(str(config_file))
         assert config["name"] == "config1"
@@ -108,15 +106,13 @@ configs:
     def test_load_named_config(self, tmp_path):
         """Test loading config by name."""
         config_file = tmp_path / "test_config.yaml"
-        config_file.write_text(
-            """
+        config_file.write_text("""
 configs:
   - name: config1
     value: 1
   - name: config2
     value: 2
-"""
-        )
+""")
 
         config = load_config_from_yaml(str(config_file), config_name="config2")
         assert config["name"] == "config2"
@@ -125,13 +121,11 @@ configs:
     def test_config_not_found(self, tmp_path):
         """Test error when config name not found."""
         config_file = tmp_path / "test_config.yaml"
-        config_file.write_text(
-            """
+        config_file.write_text("""
 configs:
   - name: config1
     value: 1
-"""
-        )
+""")
 
         with pytest.raises(ValueError, match="Config with name 'config3' not found"):
             load_config_from_yaml(str(config_file), config_name="config3")
