@@ -57,3 +57,30 @@ def resolve_champion_config_name(
     if rows.empty:
         raise LookupError(f"no champion is registered for model scope {model_scope(contract)}")
     return str(rows.iloc[0]["model_config_name"])
+
+
+def resolve_champion_candidate_id(
+    contract: BacktestContract,
+    *,
+    candidate_table: str,
+    event_table: str,
+    project_id: str | None = None,
+) -> str:
+    """Resolve the candidate ID from the latest champion-setting event."""
+    candidate_table = validate_bq_table_id(candidate_table)
+    event_table = validate_bq_table_id(event_table)
+    scope = model_scope(contract).replace("\\", "\\\\").replace("'", "\\'")
+    query = f"""
+        SELECT events.candidate_id
+        FROM `{event_table}` AS events
+        INNER JOIN `{candidate_table}` AS candidates USING (candidate_id)
+        WHERE TO_JSON_STRING(candidates.model_scope_json) = '{scope}'
+          AND events.event_type IN ('promoted', 'rolled_back')
+          AND events.to_state = 'champion'
+        ORDER BY events.occurred_at DESC, events.lifecycle_event_id DESC
+        LIMIT 1
+    """
+    rows = run_query(query, project_id=project_id)
+    if rows.empty:
+        raise LookupError(f"no champion is registered for model scope {model_scope(contract)}")
+    return str(rows.iloc[0]["candidate_id"])

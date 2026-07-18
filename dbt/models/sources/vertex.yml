@@ -78,3 +78,12 @@ sources:
 
       - name: backtest_metrics
         description: Append-only horizon and segment metrics produced by rolling-origin backtests
+
+      - name: model_candidates
+        description: Immutable model candidate registrations and reproducibility evidence
+
+      - name: model_promotion_checks
+        description: Append-only configured promotion gate results for each candidate
+
+      - name: model_lifecycle_events
+        description: Append-only model state transitions, replacements, waivers, and rollbacks

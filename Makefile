@@ -27,7 +27,8 @@ endif
 	docs-serve dbt-ui dbt-docs dbt-docs-generate dbt-docs-serve \
 	mlflow-ui prefect-ui prefect-server prefect-work-pool-create prefect-worker prefect-deploy \
 	prefect-run-dbt prefect-run-vertex-train prefect-run-vertex-train-all prefect-run-vertex-pipeline \
-	prefect-flow-dbt prefect-flow-vertex-train prefect-flow-vertex-pipeline \
+	prefect-run-model-lifecycle prefect-flow-dbt prefect-flow-vertex-train prefect-flow-vertex-pipeline \
+	prefect-flow-model-lifecycle \
 	vertex-train vertex-predict vertex-optimize vertex-run vertex-run-docker vertex-submit \
 	vertex-train-docker vertex-predict-docker vertex-optimize-docker \
 	vertex-submit-train vertex-submit-predict vertex-submit-optimize \
@@ -523,6 +524,10 @@ prefect-run-vertex-pipeline: ## Trigger manual ML pipeline deployment (VERTEX_PI
 		'prefect-vertex-ml-pipeline/prefect-vertex-ml-pipeline-manual' \
 		--param pipeline_name=$(VERTEX_PIPELINE)
 
+prefect-run-model-lifecycle: ## Trigger manual governed model lifecycle deployment
+	$(DOCKER_RUN) -e PREFECT_API_URL=$(PREFECT_API_URL_DOCKER) prefect deployment run \
+		'prefect-model-lifecycle/prefect-model-lifecycle-manual'
+
 # Run flows directly in Docker (no Prefect server; for development)
 prefect-flow-dbt: ## Run prefect-dbt-run flow once in Docker
 	$(DOCKER_RUN) python -c "from orchestration.flows.dbt import prefect_dbt_run_flow; prefect_dbt_run_flow()"
@@ -538,6 +543,9 @@ from orchestration.flows.vertex_pipeline import prefect_vertex_ml_pipeline_flow;
 prefect_vertex_ml_pipeline_flow(\
 pipeline_name='$(VERTEX_PIPELINE)', vertex_mode='$(VERTEX_MODE)', sync=$(if $(filter 1 true yes,$(SYNC)),True,False), \
 skip_optimize=$(if $(filter 1 true yes,$(SKIP_OPTIMIZE)),True,False), skip_predict=$(if $(filter 1 true yes,$(SKIP_PREDICT)),True,False))"
+
+prefect-flow-model-lifecycle: ## Run governed model lifecycle flow once in Docker
+	$(DOCKER_RUN) python -c "from orchestration.flows.model_lifecycle import prefect_model_lifecycle_flow; prefect_model_lifecycle_flow()"
 
 # --- CLEANUP COMMANDS ---
 

@@ -2,7 +2,7 @@
 
 # SPEC: Rolling-origin backtesting and model lifecycle
 
-**Status:** In progress
+**Status:** Shipped
 **Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P0 "Replace the single holdout with rolling-origin backtesting" and "Fix model benchmark and champion semantics"
 
 ---
@@ -156,7 +156,9 @@ Promotion gates:
 - Candidate registration, persisted promotion checks, audited waivers, atomic champion replacement events, and deterministic rollback events are implemented.
 - Scheduled model jobs can resolve the latest champion for the contract scope with `vertex.jobs.run --resolve-champion`.
 - Lifecycle contract validation and write-free planning run through `make vertex-lifecycle-plan` and CI.
-- Remaining work is Prefect lifecycle orchestration and dbt staging/current-state views over the three lifecycle tables.
+- Prefect runs the complete BigQuery backtest, evidence persistence, gate evaluation, candidate registration, and retry-safe champion replacement cycle on a weekly or manual deployment.
+- dbt exposes candidate/check/event history, derives replacement retirement events, and publishes one current champion per canonical model scope.
+- Live GCP acceptance completed on 2026-07-18; evidence and the verification query are recorded in [`../acceptance/core_forecasting_2026-07-18.md`](../acceptance/core_forecasting_2026-07-18.md).
 
 ## Testing & validation
 

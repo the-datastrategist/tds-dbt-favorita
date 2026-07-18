@@ -16,6 +16,8 @@ Flow code lives under `orchestration/` (not `prefect/`) so it does not shadow th
 | `prefect-vertex-train-model-schedule` | `prefect-vertex-train-model` | Daily training (07:00 UTC) |
 | `prefect-vertex-ml-pipeline-manual` | `prefect-vertex-ml-pipeline` | On-demand ML pipeline (optimize → train → predict) |
 | `prefect-vertex-ml-pipeline-scheduled` | `prefect-vertex-ml-pipeline` | Weekly XGBoost pipeline (Sunday 08:00 UTC) |
+| `prefect-model-lifecycle-manual` | `prefect-model-lifecycle` | On-demand rolling-origin evaluation and governed promotion |
+| `prefect-model-lifecycle-scheduled` | `prefect-model-lifecycle` | Weekly lifecycle evaluation (Sunday 10:00 UTC) |
 
 ## Prerequisites
 
@@ -150,3 +152,7 @@ Optional entries in `.env` (see `env.example`):
 - `PREFECT_DEFAULT_VERTEX_MODE` — default `vertex_mode` for Vertex flows (`docker` or `vertex`)
 
 Scheduled cron expressions are defined in `prefect.yaml`; edit there to change times or timezones.
+
+The lifecycle deployment runs after the scheduled ML pipeline, resolves the latest reproducible
+artifact, persists rolling-origin evidence and gate checks, and atomically replaces the current
+champion only when every configured promotion gate passes.

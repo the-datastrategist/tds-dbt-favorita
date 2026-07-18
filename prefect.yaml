@@ -90,3 +90,25 @@ deployments:
       - cron: "0 8 * * 0"
         timezone: UTC
         active: true
+
+  - name: prefect-model-lifecycle-manual
+    entrypoint: orchestration/flows/model_lifecycle.py:prefect_model_lifecycle_flow
+    work_pool:
+      name: default
+    description: Manually backtest, evaluate promotion gates, and replace the scoped champion.
+    parameters:
+      actor: prefect-model-lifecycle-manual
+      auto_promote: true
+
+  - name: prefect-model-lifecycle-scheduled
+    entrypoint: orchestration/flows/model_lifecycle.py:prefect_model_lifecycle_flow
+    work_pool:
+      name: default
+    description: Weekly governed backtest and model promotion after the ML pipeline completes.
+    parameters:
+      actor: prefect-model-lifecycle-scheduled
+      auto_promote: true
+    schedules:
+      - cron: "0 10 * * 0"
+        timezone: UTC
+        active: true
