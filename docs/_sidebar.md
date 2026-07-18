@@ -21,12 +21,12 @@
   * [Accelerators](accelerators.md)
   * [dbt lineage and catalog](dbt-docs.md)
 
-* Consulting package
-  * [Package overview](consulting_package.md)
-  * [dbt](dbt/consulting_package.md)
-  * [Vertex AI](vertex/consulting_package.md)
-  * [Prefect](prefect/consulting_package.md)
-  * [MLflow](mlflow/consulting_package.md)
+* Platform guide
+  * [Platform overview](platform_guide.md)
+  * [dbt](dbt/component_guide.md)
+  * [Vertex AI](vertex/component_guide.md)
+  * [Prefect](prefect/component_guide.md)
+  * [MLflow](mlflow/component_guide.md)
 
 * Engineering specs
   * [Specs overview](specs/README.md)

@@ -204,6 +204,6 @@ Warehouse-backed runs (`dbt run`, `dbt test`, Vertex submit) execute in the clie
 
 - [Accelerators](accelerators.md) — what is implemented in this repo
 - [Case study](case_study.md) — business framing
-- Product views: [dbt](dbt/consulting_package.md) · [Vertex](vertex/consulting_package.md) · [MLflow](mlflow/consulting_package.md) · [Prefect](prefect/consulting_package.md)
+- Product views: [dbt](dbt/component_guide.md) · [Vertex](vertex/component_guide.md) · [MLflow](mlflow/component_guide.md) · [Prefect](prefect/component_guide.md)
 
 {% enddocs %}

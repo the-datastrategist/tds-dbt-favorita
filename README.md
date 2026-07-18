@@ -4,7 +4,9 @@ A production-style GCP demand forecasting platform built around dbt, BigQuery ML
 
 The platform is intentionally **GCP-first**. It provides reusable infrastructure, orchestration, model execution, experiment tracking, evaluation, metadata, and documentation patterns. Each project supplies its own dbt models for the business-specific source data, grains, features, and demand semantics.
 
-**Consulting package** — reference architecture, accelerators, and delivery artifacts for client engagements: **[docs/consulting_package.md](docs/consulting_package.md)** (rendered in hosted dbt Docs via `make dbt-ui`).
+**Platform guide** — reference architecture, reusable components, operating guides, and extension
+points: **[docs/platform_guide.md](docs/platform_guide.md)** (also rendered in hosted dbt Docs via
+`make dbt-ui`).
 
 **New user?** Follow [Generate your first forecast](docs/first_forecast.md) for the supported path
 from environment validation through canonical forecast output in BigQuery.
@@ -23,7 +25,7 @@ from environment validation through canonical forecast output in BigQuery.
 - **Hosted documentation**: Docsify portal and dbt Docs deploy together to GitHub Pages on pushes to `main` / `master` (see [Hosted documentation](#hosted-documentation))
 - **dbt Docs & lineage**: Project overview ([`docs/overview.md`](docs/overview.md)), exposures for ML and operational consumers (`dbt/models/exposures.yml`)
 - **Code Quality**: Black, flake8, and mypy for code quality
-- **Consulting package**: Architecture diagrams, accelerators inventory, case study, benchmarks, rollout playbook, and IaC guidance ([docs/consulting_package.md](docs/consulting_package.md))
+- **Platform guide**: Architecture diagrams, accelerators inventory, case study, benchmarks, rollout playbook, and IaC guidance ([docs/platform_guide.md](docs/platform_guide.md))
 
 ## Platform scope
 
@@ -41,15 +43,16 @@ The dbt layer is therefore a **canonical adapter layer**: each implementation ma
 
 Formal third-party plugin or connector interfaces are out of scope for now. New projects should adapt the dbt layer and configuration directly, using the specs in [docs/specs](docs/specs/README.md) as implementation guides.
 
-## Consulting package
+## Platform guide
 
-Productized engagement docs for proposals, kickoff, and handoff. Start at **[docs/consulting_package.md](docs/consulting_package.md)**.
+Architecture, component, operations, evaluation, and adoption documentation. Start at
+**[docs/platform_guide.md](docs/platform_guide.md)**.
 
 | Layer | Documents |
 |-------|-----------|
 | **Reference architecture** | [reference_architecture.md](docs/reference_architecture.md) — GCP layers, data flows, dual ML path |
 | **Accelerators** | [accelerators.md](docs/accelerators.md) — dbt, Vertex, MLflow, Prefect, platform assets |
-| **Delivery artifacts** | [delivery_artifacts.md](docs/delivery_artifacts.md) — index of collateral below |
+| **Operating guides** | [delivery_artifacts.md](docs/delivery_artifacts.md) — evaluation, rollout, dashboard, and operations guidance |
 
 | Artifact | Document |
 |----------|----------|
@@ -58,7 +61,7 @@ Productized engagement docs for proposals, kickoff, and handoff. Start at **[doc
 | Client rollout (4-week) | [docs/client_rollout.md](docs/client_rollout.md) |
 | IaC & GCP ops | [docs/iac.md](docs/iac.md), [vertex/ops/README.md](vertex/ops/README.md) |
 
-Product-specific views: [dbt](docs/dbt/consulting_package.md) · [Vertex AI](docs/vertex/consulting_package.md) · [MLflow](docs/mlflow/consulting_package.md) · [Prefect](docs/prefect/consulting_package.md)
+Product-specific views: [dbt](docs/dbt/component_guide.md) · [Vertex AI](docs/vertex/component_guide.md) · [MLflow](docs/mlflow/component_guide.md) · [Prefect](docs/prefect/component_guide.md)
 
 Browse locally with **`make dbt-ui`** (http://127.0.0.1:8080) or on GitHub after `dbt docs generate` in CI.
 
@@ -133,13 +136,13 @@ More detail (dual ML path, operational sequence, security/environments, CI/CD): 
 
 ```
 .
-├── docs/                   # Project + consulting docs (dbt docs-paths: ../docs)
+├── docs/                   # Project + platform docs (dbt docs-paths: ../docs)
 │   ├── overview.md        # dbt Docs Overview tab
-│   ├── consulting_package.md
-│   ├── dbt/               # dbt-focused consulting view
-│   ├── vertex/            # Vertex-focused consulting view
-│   ├── mlflow/            # MLflow-focused consulting view
-│   └── prefect/           # Prefect-focused consulting view
+│   ├── platform_guide.md
+│   ├── dbt/               # dbt component guide
+│   ├── vertex/            # Vertex AI component guide
+│   ├── mlflow/            # MLflow component guide
+│   └── prefect/           # Prefect component guide
 ├── dbt/                    # dbt models and configurations
 │   ├── models/
 │   │   ├── staging/       # Staging models
@@ -318,7 +321,7 @@ Narrative docs and exposures are configured in the dbt project (`docs-paths` in 
 | File | Purpose |
 |------|---------|
 | [`docs/overview.md`](docs/overview.md) | **Overview** tab in dbt Docs: architecture, grains, run order, data-quality notes |
-| [`docs/consulting_package.md`](docs/consulting_package.md) | Consulting package hub (architecture, accelerators, delivery artifacts) |
+| [`docs/platform_guide.md`](docs/platform_guide.md) | Platform guide hub (architecture, accelerators, delivery artifacts) |
 | [`dbt/models/exposures.yml`](dbt/models/exposures.yml) | Lineage **exposures** linking models to BQML forecasts, Vertex training, calendar/holiday context, and store master data |
 
 Defined exposures document how transformed tables feed ML and operational use cases. In the docs site, open the lineage graph and select an exposure to highlight upstream models.
@@ -389,7 +392,7 @@ All three run in Docker and bind to **localhost only** (override ports via Make 
 
 | Command | URL | Purpose |
 |---------|-----|---------|
-| `make dbt-ui` | http://127.0.0.1:8080 | dbt Docs — model catalog, lineage graph, exposures, consulting package |
+| `make dbt-ui` | http://127.0.0.1:8080 | dbt Docs — model catalog, lineage graph, exposures, and platform guide |
 | `make mlflow-ui` | http://127.0.0.1:5001 | Browse runs, metrics, and **Models** tab (GCS catalog pointers; not joblib copies) |
 | `make prefect-ui` | http://127.0.0.1:4200 | Prefect OSS server (API + dashboard) |
 

@@ -344,7 +344,7 @@ Create the following documents as part of implementation:
 | `monitoring_and_slos.md` | Data/model/forecast/pipeline monitoring and operational objectives |
 | `integration_contracts.md` | Warehouse, API, export, webhook, and delivery contracts |
 | `open_source_governance.md` | Contribution, security, releases, compatibility, and extension policy |
-| `product_roadmap.md` | Implemented, in-progress, experimental, planned, and consulting-only scope |
+| `product_roadmap.md` | Implemented, in-progress, experimental, planned, and deployment-specific scope |
 
 ## Suggested acceptance criteria
 

@@ -10,17 +10,17 @@ behind that walkthrough.
 
 The platform is intentionally **GCP-first** and intentionally **dbt-adapted per project**. Each implementation maps its own operational data into forecast-ready dbt models, because demand features, source systems, covariates, and planning grains vary by business.
 
-## Consulting package
+## Platform guide
 
-This project is structured as a **productized consulting engagement** with three layers:
+The platform documentation is organized into three layers:
 
 1. **[Reference architecture](reference_architecture.md)** — how modern GCP forecasting stacks are structured
 2. **[Accelerators](accelerators.md)** — reusable dbt, Vertex, MLflow, Prefect, and platform assets
-3. **[Delivery artifacts](delivery_artifacts.md)** — case study, benchmarks, dashboard blueprint, rollout playbook, IaC
+3. **[Operating guides](delivery_artifacts.md)** — evaluation, dashboard, adoption, and infrastructure guidance
 
-Start here: **[Consulting package overview](consulting_package.md)**
+Start here: **[Platform guide overview](platform_guide.md)**
 
-Product-specific views: [dbt](dbt/consulting_package.md) · [Vertex AI](vertex/consulting_package.md) · [MLflow](mlflow/consulting_package.md) · [Prefect](prefect/consulting_package.md)
+Product-specific views: [dbt](dbt/component_guide.md) · [Vertex AI](vertex/component_guide.md) · [MLflow](mlflow/component_guide.md) · [Prefect](prefect/component_guide.md)
 
 ## Business question
 

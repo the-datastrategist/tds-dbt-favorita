@@ -58,11 +58,11 @@ mindmap
 | Sources | `dbt/models/sources/vertex.yml` | Contract for ML output tables |
 | Selectors | `dbt/selectors.yml` | `daily_refresh`, `ml_features`, `bqml_train`, `bqml_score` |
 | Exposures | `dbt/models/exposures.yml` | Lineage to ML, dashboard, and app consumers |
-| Docs | `docs/` | Overview + consulting package (`dbt_project.yml` → `docs-paths: ["../docs"]`) |
+| Docs | `docs/` | Overview + platform guide (`dbt_project.yml` → `docs-paths: ["../docs"]`) |
 
 **Commands:** `make dbt-run`, `make dbt-train`, `make dbt-predict`, `make dbt-vertex`, `make dbt-test`, `make selector-accuracy-monitoring`
 
-→ Product view: [dbt/consulting_package.md](dbt/consulting_package.md)
+→ Product view: [dbt/component_guide.md](dbt/component_guide.md)
 
 ---
 
@@ -90,7 +90,7 @@ mindmap
 
 **Model types:** `xgboost`, `random_forest`, `arima`, `sarima`, `prophet`
 
-→ Product view: [vertex/consulting_package.md](vertex/consulting_package.md)
+→ Product view: [vertex/component_guide.md](vertex/component_guide.md)
 
 ---
 
@@ -106,7 +106,7 @@ mindmap
 
 GCS remains **canonical** for model binaries; MLflow stores pointers, not duplicate joblib files.
 
-→ Product view: [mlflow/consulting_package.md](mlflow/consulting_package.md)
+→ Product view: [mlflow/component_guide.md](mlflow/component_guide.md)
 
 ---
 
@@ -127,7 +127,7 @@ GCS remains **canonical** for model binaries; MLflow stores pointers, not duplic
 | `prefect-vertex-train-model-schedule` | Daily 07:00 UTC | Training |
 | `prefect-vertex-ml-pipeline-scheduled` | Sun 08:00 UTC | optimize → train → predict |
 
-→ Product view: [prefect/consulting_package.md](prefect/consulting_package.md)
+→ Product view: [prefect/component_guide.md](prefect/component_guide.md)
 
 ---
 
