@@ -128,7 +128,7 @@ Use during platform evaluation and adoption planning:
 
 ## Related documents
 
-- [Platform guide overview](platform_guide.md)
+- [Open-source forecasting platform on GCP](platform_guide.md)
 - Product views: [dbt](dbt/component_guide.md) · [Vertex](vertex/component_guide.md) · [MLflow](mlflow/component_guide.md) · [Prefect](prefect/component_guide.md)
 
 {% enddocs %}

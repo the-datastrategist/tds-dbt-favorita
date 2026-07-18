@@ -10,7 +10,7 @@ behind that walkthrough.
 
 The platform is intentionally **GCP-first** and intentionally **dbt-adapted per project**. Each implementation maps its own operational data into forecast-ready dbt models, because demand features, source systems, covariates, and planning grains vary by business.
 
-## Platform guide
+## Open-source forecasting platform on GCP
 
 The platform documentation is organized into three layers:
 
@@ -18,7 +18,7 @@ The platform documentation is organized into three layers:
 2. **[Accelerators](accelerators.md)** — reusable dbt, Vertex, MLflow, Prefect, and platform assets
 3. **[Operating guides](delivery_artifacts.md)** — evaluation, dashboard, adoption, and infrastructure guidance
 
-Start here: **[Platform guide overview](platform_guide.md)**
+Start here: **[Open-source forecasting platform on GCP](platform_guide.md)**
 
 Product-specific views: [dbt](dbt/component_guide.md) · [Vertex AI](vertex/component_guide.md) · [MLflow](mlflow/component_guide.md) · [Prefect](prefect/component_guide.md)
 

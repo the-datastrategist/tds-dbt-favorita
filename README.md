@@ -4,7 +4,7 @@ A production-style GCP demand forecasting platform built around dbt, BigQuery ML
 
 The platform is intentionally **GCP-first**. It provides reusable infrastructure, orchestration, model execution, experiment tracking, evaluation, metadata, and documentation patterns. Each project supplies its own dbt models for the business-specific source data, grains, features, and demand semantics.
 
-**Platform guide** — reference architecture, reusable components, operating guides, and extension
+**Open-source forecasting platform on GCP** — reference architecture, reusable components, operating guides, and extension
 points: **[docs/platform_guide.md](docs/platform_guide.md)** (also rendered in hosted dbt Docs via
 `make dbt-ui`).
 
@@ -25,7 +25,7 @@ from environment validation through canonical forecast output in BigQuery.
 - **Hosted documentation**: Docsify portal and dbt Docs deploy together to GitHub Pages on pushes to `main` / `master` (see [Hosted documentation](#hosted-documentation))
 - **dbt Docs & lineage**: Project overview ([`docs/overview.md`](docs/overview.md)), exposures for ML and operational consumers (`dbt/models/exposures.yml`)
 - **Code Quality**: Black, flake8, and mypy for code quality
-- **Platform guide**: Architecture diagrams, accelerators inventory, case study, benchmarks, rollout playbook, and IaC guidance ([docs/platform_guide.md](docs/platform_guide.md))
+- **Open-source GCP platform guide**: Architecture diagrams, accelerators inventory, case study, benchmarks, rollout playbook, and IaC guidance ([docs/platform_guide.md](docs/platform_guide.md))
 
 ## Platform scope
 
@@ -43,7 +43,7 @@ The dbt layer is therefore a **canonical adapter layer**: each implementation ma
 
 Formal third-party plugin or connector interfaces are out of scope for now. New projects should adapt the dbt layer and configuration directly, using the specs in [docs/specs](docs/specs/README.md) as implementation guides.
 
-## Platform guide
+## Open-source forecasting platform on GCP
 
 Architecture, component, operations, evaluation, and adoption documentation. Start at
 **[docs/platform_guide.md](docs/platform_guide.md)**.
@@ -321,7 +321,7 @@ Narrative docs and exposures are configured in the dbt project (`docs-paths` in 
 | File | Purpose |
 |------|---------|
 | [`docs/overview.md`](docs/overview.md) | **Overview** tab in dbt Docs: architecture, grains, run order, data-quality notes |
-| [`docs/platform_guide.md`](docs/platform_guide.md) | Platform guide hub (architecture, accelerators, delivery artifacts) |
+| [`docs/platform_guide.md`](docs/platform_guide.md) | Open-source platform hub (architecture, accelerators, delivery artifacts) |
 | [`dbt/models/exposures.yml`](dbt/models/exposures.yml) | Lineage **exposures** linking models to BQML forecasts, Vertex training, calendar/holiday context, and store master data |
 
 Defined exposures document how transformed tables feed ML and operational use cases. In the docs site, open the lineage graph and select an exposure to highlight upstream models.

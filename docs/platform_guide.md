@@ -1,8 +1,8 @@
 {% docs platform_guide %}
 
-# Platform guide — GCP demand forecasting platform
+# Open-source forecasting platform on GCP
 
-This repository is an **open-source, GCP-first demand forecasting platform**. It provides reusable
+This repository is an **open-source forecasting platform on GCP**. It provides reusable
 contracts, infrastructure, model execution, evaluation, orchestration, and forecast operations
 while leaving business-specific source adaptation and demand semantics to each implementation.
 

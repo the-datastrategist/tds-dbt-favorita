@@ -5,7 +5,8 @@
 Working specs for the **longer-horizon roadmap items** already flagged (but not designed) elsewhere in this repo: [`docs/client_rollout.md`](../client_rollout.md#post-rollout-weeks-58-optional) "Post-rollout" table, [`docs/iac.md`](../iac.md#terraform-roadmap) "Terraform roadmap", [`vertex/README.md`](../../vertex/README.md#adding-a-model-family) "Planned: prophet", and [`docs/demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) for the broader open-source demand forecasting platform roadmap.
 
 These are implementation specs for planned or evolving platform capabilities. The
-[platform guide](../platform_guide.md) documents the shipped architecture and reusable components.
+[open-source forecasting platform guide](../platform_guide.md) documents the shipped architecture
+and reusable components.
 A completed spec should graduate into an accelerator entry in [accelerators.md](../accelerators.md).
 
 ---

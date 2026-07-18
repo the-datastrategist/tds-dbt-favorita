@@ -396,7 +396,7 @@ make vertex-pipeline-train-only VERTEX_PIPELINE=favorita_arima
 make dbt-vertex
 ```
 
-**GCP practices** (consulting template): dedicated pipeline SA (`VERTEX_PIPELINE_SERVICE_ACCOUNT`), customer-owned `VERTEX_AI_PIPELINE_ROOT`, resource labels (`GCP_CLIENT_LABEL`, `GCP_ENVIRONMENT`), and least-privilege IAM — see [ops/README.md](ops/README.md).
+**GCP practices** (open-source forecasting platform): dedicated pipeline SA (`VERTEX_PIPELINE_SERVICE_ACCOUNT`), operator-owned `VERTEX_AI_PIPELINE_ROOT`, resource labels (`GCP_CLIENT_LABEL`, `GCP_ENVIRONMENT`), and least-privilege IAM — see [ops/README.md](ops/README.md).
 
 dbt models: `stg_vertex_model_predictions`, `stg_vertex_model_metadata`, `stg_vertex_job_runs` (sources in `dbt/models/sources/vertex.yml`). Apply DDL once: `vertex/ddl/vertex_bq_tables.sql` (`make vertex-bq-ddl` prints the path).
 

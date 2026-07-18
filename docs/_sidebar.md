@@ -1,4 +1,5 @@
 * Start here
+  * [Open-source forecasting platform on GCP](platform_guide.md)
   * [Platform overview](overview.md)
   * [Generate your first forecast](first_forecast.md)
   * [Reference architecture](reference_architecture.md)
@@ -21,8 +22,7 @@
   * [Accelerators](accelerators.md)
   * [dbt lineage and catalog](dbt-docs.md)
 
-* Platform guide
-  * [Platform overview](platform_guide.md)
+* Platform components
   * [dbt](dbt/component_guide.md)
   * [Vertex AI](vertex/component_guide.md)
   * [Prefect](prefect/component_guide.md)
