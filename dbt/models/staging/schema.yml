@@ -580,9 +580,6 @@ models:
             - entity_key_json
             - target_date
             - horizon
-            - forecast_status
-          config:
-            where: "forecast_status = 'draft'"
     columns:
       - name: forecast_output_id
         description: Stable unique identifier for the forecast output row.
@@ -647,12 +644,32 @@ models:
         description: Model training run used for this forecast.
       - name: model_id
         description: Model artifact identifier.
+        data_tests:
+          - not_null
+      - name: config_name
+        description: Model configuration that produced the forecast.
+        data_tests:
+          - not_null
+      - name: model_type
+        description: Model implementation type.
+        data_tests:
+          - not_null
       - name: feature_version
-        description: Feature definition or materialization version, when configured.
+        description: Stable feature definition or materialization version.
+        data_tests:
+          - not_null
       - name: code_sha
         description: Source code SHA used for the forecast job.
+        data_tests:
+          - not_null
       - name: data_cutoff
         description: Latest source data cutoff represented in the forecast.
+        data_tests:
+          - not_null
+      - name: model_artifact_uri
+        description: Immutable or versioned model artifact location.
+        data_tests:
+          - not_null
 
   - name: stg_forecast_status_history
     description: Forecast lifecycle transition events.
@@ -677,6 +694,12 @@ models:
               values: ['draft', 'approved', 'published', 'superseded', 'failed']
       - name: changed_at
         description: Timestamp when the status changed.
+        data_tests:
+          - not_null
+      - name: changed_by
+        description: Actor or service responsible for the transition.
+        data_tests:
+          - not_null
 
   - name: stg_vertex_model_explain
     description: >
