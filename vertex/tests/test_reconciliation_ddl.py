@@ -2,6 +2,10 @@
 
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.unit
+
 
 def test_reconciliation_tables_are_append_only_and_separate_from_base_outputs():
     ddl = (Path(__file__).parents[1] / "ddl" / "vertex_bq_tables.sql").read_text()

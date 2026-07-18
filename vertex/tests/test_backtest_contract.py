@@ -92,6 +92,13 @@ class TestBacktestContract:
         with pytest.raises(ValueError, match="Unsupported backtest baselines"):
             validate_backtest_contract(raw)
 
+    def test_rejects_invalid_promotion_completeness(self):
+        raw = _valid_contract()
+        raw["backtest"]["promotion_gates"]["min_prediction_completeness"] = 1.01
+
+        with pytest.raises(ValueError, match="must be <= 1"):
+            validate_backtest_contract(raw)
+
     def test_rejects_origins_and_origin_policy_together(self):
         raw = _valid_contract()
         raw["backtest"]["origins"] = ["2016-08-01"]

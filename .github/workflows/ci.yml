@@ -55,8 +55,13 @@ jobs:
       - name: Validate rolling-origin backtest plan
         run: python -m vertex.jobs.backtest --dry-run
 
+      - name: Validate model lifecycle contract and dry-run plan
+        run: python -m vertex.jobs.model_lifecycle plan
+
       - name: Unit tests
-        run: pytest -m unit --cov-fail-under=65
+        run: |
+          python scripts/check_test_environment.py
+          make test DOCKER_RUN=
 
       - name: Compile Vertex KFP pipeline (no GCP)
         run: |

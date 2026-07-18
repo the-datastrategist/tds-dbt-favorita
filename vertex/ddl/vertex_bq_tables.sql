@@ -235,6 +235,52 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_metrics` (
 PARTITION BY forecast_origin
 CLUSTER BY backtest_contract_name, horizon, baseline_name, backtest_run_id;
 
+-- Immutable registrations. Current state and champion history are derived from
+-- model_lifecycle_events so retries never update or erase an earlier decision.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.model_candidates` (
+  candidate_id STRING NOT NULL,
+  model_scope_json JSON NOT NULL,
+  model_config_name STRING NOT NULL,
+  model_family STRING NOT NULL,
+  model_type STRING NOT NULL,
+  backtest_run_id STRING NOT NULL,
+  backtest_contract_hash STRING NOT NULL,
+  artifact_uri STRING,
+  initial_state STRING NOT NULL,
+  registered_by STRING NOT NULL,
+  registered_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY DATE(registered_at)
+CLUSTER BY model_config_name, model_family, candidate_id;
+
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.model_promotion_checks` (
+  promotion_check_id STRING NOT NULL,
+  candidate_id STRING NOT NULL,
+  check_name STRING NOT NULL,
+  observed_value FLOAT64,
+  threshold_value FLOAT64 NOT NULL,
+  passed BOOL NOT NULL,
+  details_json JSON,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+CLUSTER BY candidate_id, check_name, passed;
+
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.model_lifecycle_events` (
+  lifecycle_event_id STRING NOT NULL,
+  candidate_id STRING NOT NULL,
+  event_type STRING NOT NULL,
+  from_state STRING,
+  to_state STRING NOT NULL,
+  replaces_candidate_id STRING,
+  reason STRING,
+  actor STRING NOT NULL,
+  occurred_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY DATE(occurred_at)
+CLUSTER BY candidate_id, event_type, to_state;
+
 -- SHAP feature attributions for tree-based Vertex predictions (xgboost, random_forest);
 -- one row per prediction_id in ml_model_predictions when explain.enabled is set.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_explain` (

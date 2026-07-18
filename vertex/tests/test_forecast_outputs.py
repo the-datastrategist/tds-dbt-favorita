@@ -1,12 +1,17 @@
 """Tests for canonical forecast output row builder."""
 
 from datetime import datetime
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
 
 from vertex.config.forecast_contract import validate_forecast_contract
-from vertex.utils.forecast_outputs import _feature_version, build_forecast_output_rows
+from vertex.utils.forecast_outputs import (
+    _feature_version,
+    build_forecast_output_rows,
+    write_forecast_outputs_if_configured,
+)
 from vertex.utils.predictions import build_standard_prediction_rows
 
 
@@ -204,3 +209,77 @@ def test_derived_feature_version_is_stable_and_changes_with_feature_inputs():
     assert _feature_version(config) == _feature_version(config)
     changed = {"inputs": {"predict_sql_query": "select a, b from t", "excluded_columns": ["id"]}}
     assert _feature_version(config) != _feature_version(changed)
+
+
+@pytest.mark.unit
+def test_write_forecast_outputs_is_opt_in():
+    assert write_forecast_outputs_if_configured(config={}, prediction_rows=pd.DataFrame()) == 0
+
+
+@pytest.mark.unit
+def test_write_forecast_outputs_persists_contract_run_rows_and_status_events():
+    predictions = pd.DataFrame(
+        {
+            "prediction_id": ["prediction-1"],
+            "predict_run_id": ["predict-run"],
+            "model_run_id": ["model-run"],
+            "model_id": ["model"],
+            "config_name": ["config"],
+            "model_family": ["family"],
+            "model_type": ["xgboost"],
+            "model_artifact_uri": ["gs://models/model.joblib"],
+            "store_id": [1],
+            "date": pd.to_datetime(["2024-01-01"]),
+            "forecast_horizon": [7],
+            "prediction": [11.0],
+            "run_at": pd.to_datetime(["2024-01-02"]),
+        }
+    )
+    config = {
+        "inputs": {"feature_version": "features-v1"},
+        "outputs": {
+            "forecast_output_table": "project.dataset.outputs",
+            "forecast_contract_table": "project.dataset.contracts",
+            "forecast_runs_table": "project.dataset.runs",
+            "forecast_status_history_table": "project.dataset.status",
+        },
+    }
+    cutoff = {"data_cutoff": datetime(2024, 1, 1)}
+    with (
+        pytest.MonkeyPatch.context() as monkeypatch,
+        patch("vertex.utils.forecast_outputs.load_forecast_contract", return_value=_contract()),
+        patch("vertex.utils.forecast_outputs.merge_row_to_bigquery") as merge,
+        patch("vertex.utils.forecast_outputs.insert_rows_idempotent") as insert,
+    ):
+        monkeypatch.setattr("vertex.utils.forecast_outputs.get_git_sha", lambda: "abc123")
+        count = write_forecast_outputs_if_configured(
+            config=config,
+            prediction_rows=predictions,
+            project_id="billing-project",
+            feature_cutoff_metadata=cutoff,
+        )
+
+    assert count == 1
+    assert merge.call_count == 2
+    assert insert.call_count == 2
+    assert merge.call_args_list[0].args[1] == "project.dataset.contracts"
+    assert merge.call_args_list[1].args[1] == "project.dataset.runs"
+    assert insert.call_args_list[0].args[1] == "project.dataset.outputs"
+    assert insert.call_args_list[1].args[1] == "project.dataset.status"
+
+
+@pytest.mark.unit
+def test_write_forecast_outputs_requires_all_persistence_tables():
+    predictions = pd.DataFrame({"run_at": pd.to_datetime(["2024-01-02"])})
+    config = {"outputs": {"forecast_output_table": "project.dataset.outputs"}}
+    with (
+        patch("vertex.utils.forecast_outputs.load_forecast_contract", return_value=_contract()),
+        patch("vertex.utils.forecast_outputs.feature_cutoff_metadata_from_frame", return_value={}),
+        patch("vertex.utils.forecast_outputs.get_git_sha", return_value="abc123"),
+        patch("vertex.utils.forecast_outputs.build_forecast_output_rows") as build,
+    ):
+        build.return_value = pd.DataFrame(
+            {"forecast_run_id": ["run"], "forecast_origin": [pd.Timestamp("2024-01-01")]}
+        )
+        with pytest.raises(ValueError, match="canonical persistence requires"):
+            write_forecast_outputs_if_configured(config=config, prediction_rows=predictions)

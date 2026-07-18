@@ -5,6 +5,8 @@ PROJECT_NAME = tds-favorita
 DBT_DIR = dbt
 VERTEX_DIR = vertex
 DOCKER_RUN = docker compose run --rm ml-pipeline
+UNIT_TEST_COMMAND = python -m pytest -m unit --cov-fail-under=75
+TEST_COMMAND = python -m pytest --cov-fail-under=75
 
 # Load .env variables
 ifneq ("$(wildcard .env)","")
@@ -32,6 +34,7 @@ endif
 	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
 	dbt-vertex dbt-backtest vertex-bq-ddl vertex-validate-config vertex-validate-configs \
 	vertex-backfill vertex-backtest-plan vertex-backtest vertex-backtest-persist prefect-flow-vertex-backfill \
+	vertex-lifecycle-plan vertex-lifecycle-evaluate vertex-lifecycle-promote vertex-lifecycle-rollback \
 	docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
 
 help: ## Show this help message
@@ -65,13 +68,15 @@ check: format lint type-check ## Run all code quality checks
 # --- TESTING COMMANDS ---
 
 test: ## Run tests with pytest
-	$(DOCKER_RUN) pytest
+	$(DOCKER_RUN) python scripts/check_test_environment.py
+	$(DOCKER_RUN) $(TEST_COMMAND)
 
 test-cov: ## Run tests with coverage report
 	$(DOCKER_RUN) pytest --cov=vertex --cov-report=html --cov-report=term
 
 test-unit: ## Run only unit tests
-	$(DOCKER_RUN) pytest -m unit
+	$(DOCKER_RUN) python scripts/check_test_environment.py
+	$(DOCKER_RUN) $(UNIT_TEST_COMMAND)
 
 test-integration: ## Run only integration tests
 	$(DOCKER_RUN) pytest -m integration
@@ -395,6 +400,33 @@ vertex-backtest: ## Score model + baselines; set VERTEX_BACKTEST_PERSIST=true to
 vertex-backtest-persist: ## Score and idempotently persist model + baseline backtest records
 	@$(MAKE) vertex-backtest VERTEX_BACKTEST_PERSIST=true
 
+VERTEX_LIFECYCLE_ACTOR ?= local-user
+VERTEX_LIFECYCLE_ARTIFACT_URI ?=
+VERTEX_LIFECYCLE_ARGS ?=
+
+vertex-lifecycle-plan: ## Validate promotion policy and print an offline, write-free plan
+	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.model_lifecycle plan \
+		--contract-path $(VERTEX_BACKTEST_CONTRACT)
+
+vertex-lifecycle-evaluate: ## Evaluate a candidate; set VERTEX_BACKTEST_INPUT and artifact URI
+	@test -n "$(VERTEX_BACKTEST_INPUT)" || (echo "Set VERTEX_BACKTEST_INPUT to a CSV path" && exit 1)
+	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.model_lifecycle evaluate \
+		--contract-path $(VERTEX_BACKTEST_CONTRACT) --input-csv $(VERTEX_BACKTEST_INPUT) \
+		--actor $(VERTEX_LIFECYCLE_ACTOR) $(if $(VERTEX_LIFECYCLE_ARTIFACT_URI),--artifact-uri $(VERTEX_LIFECYCLE_ARTIFACT_URI),) \
+		$(VERTEX_LIFECYCLE_ARGS)
+
+vertex-lifecycle-promote: ## Evaluate and promote a passing candidate (or provide waiver args)
+	@test -n "$(VERTEX_BACKTEST_INPUT)" || (echo "Set VERTEX_BACKTEST_INPUT to a CSV path" && exit 1)
+	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.model_lifecycle promote \
+		--contract-path $(VERTEX_BACKTEST_CONTRACT) --input-csv $(VERTEX_BACKTEST_INPUT) \
+		--actor $(VERTEX_LIFECYCLE_ACTOR) $(if $(VERTEX_LIFECYCLE_ARTIFACT_URI),--artifact-uri $(VERTEX_LIFECYCLE_ARTIFACT_URI),) \
+		$(VERTEX_LIFECYCLE_ARGS)
+
+vertex-lifecycle-rollback: ## Restore a prior candidate; pass IDs and reason in VERTEX_LIFECYCLE_ARGS
+	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.model_lifecycle rollback \
+		--contract-path $(VERTEX_BACKTEST_CONTRACT) --actor $(VERTEX_LIFECYCLE_ACTOR) \
+		$(VERTEX_LIFECYCLE_ARGS)
+
 # Walk-forward backfill: train + predict per anchor date (see vertex/jobs/backfill.py)
 VERTEX_BACKFILL_CONFIG ?= favorita_store_n1d_xgboost
 START_DATE ?=
@@ -523,3 +555,10 @@ clean: ## Clean generated files and artifacts
 
 clean-all: clean ## Clean generated artifacts (same as clean)
 	@true
+.PHONY: bootstrap-check bootstrap-gcp
+
+bootstrap-check: ## Validate GCP/ADC/GitHub bootstrap prerequisites without writing
+	env -u GOOGLE_APPLICATION_CREDENTIALS -u GOOGLE_CREDENTIALS python scripts/bootstrap_gcp.py check
+
+bootstrap-gcp: ## Adopt existing GCP resources, apply WIF, and configure GitHub dev
+	env -u GOOGLE_APPLICATION_CREDENTIALS -u GOOGLE_CREDENTIALS python scripts/bootstrap_gcp.py bootstrap --apply --configure-github

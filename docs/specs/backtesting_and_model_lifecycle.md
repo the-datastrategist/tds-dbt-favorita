@@ -2,7 +2,7 @@
 
 # SPEC: Rolling-origin backtesting and model lifecycle
 
-**Status:** Proposed
+**Status:** In progress
 **Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P0 "Replace the single holdout with rolling-origin backtesting" and "Fix model benchmark and champion semantics"
 
 ---
@@ -19,7 +19,7 @@ This spec adds `docs/backtesting_and_evaluation.md`, a reusable backtest runner,
 - Add naive and demand-specific baselines to every benchmark.
 - Store metrics by target, grain, horizon, segment, model, baseline, and forecast contract.
 - Replace direct cross-grain ranking with comparable leaderboard keys.
-- Add model lifecycle states: `candidate`, `challenger`, `champion`, `archived`, `rejected`.
+- Add model lifecycle states: `candidate`, `champion`, `retired`, `rejected`.
 - Require promotion gates before a model becomes champion.
 
 ## Non-goals
@@ -149,6 +149,14 @@ Promotion gates:
 5. Add dbt staging models and revised leaderboard/champion marts.
 6. Update `docs/benchmarks.md` to query backtest and lifecycle tables.
 7. Add Prefect flow for scheduled or manual backtesting.
+
+### Current implementation
+
+- Rolling-origin ML and baseline scoring, immutable prediction/metric persistence, and comparable leaderboard keys are implemented.
+- Candidate registration, persisted promotion checks, audited waivers, atomic champion replacement events, and deterministic rollback events are implemented.
+- Scheduled model jobs can resolve the latest champion for the contract scope with `vertex.jobs.run --resolve-champion`.
+- Lifecycle contract validation and write-free planning run through `make vertex-lifecycle-plan` and CI.
+- Remaining work is Prefect lifecycle orchestration and dbt staging/current-state views over the three lifecycle tables.
 
 ## Testing & validation
 

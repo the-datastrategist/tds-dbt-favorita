@@ -52,6 +52,21 @@ for the `terraform import` sequence and the "zero diff before adopting" rule.
 
 ## Keyless GitHub Actions plan
 
+For the supported guided path, authenticate locally and run:
+
+```bash
+gcloud auth application-default login
+make bootstrap-check
+make bootstrap-gcp
+```
+
+`bootstrap-check` is read-only and reports credential overrides, missing tools, project/API
+access, state-bucket access, and GitHub authentication. `bootstrap-gcp` inventories known legacy
+resources, imports matches into remote state, rejects any plan containing deletion, applies the
+reviewed plan, configures the protected GitHub `dev` environment, and verifies a clean final plan.
+It is safe to rerun. Use `python scripts/bootstrap_gcp.py bootstrap` without `--apply` to stop after
+creating the reviewed plan.
+
 1. Create the versioned dev state bucket before initializing this configuration.
 2. Set `enable_github_wif`, `github_repository`, and `terraform_state_bucket` as shown in
    `environments/dev/terraform.tfvars.example`, then apply once with a trusted human identity.
