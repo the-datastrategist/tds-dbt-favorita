@@ -1,6 +1,7 @@
 {#
-  Comparable BQML, Vertex holdout, and rolling-origin baseline metrics.
+  Comparable BQML, Vertex holdout, and rolling-origin metrics.
   Champion consumers must use the full target/grain/horizon/segment/metric-policy key.
+  See docs/specs/backtesting_and_model_lifecycle.md.
 #}
 
 {{ config(materialized='table', tags=['bqml', 'vertex', 'backtest']) }}

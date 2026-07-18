@@ -2,7 +2,7 @@
 {{ config(tags=['data_quality', 'ml_models', 'backtest']) }}
 
 select comparable_partition_key
-from {{ ref('favorita_model_leaderboard') }}
+from {{ ref('ml_model_leaderboard') }}
 group by comparable_partition_key
 having count(distinct to_json_string(struct(
     target, grain, horizon, segment_key_json, metric_policy

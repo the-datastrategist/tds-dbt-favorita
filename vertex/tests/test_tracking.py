@@ -21,7 +21,7 @@ class TestJobRunTracking:
                 "region": "us-central1",
             },
             "outputs": {
-                "job_runs_table": "test-project.favorita.favorita_vertex_job_runs",
+                "job_runs_table": "test-project.favorita.ml_vertex_job_runs",
             },
         }
 

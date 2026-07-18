@@ -11,17 +11,17 @@ defaults:
     register_model: false
     registered_model_prefix: favorita
   outputs:
-    metadata_table: tds-favorita.favorita.favorita_model_metadata
-    performance_table: tds-favorita.favorita.favorita_model_performance
-    prediction_table: tds-favorita.favorita.favorita_model_predictions
+    metadata_table: tds-favorita.favorita.ml_model_metadata
+    performance_table: tds-favorita.favorita.ml_model_performance
+    prediction_table: tds-favorita.favorita.ml_model_predictions
     forecast_contract_table: tds-favorita.favorita.forecast_contracts
     forecast_runs_table: tds-favorita.favorita.forecast_runs
     forecast_output_table: tds-favorita.favorita.forecast_outputs
     forecast_status_history_table: tds-favorita.favorita.forecast_status_history
     forecast_contract_path: vertex/config/forecast_contract.yaml
     feature_availability_path: vertex/config/feature_availability.yaml
-    optimize_table: tds-favorita.favorita.favorita_model_optimize
-    job_runs_table: tds-favorita.favorita.favorita_vertex_job_runs
+    optimize_table: tds-favorita.favorita.ml_model_optimize
+    job_runs_table: tds-favorita.favorita.ml_vertex_job_runs
     # SHAP feature attributions on predict; only used when a config sets explain.enabled.
     explain_table: tds-favorita.favorita.favorita_model_explain
 
@@ -39,6 +39,10 @@ pipelines:
 
   favorita_arima:
     config: favorita_store_n1d_arima
+    steps: [train, predict]
+
+  favorita_prophet:
+    config: favorita_store_n1d_prophet
     steps: [train, predict]
 
 configs:
@@ -335,6 +339,50 @@ configs:
         method: lbfgs
         maxiter: 50
         disp: false
+    outputs: {}
+
+
+  - name: favorita_store_n1d_prophet
+    description: Per-entity Prophet on store daily sales (additive seasonality; no SHAP)
+    model_family: favorita_store_daily
+    model_type: prophet
+    vertex:
+      experiment: favorita-vertex
+      machine_type: n1-standard-4
+    inputs:
+      train_sql_query: |
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) > 1
+      predict_sql_query: |
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        qualify ntile(5) over (order by date desc) = 1
+      target_column: sales_store_n1d
+      date_column: date
+      entity_column: store_nbr
+      id_columns:
+        - store_nbr
+      training_mode: per_entity
+      gcs_model_path: gs://favorita-vertex-models/
+      forecast_horizon: 7
+      train_days: 180
+      test_size: 0.2
+      min_train_obs: 90
+      max_entities: 100
+      predict_scope: holdout
+      trial_count: 10
+      objective_metric: mae
+      model_params:
+        # Prophet's own tunables — additive seasonality only in this first cut (see
+        # docs/specs/prophet_model_family.md Non-goals: multiplicative is a fast-follow)
+        growth: linear
+        seasonality_mode: additive
+        yearly_seasonality: auto
+        weekly_seasonality: auto
+        changepoint_prior_scale: 0.05
+    # No explain: block — Prophet isn't a tree model, so explain.enabled must stay unset
+    # (SHAP_SUPPORTED_MODEL_TYPES in load_config.py already rejects it if set).
     outputs: {}
 
 

@@ -75,7 +75,7 @@ Alternative: **Workflows** orchestrating dbt Cloud job → Vertex PipelineJob AP
 ## Monitoring
 
 - Vertex AI → Pipelines / Training: job failures, duration
-- BigQuery: `favorita_vertex_job_runs` for status `FAILED`
+- BigQuery: `ml_vertex_job_runs` for status `FAILED`
 - Cloud Logging: filter `resource.type="aiplatform.googleapis.com/PipelineJob"`
 
 ## CI vs production

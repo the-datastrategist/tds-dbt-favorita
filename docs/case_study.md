@@ -91,9 +91,9 @@ Outcomes below reflect **architectural deliverables**. Numeric benchmarks are po
 | End-to-end feature pipeline | `make dbt-run` → four `int_sales_*` tables |
 | BQML baseline | `make dbt-train`, `bqml_model_evaluate` |
 | Four Vertex model families | XGBoost, RF, ARIMA, SARIMA configs in YAML |
-| Hyperparameter search | Optuna optimize step + model optimize table |
-| Per-prediction explainability | SHAP top-feature attributions for tree models |
-| Unified predictions | BigQuery prediction / forecast output tables |
+| Hyperparameter search | Optuna optimize step + `ml_model_optimize` table |
+| Per-prediction explainability | SHAP top-feature attributions for tree models (`favorita_model_explain`) |
+| Unified predictions | `ml_model_predictions`, canonical forecast output tables, and dbt staging |
 | Experiment tracking | MLflow UI (`make mlflow-ui`), Vertex Experiments |
 | CI without GCP | GitHub Actions: lint, test, config validate, KFP compile |
 | Lineage for ML consumers | `dbt/models/exposures.yml` |

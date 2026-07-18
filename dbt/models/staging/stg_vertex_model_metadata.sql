@@ -21,4 +21,4 @@ select
     test_row_count,
     parameters,
     test_performance
-from {{ source('vertex_ml', 'favorita_model_metadata') }}
+from {{ source('vertex_ml', 'ml_model_metadata') }}

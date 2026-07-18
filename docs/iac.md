@@ -108,7 +108,7 @@ Apply Vertex tables once per environment:
 make vertex-bq-ddl
 ```
 
-Tables: `favorita_vertex_job_runs`, `favorita_model_metadata`, `favorita_model_performance`, `favorita_model_optimize`, `favorita_model_predictions`.
+Tables: `ml_vertex_job_runs`, `ml_model_metadata`, `ml_model_performance`, `ml_model_optimize`, `ml_model_predictions`.
 
 ---
 
@@ -158,7 +158,7 @@ Recommended cron (matches `prefect.yaml` defaults):
 | Signal | Where |
 |--------|-------|
 | Pipeline failures | Vertex AI → Pipelines / Training console |
-| Job audit | `SELECT * FROM favorita_vertex_job_runs WHERE status = 'FAILED'` |
+| Job audit | `SELECT * FROM ml_vertex_job_runs WHERE status = 'FAILED'` |
 | Logs | Cloud Logging: `resource.type="aiplatform.googleapis.com/PipelineJob"` |
 | Model quality | [benchmarks.md](benchmarks.md) queries on performance tables |
 

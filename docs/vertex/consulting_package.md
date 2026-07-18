@@ -29,7 +29,7 @@ flowchart TB
   end
 
   subgraph L3["Delivery artifacts"]
-    BM[Benchmarks — model performance]
+    BM[Benchmarks — ml_model_performance]
     RP[Rollout Week 3 ML]
     IAC[IAM + GCS + Scheduler]
     MLf[MLflow catalog pointers]
@@ -107,11 +107,11 @@ make vertex-validate-configs
 
 | Table | Contents |
 |-------|----------|
-| model metadata table | Training lineage, artifact URIs |
-| model performance table | Holdout metrics |
-| prediction / forecast output table | Unified prediction or canonical forecast rows |
-| model optimize table | Optuna trials |
-| Vertex job runs table | Orchestration audit |
+| `ml_model_metadata` | Training lineage, artifact URIs |
+| `ml_model_performance` | Holdout metrics (JSON) |
+| `ml_model_predictions` / canonical forecast output | Prediction and publication facts |
+| `ml_model_optimize` | Optuna trials |
+| `ml_vertex_job_runs` | Orchestration audit |
 
 dbt staging: `stg_vertex_model_predictions`, `stg_vertex_model_metadata`, `stg_vertex_job_runs` (`make dbt-vertex`).
 
@@ -122,7 +122,7 @@ dbt staging: `stg_vertex_model_predictions`, `stg_vertex_model_metadata`, `stg_v
 | Artifact | Vertex contribution |
 |----------|----------------------|
 | **Case study** | Dual path vs BQML; config-driven ML |
-| **Benchmarks** | Query model performance tables; compare model types |
+| **Benchmarks** | Query `ml_model_performance`; compare model types |
 | **Dashboard** | `stg_vertex_model_predictions` as primary fact |
 | **Rollout** | Week 3: train/predict; Week 4: pipeline + Scheduler |
 | **IaC** | `vertex/ops/README.md` — SA, buckets, labels, monitoring |
@@ -145,7 +145,7 @@ From `vertex/ops/README.md`:
 - [ ] `VERTEX_AI_STAGING_BUCKET`, `VERTEX_AI_PIPELINE_ROOT`, `VERTEX_TRAINING_IMAGE`
 - [ ] Chargeback labels: `GCP_CLIENT_LABEL`, `GCP_ENVIRONMENT`
 - [ ] Cloud Scheduler → dbt then pipeline
-- [ ] Monitor `favorita_vertex_job_runs` for `FAILED`
+- [ ] Monitor `ml_vertex_job_runs` for `FAILED`
 
 → Full detail: [iac.md](../iac.md)
 

@@ -7,7 +7,7 @@ sources:
     database: "{{ env_var('GOOGLE_PROJECT_ID') }}"
     schema: "{{ env_var('DBT_DATASET', 'favorita') }}"
     tables:
-      - name: favorita_model_predictions
+      - name: ml_model_predictions
         description: Unified prediction rows across model_type (xgboost, random_forest, arima, sarima)
         columns:
           - name: prediction_id
@@ -27,20 +27,20 @@ sources:
           - name: explanation_id
             description: Stable hash per explanation row
           - name: prediction_id
-            description: Joins 1:1 to favorita_model_predictions.prediction_id
+            description: Joins 1:1 to ml_model_predictions.prediction_id
           - name: top_feature_attributions
             description: Top-K [{feature, attribution}] SHAP values, sorted by |attribution| desc
 
-      - name: favorita_model_metadata
+      - name: ml_model_metadata
         description: Training run metadata and GCS artifact URIs
 
-      - name: favorita_model_performance
+      - name: ml_model_performance
         description: Holdout performance metrics per training run
 
-      - name: favorita_model_optimize
+      - name: ml_model_optimize
         description: Hyperparameter optimization trials (Optuna)
 
-      - name: favorita_vertex_job_runs
+      - name: ml_vertex_job_runs
         description: Custom Job and pipeline orchestration audit log
 
       - name: forecast_contracts

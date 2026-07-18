@@ -2,7 +2,7 @@
 
 # SPEC: Prophet model family
 
-**Status:** Proposed
+**Status:** Shipped
 **Roadmap reference:** [`vertex/README.md`](../../vertex/README.md#adding-a-model-family) — "Planned: `prophet`"; [`client_rollout.md`](../client_rollout.md#post-rollout-weeks-58-optional) — "Prophet / deep learning family | `vertex/models/registry.py` pattern"; README.md feature list — "Vertex AI: ... (Prophet planned)"
 
 ---
@@ -15,13 +15,48 @@ This repo already supports two per-entity time-series model types (`arima`, `sar
 
 - `prophet` as a new `model_type`, fittable per-entity (store) exactly like `arima`/`sarima` — same `train_days`, `forecast_horizon`, holdout-then-forward-forecast pattern.
 - Zero special-casing in `vertex/jobs/run.py`, `submit.py`, or the KFP pipeline compiler — the registry dispatch pattern means adding a model family should only touch `vertex/models/`, `vertex/config/load_config.py` (if any Prophet-only validation is needed), `model_config.yaml`, and `vertex/tests/`.
-- Prophet's native uncertainty intervals (`yhat_lower`/`yhat_upper`) populate the existing `prediction_lower`/`prediction_upper` columns on `favorita_model_predictions` (already in the DDL, currently unused by ARIMA/SARIMA, which don't emit intervals today).
+- Prophet's native uncertainty intervals (`yhat_lower`/`yhat_upper`) populate the existing `prediction_lower`/`prediction_upper` columns on `ml_model_predictions` (already in the DDL, currently unused by ARIMA/SARIMA, which don't emit intervals today).
 
 ## Non-goals
 
 - SHAP explainability for Prophet. `explain.enabled` validation in `load_config.py` (`SHAP_SUPPORTED_MODEL_TYPES = frozenset({"xgboost", "xgboost_sklearn", "random_forest"})`) already rejects non-tree types — Prophet configs should simply never set `explain.enabled: true`. If per-component attribution is wanted later, Prophet's own `plot_components`/regressor coefficients are a separate, non-SHAP mechanism and a separate spec.
 - Multiplicative seasonality, holidays regressor wiring, or custom regressors in the first cut — ship additive-seasonality Prophet with the same `order`/`seasonal_order`-style simplicity ARIMA/SARIMA have today; richer configuration is a fast-follow once the family exists end-to-end.
 - Deep learning families (also mentioned alongside Prophet in `client_rollout.md`'s "Prophet / deep learning family" row) — scope this spec to Prophet only; a deep-learning family (e.g. N-BEATS, TFT) would need GPU machine types and a materially different training loop, warranting its own spec.
+
+## Implementation notes (as shipped)
+
+Shipped as option (a) from § "Shared per-entity loop" — a standalone `vertex/models/prophet/`
+package, `ts_common.py` untouched. Deviations from the letter of the design, and answers to the
+two Open Questions:
+
+- **Open question resolved — no CmdStan preinstall needed.** Spiked `pip install
+  "prophet>=1.1,<2.0"` on both a bare `python:3.11-slim` venv and the actual project Docker image
+  (`docker build --target runtime` + a fit/predict smoke test inside the built container, arm64).
+  Both worked with zero `Dockerfile` changes — PyPI's `prophet`/`cmdstanpy` wheels ship a
+  prebuilt CmdStan backend, and the `Dockerfile`'s existing `build-essential` (added for other
+  reasons) was never actually exercised. Net image dependency footprint: ~38MB (`prophet` +
+  `cmdstanpy` + `holidays`); `pandas`/`numpy` are already shared with the rest of the stack.
+- **`include_in_run: true` dropped from the example config.** The spec's own YAML example sets
+  it, but `vertex/tests/test_run_batch.py::test_includes_only_explicit_include_in_run` asserts
+  the *exact* config list eligible for `make vertex-train` batch runs (currently
+  `["favorita_store_n1d_xgboost"]` only) — same reason ARIMA/SARIMA don't set it either.
+  `favorita_store_n1d_prophet` is runnable directly by name
+  (`make vertex-train VERTEX_CONFIG=favorita_store_n1d_prophet`), just not part of the
+  batch-all default, consistent with the other time-series configs.
+- **Optimize's search space is `changepoint_prior_scale` only**, not a fuller grid — Non-goals
+  already rules out multiplicative seasonality for v1, and `growth`/`yearly_seasonality`/
+  `weekly_seasonality` don't have a small discrete search space that's obviously worth Optuna
+  trials yet (they stay at their config defaults). Revisit once real client data shows
+  `changepoint_prior_scale` alone isn't the binding constraint.
+- **Holdout/forward scoring calls `Prophet.predict()` with the actual target dates** (from the
+  entity's chronological test split, or `pd.date_range` off the last observed date for forward),
+  rather than a step-count-based `forecast(steps=...)` like SARIMAX. This is more natural for
+  Prophet's API (`predict(future_df)` takes explicit `ds` values) and sidesteps any
+  frequency-inference mismatch for the holdout case specifically — forward-scope forecasting
+  still uses `pd.infer_freq` exactly as `ts_common.predict_forward_rows` does.
+- **Config omits `excluded_columns`** (present, unused, on the ARIMA/SARIMA config blocks —
+  vestigial from the tabular-model template) since per-entity univariate time series never
+  reference it.
 
 ## Design
 
@@ -141,8 +176,8 @@ Add `prophet>=1.1,<2.0` to `requirements.in` (pulls in `cmdstanpy`, which needs 
 
 ## Open questions
 
-- Ship the `ts_common.py` generalization (option b above) as part of this spec, or strictly as a follow-on? Recommend follow-on, to keep this spec's diff reviewable and avoid touching ARIMA/SARIMA's tested code path in the same change that introduces a brand-new, less-proven dependency.
-- Does the Vertex Custom Job base image need a CmdStan preinstall step, or does `pip install prophet` on `python:3.11-slim` (current `Dockerfile` base) pull a working prebuilt backend? Needs a spike before implementation — Prophet's CmdStan dependency has historically been the main source of install friction across platforms.
+- ~~Ship the `ts_common.py` generalization (option b above) as part of this spec, or strictly as a follow-on?~~ **Resolved: follow-on.** Shipped option (a) — `ts_common.py` is untouched; revisit generalizing once a third per-entity family (or richer Prophet config) makes the shared shape worth extracting.
+- ~~Does the Vertex Custom Job base image need a CmdStan preinstall step?~~ **Resolved: no.** See Implementation notes — `pip install prophet` on the existing `python:3.11-slim` base works as-is, confirmed both in a bare venv and inside the actual built `Dockerfile` image.
 
 ## Related documents
 

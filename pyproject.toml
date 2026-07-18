@@ -80,6 +80,9 @@ omit = [
     "vertex/models/timeseries/train_timeseries.py",
     "vertex/models/xgboost/train_xgboost.py",
     "vertex/models/xgboost/predict_xgboost.py",
+    "vertex/models/prophet/optimize_prophet.py",
+    "vertex/models/prophet/predict_prophet.py",
+    "vertex/models/prophet/train_prophet.py",
     "vertex/utils/artifacts.py",
 ]
 

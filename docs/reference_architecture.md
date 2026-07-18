@@ -124,7 +124,7 @@ flowchart TB
     XGB[xgboost / random_forest]
     TS[arima / sarima]
     GCSArt[GCS artifacts]
-    Unified[canonical forecast output]
+    Unified["ml_model_predictions / canonical forecast output"]
   end
 
   BQMLPath --> BQPred

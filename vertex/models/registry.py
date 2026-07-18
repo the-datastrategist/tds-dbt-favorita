@@ -95,6 +95,16 @@ def _register_all() -> None:
             ("vertex.models.timeseries.optimize_timeseries", "run_optimize_timeseries")
         )
 
+    _REGISTRY[("prophet", "train")] = _lazy_runner(
+        ("vertex.models.prophet.train_prophet", "run_train_prophet")
+    )
+    _REGISTRY[("prophet", "predict")] = _lazy_runner(
+        ("vertex.models.prophet.predict_prophet", "run_predict_prophet")
+    )
+    _REGISTRY[("prophet", "optimize")] = _lazy_runner(
+        ("vertex.models.prophet.optimize_prophet", "run_optimize_prophet")
+    )
+
 
 def ensure_registered() -> None:
     if not _REGISTRY:

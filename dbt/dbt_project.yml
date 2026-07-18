@@ -55,7 +55,7 @@ models:
       +materialized: table
       ml_models:
         +materialized: view
-        # No blanket tag here: bqml/vertex-only models (e.g. favorita_prediction_accuracy_rolling,
+        # No blanket tag here: bqml/vertex-only models (e.g. ml_prediction_accuracy_rolling,
         # int_vertex_prediction_accuracy_daily) must NOT inherit `bqml`, or `--exclude tag:bqml`
         # (used by dbt-run/dbt-build/dbt-test) would skip building/testing them too. Each model
         # under ml_models/ sets its own tags in its config() block instead.
@@ -66,7 +66,7 @@ vars:
   bq_raw_dataset: "{{ env_var('BQ_RAW_DATASET', 'raw_favorita') }}"
   bqml_explain_top_k_features: 20
 
-  # Primary metric used to select favorita_model_champion per grain. Override per client
+  # Primary metric used to select ml_model_champion per grain. Override per client
   # engagement if a different metric better fits the sales pattern for that grain.
   leaderboard_primary_metric_by_grain:
     store-day: wape

@@ -53,8 +53,8 @@ mindmap
 | Feature tables | `dbt/models/intermediate/int_sales_*.sql` | Project-specific partitioned ML features at selected grains |
 | BQML marts | `dbt/models/marts/ml_models/` | Train, predict, evaluate, explain via macros |
 | Vertex staging | `dbt/models/staging/stg_vertex_*.sql` | Views over Vertex-written BQ tables |
-| Model leaderboard | `favorita_model_leaderboard`, `favorita_model_champion` | Unified BQML + Vertex metrics, ranked, champion-flagged per grain |
-| Accuracy monitoring | `favorita_prediction_accuracy_rolling`, `assert_no_material_accuracy_drift` | Rolling 7d/28d live accuracy vs. training-time metrics, with a drift test |
+| Model leaderboard | `ml_model_leaderboard`, `ml_model_champion` | Unified BQML + Vertex metrics, ranked, champion-flagged per grain |
+| Accuracy monitoring | `ml_prediction_accuracy_rolling`, `assert_no_material_accuracy_drift` | Rolling 7d/28d live accuracy vs. training-time metrics, with a drift test |
 | Sources | `dbt/models/sources/vertex.yml` | Contract for ML output tables |
 | Selectors | `dbt/selectors.yml` | `daily_refresh`, `ml_features`, `bqml_train`, `bqml_score` |
 | Exposures | `dbt/models/exposures.yml` | Lineage to ML, dashboard, and app consumers |
@@ -74,7 +74,7 @@ mindmap
 | Job configs | `vertex/config/model_config.yaml` | Named train / predict / optimize + pipelines |
 | Runners | `vertex/jobs/run.py`, `submit.py`, `submit_pipeline.py` | Docker, Custom Job, PipelineJob entrypoints |
 | Model registry | `vertex/models/registry.py` | `(model_type, step)` → Python module |
-| Families | `vertex/models/xgboost/`, `sklearn/`, `timeseries/` | XGBoost, RF, ARIMA, SARIMA |
+| Families | `vertex/models/xgboost/`, `sklearn/`, `timeseries/`, `prophet/` | XGBoost, RF, ARIMA, SARIMA, Prophet |
 | Predictions schema | `vertex/utils/predictions.py` | Unified prediction fact rows |
 | Explainability | `vertex/utils/explain.py`, `stg_vertex_model_explain` | Per-prediction SHAP top-K feature attributions (xgboost, random_forest) |
 | Experiment tracking | `vertex/utils/experiment_tracking.py` | MLflow + Vertex Experiments |
@@ -85,7 +85,7 @@ mindmap
 
 **Commands:** `make vertex-train`, `make vertex-predict`, `make vertex-optimize`, `make vertex-pipeline-submit`, `make vertex-bq-ddl`
 
-**Model types:** `xgboost`, `random_forest`, `arima`, `sarima`
+**Model types:** `xgboost`, `random_forest`, `arima`, `sarima`, `prophet`
 
 → Product view: [vertex/consulting_package.md](vertex/consulting_package.md)
 

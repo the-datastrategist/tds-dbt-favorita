@@ -9,7 +9,7 @@ The platform is intentionally **GCP-first**. It provides reusable infrastructure
 ## Features
 
 - **dbt + BigQuery ML**: Train and deploy ML models directly in BigQuery
-- **Vertex AI**: Config-driven train / predict / optimize (XGBoost, Random Forest, ARIMA, SARIMA; Prophet planned), runnable in local Docker or as Vertex Custom Jobs
+- **Vertex AI**: Config-driven train / predict / optimize (XGBoost, Random Forest, ARIMA, SARIMA, Prophet), runnable in local Docker or as Vertex Custom Jobs
 - **End-to-end Pipeline**: From data transformation to model training and prediction
 - **Dockerized**: Run everything locally in Docker containers
 - **Prefect**: OSS workflow orchestration for scheduled and manual dbt / Vertex / ML pipeline runs via Docker (`make prefect-*`; see [orchestration/README.md](orchestration/README.md))

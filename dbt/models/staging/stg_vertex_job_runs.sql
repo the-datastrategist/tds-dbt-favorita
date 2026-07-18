@@ -27,4 +27,4 @@ select
     optimize_run_id,
     project_id,
     region
-from {{ source('vertex_ml', 'favorita_vertex_job_runs') }}
+from {{ source('vertex_ml', 'ml_vertex_job_runs') }}

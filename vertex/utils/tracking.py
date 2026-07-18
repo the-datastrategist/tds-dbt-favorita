@@ -32,7 +32,7 @@ def _job_runs_table(config: dict[str, Any]) -> str:
     project = config.get("inputs", {}).get("project_id") or os.getenv("GOOGLE_PROJECT_ID")
     if not project:
         raise ValueError("project_id required for job_runs_table")
-    return f"{project}.favorita.favorita_vertex_job_runs"
+    return f"{project}.favorita.ml_vertex_job_runs"
 
 
 def new_job_run_id() -> str:

@@ -406,7 +406,7 @@ models:
 
   - name: stg_vertex_model_predictions
     description: >
-      Vertex AI predictions (all model types) from favorita_model_predictions.
+      Vertex AI predictions (all model types) from ml_model_predictions.
     columns:
       - name: prediction_id
         description: Unique identifier for the prediction row.
@@ -461,9 +461,9 @@ models:
 
   - name: stg_vertex_model_performance
     description: >
-      Vertex AI holdout performance metrics (all model types) from favorita_model_performance.
+      Vertex AI holdout performance metrics (all model types) from ml_model_performance.
       metric_set is currently always 'test'; train-set metrics are not written to this table
-      today (see favorita_model_metadata.train_performance JSON instead).
+      today (see ml_model_metadata.train_performance JSON instead).
     columns:
       - name: model_run_id
         description: Identifier for the training run these metrics were computed from.
@@ -719,7 +719,7 @@ models:
       - name: date
         description: Date the prediction feature row corresponds to.
       - name: predicted_value
-        description: Predicted value the SHAP attributions explain (matches favorita_model_predictions.prediction).
+        description: Predicted value the SHAP attributions explain (matches ml_model_predictions.prediction).
       - name: base_value
         description: shap.TreeExplainer expected_value; the model's average output before feature attributions.
       - name: top_feature_attributions

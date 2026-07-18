@@ -8,7 +8,7 @@ select
     segment_key_json,
     metric_policy,
     count(*) as champion_count
-from {{ ref('favorita_model_champion') }}
+from {{ ref('ml_model_champion') }}
 where is_champion
 group by target, grain, horizon, segment_key_json, metric_policy
 having count(*) > 1

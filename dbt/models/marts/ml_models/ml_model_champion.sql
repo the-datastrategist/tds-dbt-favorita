@@ -11,7 +11,7 @@ with latest_run_per_candidate as (
                 platform, config_name
             order by run_at desc, model_run_id desc
         ) = 1 as is_latest_run
-    from {{ ref('favorita_model_leaderboard') }}
+    from {{ ref('ml_model_leaderboard') }}
 ),
 
 ranked as (

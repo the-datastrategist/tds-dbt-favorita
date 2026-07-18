@@ -18,8 +18,8 @@ model_config.yaml  →  vertex.jobs.run  →  registry (model_type × step)  →
 | Step | Config example | What it does |
 |------|----------------|--------------|
 | `train` | `favorita_store_n1d_xgboost` | Fit model, write GCS artifacts + metadata/performance to BigQuery |
-| `predict` | `favorita_store_n1d_xgboost` | Load latest (or pinned) artifact, write unified rows to `favorita_model_predictions` |
-| `optimize` | `favorita_store_n1d_xgboost` | Optuna trials → `favorita_model_optimize` |
+| `predict` | `favorita_store_n1d_xgboost` | Load latest (or pinned) artifact, write unified rows to `ml_model_predictions` |
+| `optimize` | `favorita_store_n1d_xgboost` | Optuna trials → `ml_model_optimize` |
 
 Configs that share **`model_family`** (e.g. `favorita_store_daily`) are meant to be used together: train writes artifacts; predict references `inputs.artifact_config_name` to find them.
 
@@ -67,11 +67,11 @@ vertex/
 
    This applies [`ddl/vertex_bq_tables.sql`](ddl/vertex_bq_tables.sql) (`CREATE TABLE` + idempotent `ALTER TABLE` migrations). Tables:
 
-   - `favorita_vertex_job_runs` — orchestration audit
-   - `favorita_model_metadata` — training lineage
-   - `favorita_model_performance` — holdout metrics
-   - `favorita_model_optimize` — hyperparameter trials
-   - `favorita_model_predictions` — unified prediction fact table
+   - `ml_vertex_job_runs` — orchestration audit
+   - `ml_model_metadata` — training lineage
+   - `ml_model_performance` — holdout metrics
+   - `ml_model_optimize` — hyperparameter trials
+   - `ml_model_predictions` — unified prediction fact table
 
 3. **Feature data** — training SQL in config usually points at dbt marts (e.g. `int_sales_store_daily`). Build features with dbt before training:
 
@@ -177,7 +177,7 @@ make vertex-backfill START_DATE=2016-08-01 END_DATE=2016-08-31 INTERVAL_DAYS=1 T
 make vertex-backfill START_DATE=2016-08-01 END_DATE=2016-08-31 MAX_ITERATIONS=2
 ```
 
-Each iteration pins `inputs.model_run_id` on predict so artifacts do not cross dates. Predictions append to `favorita_model_predictions`.
+Each iteration pins `inputs.model_run_id` on predict so artifacts do not cross dates. Predictions append to `ml_model_predictions`.
 
 ## Running on Vertex AI
 
@@ -201,7 +201,7 @@ Each iteration pins `inputs.model_run_id` on predict so artifacts do not cross d
    make vertex-train VERTEX_MODE=vertex
    ```
 
-The Custom Job runs: `python -m vertex.jobs.run --config-name <name>`. Job runs are **upserted** (MERGE) into **`favorita_vertex_job_runs`** — one row per `job_run_id` with duration, artifact URI, git SHA, and image URI when BigQuery is reachable. Submit passes `VERTEX_JOB_RUN_ID` so submitter and container share the same id.
+The Custom Job runs: `python -m vertex.jobs.run --config-name <name>`. Job runs are **upserted** (MERGE) into **`ml_vertex_job_runs`** — one row per `job_run_id` with duration, artifact URI, git SHA, and image URI when BigQuery is reachable. Submit passes `VERTEX_JOB_RUN_ID` so submitter and container share the same id.
 
 ## Experiment tracking
 
@@ -209,7 +209,7 @@ The Custom Job runs: `python -m vertex.jobs.run --config-name <name>`. Job runs 
 
 | Destination | What is logged |
 |-------------|----------------|
-| **BigQuery** | Training metadata (`favorita_model_metadata`), performance, predictions, optimize trials, job runs (existing runners) |
+| **BigQuery** | Training metadata (`ml_model_metadata`), performance, predictions, optimize trials, job runs (existing runners) |
 | **MLflow** | Params, metrics, tags per job run; on **train**, a **`gcs_model_catalog.json`** artifact pointing at GCS (`manifest_gcs_uri`, `joblib_gcs_uri`) |
 | **Vertex AI Experiments** | Same params/metrics under `vertex.experiment` (default `favorita-vertex`) |
 
@@ -277,7 +277,7 @@ make mlflow-ui    # http://127.0.0.1:5001
 
 Default host port **5001** avoids macOS AirPlay on **5000**. Override with `make mlflow-ui MLFLOW_UI_PORT=5002`. The Make target passes `--backend-store-uri` from `MLFLOW_TRACKING_URI` in `.env` or defaults to `file:/app/mlruns` (same directory via the `/app` bind mount).
 
-Each job run logs `job_run_id` as an MLflow tag/param; BigQuery stores `mlflow_run_id` and `vertex_experiment_run` on `favorita_vertex_job_runs` for cross-system joins.
+Each job run logs `job_run_id` as an MLflow tag/param; BigQuery stores `mlflow_run_id` and `vertex_experiment_run` on `ml_vertex_job_runs` for cross-system joins.
 
 For Prefect orchestration UI (`make prefect-ui` on port **4200**), see the [root README](../README.md#local-uis-mlflow--prefect) and [orchestration/README.md](../orchestration/README.md).
 
@@ -344,14 +344,15 @@ docker run --rm -v "$(pwd)":/app -w /app tds-favorita:latest \
 | `random_forest` | `models/sklearn/` | joblib | Same feature path as XGBoost |
 | `arima` | `models/timeseries/` | joblib bundle per entity | `inputs.entity_column`, `min_train_obs` |
 | `sarima` | `models/timeseries/` | joblib bundle per entity | `seasonal_order` in `model_params` |
+| `prophet` | `models/prophet/` | joblib bundle per entity | Additive seasonality only; emits `prediction_lower`/`prediction_upper` from Prophet's native uncertainty interval; no SHAP (`explain.enabled` must stay unset — see [prophet_model_family.md](../docs/specs/prophet_model_family.md)) |
 
 Example configs:
 
-| Step | XGBoost | Random Forest | ARIMA | SARIMA |
-|------|---------|---------------|-------|--------|
-| Train | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` |
-| Predict | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` |
-| Optimize | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` |
+| Step | XGBoost | Random Forest | ARIMA | SARIMA | Prophet |
+|------|---------|---------------|-------|--------|---------|
+| Train | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` | `favorita_store_n1d_prophet` |
+| Predict | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` | `favorita_store_n1d_prophet` |
+| Optimize | `favorita_store_n1d_xgboost` | `favorita_store_n1d_rf` | `favorita_store_n1d_arima` | `favorita_store_n1d_sarima` | `favorita_store_n1d_prophet` |
 
 ```bash
 make vertex-train VERTEX_CONFIG=favorita_store_n1d_xgboost
@@ -377,6 +378,7 @@ End-to-end **optimize → train → predict** runs as a Vertex AI **PipelineJob*
 | `favorita_xgboost` | XGBoost | optimize, train, predict |
 | `favorita_random_forest` | Random Forest | optimize, train, predict |
 | `favorita_arima` | ARIMA | train, predict (no optimize) |
+| `favorita_prophet` | Prophet | train, predict (no optimize) |
 
 ```bash
 # Compile KFP JSON (checked in CI; artifacts gitignored)
@@ -402,10 +404,10 @@ dbt models: `stg_vertex_model_predictions`, `stg_vertex_model_metadata`, `stg_ve
 
 1. Add train / predict / optimize modules under `vertex/models/<family>/`.
 2. Register runners in `models/registry.py` for `(model_type, step)`.
-3. Add three config blocks to `model_config.yaml` (`job.step`, shared `model_family`).
+3. Add a config block to `model_config.yaml` (unified — `model_type`, shared `model_family`; step is set at runtime, not in YAML).
 4. Extend tests under `vertex/tests/`.
 
-Planned: `prophet` (design: [../docs/specs/prophet_model_family.md](../docs/specs/prophet_model_family.md)).
+`prophet` (design: [../docs/specs/prophet_model_family.md](../docs/specs/prophet_model_family.md)) is the most recent family shipped via this exact pattern — zero changes needed to `vertex/jobs/run.py`, `submit.py`, or `pipelines/compile.py`.
 
 ## Troubleshooting
 

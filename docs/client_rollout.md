@@ -103,7 +103,7 @@ gantt
 
 ### Exit criteria
 
-- [ ] Rows in model metadata and prediction / forecast output tables
+- [ ] Rows in `ml_model_metadata`, `ml_model_predictions`, and canonical forecast output tables
 - [ ] At least one BQML and one Vertex model with documented test metrics
 - [ ] Client agrees on champion candidate
 
@@ -124,7 +124,7 @@ gantt
 | 1 | Prefect or Cloud Scheduler setup | `make prefect-deploy` or [iac.md](iac.md) Scheduler |
 | 1–2 | Wire dbt → Vertex order (features before train) | Prefect pipeline flow or Workflows YAML |
 | 2 | CI in client GitHub | `.github/workflows/ci.yml` |
-| 3 | Monitoring queries | Vertex job-runs FAILED filter |
+| 3 | Monitoring queries | `ml_vertex_job_runs` FAILED filter |
 | 3–4 | Dashboard POC (optional) | Looker Studio on `stg_vertex_model_predictions` |
 | 4–5 | Handoff session: Makefile, YAML configs, ops README | `vertex/ops/README.md` |
 | 5 | Backlog: champion mart, Terraform, WIF | Prioritized with client |
@@ -166,11 +166,11 @@ gantt
 
 | Enhancement | Accelerator base | Spec |
 |-------------|------------------|------|
-| Model leaderboard mart ✅ shipped | model performance + dbt mart | [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md) |
+| Model leaderboard mart ✅ shipped | `ml_model_performance` + dbt mart | [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md) |
 | Drift / accuracy monitoring ✅ shipped | dbt tests on prediction vs actual | [specs/prediction_accuracy_monitoring.md](specs/prediction_accuracy_monitoring.md) |
 | Terraform modules ✅ shipped | [iac.md](iac.md) roadmap | [specs/terraform_modules.md](specs/terraform_modules.md) |
 | Workload Identity Federation 🔧 in progress | Replace SA keys | [specs/workload_identity_federation.md](specs/workload_identity_federation.md) |
-| Prophet / deep learning family | `vertex/models/registry.py` pattern | [specs/prophet_model_family.md](specs/prophet_model_family.md) |
+| Prophet / deep learning family ✅ Prophet shipped | `vertex/models/registry.py` pattern | [specs/prophet_model_family.md](specs/prophet_model_family.md) |
 
 ---
 
