@@ -18,6 +18,17 @@
   margin-top: 1.25rem;
 }
 
+.mermaid {
+  margin: 1.5rem auto;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.mermaid svg {
+  height: auto;
+  max-width: 100%;
+}
+
 @media screen and (max-width: 768px) {
   :root {
     --sidebar-width: 17rem;
