@@ -185,7 +185,7 @@ class TestBaselineScoring:
     def test_scores_configured_model_on_same_origin_and_run(self):
         history = _history()
         history["sales_store_n7d_same_dow"] = history["sales_store"].shift(-7)
-        history["numeric_feature"] = range(len(history))
+        history["sales_store_l1d"] = range(len(history))
         seen: dict[str, pd.DataFrame] = {}
 
         def fit_predict(train_rows, predict_rows, _model_config):
@@ -208,6 +208,25 @@ class TestBaselineScoring:
         assert seen["train"]["date"].max() == date(2016, 7, 25)
         assert seen["predict"]["date"].unique().tolist() == [date(2016, 8, 1)]
         assert set(result.predictions["backtest_run_id"]) == {"run-1"}
+        assert result.predictions["data_cutoff"].notna().all()
+        assert result.predictions["source_cutoff_json"].notna().all()
+        assert result.predictions["feature_availability_hash"].notna().all()
+
+    def test_rejects_model_feature_snapshot_created_after_origin(self):
+        history = _history()
+        history["sales_store_n7d_same_dow"] = history["sales_store"].shift(-7)
+        history["promotion"] = 1
+        history["promotion_plan_updated_at"] = pd.Timestamp("2016-08-02")
+
+        with pytest.raises(ValueError, match="violates forecast cutoff"):
+            score_model_and_baselines(
+                history,
+                _contract(baselines=["zero_demand"]),
+                backtest_run_id="run-1",
+                fit_predict=lambda train, predict, config: pd.Series(
+                    1.0, index=predict.index
+                ),
+            )
 
     def test_generated_ids_are_stable_for_same_contract_and_input(self):
         first = score_baselines(_history(), _contract(baselines=["zero_demand"]))

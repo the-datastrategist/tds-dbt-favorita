@@ -129,6 +129,70 @@ class FeatureAvailabilityRegistry:
         if errors:
             raise ValueError("Invalid forecast contract feature availability: " + "; ".join(errors))
 
+    def validate_frame_cutoffs(
+        self,
+        df: pd.DataFrame,
+        feature_names: Iterable[str],
+        *,
+        cutoff: Any | pd.Series,
+        date_column: str | None = None,
+        context: str = "feature frame",
+    ) -> dict[str, Any]:
+        """Reject feature snapshots whose source metadata was not available at cutoff."""
+        if df.empty:
+            raise ValueError(f"{context} cannot enforce cutoffs on an empty feature frame")
+        self.validate_features(feature_names, context=context)
+        entries = [self.match(name) for name in sorted(set(feature_names))]
+        metadata_columns = sorted(
+            {
+                str(getattr(entry, field))
+                for entry in entries
+                if entry is not None
+                for field in KNOWN_FUTURE_METADATA_FIELDS
+                if getattr(entry, field, None)
+            }
+        )
+
+        if isinstance(cutoff, pd.Series):
+            cutoff_values = pd.to_datetime(cutoff.reindex(df.index), errors="coerce")
+        else:
+            cutoff_values = pd.Series(pd.to_datetime(cutoff), index=df.index)
+        if cutoff_values.isna().any():
+            raise ValueError(f"{context} has missing or invalid forecast cutoffs")
+
+        source_cutoffs: dict[str, str] = {}
+        for column in metadata_columns:
+            if column not in df.columns:
+                raise ValueError(
+                    f"{context} is missing point-in-time metadata column {column!r}"
+                )
+            values = pd.to_datetime(df[column], errors="coerce")
+            if values.isna().any():
+                raise ValueError(f"{context} has null or invalid values in {column!r}")
+            leaking = values.gt(cutoff_values)
+            if leaking.any():
+                first_index = leaking[leaking].index[0]
+                raise ValueError(
+                    f"{context} violates forecast cutoff: {column}="
+                    f"{values.loc[first_index].isoformat()} is later than "
+                    f"{cutoff_values.loc[first_index].isoformat()}"
+                )
+            source_cutoffs[column] = values.max().to_pydatetime().isoformat()
+
+        if date_column:
+            if date_column not in df.columns:
+                raise ValueError(f"{context} is missing cutoff date column {date_column!r}")
+            dates = pd.to_datetime(df[date_column], errors="coerce")
+            if dates.isna().any() or dates.gt(cutoff_values).any():
+                raise ValueError(f"{context} contains rows later than their forecast cutoff")
+            source_cutoffs.setdefault(date_column, dates.max().to_pydatetime().isoformat())
+
+        return {
+            "data_cutoff": cutoff_values.max().to_pydatetime().isoformat(),
+            "source_cutoff_json": source_cutoffs,
+            "feature_availability_hash": self.hash,
+        }
+
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     if not path.is_file():
@@ -228,6 +292,26 @@ def validate_model_features_from_config(
     registry = load_feature_availability_registry(registry_path_from_config(config))
     registry.validate_features(feature_names, context=context)
     return registry
+
+
+def validate_feature_cutoffs_from_config(
+    config: dict[str, Any],
+    df: pd.DataFrame,
+    feature_names: Iterable[str],
+    *,
+    cutoff: Any | pd.Series,
+    date_column: str | None = None,
+    context: str,
+) -> dict[str, Any]:
+    """Validate feature registration and enforce source cutoffs for a model job."""
+    registry = load_feature_availability_registry(registry_path_from_config(config))
+    return registry.validate_frame_cutoffs(
+        df,
+        feature_names,
+        cutoff=cutoff,
+        date_column=date_column,
+        context=context,
+    )
 
 
 def feature_cutoff_metadata_from_frame(

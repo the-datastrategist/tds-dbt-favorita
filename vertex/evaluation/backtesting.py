@@ -12,6 +12,10 @@ import numpy as np
 import pandas as pd
 
 from vertex.config.backtest_contract import BacktestContract
+from vertex.config.feature_availability import (
+    load_feature_availability_registry,
+    registry_path_from_config,
+)
 from vertex.utils.data_utils import get_hash
 
 SUPPORTED_SCORING_BASELINES = frozenset(
@@ -40,6 +44,9 @@ PREDICTION_COLUMNS = [
     "baseline_name",
     "actual",
     "prediction",
+    "data_cutoff",
+    "source_cutoff_json",
+    "feature_availability_hash",
 ]
 
 METRIC_COLUMNS = [
@@ -357,6 +364,11 @@ def score_baselines(
                             "backtest_contract_hash": contract.hash,
                             "actual": actual,
                             "prediction": prediction,
+                            "data_cutoff": origin.isoformat(),
+                            "source_cutoff_json": _json_key(
+                                {contract.date_column: origin.isoformat()}
+                            ),
+                            "feature_availability_hash": None,
                         }
                     )
     predictions = pd.DataFrame(rows, columns=PREDICTION_COLUMNS)
@@ -451,6 +463,7 @@ def score_model_and_baselines(
     horizon = contract.horizons[0]
     predict_fn = fit_predict or _fit_predict_tabular_model
     model_rows: list[dict[str, Any]] = []
+    registry = load_feature_availability_registry(registry_path_from_config(model_config))
 
     for origin in contract.origins:
         train_start = origin - timedelta(days=contract.train_window_days + horizon)
@@ -465,6 +478,26 @@ def score_model_and_baselines(
             predict_rows = predict_rows.head(contract.max_entities)
         if predict_rows.empty:
             raise ValueError(f"No model feature rows are available at forecast origin {origin}")
+        excluded = set(inputs.get("excluded_columns") or []) | {target_column, date_column}
+        candidate_features = [
+            column
+            for column in predict_rows.select_dtypes(include=[np.number, "bool"]).columns
+            if column not in excluded
+        ]
+        cutoff_metadata = registry.validate_frame_cutoffs(
+            predict_rows,
+            candidate_features,
+            cutoff=origin,
+            date_column=date_column,
+            context=f"rolling-origin features at {origin.isoformat()}",
+        )
+        registry.validate_frame_cutoffs(
+            train_rows,
+            candidate_features,
+            cutoff=train_rows[date_column],
+            date_column=date_column,
+            context=f"rolling-origin training features at {origin.isoformat()}",
+        )
         predictions = predict_fn(train_rows, predict_rows, model_config)
         target_date = origin + timedelta(days=horizon)
 
@@ -504,6 +537,15 @@ def score_model_and_baselines(
                         if row_index in predictions.index
                         else None
                     ),
+                    "data_cutoff": cutoff_metadata["data_cutoff"],
+                    "source_cutoff_json": json.dumps(
+                        cutoff_metadata["source_cutoff_json"],
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
+                    "feature_availability_hash": cutoff_metadata[
+                        "feature_availability_hash"
+                    ],
                 }
             )
 
@@ -512,4 +554,7 @@ def score_model_and_baselines(
         [baseline_result.predictions, model_predictions],
         ignore_index=True,
     )
+    predictions["feature_availability_hash"] = predictions[
+        "feature_availability_hash"
+    ].fillna(registry.hash)
     return BaselineBacktestResult(run_id, predictions, _build_metrics(predictions, contract))

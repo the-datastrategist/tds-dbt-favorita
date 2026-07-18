@@ -196,10 +196,22 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_predictions` (
   baseline_name STRING NOT NULL,
   actual FLOAT64,
   prediction FLOAT64,
+  data_cutoff TIMESTAMP NOT NULL,
+  source_cutoff_json JSON NOT NULL,
+  feature_availability_hash STRING,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
 )
 PARTITION BY forecast_origin
 CLUSTER BY backtest_contract_name, horizon, baseline_name, backtest_run_id;
+
+ALTER TABLE `tds-favorita.favorita.backtest_predictions`
+ADD COLUMN IF NOT EXISTS data_cutoff TIMESTAMP;
+
+ALTER TABLE `tds-favorita.favorita.backtest_predictions`
+ADD COLUMN IF NOT EXISTS source_cutoff_json JSON;
+
+ALTER TABLE `tds-favorita.favorita.backtest_predictions`
+ADD COLUMN IF NOT EXISTS feature_availability_hash STRING;
 
 -- Append-only metrics derived from backtest_predictions. metric_id is stable
 -- for a run/origin/horizon/baseline/segment metric record.

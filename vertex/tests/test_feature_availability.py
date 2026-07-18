@@ -69,3 +69,45 @@ class TestFeatureAvailabilityRegistry:
         assert metadata["source_cutoff_json"]["date"] == datetime(2024, 1, 3).isoformat()
         assert metadata["feature_availability_hash"] == registry.hash
         assert metadata["feature_materialization_id"] == "features-20240103"
+
+    def test_rejects_known_future_snapshot_loaded_after_forecast_origin(self):
+        registry = load_feature_availability_registry()
+        frame = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-03"]),
+                "promotion": [1],
+                "promotion_plan_updated_at": pd.to_datetime(["2024-01-04"]),
+            }
+        )
+
+        with pytest.raises(ValueError, match="violates forecast cutoff"):
+            registry.validate_frame_cutoffs(
+                frame,
+                ["promotion"],
+                cutoff=datetime(2024, 1, 3),
+                date_column="date",
+                context="test snapshot",
+            )
+
+    def test_records_each_source_cutoff_for_safe_snapshot(self):
+        registry = load_feature_availability_registry()
+        frame = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-03"]),
+                "promotion": [1],
+                "promotion_plan_updated_at": pd.to_datetime(["2024-01-02 12:00:00"]),
+            }
+        )
+
+        metadata = registry.validate_frame_cutoffs(
+            frame,
+            ["promotion"],
+            cutoff=datetime(2024, 1, 3),
+            date_column="date",
+            context="test snapshot",
+        )
+
+        assert metadata["source_cutoff_json"] == {
+            "date": datetime(2024, 1, 3).isoformat(),
+            "promotion_plan_updated_at": datetime(2024, 1, 2, 12).isoformat(),
+        }

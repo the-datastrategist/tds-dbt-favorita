@@ -227,6 +227,7 @@ def write_forecast_outputs_if_configured(
     config: dict[str, Any],
     prediction_rows: pd.DataFrame,
     project_id: Optional[str] = None,
+    feature_cutoff_metadata: Optional[dict[str, Any]] = None,
 ) -> int:
     """
     Write canonical forecast output rows when outputs.forecast_output_table is configured.
@@ -246,9 +247,8 @@ def write_forecast_outputs_if_configured(
         or inputs.get("forecast_contract_path")
     )
     contract = load_forecast_contract(contract_path)
-    cutoff_metadata = feature_cutoff_metadata_from_frame(
-        prediction_rows,
-        date_column="date",
+    cutoff_metadata = feature_cutoff_metadata or feature_cutoff_metadata_from_frame(
+        prediction_rows, date_column="date"
     )
     feature_version = _feature_version(config)
     code_sha = get_git_sha()
@@ -297,6 +297,9 @@ def write_forecast_outputs_if_configured(
             "started_at": prediction_rows["run_at"].min(),
             "finished_at": now,
             "data_cutoff": data_cutoff,
+            "source_cutoff_json": cutoff_metadata.get("source_cutoff_json"),
+            "feature_availability_hash": cutoff_metadata.get("feature_availability_hash"),
+            "feature_materialization_id": cutoff_metadata.get("feature_materialization_id"),
             "feature_version": feature_version,
             "code_sha": code_sha,
             "model_run_id": rows["model_run_id"].iloc[0],

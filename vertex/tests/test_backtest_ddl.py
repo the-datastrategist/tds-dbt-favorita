@@ -24,6 +24,9 @@ def test_backtest_tables_match_normalized_record_contracts():
         "baseline_name STRING NOT NULL",
         "actual FLOAT64",
         "prediction FLOAT64",
+        "data_cutoff TIMESTAMP NOT NULL",
+        "source_cutoff_json JSON NOT NULL",
+        "feature_availability_hash STRING",
     }
     metric_columns = {
         "metric_id STRING NOT NULL",
