@@ -193,7 +193,7 @@ flowchart LR
   GHA --> Config[validate model_config.yaml]
   GHA --> KFP[compile KFP pipeline JSON]
   GHA --> dbt[dbt parse / compile / docs]
-  main[Push to main] --> Pages[GitHub Pages dbt Docs]
+  main[Push to main] --> Pages[GitHub Pages Docsify + dbt Docs]
 ```
 
 Warehouse-backed runs (`dbt run`, `dbt test`, Vertex submit) execute in the client GCP project after credentials are configured — not in CI.

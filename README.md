@@ -17,7 +17,7 @@ The platform is intentionally **GCP-first**. It provides reusable infrastructure
 - **pip + Docker**: Locked dependencies in `requirements.txt`; all local commands run in Docker
 - **Testing**: pytest for Vertex utilities; dbt data tests on staging and intermediate models
 - **CI/CD**: GitHub Actions on every push and PR (Python lint/tests, `dbt parse` / `dbt compile` / `dbt docs generate`)
-- **Hosted dbt Docs**: GitHub Pages deploy on push to `main` / `master` (see [Hosted documentation](#hosted-documentation))
+- **Hosted documentation**: Docsify portal and dbt Docs deploy together to GitHub Pages on pushes to `main` / `master` (see [Hosted documentation](#hosted-documentation))
 - **dbt Docs & lineage**: Project overview ([`docs/overview.md`](docs/overview.md)), exposures for ML and operational consumers (`dbt/models/exposures.yml`)
 - **Code Quality**: Black, flake8, and mypy for code quality
 - **Consulting package**: Architecture diagrams, accelerators inventory, case study, benchmarks, rollout playbook, and IaC guidance ([docs/consulting_package.md](docs/consulting_package.md))
@@ -72,7 +72,7 @@ flowchart TB
 
   subgraph GH["GitHub"]
     Actions[GitHub Actions CI]
-    Pages["GitHub Pages\ndbt Docs"]
+    Pages["GitHub Pages\nDocsify + dbt Docs"]
   end
 
   subgraph GCP["GCP project"]
@@ -327,13 +327,14 @@ make dbt-docs-serve     # reuse existing artifacts without regenerating
 
 ### Hosted documentation
 
-After you enable **Settings → Pages → Build and deployment → GitHub Actions**, pushes to `main` / `master` run [`.github/workflows/docs.yml`](.github/workflows/docs.yml) and publish static dbt Docs.
+After you enable **Settings → Pages → Build and deployment → GitHub Actions**, pushes to `main` / `master` run [`.github/workflows/docs.yml`](.github/workflows/docs.yml) and publish the Docsify portal and static dbt Docs together.
 
-**Public URL (replace org/repo with yours):**
+**Published sites:**
 
-`https://<github-org-or-user>.github.io/<repository-name>/`
+- [Documentation portal](https://the-datastrategist.github.io/tds-dbt-favorita/)
+- [dbt Docs lineage and catalog](https://the-datastrategist.github.io/tds-dbt-favorita/dbt-docs/)
 
-The site includes the [project overview](docs/overview.md), model catalog, and [exposures](dbt/models/exposures.yml) on the lineage graph. No BigQuery credentials are required to browse it.
+The portal contains the narrative platform and delivery documentation. The dbt Docs subsite contains the model catalog and [exposures](dbt/models/exposures.yml) on the lineage graph. No BigQuery credentials are required to browse either site.
 
 ### Vertex AI model commands
 
