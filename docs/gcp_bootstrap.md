@@ -128,11 +128,10 @@ BigQuery's `oauth` method so dbt consumes the external-account ADC file created 
 `google-github-actions/auth`; it must not use the local `dev` target, which intentionally expects
 a service-account key file.
 
-The reference environment's OIDC exchange, federated project access, and keyless Terraform plan
-were accepted on 2026-07-18 in GitHub Actions run
-[`29648312277`](https://github.com/the-datastrategist/tds-dbt-favorita/actions/runs/29648312277).
-That run exposed the former dbt key-file profile mismatch. After committing the dedicated `wif`
-target, rerun the workflow and replace this note with the final fully green run URL.
+The complete reference path was accepted on 2026-07-18 in GitHub Actions run
+[`29650216690`](https://github.com/the-datastrategist/tds-dbt-favorita/actions/runs/29650216690):
+GitHub OIDC exchange, federated project access, keyless Terraform planning, dbt ADC
+authentication, parsing, and compilation all passed without a service-account JSON secret.
 
 The GitHub `dev` environment should contain:
 
