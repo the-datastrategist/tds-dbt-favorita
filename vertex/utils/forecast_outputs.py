@@ -302,11 +302,15 @@ def write_forecast_outputs_if_configured(
     contract_table = outputs.get("forecast_contract_table")
     runs_table = outputs.get("forecast_runs_table")
     status_table = outputs.get("forecast_status_history_table")
-    if not all((contract_table, runs_table, status_table)):
+    persistence_tables = (contract_table, runs_table, status_table)
+    if not all(isinstance(table, str) and table.strip() for table in persistence_tables):
         raise ValueError(
             "canonical persistence requires forecast_contract_table, forecast_runs_table, "
             "and forecast_status_history_table"
         )
+    assert isinstance(contract_table, str)
+    assert isinstance(runs_table, str)
+    assert isinstance(status_table, str)
     merge_row_to_bigquery(
         _contract_registration_row(contract, now),
         contract_table,
