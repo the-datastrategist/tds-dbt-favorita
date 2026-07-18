@@ -9,10 +9,6 @@ push: null
 pull: null
 
 deployments:
-  # Planned scheduled forecast-publication deployment (not registered until its flow entrypoint
-  # exists): route -> forecast -> calibrate -> reconcile -> validate -> approve/publish.
-  # Required parameters: contract_name, contract_version, forecast_origin, publication_mode,
-  # and idempotency_key. See docs/specs/forecast_operations.md for gates and failure semantics.
   - name: prefect-dbt-run-manual
     entrypoint: orchestration/flows/dbt.py:prefect_dbt_run_flow
     work_pool:
@@ -116,3 +112,15 @@ deployments:
       - cron: "0 10 * * 0"
         timezone: UTC
         active: true
+
+  - name: prefect-forecast-publication-manual
+    entrypoint: orchestration/flows/forecast_publication.py:prefect_forecast_publication_flow
+    work_pool:
+      name: default
+    description: Validate a canonical forecast run and optionally publish it after all gates pass.
+    parameters:
+      forecast_run_id: ""
+      publication_mode: draft_only
+      idempotency_key: ""
+      actor: prefect-forecast-publication-manual
+      destination: canonical_bigquery

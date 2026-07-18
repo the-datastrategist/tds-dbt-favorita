@@ -18,18 +18,21 @@ Flow code lives under `orchestration/` (not `prefect/`) so it does not shadow th
 | `prefect-vertex-ml-pipeline-scheduled` | `prefect-vertex-ml-pipeline` | Weekly XGBoost pipeline (Sunday 08:00 UTC) |
 | `prefect-model-lifecycle-manual` | `prefect-model-lifecycle` | On-demand rolling-origin evaluation and governed promotion |
 | `prefect-model-lifecycle-scheduled` | `prefect-model-lifecycle` | Weekly lifecycle evaluation (Sunday 10:00 UTC) |
+| `prefect-forecast-publication-manual` | `prefect-forecast-publication` | Validate a canonical run and optionally create an idempotent publication |
 
-The scheduled forecast-publication deployment is the next orchestration slice and is not yet
-registered in `prefect.yaml`. Its required stage order is:
+The manual forecast-publication deployment implements the gated publication boundary. Its required
+stage order is:
 
 ```text
 route -> forecast -> calibrate -> reconcile -> validate -> approve/publish
 ```
 
-The flow will accept `contract_name`, `contract_version`, `forecast_origin`, `publication_mode`,
-and `idempotency_key`. Stage writes must be retry-safe and append-only; failed validation must not
-create a published version. The authoritative keys, lineage fields, gates, and exception behavior
-are defined in the [forecast operations scheduled-publication
+The current flow accepts a concrete `forecast_run_id`, `publication_mode`, and `idempotency_key`.
+Use `draft_only` to validate without writing approvals or publications, or `auto_publish` to create
+both after every gate passes. Stage writes are retry-safe and append-only; failed validation cannot
+create a published version. Automatic run selection and the production schedule remain the next
+slice, after freshness and completeness thresholds are configurable. The authoritative keys,
+lineage fields, gates, and exception behavior are defined in the [forecast operations scheduled-publication
 contract](../docs/specs/forecast_operations.md#6-end-to-end-scheduled-publication-path).
 
 ## Prerequisites

@@ -376,6 +376,11 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_outputs` (
   forecast_strategy STRING NOT NULL,
   fallback_reason STRING,
   confidence_flag STRING NOT NULL,
+  calibration_method STRING,
+  calibration_run_id STRING,
+  hierarchy_version STRING,
+  reconciliation_method STRING NOT NULL,
+  reconciliation_run_id STRING,
   statistical_forecast FLOAT64 NOT NULL,
   planner_override FLOAT64,
   approved_forecast FLOAT64,
@@ -403,6 +408,21 @@ ADD COLUMN IF NOT EXISTS fallback_reason STRING;
 
 ALTER TABLE `tds-favorita.favorita.forecast_outputs`
 ADD COLUMN IF NOT EXISTS confidence_flag STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS calibration_method STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS calibration_run_id STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS hierarchy_version STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS reconciliation_method STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS reconciliation_run_id STRING;
 
 -- Versioned hierarchy nodes used by reconciliation runs.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_hierarchy_nodes` (

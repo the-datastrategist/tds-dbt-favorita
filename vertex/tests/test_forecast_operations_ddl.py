@@ -38,3 +38,19 @@ def test_override_and_revision_audit_fields_are_required():
         table_ddl = ddl.split(table_marker, maxsplit=1)[1].split(";", maxsplit=1)[0]
         assert "reason_code STRING NOT NULL" in table_ddl
         assert "comment STRING NOT NULL" in table_ddl
+
+
+@pytest.mark.unit
+def test_forecast_outputs_include_publication_stage_lineage():
+    ddl = DDL_PATH.read_text(encoding="utf-8")
+    table_marker = "CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_outputs`"
+    table_ddl = ddl.split(table_marker, maxsplit=1)[1].split(";", maxsplit=1)[0]
+
+    for column in (
+        "calibration_method STRING",
+        "calibration_run_id STRING",
+        "hierarchy_version STRING",
+        "reconciliation_method STRING NOT NULL",
+        "reconciliation_run_id STRING",
+    ):
+        assert column in table_ddl
