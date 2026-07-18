@@ -23,3 +23,13 @@ output "bigquery_dataset_ids" {
     analytics = module.bigquery_datasets.analytics_dataset_id
   }
 }
+
+output "github_wif_provider" {
+  description = "Set as the GCP_DEV_WIF_PROVIDER GitHub environment variable."
+  value       = try(module.github_wif[0].workload_identity_provider, null)
+}
+
+output "github_terraform_service_account" {
+  description = "Set as the GCP_DEV_WIF_SERVICE_ACCOUNT GitHub environment variable."
+  value       = try(module.github_wif[0].service_account_email, null)
+}

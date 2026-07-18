@@ -9,6 +9,7 @@ terraform/
     gcp-apis/           # Enable required APIs
     artifact-registry/  # Docker repository
     iam-vertex-sa/       # SA + least-privilege role bindings
+    github-wif/          # Repository-scoped GitHub OIDC + plan identity
     bigquery-datasets/   # raw + analytics datasets (not table schemas — see Non-goals below)
     gcs-buckets/          # raw, staging, models, mlflow
     cloud-scheduler/     # Optional HTTP jobs, disabled by default
@@ -43,8 +44,23 @@ for the `terraform import` sequence and the "zero diff before adopting" rule.
 - Table schemas (`vertex/ddl/vertex_bq_tables.sql`) stay owned by the DDL script / dbt, not
   Terraform — the `bigquery-datasets` module only manages dataset-level resources (location,
   labels). See the spec's Non-goals.
-- WIF pool/provider resources live in the separate
-  [Workload Identity Federation spec](../docs/specs/workload_identity_federation.md); `iam-vertex-sa`
-  is written so those bindings can be added later without restructuring it.
-- `terraform apply` is a manual, human-run command — CI only runs `fmt`/`validate`
-  (`.github/workflows/terraform.yml`), never `plan`/`apply` against a live project.
+- WIF pool/provider resources are implemented by `modules/github-wif`; see the
+  [Workload Identity Federation spec](../docs/specs/workload_identity_federation.md) for the
+  bootstrap and GitHub environment configuration.
+- `terraform apply` remains a manual, human-run command. CI runs `fmt`/`validate` and an
+  authenticated dev `plan`, but has no infrastructure mutation roles and no apply step.
+
+## Keyless GitHub Actions plan
+
+1. Create the versioned dev state bucket before initializing this configuration.
+2. Set `enable_github_wif`, `github_repository`, and `terraform_state_bucket` as shown in
+   `environments/dev/terraform.tfvars.example`, then apply once with a trusted human identity.
+3. Create a protected GitHub environment named `dev` and configure these environment variables:
+   `GCP_DEV_PROJECT_ID`, `GCP_DEV_CLIENT_LABEL`, `GCP_DEV_CALLER_MEMBER`,
+   `GCP_DEV_TF_STATE_BUCKET`, `GCP_DEV_WIF_PROVIDER`, and `GCP_DEV_WIF_SERVICE_ACCOUNT`. The final
+   two values come from the Terraform outputs of the same names.
+
+The `plan-dev` job does not run for pull requests from forks. Protect the `dev` environment with
+required reviewers if plans should require approval. The CI service account has project viewer and
+IAM security-reviewer roles plus object administration on the state bucket (needed for Terraform's
+short-lived state lock); it has no roles that can apply infrastructure changes.

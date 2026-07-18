@@ -10,6 +10,9 @@ variable "apis" {
     "artifactregistry.googleapis.com",
     "aiplatform.googleapis.com",
     "bigquery.googleapis.com",
+    "iam.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "sts.googleapis.com",
     "storage.googleapis.com",
   ]
 }

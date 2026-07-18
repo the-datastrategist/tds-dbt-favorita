@@ -5,3 +5,9 @@ bucket_location = "US"
 environment   = "dev"
 client_label  = "acme-corp"
 caller_member = "user:you@example.com"
+
+# Enable after the dev state bucket exists. Apply once with a trusted human identity, then copy
+# the two WIF outputs into the protected GitHub `dev` environment.
+enable_github_wif      = true
+github_repository      = "your-org/tds-dbt-favorita"
+terraform_state_bucket = "acme-corp-terraform-state"
