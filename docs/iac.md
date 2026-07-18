@@ -202,17 +202,18 @@ From `vertex/ops/README.md`:
       CI actions and the Python base image are pinned to immutable revisions
 - [x] Vertex Custom Jobs authenticate via their attached service account + ADC (no key file
       propagated into the job container — fixed in `vertex/jobs/gcp.py`)
-- [ ] CI **Workload Identity Federation** for jobs that need real GCP access (design:
-      [specs/workload_identity_federation.md](specs/workload_identity_federation.md); the
-      `iam-vertex-sa` Terraform module it extends now exists — see [specs/terraform_modules.md](specs/terraform_modules.md)
-      — but the pool/provider resources themselves still require a real GCP org to provision)
+- [x] CI **Workload Identity Federation** for jobs that need real GCP access: the reference dev
+      pool/provider, repository-scoped principal, CI service account, protected GitHub variables,
+      federated identity check, and keyless Terraform plan were live-accepted on 2026-07-18
+      ([spec](specs/workload_identity_federation.md)); repeat `make bootstrap-gcp` per client
 - [ ] Service account keys not in repo for **local dev**; key file remains the supported path
       there per the WIF spec's non-goals
 - [ ] Artifact Registry **vulnerability scanning** enabled
 - [ ] VPC-SC or private IP for Vertex (enterprise)
 - [ ] **CMEK** on GCS buckets if required
 - [ ] Separate GCP projects for **dev / prod**
-- [ ] CI uses placeholder credentials only (see `.github/workflows/ci.yml`)
+- [x] Offline CI parse/compile jobs use placeholder credentials only; authenticated dev planning
+      uses WIF and never stores a service-account JSON secret
 
 ---
 

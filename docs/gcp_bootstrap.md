@@ -4,6 +4,10 @@ Use this guide to provision or adopt the platform infrastructure and configure k
 Actions authentication. The bootstrap is safe to rerun and never stores a GCP service-account key
 in GitHub.
 
+After completing this infrastructure guide, continue with
+[Generate your first forecast](first_forecast.md) to validate the platform contracts, build
+features, run a model, and inspect canonical output.
+
 ## Before you begin
 
 Install Google Cloud CLI (`gcloud`, `bq`, and `gcloud storage`), Terraform 1.5+, GitHub CLI (`gh`),
@@ -123,6 +127,17 @@ conflicts stop the process for human review.
 Commit and push the repository changes, then run **WIF smoke test** from GitHub Actions. It verifies
 federated GCP authentication, Terraform drift, and dbt authentication and compilation.
 
+The smoke workflow uses the `wif` output in `dbt/profiles/profiles.yml`. That target selects
+BigQuery's `oauth` method so dbt consumes the external-account ADC file created by
+`google-github-actions/auth`; it must not use the local `dev` target, which intentionally expects
+a service-account key file.
+
+The reference environment's OIDC exchange, federated project access, and keyless Terraform plan
+were accepted on 2026-07-18 in GitHub Actions run
+[`29648312277`](https://github.com/the-datastrategist/tds-dbt-favorita/actions/runs/29648312277).
+That run exposed the former dbt key-file profile mismatch. After committing the dedicated `wif`
+target, rerun the workflow and replace this note with the final fully green run URL.
+
 The GitHub `dev` environment should contain:
 
 | Variable | Purpose |
@@ -165,6 +180,12 @@ configuration intentionally.
 
 Confirm the workflow has `id-token: write`, runs after checkout, uses the `dev` environment, and
 that `github_repository` matches the repository exactly, including case.
+
+### dbt asks you to log into GCP in the smoke workflow
+
+Confirm every smoke-workflow dbt command includes `--target wif`. The `dev` and `prod` targets use
+`method: service-account` for local key-file compatibility; the `wif` target uses ADC and accepts
+the external-account credential generated from GitHub OIDC.
 
 ## Local runtime credentials
 

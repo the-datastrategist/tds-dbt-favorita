@@ -2,24 +2,32 @@
 
 # SPEC: Workload Identity Federation
 
-**Status:** Implemented (project bootstrap required)
+**Status:** Shipped
 **Roadmap reference:** [`iac.md`](../iac.md#security-checklist) security checklist — "Service account keys not in repo; prefer Workload Identity Federation"; [`vertex/ops/README.md`](../../vertex/ops/README.md#security-checklist) same item; [`client_rollout.md`](../client_rollout.md#post-rollout-weeks-58-optional) — "Workload Identity Federation | Replace SA keys"
 
 ---
 
 ## Summary
 
-Every GCP-authenticated surface in this repo today — local Docker, Vertex Custom Jobs, and (in placeholder form) CI — is designed around a downloaded service-account JSON key file (`GOOGLE_APPLICATION_CREDENTIALS`). Key files are long-lived, easy to leak, and explicitly called out as a risk in this repo's own security checklist. This spec replaces key-file auth with Workload Identity Federation (WIF) in the two places it actually matters for a client engagement: **GitHub Actions CI** and **Vertex Custom Jobs**. Local developer auth keeps a lighter-weight path (`gcloud auth application-default login`) since a laptop isn't a "workload" WIF is designed for.
+Before this implementation, every GCP-authenticated surface in the repo—local Docker, Vertex
+Custom Jobs, and the future authenticated CI path—was designed around a downloaded
+service-account JSON key file (`GOOGLE_APPLICATION_CREDENTIALS`). This spec replaced automated
+key-file authentication where it matters for a client engagement: **GitHub Actions CI** now uses
+WIF, while **Vertex Custom Jobs** use their attached service account and metadata-server ADC.
+Local development retains its documented key-file or human ADC paths.
 
-## Problem — current state
+## Problem — pre-implementation state
 
-| Surface | Current auth | File |
+| Surface | Previous auth | File |
 |---------|-------------|------|
 | Local Docker (`make vertex-*`) | Key file bind-mounted into container via `GOOGLE_APPLICATION_CREDENTIALS_CONTAINER` | [`docker-compose.yml`](../../docker-compose.yml) |
 | CI (`.github/workflows/ci.yml`) | Placeholder key file (`echo '{}' > /tmp/ci-service-account.json`) — **not real**, but the pattern exists so any future job that talks to real GCP would need a real key stored as a GitHub secret | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) |
 | Vertex Custom Jobs (`vertex.jobs.submit`) | The **local** `GOOGLE_APPLICATION_CREDENTIALS` path string is forwarded verbatim into the Custom Job container's env vars | [`vertex/jobs/gcp.py:167-169`](../../vertex/jobs/gcp.py#L167-L169) |
 
-The third row is a latent bug worth fixing regardless of WIF: `creds = os.getenv("GOOGLE_APPLICATION_CREDENTIALS"); env.append({"name": ..., "value": creds})` propagates a **local filesystem path** (e.g. `/app/credentials/service-account-key.json`) into the Custom Job's container environment. That path doesn't exist inside the Vertex-managed container (the key file isn't baked into `VERTEX_TRAINING_IMAGE`, and Custom Jobs don't inherit the submitting machine's filesystem) — the Custom Job actually authenticates via its attached `service_account` (`VERTEX_PIPELINE_SERVICE_ACCOUNT`) and Google's metadata-server ADC, making this env var propagation dead weight at best, and a source of confusing `FileNotFoundError`s if any code path ever tries to open it inside the job.
+The third row was also a latent bug: it propagated a **local filesystem path** into a managed
+container where that path did not exist. The implementation removed that propagation; Custom Jobs
+now unambiguously authenticate through the attached `VERTEX_PIPELINE_SERVICE_ACCOUNT` and
+metadata-server ADC.
 
 ## Goals
 
@@ -34,8 +42,8 @@ The third row is a latent bug worth fixing regardless of WIF: `creds = os.getenv
 
 ## Implementation notes
 
-All repository changes are shipped. A client must still bootstrap the resources in its real GCP
-project and configure the protected GitHub `dev` environment as documented in
+Repository changes and live acceptance are complete for the reference `tds-favorita` dev
+environment. New client projects must repeat the documented bootstrap in
 [`terraform/README.md`](../../terraform/README.md#keyless-github-actions-plan):
 
 - **Done:** the dead-code removal in `vertex/jobs/gcp.py` — `worker_pool_spec` no longer
@@ -54,6 +62,13 @@ project and configure the protected GitHub `dev` environment as documented in
 - **Done:** `.github/workflows/terraform.yml` authenticates the dev plan through
   `google-github-actions/auth`, requests `id-token: write` only on that job, rejects fork PRs, and
   retains a human-readable plan for seven days. It has no apply step.
+- **Accepted 2026-07-18:** the live bootstrap verified the repository-scoped pool/provider,
+  CI service account and IAM bindings, populated all protected GitHub `dev` variables, and
+  produced a zero-change Terraform plan. GitHub Actions run
+  [`29648312277`](https://github.com/the-datastrategist/tds-dbt-favorita/actions/runs/29648312277)
+  successfully exchanged the GitHub OIDC token, described the live project, and read the remote
+  Terraform state without a service-account key. The run also exposed and led to the correction
+  of the dbt profile from key-file authentication to the dedicated `wif` ADC target.
 
 ## Design
 
@@ -126,10 +141,10 @@ The **machine that calls `vertex.jobs.submit`** (a developer's laptop, or eventu
 1. Land the `vertex/jobs/gcp.py` dead-code removal independently — it's a small, safe cleanup with no WIF dependency.
 2. Ship the standalone WIF Terraform module and opt-in dev wiring. **Done.**
 3. Add `google-github-actions/auth` to the real Terraform dev plan job. **Done.**
-4. Bootstrap the module in the client's dev project and configure the protected GitHub `dev`
-   environment. **Per-client operation; see `terraform/README.md`.**
-5. Update security checklists in `iac.md` and `vertex/ops/README.md` after that client bootstrap,
-   so they state deployed facts rather than repository capability.
+4. Bootstrap the module in the reference dev project and configure the protected GitHub `dev`
+   environment. **Done 2026-07-18; repeat per client using `terraform/README.md`.**
+5. Update security checklists in `iac.md` and `vertex/ops/README.md` so they state deployed facts
+   rather than repository capability. **Done.**
 
 ## Open questions
 

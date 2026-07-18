@@ -44,6 +44,16 @@ def run(command: Sequence[str], *, check: bool = True, capture: bool = False) ->
     return (result.stdout or "").strip()
 
 
+def parse_terraform_console_value(output: str) -> object:
+    """Decode jsonencode output while ignoring Terraform progress messages."""
+    for line in reversed(output.splitlines()):
+        try:
+            return json.loads(json.loads(line))
+        except (json.JSONDecodeError, TypeError):
+            continue
+    raise RuntimeError(f"terraform console returned no JSON value: {output.strip()}")
+
+
 def terraform_vars() -> dict[str, object]:
     command = ["terraform", "console"]
     values: dict[str, object] = {}
@@ -68,7 +78,7 @@ def terraform_vars() -> dict[str, object]:
         )
         if result.returncode:
             raise RuntimeError(result.stderr.strip())
-        values[name] = json.loads(json.loads(result.stdout.strip()))
+        values[name] = parse_terraform_console_value(result.stdout)
     return values
 
 
