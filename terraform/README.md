@@ -47,12 +47,14 @@ for the `terraform import` sequence and the "zero diff before adopting" rule.
 - WIF pool/provider resources are implemented by `modules/github-wif`; see the
   [Workload Identity Federation spec](../docs/specs/workload_identity_federation.md) for the
   bootstrap and GitHub environment configuration.
-- `terraform apply` remains a manual, human-run command. CI runs `fmt`/`validate` and an
-  authenticated dev `plan`, but has no infrastructure mutation roles and no apply step.
+- Apply remains a locally initiated human operation, directly or through `make bootstrap-gcp`.
+  CI runs `fmt`/`validate` and an authenticated dev `plan`, but has no infrastructure mutation
+  roles and no apply step.
 
 ## Keyless GitHub Actions plan
 
-For the supported guided path, authenticate locally and run:
+For the supported guided path, follow the
+[GCP and GitHub bootstrap guide](../docs/gcp_bootstrap.md). In short, authenticate locally and run:
 
 ```bash
 gcloud auth application-default login

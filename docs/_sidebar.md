@@ -16,6 +16,7 @@
   * [Client rollout](client_rollout.md)
   * [Clean rebuild runbook](clean_rebuild.md)
   * [Infrastructure and GCP operations](iac.md)
+  * [GCP and GitHub bootstrap](gcp_bootstrap.md)
   * [Accelerators](accelerators.md)
   * [dbt lineage and catalog](dbt-docs.md)
 

@@ -176,6 +176,11 @@ More detail (dual ML path, operational sequence, security/environments, CI/CD): 
 
 ## Setup
 
+For a new GCP environment—or an existing environment Terraform must adopt—start with the
+**[guided GCP and GitHub bootstrap](docs/gcp_bootstrap.md)**. It covers cloning, local
+authentication, safe adoption, WIF, and GitHub configuration. Continue below for the local Docker
+runtime.
+
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
@@ -188,7 +193,7 @@ More detail (dual ML path, operational sequence, security/environments, CI/CD): 
    # Edit .env with your Google Cloud credentials and configuration
    ```
 
-3. **Set up Google Cloud credentials**
+3. **Set up local Docker credentials**
    ```bash
    mkdir -p credentials
    # Place your service account key JSON in credentials/ (gitignored)
@@ -198,7 +203,9 @@ More detail (dual ML path, operational sequence, security/environments, CI/CD): 
    GOOGLE_APPLICATION_CREDENTIALS=./credentials/your-key.json
    GOOGLE_APPLICATION_CREDENTIALS_CONTAINER=/app/credentials/your-key.json
    ```
-   The repo is bind-mounted at `/app`, so keys must live under `credentials/` — do not use an empty placeholder `service-account-key.json` unless that file contains valid JSON.
+   These credentials are for local Docker commands, not GitHub Actions. GitHub uses keyless WIF
+   configured by the guided bootstrap. The repo is bind-mounted at `/app`, so key files must live
+   under `credentials/`—do not use an empty placeholder unless it contains valid JSON.
 
 4. **Ensure raw data is in GCS**
    Place project source files in the bucket/prefix from `GCS_RAW_DATA_BUCKET` (see `env.example`). The current sample loader expects the public demo CSV archive shape; production implementations should replace or extend the loader and dbt sources for their own operational data.
