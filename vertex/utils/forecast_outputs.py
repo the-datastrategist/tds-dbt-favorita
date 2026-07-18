@@ -31,6 +31,9 @@ FORECAST_OUTPUT_COLUMNS = [
     "prediction_p10",
     "prediction_p50",
     "prediction_p90",
+    "forecast_strategy",
+    "fallback_reason",
+    "confidence_flag",
     "statistical_forecast",
     "planner_override",
     "approved_forecast",
@@ -128,6 +131,14 @@ def build_forecast_output_rows(
     if forecast_run_ids.nunique(dropna=False) != 1 or forecast_run_ids.isna().any():
         raise ValueError("a canonical persistence batch must contain exactly one forecast_run_id")
     created_at = work["run_at"]
+    forecast_strategy = work.get("forecast_strategy", pd.Series("entity_model", index=work.index))
+    fallback_reason = work.get("fallback_reason", pd.Series(None, index=work.index, dtype=object))
+    confidence_flag = work.get("confidence_flag", pd.Series("high", index=work.index))
+    if forecast_strategy.isna().any() or (forecast_strategy == "").any():
+        raise ValueError("every canonical forecast row must include a forecast_strategy")
+    invalid_confidence = sorted(set(confidence_flag.dropna()) - {"high", "medium", "low"})
+    if confidence_flag.isna().any() or invalid_confidence:
+        raise ValueError("confidence_flag must be non-null and one of high, medium, or low")
 
     output_ids = [
         get_hash(
@@ -161,6 +172,9 @@ def build_forecast_output_rows(
             "prediction_p10": work.get("prediction_lower"),
             "prediction_p50": work["prediction"],
             "prediction_p90": work.get("prediction_upper"),
+            "forecast_strategy": forecast_strategy,
+            "fallback_reason": fallback_reason,
+            "confidence_flag": confidence_flag,
             "statistical_forecast": work["prediction"],
             "planner_override": None,
             "approved_forecast": None,
@@ -197,7 +211,9 @@ def _feature_version(config: dict[str, Any]) -> str:
     )
 
 
-def _contract_registration_row(contract: ForecastContract, registered_at: datetime) -> dict[str, Any]:
+def _contract_registration_row(
+    contract: ForecastContract, registered_at: datetime
+) -> dict[str, Any]:
     spec = contract.spec
     return {
         "forecast_contract_name": contract.name,

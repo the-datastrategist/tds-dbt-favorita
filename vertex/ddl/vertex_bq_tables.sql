@@ -327,6 +327,9 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_outputs` (
   prediction_p10 FLOAT64,
   prediction_p50 FLOAT64,
   prediction_p90 FLOAT64,
+  forecast_strategy STRING NOT NULL,
+  fallback_reason STRING,
+  confidence_flag STRING NOT NULL,
   statistical_forecast FLOAT64 NOT NULL,
   planner_override FLOAT64,
   approved_forecast FLOAT64,
@@ -345,6 +348,15 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_outputs` (
 )
 PARTITION BY DATE(forecast_origin)
 CLUSTER BY forecast_contract_name, forecast_status, config_name;
+
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS forecast_strategy STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS fallback_reason STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS confidence_flag STRING;
 
 -- Forecast status transition history.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_status_history` (

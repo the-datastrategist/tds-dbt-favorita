@@ -72,6 +72,9 @@ def test_build_forecast_output_rows_from_standard_predictions():
     assert rows["forecast_run_id"].tolist() == ["predict-run"] * 2
     assert rows["horizon"].tolist() == [7, 7]
     assert rows["prediction_p50"].tolist() == [11.0, 21.0]
+    assert rows["forecast_strategy"].tolist() == ["entity_model", "entity_model"]
+    assert rows["fallback_reason"].isna().all()
+    assert rows["confidence_flag"].tolist() == ["high", "high"]
     assert rows["statistical_forecast"].tolist() == [11.0, 21.0]
     assert rows["forecast_status"].tolist() == ["draft", "draft"]
     assert rows["feature_version"].tolist() == ["features-v1", "features-v1"]
@@ -124,6 +127,42 @@ def test_build_forecast_output_rows_accepts_every_configured_horizon():
         datetime(2024, 1, 15).date(),
     ]
     assert rows["forecast_output_id"].is_unique
+
+
+@pytest.mark.unit
+def test_build_forecast_output_rows_persists_fallback_strategy_metadata():
+    source = pd.DataFrame(
+        {"store_nbr": [1], "date": pd.to_datetime(["2024-01-01"]), "sales": [0.0]}
+    )
+    predictions = build_standard_prediction_rows(
+        source,
+        pd.Series([1.0]),
+        predict_run_id="predict-run",
+        model_id="global-model",
+        model_run_id="model-run",
+        config_name="config",
+        model_family="family",
+        model_type="xgboost",
+        target_column="sales",
+        run_at=datetime(2024, 1, 1, 6),
+        forecast_horizon=7,
+        model_artifact_uri="gs://models/model.joblib",
+    )
+    predictions["forecast_strategy"] = "global_model"
+    predictions["fallback_reason"] = "cold_start"
+    predictions["confidence_flag"] = "medium"
+
+    rows = build_forecast_output_rows(
+        predictions,
+        contract=_contract([7]),
+        feature_version="features-v1",
+        code_sha="abc123",
+        data_cutoff=datetime(2023, 12, 31),
+    )
+
+    assert rows.loc[0, "forecast_strategy"] == "global_model"
+    assert rows.loc[0, "fallback_reason"] == "cold_start"
+    assert rows.loc[0, "confidence_flag"] == "medium"
 
 
 @pytest.mark.unit

@@ -626,6 +626,18 @@ models:
         description: P50 forecast; defaults to the point prediction for deterministic models.
       - name: prediction_p90
         description: P90 forecast, when available.
+      - name: forecast_strategy
+        description: Forecast method selected by the series routing policy.
+        data_tests:
+          - not_null
+      - name: fallback_reason
+        description: Reason the preferred entity strategy was not used, when applicable.
+      - name: confidence_flag
+        description: Routing confidence assigned to the selected forecast strategy.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['high', 'medium', 'low']
       - name: statistical_forecast
         description: Raw model/statistical forecast before planner overrides.
       - name: planner_override
