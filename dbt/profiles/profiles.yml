@@ -9,6 +9,13 @@ tds_favorita:
       threads: 4
       location: "{{ env_var('BQ_LOCATION', 'US') }}"
       keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+    wif:
+      type: bigquery
+      method: oauth
+      project: "{{ env_var('GOOGLE_PROJECT_ID') }}"
+      dataset: "{{ env_var('DBT_DATASET', 'favorita') }}"
+      threads: 4
+      location: "{{ env_var('BQ_LOCATION', 'US') }}"
     prod:
       type: bigquery
       method: service-account

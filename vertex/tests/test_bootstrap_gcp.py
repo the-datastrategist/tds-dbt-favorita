@@ -1,4 +1,17 @@
-from scripts.bootstrap_gcp import destructive_changes
+import pytest
+
+from scripts.bootstrap_gcp import destructive_changes, parse_terraform_console_value
+
+
+def test_parse_terraform_console_value_ignores_progress_messages() -> None:
+    output = 'Acquiring state lock. This may take a few moments...\n"\\"favorita\\""\n'
+
+    assert parse_terraform_console_value(output) == "favorita"
+
+
+def test_parse_terraform_console_value_rejects_missing_json() -> None:
+    with pytest.raises(RuntimeError, match="returned no JSON value"):
+        parse_terraform_console_value("Acquiring state lock...")
 
 
 def test_destructive_changes_accepts_create_and_update() -> None:

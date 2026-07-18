@@ -35,6 +35,8 @@ jobs:
           project_id: ${{ vars.GCP_DEV_PROJECT_ID }}
           workload_identity_provider: ${{ vars.GCP_DEV_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_DEV_WIF_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
 
       - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
 
@@ -58,11 +60,16 @@ jobs:
           cache-dependency-path: requirements-dev.txt
 
       - name: Verify dbt authentication and compilation
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: |
+          test -s "$GOOGLE_APPLICATION_CREDENTIALS"
           pip install -r requirements-dev.txt
+          python -c "import google.auth; _, project = google.auth.default(); print(f'ADC project: {project}')"
           dbt deps --project-dir dbt
-          dbt debug --project-dir dbt
-          dbt parse --project-dir dbt
+          dbt debug --project-dir dbt --target wif
+          dbt parse --project-dir dbt --target wif
           dbt compile --project-dir dbt \
+            --target wif \
             --no-populate-cache --no-introspect --threads 1 \
             --exclude config.materialized:incremental

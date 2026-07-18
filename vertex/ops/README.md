@@ -101,9 +101,10 @@ Alternative: **Workflows** orchestrating dbt Cloud job → Vertex PipelineJob AP
 - [x] Vertex Custom Jobs authenticate via their attached service account + ADC (instance
       metadata server) — no key file is propagated into the job container
       (`vertex/jobs/gcp.py`). See `docs/specs/workload_identity_federation.md`.
-- [ ] CI Workload Identity Federation for jobs that need real GCP access (design in the spec
-      above; `iam-vertex-sa` Terraform module exists to extend — see `docs/specs/terraform_modules.md`
-      — but the pool/provider resources still need a real GCP project to provision)
+- [x] CI Workload Identity Federation for jobs that need real GCP access. The reference dev
+      environment was live-accepted on 2026-07-18 with repository-scoped GitHub OIDC, federated
+      project access, and a keyless remote-state Terraform plan; repeat the documented bootstrap
+      for each client (`docs/specs/workload_identity_federation.md`)
 - [ ] Service account keys not stored in repo for **local dev** submission identity; key file
       remains the supported path there (see spec's non-goals) — Secret Manager as an alternative
 - [ ] Artifact Registry image scanning enabled
