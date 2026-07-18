@@ -138,7 +138,7 @@ def test_main_scores_and_persists_through_shared_contract(capsys):
     with (
         patch.object(sys, "argv", argv),
         patch("vertex.jobs.backtest.build_backtest_plan", return_value=[]),
-        patch("vertex.jobs.backtest.load_backtest_contract") as load_contract,
+        patch("vertex.jobs.backtest.load_backtest_contract"),
         patch("vertex.jobs.backtest.run_backtest", return_value=result) as runner,
         patch("vertex.jobs.backtest.persist_backtest_result") as persist,
     ):

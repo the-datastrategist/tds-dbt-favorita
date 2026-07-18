@@ -17,6 +17,13 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    ignore:
+      # The locked ML stack targets Python 3.11. Keep digest and patch updates,
+      # but do not open automated runtime-minor/major upgrade PRs.
+      - dependency-name: python
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
 
   - package-ecosystem: terraform
     directory: "/terraform/environments/dev"

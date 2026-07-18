@@ -4,10 +4,6 @@ Use this guide to provision or adopt the platform infrastructure and configure k
 Actions authentication. The bootstrap is safe to rerun and never stores a GCP service-account key
 in GitHub.
 
-After completing this infrastructure guide, continue with
-[Generate your first forecast](first_forecast.md) to validate the platform contracts, build
-features, run a model, and inspect canonical output.
-
 ## Before you begin
 
 Install Google Cloud CLI (`gcloud`, `bq`, and `gcloud storage`), Terraform 1.5+, GitHub CLI (`gh`),
