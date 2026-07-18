@@ -28,4 +28,5 @@ select
     avg(prediction - actual) as bias
 from {{ ref('stg_vertex_model_predictions') }}
 where actual is not null
+    and forecast_date is not null
 group by config_name, model_family, model_type, model_run_id, forecast_date

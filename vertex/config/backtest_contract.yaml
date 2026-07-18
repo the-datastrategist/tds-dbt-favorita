@@ -1,0 +1,37 @@
+backtest:
+  name: store_daily_rolling_origin
+  forecast_contract_path: vertex/config/forecast_contract.yaml
+  model_config_name: favorita_store_h7_xgboost
+  origin_policy:
+    start_date: "2016-08-01"
+    end_date: "2016-08-29"
+    interval_days: 7
+  horizons: [7]
+  train_window_days: 180
+  entity_columns: [store_nbr]
+  date_column: date
+  actual_column: sales_store
+  history_table: tds-favorita.favorita.int_sales_store_daily
+  segment_columns: []
+  moving_average_window: 7
+  max_entities:
+  baselines:
+    - zero_demand
+    - last_observation
+    - seasonal_naive_7d
+    - moving_average
+    - same_period_last_year
+    - croston_sba_tsb
+  metric_policy:
+    primary_metric: wape
+    lower_is_better: true
+    selection_scope:
+      - target
+      - grain
+      - horizon
+      - segment_key_json
+  promotion_gates:
+    min_baseline_improvement_pct: 0.05
+    max_bias_abs_pct: 0.10
+    min_prediction_completeness: 0.98
+    require_reproducible_artifact: true

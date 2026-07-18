@@ -10,6 +10,7 @@ from typing import Any, Optional
 
 import pandas as pd
 
+from vertex.config.feature_availability import validate_model_features_from_config
 from vertex.config.load_config import (
     DEFAULT_CONFIG_PATH,
     explain_enabled,
@@ -23,6 +24,7 @@ from vertex.utils.data_loading import load_data_from_config
 from vertex.utils.data_utils import get_hash
 from vertex.utils.explain import build_explain_rows, compute_tree_shap_top_features
 from vertex.utils.features import prepare_feature_matrix
+from vertex.utils.forecast_outputs import write_forecast_outputs_if_configured
 from vertex.utils.ml_utils import sanitize_feature_columns
 from vertex.utils.predictions import build_standard_prediction_rows, new_predict_run_id
 
@@ -87,7 +89,10 @@ def run_predict_random_forest(config: dict[str, Any]) -> dict[str, Any]:
         model_run_id=model_run_id,
     )
     joblib_uri = manifest.get("joblib_gcs_uri") or artifact_uri
-    model = load_joblib_from_gcs(joblib_uri)
+    model = load_joblib_from_gcs(
+        joblib_uri,
+        expected_sha256=manifest.get("joblib_sha256"),
+    )
 
     df = load_data_from_config(config)
     manifest_target = manifest.get("target_column", target_column)
@@ -103,6 +108,11 @@ def run_predict_random_forest(config: dict[str, Any]) -> dict[str, Any]:
     bool_cols = model_input.select_dtypes(include="bool").columns
     if len(bool_cols) > 0:
         model_input[bool_cols] = model_input[bool_cols].astype(int)
+    validate_model_features_from_config(
+        config,
+        list(model_input.columns),
+        context=f"{config_name} prediction features",
+    )
     predictions = pd.Series(model.predict(model_input), index=X.index)
 
     run_at = dt.utcnow()
@@ -149,6 +159,17 @@ def run_predict_random_forest(config: dict[str, Any]) -> dict[str, Any]:
         if_exists="append",
     )
     logger.info("Wrote %s predictions (predict_run_id=%s)", len(prediction_rows), predict_run_id)
+    forecast_output_count = write_forecast_outputs_if_configured(
+        config=config,
+        prediction_rows=prediction_rows,
+        project_id=project_id,
+    )
+    if forecast_output_count:
+        logger.info(
+            "Wrote %s canonical forecast outputs (predict_run_id=%s)",
+            forecast_output_count,
+            predict_run_id,
+        )
 
     explain_count = 0
     if explain_enabled(config):
@@ -183,6 +204,7 @@ def run_predict_random_forest(config: dict[str, Any]) -> dict[str, Any]:
         "predict_run_id": predict_run_id,
         "model_id": model_id,
         "prediction_count": len(prediction_rows),
+        "forecast_output_count": forecast_output_count,
         "explain_count": explain_count,
     }
 

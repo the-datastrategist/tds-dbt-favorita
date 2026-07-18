@@ -1,10 +1,10 @@
 {% docs case_study %}
 
-# Case study — Favorita demand forecasting on GCP
+# Case study — GCP demand forecasting platform
 
-**Client context (synthetic):** A multi-store grocery retailer needs daily store-level sales forecasts that account for promotions, Ecuadorian holidays, and macro signals (oil prices). Data lives in BigQuery; the analytics team uses dbt; ML engineers want both quick baselines and tunable custom models.
+**Client context (synthetic):** A multi-location business needs daily operational demand forecasts that account for known-future business events, calendar effects, pricing, promotions, and other project-specific covariates. Data lives in BigQuery; the analytics team uses dbt; ML engineers want both quick baselines and tunable custom models.
 
-**Engagement type:** Reference implementation / accelerator — built on public [Kaggle Favorita data](https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting) to demonstrate The Data Strategist's GCP forecasting delivery pattern.
+**Engagement type:** Production-style GCP platform implementation — built to demonstrate The Data Strategist's demand forecasting delivery pattern.
 
 ---
 
@@ -14,7 +14,7 @@ Retailers must answer:
 
 > *How much will each store sell tomorrow — and over the next week — by category and SKU, given promotions and calendar effects?*
 
-Poor forecasts drive **overstock, stockouts, and wasted labor** in replenishment and staffing. The Favorita dataset captures this at store × product × day granularity with rich promotion and holiday metadata — an ideal public proxy for client conversations.
+Poor forecasts drive **overstock, stockouts, and wasted labor** in replenishment, staffing, and capacity planning. The platform is designed for projects where demand varies across entities, time, hierarchy, and known-future business drivers.
 
 ### Success criteria
 
@@ -36,7 +36,7 @@ Poor forecasts drive **overstock, stockouts, and wasted labor** in replenishment
 | Small platform team | Prefer config over custom code per model |
 | Cost sensitivity | BQML for baseline; Vertex for tuning and time-series |
 | Governance | dbt tests, exposures, lineage for ML consumers |
-| Public demo data | No PII; suitable for open-source showcase |
+| Reusable GCP boundary | No alternate warehouse or cloud target in scope |
 
 ---
 
@@ -44,13 +44,13 @@ Poor forecasts drive **overstock, stockouts, and wasted labor** in replenishment
 
 ### 1. Analytics engineering first
 
-Raw competition CSVs land in `raw_favorita`. dbt builds:
+Raw operational data lands in BigQuery. dbt builds:
 
-- **Staging** — typed, incremental tables; Ecuador holiday logic; oil price alignment
-- **Intermediate** — `int_sales_*` at company, store, store-product, and family grains
+- **Staging** — typed, incremental source-aligned tables
+- **Intermediate** — feature tables at the project's chosen aggregate, location, product, or other planning grains
 - **Tests** — grain uniqueness, `not_null`, row-count assertions
 
-*Why:* ML quality ceiling is set by features. Governed SQL features are reusable by BQML, Vertex, and BI.
+*Why:* ML quality ceiling is set by features. Governed SQL features are reusable by BQML, Vertex, and BI. This dbt layer is intentionally project-specific.
 
 ### 2. Dual ML paths on shared features
 
@@ -93,7 +93,7 @@ Outcomes below reflect **architectural deliverables**. Numeric benchmarks are po
 | Four Vertex model families | XGBoost, RF, ARIMA, SARIMA configs in YAML |
 | Hyperparameter search | Optuna optimize step + `ml_model_optimize` table |
 | Per-prediction explainability | SHAP top-feature attributions for tree models (`favorita_model_explain`) |
-| Unified predictions | `ml_model_predictions` + `stg_vertex_model_predictions` |
+| Unified predictions | `ml_model_predictions`, canonical forecast output tables, and dbt staging |
 | Experiment tracking | MLflow UI (`make mlflow-ui`), Vertex Experiments |
 | CI without GCP | GitHub Actions: lint, test, config validate, KFP compile |
 | Lineage for ML consumers | `dbt/models/exposures.yml` |
@@ -104,7 +104,7 @@ Outcomes below reflect **architectural deliverables**. Numeric benchmarks are po
 
 | Area | Reference repo | Typical client adaptation |
 |------|----------------|---------------------------|
-| Data source | Kaggle CSVs in GCS | ERP / POS / promo feeds, incremental loads |
+| Data source | Demo or initial project source files in GCS | ERP / POS / promo feeds, incremental loads |
 | Grain | Store-day default for Vertex | SKU-level or DC-level per use case |
 | Orchestration | Prefect OSS in Docker | Cloud Composer, Workflows, or client scheduler |
 | Auth | Service account JSON (dev) | Workload Identity Federation, Secret Manager |

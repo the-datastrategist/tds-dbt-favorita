@@ -33,7 +33,7 @@ def resolve_batch_config_names(
     """Resolve one explicit config or all include_in_run configs for the step."""
     if config_name:
         return [config_name]
-    names = list_run_config_names(config_path, step=step)
+    names = list_run_config_names(config_path)
     if not names:
         raise ValueError(
             f"No configs with include_in_run: true found for step={step!r}. "

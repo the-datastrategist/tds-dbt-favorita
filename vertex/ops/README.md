@@ -9,16 +9,24 @@ Create a **Vertex AI service account** per environment (e.g. `sa-vertex-ml@PROJE
 | Role | Purpose |
 |------|---------|
 | `roles/aiplatform.user` | Submit Custom Jobs and PipelineJobs |
-| `roles/storage.objectAdmin` | Staging bucket, model artifacts, pipeline root (scope to bucket IAM) |
-| `roles/bigquery.dataEditor` | Write metadata, predictions, job runs |
+| `roles/storage.objectUser` | Staging, model, and MLflow buckets (bucket-level only) |
+| `roles/bigquery.dataEditor` | Raw and analytics datasets (dataset-level only) |
 | `roles/bigquery.jobUser` | Run queries for training data |
 
-Prefer **bucket-level** IAM for GCS instead of project-wide `objectAdmin` when possible.
+The Terraform modules grant Storage and BigQuery data roles only on the named buckets and
+datasets. Do not grant either data-plane role at project scope.
+
+Terraform also creates a separate prediction identity. Set its output as
+`VERTEX_PREDICTION_SERVICE_ACCOUNT`; it receives `storage.objectViewer` on the model bucket,
+not artifact write access. Standalone `--step predict` submissions select it automatically.
+Multi-step PipelineJobs still use one pipeline identity for every component, so workloads that
+require strict per-step isolation should submit train and predict as separate Custom Jobs.
 
 Set in `.env`:
 
 ```bash
 VERTEX_PIPELINE_SERVICE_ACCOUNT=sa-vertex-ml@PROJECT.iam.gserviceaccount.com
+VERTEX_PREDICTION_SERVICE_ACCOUNT=sa-vertex-ml-predict@PROJECT.iam.gserviceaccount.com
 ```
 
 Custom Jobs and PipelineJobs use this account when set.
@@ -80,6 +88,8 @@ Alternative: **Workflows** orchestrating dbt Cloud job → Vertex PipelineJob AP
 
 ## Security checklist
 
+- [x] Production container runs as a non-root user and excludes compilers, Git, and curl;
+      CI actions and the Python base image are pinned to immutable revisions
 - [x] Vertex Custom Jobs authenticate via their attached service account + ADC (instance
       metadata server) — no key file is propagated into the job container
       (`vertex/jobs/gcp.py`). See `docs/specs/workload_identity_federation.md`.

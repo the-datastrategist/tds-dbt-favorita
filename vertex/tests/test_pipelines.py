@@ -48,6 +48,16 @@ class TestPipelineConfig:
         assert "optimize" not in steps
         assert steps["train"] == "favorita_store_n1d_arima"
 
+    def test_pipeline_requires_unified_config(self, tmp_path):
+        config_path = tmp_path / "model_config.yaml"
+        config_path.write_text(
+            "pipelines:\n  legacy:\n    configs:\n      train: old_train_config\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="must define config"):
+            resolve_pipeline_model_config("legacy", config_path)
+
 
 @pytest.mark.unit
 class TestPipelineCompile:

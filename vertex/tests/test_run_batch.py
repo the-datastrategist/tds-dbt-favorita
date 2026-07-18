@@ -13,11 +13,7 @@ from vertex.jobs.run_batch import resolve_batch_config_names, run_configs
 @pytest.mark.unit
 class TestListRunConfigNames:
     def test_includes_only_explicit_include_in_run(self) -> None:
-        names = list_run_config_names(step="train")
-        assert names == ["favorita_store_n1d_xgboost"]
-
-    def test_predict_step_same_configs(self) -> None:
-        names = list_run_config_names(step="predict")
+        names = list_run_config_names()
         assert names == ["favorita_store_n1d_xgboost"]
 
 

@@ -1,6 +1,6 @@
 {% docs prefect_consulting_package %}
 
-# Prefect consulting package — Favorita forecasting
+# Prefect consulting package — GCP demand forecasting platform
 
 **Prefect's role** in this engagement: **orchestrate** recurring dbt feature builds and Vertex ML workloads (train-only or full optimize → train → predict pipelines) with a local OSS demo path that maps cleanly to Cloud Scheduler / Workflows in production.
 
@@ -179,7 +179,7 @@ Makefile defaults worker API to `http://host.docker.internal:4200/api`.
 
 ## Related documents
 
-- [orchestration/README.md](../../../orchestration/README.md)
+- [orchestration/README.md](../../orchestration/README.md)
 - [Client rollout](../client_rollout.md) — Week 4
 - [IaC — Scheduling](../iac.md#scheduling-production)
 - Other products: [dbt](../dbt/consulting_package.md) · [Vertex](../vertex/consulting_package.md) · [MLflow](../mlflow/consulting_package.md)

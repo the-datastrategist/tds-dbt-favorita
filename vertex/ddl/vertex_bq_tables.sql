@@ -141,6 +141,88 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.ml_model_predictions` (
 PARTITION BY run_date
 CLUSTER BY model_family, model_type, config_name;
 
+-- One immutable record per logical rolling-origin execution. Re-running the
+-- same contract and input fingerprint produces the same backtest_run_id.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_runs` (
+  backtest_run_id STRING NOT NULL,
+  backtest_contract_name STRING NOT NULL,
+  backtest_contract_hash STRING NOT NULL,
+  model_config_name STRING NOT NULL,
+  model_family STRING NOT NULL,
+  model_type STRING NOT NULL,
+  target STRING NOT NULL,
+  grain STRING NOT NULL,
+  metric_policy_json STRING NOT NULL,
+  origin_start DATE NOT NULL,
+  origin_end DATE NOT NULL,
+  prediction_count INT64 NOT NULL,
+  metric_count INT64 NOT NULL,
+  status STRING NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY origin_start
+CLUSTER BY backtest_contract_name, model_config_name, backtest_run_id;
+
+-- Forward-compatible migration for datasets created before comparison semantics
+-- were persisted on the run record. BigQuery adds these as nullable on existing
+-- tables; all new writers populate them.
+ALTER TABLE `tds-favorita.favorita.backtest_runs`
+ADD COLUMN IF NOT EXISTS target STRING;
+
+ALTER TABLE `tds-favorita.favorita.backtest_runs`
+ADD COLUMN IF NOT EXISTS grain STRING;
+
+ALTER TABLE `tds-favorita.favorita.backtest_runs`
+ADD COLUMN IF NOT EXISTS metric_policy_json STRING;
+
+ALTER TABLE `tds-favorita.favorita.backtest_runs`
+ADD COLUMN IF NOT EXISTS model_family STRING;
+
+ALTER TABLE `tds-favorita.favorita.backtest_runs`
+ADD COLUMN IF NOT EXISTS model_type STRING;
+
+-- Append-only rolling-origin backtest predictions. prediction_id is a stable
+-- logical key; writers must append new records and must not update prior runs.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_predictions` (
+  prediction_id STRING NOT NULL,
+  backtest_run_id STRING NOT NULL,
+  backtest_contract_name STRING NOT NULL,
+  backtest_contract_hash STRING NOT NULL,
+  forecast_origin DATE NOT NULL,
+  target_date DATE NOT NULL,
+  horizon INT64 NOT NULL,
+  entity_key_json STRING NOT NULL,
+  segment_key_json STRING NOT NULL,
+  baseline_name STRING NOT NULL,
+  actual FLOAT64,
+  prediction FLOAT64,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY forecast_origin
+CLUSTER BY backtest_contract_name, horizon, baseline_name, backtest_run_id;
+
+-- Append-only metrics derived from backtest_predictions. metric_id is stable
+-- for a run/origin/horizon/baseline/segment metric record.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_metrics` (
+  metric_id STRING NOT NULL,
+  backtest_run_id STRING NOT NULL,
+  backtest_contract_name STRING NOT NULL,
+  backtest_contract_hash STRING NOT NULL,
+  forecast_origin DATE NOT NULL,
+  horizon INT64 NOT NULL,
+  baseline_name STRING NOT NULL,
+  segment_key_json STRING NOT NULL,
+  eligible_count INT64 NOT NULL,
+  prediction_count INT64 NOT NULL,
+  wape FLOAT64,
+  mae FLOAT64,
+  bias FLOAT64,
+  prediction_completeness FLOAT64,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY forecast_origin
+CLUSTER BY backtest_contract_name, horizon, baseline_name, backtest_run_id;
+
 -- SHAP feature attributions for tree-based Vertex predictions (xgboost, random_forest);
 -- one row per prediction_id in ml_model_predictions when explain.enabled is set.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_explain` (
@@ -165,3 +247,104 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_explain` (
 )
 PARTITION BY run_date
 CLUSTER BY model_family, model_type, config_name;
+
+-- Forecast contracts registered by platform implementations.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_contracts` (
+  forecast_contract_name STRING NOT NULL,
+  forecast_contract_hash STRING NOT NULL,
+  registered_at TIMESTAMP NOT NULL,
+  target STRING NOT NULL,
+  target_unit STRING,
+  frequency STRING NOT NULL,
+  timezone STRING NOT NULL,
+  issue_schedule STRING,
+  dimensions ARRAY<STRING>,
+  horizons ARRAY<INT64>,
+  quantiles ARRAY<FLOAT64>,
+  training_window_days INT64,
+  known_future_features ARRAY<STRING>,
+  observed_features ARRAY<STRING>,
+  hierarchy ARRAY<STRING>,
+  reconciliation_policy STRING,
+  demand_policy STRING,
+  contract_json JSON,
+  is_active BOOL
+)
+PARTITION BY DATE(registered_at)
+CLUSTER BY forecast_contract_name, forecast_contract_hash;
+
+-- Forecast scoring / publication run audit.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_runs` (
+  forecast_run_id STRING NOT NULL,
+  forecast_contract_name STRING NOT NULL,
+  forecast_contract_hash STRING NOT NULL,
+  run_type STRING NOT NULL,
+  run_status STRING NOT NULL,
+  forecast_origin TIMESTAMP NOT NULL,
+  started_at TIMESTAMP NOT NULL,
+  finished_at TIMESTAMP,
+  data_cutoff TIMESTAMP,
+  source_cutoff_json JSON,
+  feature_availability_hash STRING,
+  feature_materialization_id STRING,
+  feature_version STRING,
+  code_sha STRING,
+  model_run_id STRING,
+  model_id STRING,
+  config_name STRING,
+  row_count INT64,
+  error_message STRING
+)
+PARTITION BY DATE(started_at)
+CLUSTER BY forecast_contract_name, run_type, run_status;
+
+-- Canonical forecast output rows. Initial predict jobs write draft statistical forecasts.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_outputs` (
+  forecast_output_id STRING NOT NULL,
+  source_prediction_id STRING,
+  forecast_run_id STRING NOT NULL,
+  forecast_contract_name STRING NOT NULL,
+  forecast_contract_hash STRING NOT NULL,
+  forecast_origin TIMESTAMP NOT NULL,
+  target_date DATE,
+  horizon INT64,
+  grain STRING,
+  entity_key_json STRING,
+  target STRING,
+  target_unit STRING,
+  prediction_p10 FLOAT64,
+  prediction_p50 FLOAT64,
+  prediction_p90 FLOAT64,
+  statistical_forecast FLOAT64,
+  planner_override FLOAT64,
+  approved_forecast FLOAT64,
+  published_forecast FLOAT64,
+  forecast_status STRING NOT NULL,
+  model_run_id STRING,
+  model_id STRING,
+  config_name STRING,
+  model_family STRING,
+  model_type STRING,
+  feature_version STRING,
+  code_sha STRING,
+  data_cutoff TIMESTAMP,
+  model_artifact_uri STRING,
+  created_at TIMESTAMP NOT NULL
+)
+PARTITION BY DATE(forecast_origin)
+CLUSTER BY forecast_contract_name, forecast_status, config_name;
+
+-- Forecast status transition history.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_status_history` (
+  status_event_id STRING NOT NULL,
+  forecast_output_id STRING,
+  forecast_run_id STRING NOT NULL,
+  previous_status STRING,
+  new_status STRING NOT NULL,
+  changed_at TIMESTAMP NOT NULL,
+  changed_by STRING,
+  reason_code STRING,
+  comment STRING
+)
+PARTITION BY DATE(changed_at)
+CLUSTER BY forecast_run_id, new_status;

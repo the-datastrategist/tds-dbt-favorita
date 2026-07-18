@@ -30,9 +30,9 @@ endif
 	vertex-train-docker vertex-predict-docker vertex-optimize-docker \
 	vertex-submit-train vertex-submit-predict vertex-submit-optimize \
 	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
-	dbt-vertex vertex-bq-ddl vertex-validate-config vertex-validate-configs \
-	vertex-backfill prefect-flow-vertex-backfill \
-	model-train model-predict model-optimize docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
+	dbt-vertex dbt-backtest vertex-bq-ddl vertex-validate-config vertex-validate-configs \
+	vertex-backfill vertex-backtest-plan vertex-backtest vertex-backtest-persist prefect-flow-vertex-backfill \
+	docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -45,8 +45,8 @@ install: docker-build ## Build Docker image (installs Python deps from requireme
 requirements-lock: ## Regenerate requirements.txt and requirements-dev.txt (requires Docker)
 	docker run --rm -v $(CURDIR):/work -w /work python:3.11-slim bash -c '\
 		pip install -q pip-tools && \
-		pip-compile requirements.in -o requirements.txt --strip-extras && \
-		pip-compile requirements-dev.in -o requirements-dev.txt --strip-extras'
+		pip-compile --upgrade requirements.in -o requirements.txt --strip-extras && \
+		pip-compile --upgrade requirements-dev.in -o requirements-dev.txt --strip-extras'
 
 # --- CODE QUALITY COMMANDS ---
 
@@ -88,8 +88,6 @@ docker-bash: ## Start interactive bash shell in Docker
 
 ARTIFACT_REGISTRY_REPO ?= vertex
 ARTIFACT_REGISTRY_REGION ?= $(or $(VERTEX_AI_REGION),$(GOOGLE_REGION),us-central1)
-VERTEX_TRAINING_IMAGE_URI = $(ARTIFACT_REGISTRY_REGION)-docker.pkg.dev/$(GOOGLE_PROJECT_ID)/$(ARTIFACT_REGISTRY_REPO)/$(DOCKER_IMAGE_NAME):$(DOCKER_TAG)
-
 vertex-gcp-check: ## Verify Vertex env vars visible inside ml-pipeline container
 	@$(DOCKER_RUN) python -c "\
 import os; \
@@ -102,8 +100,8 @@ print('VERTEX_AI_PIPELINE_ROOT=', os.getenv('VERTEX_AI_PIPELINE_ROOT')); \
 exit(1 if missing else 0)" \
 	|| (echo "" && echo "Missing Vertex env in container. Set in .env and recreate: docker compose run ..." && exit 1)
 
-vertex-docker-push: docker-build ## Tag and push tds-favorita image to Artifact Registry (see scripts/push_vertex_training_image.sh)
-	bash scripts/push_vertex_training_image.sh
+vertex-docker-push: ## Build and push a Git-SHA-tagged production image; print its immutable digest
+	DOCKER_TAG="$(shell git rev-parse --verify HEAD)" bash scripts/push_vertex_training_image.sh
 
 vertex-gcp-setup: ## One-time: enable APIs + create Artifact Registry repo (requires gcloud admin login)
 	bash scripts/setup_vertex_artifact_registry.sh
@@ -162,8 +160,8 @@ dbt-predict: ## Run BQML predict/evaluate/explain models (tag:predict)
 dbt-build: ## Run + test (+ seed/snapshot) in DAG order, excluding BQML (tag:bqml)
 	docker compose run --rm ml-pipeline dbt build --project-dir dbt --target $(DBT_TARGET) --exclude tag:bqml $(ARGS)
 
-dbt-test: ## Run data tests (all, or --select via ARGS)
-	docker compose run --rm ml-pipeline dbt test --project-dir dbt --target $(DBT_TARGET) $(ARGS)
+dbt-test: ## Run data tests, excluding BQML (tag:bqml); pass ARGS to override, e.g. ARGS='--select tag:bqml'
+	docker compose run --rm ml-pipeline dbt test --project-dir dbt --target $(DBT_TARGET) --exclude tag:bqml $(ARGS)
 
 dbt-compile: ## Compile models to SQL without executing (dbt/target/compiled)
 	docker compose run --rm ml-pipeline dbt compile --project-dir dbt --target $(DBT_TARGET) $(ARGS)
@@ -181,9 +179,12 @@ dbt-clean: ## Remove dbt/target and dbt/dbt_packages via `dbt clean`
 	docker compose run --rm ml-pipeline dbt clean --project-dir dbt
 
 DBT_DOCS_PORT ?= 8080
+# dbt-core's catalog parser requests table_owner, but dbt-bigquery does not
+# return that optional field. Suppress only agate's resulting harmless warning.
+DBT_DOCS_PYTHONWARNINGS ?= ignore::RuntimeWarning:agate.type_tester
 
 dbt-docs-generate: ## Generate static dbt Docs site (dbt/target/)
-	docker compose run --rm ml-pipeline dbt docs generate --project-dir dbt
+	docker compose run --rm -e PYTHONWARNINGS="$(DBT_DOCS_PYTHONWARNINGS)" ml-pipeline dbt docs generate --project-dir dbt
 
 dbt-docs-serve: ## Serve generated dbt Docs (http://127.0.0.1:8080; run dbt-docs-generate first)
 	@echo ""
@@ -274,7 +275,7 @@ vertex-train: ## Train all include_in_run configs, or one if VERTEX_CONFIG_NAME 
 	fi
 
 vertex-predict: ## Predict (VERTEX_MODE=docker|vertex; VERTEX_CONFIG, VERTEX_STEP=predict)
-	@$(MAKE) vertex-run VERTEX_CONFIG_NAME=$(or $(VERTEX_CONFIG),$(VERTEX_CONFIG_DEFAULT)) VERTEX_STEP=predict VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC)
+	@$(MAKE) vertex-run VERTEX_CONFIG_NAME=$(or $(VERTEX_CONFIG_NAME),$(VERTEX_CONFIG),$(VERTEX_CONFIG_DEFAULT)) VERTEX_STEP=predict VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC)
 
 vertex-optimize: ## Hyperparameter search (VERTEX_CONFIG; UPDATE_CONFIG=1 writes model_config.yaml)
 	@$(MAKE) vertex-run VERTEX_CONFIG_NAME=$(or $(VERTEX_CONFIG),$(VERTEX_CONFIG_DEFAULT)) VERTEX_STEP=optimize VERTEX_MODE=$(VERTEX_MODE) SYNC=$(SYNC) UPDATE_CONFIG=$(UPDATE_CONFIG)
@@ -291,7 +292,7 @@ vertex-train-docker: ## Train in Docker (all include_in_run when VERTEX_CONFIG u
 	fi
 
 vertex-predict-docker: ## Predict in Docker
-	@$(MAKE) vertex-run-docker VERTEX_CONFIG_NAME=$(or $(VERTEX_CONFIG),$(VERTEX_CONFIG_DEFAULT)) VERTEX_STEP=predict
+	@$(MAKE) vertex-run-docker VERTEX_CONFIG_NAME=$(or $(VERTEX_CONFIG_NAME),$(VERTEX_CONFIG),$(VERTEX_CONFIG_DEFAULT)) VERTEX_STEP=predict
 
 vertex-optimize-docker: ## Optimize in Docker
 	@$(MAKE) vertex-run-docker VERTEX_CONFIG_NAME=$(or $(VERTEX_CONFIG),$(VERTEX_CONFIG_DEFAULT)) VERTEX_STEP=optimize
@@ -345,8 +346,11 @@ vertex-pipeline-train-only: ## Pipeline without optimize/predict steps
 
 # --- dbt + BigQuery ops ---
 
-dbt-vertex: ## Build staging views over Vertex output tables
-	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:vertex $(ARGS)
+dbt-vertex: vertex-bq-ddl ## Ensure Vertex tables exist, then build Vertex-only staging and monitoring models
+	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:vertex --exclude tag:bqml tag:backtest $(ARGS)
+
+dbt-backtest: vertex-bq-ddl ## Build and test backtest staging, leaderboard, and champion models
+	docker compose run --rm ml-pipeline dbt build --project-dir dbt --target $(DBT_TARGET) --select tag:backtest $(ARGS)
 
 vertex-bq-ddl: ## Create BigQuery tables for Vertex ML outputs (once per environment)
 	docker compose run --rm ml-pipeline python scripts/apply_vertex_bq_ddl.py
@@ -361,6 +365,30 @@ print('OK')"
 
 vertex-validate-configs: ## Validate all model configs in model_config.yaml
 	$(DOCKER_RUN) python -m $(VERTEX_DIR).config.validate_all
+
+VERTEX_BACKTEST_CONTRACT ?= $(VERTEX_DIR)/config/backtest_contract.yaml
+VERTEX_BACKTEST_INPUT ?=
+VERTEX_BACKTEST_INPUT_MODE ?= bigquery
+VERTEX_BACKTEST_PROJECT ?=
+VERTEX_BACKTEST_PERSIST ?= false
+VERTEX_BACKTEST_INPUT_FLAG = $(if $(filter csv,$(VERTEX_BACKTEST_INPUT_MODE)),--input-csv $(VERTEX_BACKTEST_INPUT),--input-bigquery)
+VERTEX_BACKTEST_PERSIST_FLAG = $(if $(filter true 1 yes,$(VERTEX_BACKTEST_PERSIST)),--persist,)
+
+vertex-backtest-plan: ## Validate a backtest contract and print its rolling-origin plan
+	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.backtest \
+		--contract-path $(VERTEX_BACKTEST_CONTRACT) \
+		--dry-run
+
+vertex-backtest: ## Score model + baselines; set VERTEX_BACKTEST_PERSIST=true to persist
+	@if [ "$(VERTEX_BACKTEST_INPUT_MODE)" = "csv" ]; then test -n "$(VERTEX_BACKTEST_INPUT)" || (echo "Set VERTEX_BACKTEST_INPUT to a CSV path" && exit 1); fi
+	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.backtest \
+		--contract-path $(VERTEX_BACKTEST_CONTRACT) \
+		$(VERTEX_BACKTEST_INPUT_FLAG) \
+		$(if $(VERTEX_BACKTEST_PROJECT),--project-id $(VERTEX_BACKTEST_PROJECT),) \
+		$(VERTEX_BACKTEST_PERSIST_FLAG)
+
+vertex-backtest-persist: ## Score and idempotently persist model + baseline backtest records
+	@$(MAKE) vertex-backtest VERTEX_BACKTEST_PERSIST=true
 
 # Walk-forward backfill: train + predict per anchor date (see vertex/jobs/backfill.py)
 VERTEX_BACKFILL_CONFIG ?= favorita_store_n1d_xgboost
@@ -398,12 +426,6 @@ train_days=$(if $(TRAIN_DAYS),$(TRAIN_DAYS),None), \
 dry_run=$(if $(filter 1 true yes,$(DRY_RUN)),True,False), \
 max_iterations=$(if $(MAX_ITERATIONS),$(MAX_ITERATIONS),None), \
 stop_on_error=$(if $(filter 1 true yes,$(CONTINUE_ON_ERROR)),False,True))"
-
-# --- Backward-compatible aliases ---
-
-model-train: vertex-train-docker ## Alias: train in Docker
-model-predict: vertex-predict-docker ## Alias: predict in Docker
-model-optimize: vertex-optimize-docker ## Alias: optimize in Docker
 
 # --- MLflow / Prefect UIs (localhost only; override ports via MLFLOW_UI_PORT / PREFECT_SERVER_PORT) ---
 # Train jobs log gcs_model_catalog.json to MLflow; set MLFLOW_REGISTER_MODEL=true for Model Registry.

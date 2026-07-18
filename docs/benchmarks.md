@@ -124,6 +124,53 @@ ORDER BY grain, run_at DESC;
 
 `ml_model_leaderboard` unions both platforms on a shared column set — see [specs/model_leaderboard_mart.md](specs/model_leaderboard_mart.md). `ml_model_champion` (used above) is derived from this.
 
+### Rolling-origin model versus baselines
+
+Run and persist the configured rolling-origin benchmark, then validate the comparison marts:
+
+```bash
+make vertex-backtest-persist
+make dbt-backtest
+```
+
+Inspect candidates that were evaluated under the same target, grain, horizon, segment, and
+metric policy:
+
+```sql
+SELECT
+  target,
+  grain,
+  horizon,
+  segment_key_json,
+  config_name,
+  model_type,
+  primary_metric,
+  primary_metric_value,
+  prediction_completeness,
+  is_champion,
+  run_at
+FROM `{project}.{dataset}.ml_model_champion`
+WHERE JSON_VALUE(metric_policy, '$.evaluation_protocol') = 'rolling_origin'
+ORDER BY target, grain, horizon, segment_key_json, primary_metric_value;
+```
+
+Verify persistence counts and retry idempotency for a specific run:
+
+```sql
+SELECT
+  runs.backtest_run_id,
+  runs.status,
+  runs.prediction_count AS expected_predictions,
+  COUNT(DISTINCT predictions.prediction_id) AS persisted_predictions,
+  runs.metric_count AS expected_metrics,
+  COUNT(DISTINCT metrics.metric_id) AS persisted_metrics
+FROM `{project}.{dataset}.backtest_runs` AS runs
+LEFT JOIN `{project}.{dataset}.backtest_predictions` AS predictions USING (backtest_run_id)
+LEFT JOIN `{project}.{dataset}.backtest_metrics` AS metrics USING (backtest_run_id)
+GROUP BY 1, 2, 3, 5
+ORDER BY runs.backtest_run_id DESC;
+```
+
 ### BQML evaluation
 
 ```sql

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -18,6 +19,11 @@ from google.cloud import storage
 logger = logging.getLogger(__name__)
 
 VERTEX_SKLEARN_SERVING_IMAGE = "us-docker.pkg.dev/vertex-ai/prediction/sklearn-cpu.0-24:latest"
+
+
+def artifact_sha256(payload: bytes) -> str:
+    """Return the lowercase SHA-256 digest used by artifact manifests."""
+    return hashlib.sha256(payload).hexdigest()
 
 
 def parse_gcs_uri(gcs_uri: str) -> tuple[str, str]:
@@ -244,8 +250,14 @@ def resolve_latest_artifact(
     return str(artifact_uri), manifest
 
 
-def load_joblib_from_gcs(gcs_uri: str) -> Any:
-    """Load a joblib-serialized object from GCS."""
+def load_joblib_from_gcs(gcs_uri: str, *, expected_sha256: str | None) -> Any:
+    """Verify and load a trusted joblib object from GCS.
+
+    Joblib is pickle-based and can execute code while loading. Requiring the
+    training manifest's digest detects corruption and replacement when the
+    manifest itself remains trusted. Artifact-bucket write access must still be
+    restricted because joblib is not a safe format for untrusted producers.
+    """
     import io
 
     if not gcs_uri.startswith("gs://"):
@@ -253,6 +265,14 @@ def load_joblib_from_gcs(gcs_uri: str) -> Any:
     bucket_name, blob_path = parse_gcs_uri(gcs_uri)
     client = storage.Client()
     payload = client.bucket(bucket_name).blob(blob_path).download_as_bytes()
+    if not expected_sha256:
+        raise ValueError("Refusing to load joblib artifact without manifest joblib_sha256")
+    actual_sha256 = artifact_sha256(payload)
+    if actual_sha256 != expected_sha256.lower():
+        raise ValueError(
+            f"Joblib artifact checksum mismatch for {gcs_uri}: "
+            f"expected {expected_sha256.lower()}, got {actual_sha256}"
+        )
     return joblib.load(io.BytesIO(payload))
 
 
@@ -316,6 +336,7 @@ def save_joblib_artifacts(
         manifest.update(extra_manifest)
 
     manifest["joblib_gcs_uri"] = joblib_gcs_uri
+    manifest["joblib_sha256"] = artifact_sha256(joblib_bytes)
     manifest_blob = f"{prefix}/manifest.json"
     manifest_gcs_uri = upload_manifest(bucket, manifest_blob, manifest)
 
@@ -413,6 +434,8 @@ def save_xgboost_sklearn_artifacts(
         parameters=parameters,
         gcs_prefix=prefix,
     )
+    manifest["model_json_sha256"] = artifact_sha256(json_bytes)
+    manifest["joblib_sha256"] = artifact_sha256(joblib_bytes)
     manifest_blob = f"{prefix}/manifest.json"
     manifest_gcs_uri = upload_manifest(bucket, manifest_blob, manifest)
 

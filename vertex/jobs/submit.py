@@ -20,7 +20,12 @@ from vertex.config.load_config import (
     load_model_config,
     validate_config_for_step,
 )
-from vertex.jobs.gcp import resolve_gcp_settings, standard_labels, worker_pool_spec
+from vertex.jobs.gcp import (
+    resolve_gcp_settings,
+    standard_labels,
+    validate_immutable_image_uri,
+    worker_pool_spec,
+)
 from vertex.utils.tracking import start_job_run
 
 logger = logging.getLogger(__name__)
@@ -50,6 +55,7 @@ def submit_job(
     validate_config_for_step(config)
 
     settings = resolve_gcp_settings(config, image_uri=image_uri)
+    validate_immutable_image_uri(settings.training_image)
     spec = get_job_spec(config)
     labels = standard_labels(config=config, step=spec["step"])
 

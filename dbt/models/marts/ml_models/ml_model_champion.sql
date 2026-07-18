@@ -1,44 +1,38 @@
-{#
-  Snapshot of the current champion config per grain: the best-performing config (by
-  leaderboard_primary_metric_by_grain) among each config's own latest run.
+{# Current champion inside each semantically comparable forecast partition. #}
 
-  Materialized as a table, so only the current champion is visible here — see
-  docs/specs/model_leaderboard_mart.md "Open questions" for the case for promoting this to a
-  dbt snapshot if "when did the champion change" becomes a client deliverable.
-#}
+{{ config(materialized='table', tags=['bqml', 'vertex', 'backtest']) }}
 
-{%- set primary_metric_by_grain = var('leaderboard_primary_metric_by_grain', {'store-day': 'wape', 'company-day': 'mae'}) -%}
-
-{{ config(
-    materialized='table',
-    tags=['bqml', 'vertex'],
-) }}
-
-with latest_run_per_config as (
+with latest_run_per_candidate as (
     select
         *,
         row_number() over (
-            partition by config_name
-            order by run_at desc
+            partition by
+                target, grain, horizon, segment_key_json, metric_policy,
+                platform, config_name
+            order by run_at desc, model_run_id desc
         ) = 1 as is_latest_run
     from {{ ref('ml_model_leaderboard') }}
+),
+
+ranked as (
+    select
+        *,
+        case primary_metric
+            when 'wape' then wape
+            when 'mae' then mae
+        end as primary_metric_value
+    from latest_run_per_candidate
+    where is_latest_run
 ),
 
 champion as (
     select
         *,
         row_number() over (
-            partition by grain
-            order by
-                case grain
-                {%- for grain, metric in primary_metric_by_grain.items() %}
-                    when '{{ grain }}' then {{ metric }}
-                {%- endfor %}
-                    else mae
-                end asc
+            partition by target, grain, horizon, segment_key_json, metric_policy
+            order by primary_metric_value asc nulls last, platform, config_name
         ) = 1 as is_champion
-    from latest_run_per_config
-    where is_latest_run
+    from ranked
 )
 
 select
@@ -47,11 +41,20 @@ select
     model_run_id,
     model_family,
     model_type,
+    target,
     grain,
+    horizon,
+    segment_key_json,
+    primary_metric,
+    metric_policy,
+    comparable_partition_key,
     run_at,
     mae,
     rmse,
     r2,
     wape,
+    bias,
+    prediction_completeness,
+    primary_metric_value,
     is_champion
 from champion

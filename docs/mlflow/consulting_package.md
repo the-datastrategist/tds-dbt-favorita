@@ -1,6 +1,6 @@
 {% docs mlflow_consulting_package %}
 
-# MLflow consulting package — Favorita forecasting
+# MLflow consulting package — GCP demand forecasting platform
 
 **MLflow's role** in this engagement: provide **portable experiment tracking** and optional **Model Registry catalog entries** while **GCS remains the canonical store** for model binaries. Every Vertex train, predict, and optimize job logs params, metrics, and tags.
 
@@ -85,11 +85,11 @@ Registered MLflow models are **lightweight pointers** (kilobytes), not duplicate
 defaults:
   mlflow:
     enabled: true
-    experiment_name: favorita-vertex
+    experiment_name: demand-forecasting-vertex
     vertex_experiments: true
     catalog_artifacts: true
     register_model: false
-    registered_model_prefix: favorita
+    registered_model_prefix: demand_forecast
 ```
 
 Enable Model Registry: `register_model: true` or `MLFLOW_REGISTER_MODEL=true`.
@@ -157,7 +157,7 @@ Docker bind-mounts `./mlruns` at `/app/mlruns` for local UI.
 
 ## Related documents
 
-- [vertex/README.md — Experiment tracking](../../../vertex/README.md#experiment-tracking)
+- [vertex/README.md — Experiment tracking](../../vertex/README.md#experiment-tracking)
 - [Benchmarks](../benchmarks.md)
 - [Vertex consulting package](../vertex/consulting_package.md)
 - Other products: [dbt](../dbt/consulting_package.md) · [Prefect](../prefect/consulting_package.md)

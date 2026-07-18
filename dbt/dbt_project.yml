@@ -55,7 +55,10 @@ models:
       +materialized: table
       ml_models:
         +materialized: view
-        +tags: [bqml]
+        # No blanket tag here: bqml/vertex-only models (e.g. ml_prediction_accuracy_rolling,
+        # int_vertex_prediction_accuracy_daily) must NOT inherit `bqml`, or `--exclude tag:bqml`
+        # (used by dbt-run/dbt-build/dbt-test) would skip building/testing them too. Each model
+        # under ml_models/ sets its own tags in its config() block instead.
 
 vars:
   project_id: "{{ env_var('GOOGLE_PROJECT_ID') }}"

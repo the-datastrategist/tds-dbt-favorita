@@ -1,6 +1,8 @@
-# tds-favorita
+# GCP Demand Forecasting Platform
 
-Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuery ML) and Google Vertex AI.
+A production-style GCP demand forecasting platform built around dbt, BigQuery ML, Vertex AI, MLflow, Prefect, and Terraform.
+
+The platform is intentionally **GCP-first**. It provides reusable infrastructure, orchestration, model execution, experiment tracking, evaluation, metadata, and documentation patterns. Each project supplies its own dbt models for the business-specific source data, grains, features, and demand semantics.
 
 **Consulting package** — reference architecture, accelerators, and delivery artifacts for client engagements: **[docs/consulting_package.md](docs/consulting_package.md)** (rendered in hosted dbt Docs via `make dbt-ui`).
 
@@ -19,6 +21,22 @@ Machine learning pipeline for Favorita sales forecasting using dbt (with BigQuer
 - **dbt Docs & lineage**: Project overview ([`docs/overview.md`](docs/overview.md)), exposures for ML and operational consumers (`dbt/models/exposures.yml`)
 - **Code Quality**: Black, flake8, and mypy for code quality
 - **Consulting package**: Architecture diagrams, accelerators inventory, case study, benchmarks, rollout playbook, and IaC guidance ([docs/consulting_package.md](docs/consulting_package.md))
+
+## Platform scope
+
+This repository is meant to be reused across demand forecasting projects that run on Google Cloud. Reuse comes from stable contracts and operating patterns, not from assuming every project has the same raw data model.
+
+| Platform-owned | Project-owned |
+|----------------|---------------|
+| GCP deployment pattern: BigQuery, GCS, Vertex AI, Artifact Registry, Terraform | Raw source ingestion and business-specific source models |
+| dbt conventions for staging, features, marts, tests, docs, and exposures | dbt models that encode the client's products, locations, calendar, prices, promotions, inventory, and target definition |
+| Vertex model registry, train / predict / optimize entrypoints, model metadata, and artifacts | Forecast contracts, feature sets, grains, horizons, hierarchy, and model configuration for the use case |
+| MLflow / Vertex experiment tracking and BigQuery audit tables | Business metric choices, promotion gates, and planner review policy |
+| Prefect orchestration and production scheduling patterns | Deployment cadence and downstream consumption requirements |
+
+The dbt layer is therefore a **canonical adapter layer**: each implementation maps its raw operational data into the forecast-ready models and contracts the platform expects. That adapter work is intentional and project-specific because demand forecasting features vary by industry, planning process, and available covariates.
+
+Formal third-party plugin or connector interfaces are out of scope for now. New projects should adapt the dbt layer and configuration directly, using the specs in [docs/specs](docs/specs/README.md) as implementation guides.
 
 ## Consulting package
 
@@ -87,15 +105,15 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  Kaggle["Kaggle .csv.7z"] --> GCSRaw[("GCS raw bucket")]
-  GCSRaw --> BQRaw[("BigQuery raw_favorita")]
+  Source["Operational source data"] --> GCSRaw[("GCS raw bucket")]
+  GCSRaw --> BQRaw[("BigQuery raw dataset")]
   BQRaw --> Stg["staging models"]
   Stg --> Int["int_sales_* features"]
   Int --> BQML["BQML train / predict"]
   Int --> VTrain["Vertex train / optimize"]
   VTrain --> VPred["Vertex predict"]
   VTrain --> GCSModel[("GCS model artifacts")]
-  VTrain --> BQMeta[("favorita_model_* tables")]
+  VTrain --> BQMeta[("forecast / model metadata tables")]
   VPred --> BQMeta
   BQMeta --> StgVertex["stg_vertex_*"]
   BQML --> BI["BI / dashboards"]
@@ -146,7 +164,7 @@ More detail (dual ML path, operational sequence, security/environments, CI/CD): 
 
 - Docker and Docker Compose
 - Google Cloud Platform account with:
-  - BigQuery dataset (`raw_favorita` for raw tables)
+  - BigQuery raw and analytics datasets
   - Vertex AI API enabled
   - Service account with appropriate permissions
   - GCS buckets: raw competition data (`.csv.7z`) and, for Vertex, model artifacts / staging (see `env.example`)
@@ -179,7 +197,7 @@ More detail (dual ML path, operational sequence, security/environments, CI/CD): 
    The repo is bind-mounted at `/app`, so keys must live under `credentials/` — do not use an empty placeholder `service-account-key.json` unless that file contains valid JSON.
 
 4. **Ensure raw data is in GCS**
-   Place Favorita competition `.csv.7z` files in the bucket/prefix from `GCS_RAW_DATA_BUCKET` (see `env.example`). Download from the [Favorita competition](https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting) if needed.
+   Place project source files in the bucket/prefix from `GCS_RAW_DATA_BUCKET` (see `env.example`). The current sample loader expects the public demo CSV archive shape; production implementations should replace or extend the loader and dbt sources for their own operational data.
 
 5. **Build the Docker image**
    ```bash
@@ -190,7 +208,7 @@ More detail (dual ML path, operational sequence, security/environments, CI/CD): 
 
 ## Usage
 
-Pipeline commands (dbt, data load, and the default Vertex train/predict targets) run in Docker via `make`. Pass extra CLI flags with `ARGS`, for example `make load-favorita-bigquery ARGS="--dry-run"`.
+Pipeline commands (dbt, data load, and the default Vertex train/predict targets) run in Docker via `make`. Pass extra CLI flags with `ARGS`, for example `make load-favorita-bigquery ARGS="--dry-run"` for the current demo loader.
 
 ### Run from Docker (recommended)
 
@@ -221,6 +239,8 @@ For Vertex-specific setup, configs, and GCP submit: **[vertex/README.md](vertex/
 
 For Prefect (scheduled / manual dbt, Vertex training, and ML pipelines): **[orchestration/README.md](orchestration/README.md)**.
 
+For an intentional reset or recovery that preserves raw data and reconstructs the derived dataset, follow **[docs/clean_rebuild.md](docs/clean_rebuild.md)**. This is an exceptional procedure, not routine maintenance.
+
 Interactive shell inside the same image:
 
 ```bash
@@ -236,7 +256,7 @@ make help
 
 ### Data ingestion
 
-Load [Favorita competition](https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting) `.csv.7z` archives from GCS into BigQuery `raw_favorita` (tables used by dbt sources):
+The checked-in loader demonstrates the GCS-to-BigQuery ingestion pattern for a public demo dataset. For a production project, replace the raw loader and dbt source definitions with source-specific ingestion that lands demand, product, location, calendar, price, promotion, inventory, and other relevant operational data in BigQuery.
 
 ```bash
 # Uses GCS_RAW_DATA_BUCKET, GOOGLE_PROJECT_ID, and BQ_RAW_DATASET from .env
@@ -252,7 +272,7 @@ make load-favorita-bigquery ARGS="--table raw_favorita_train"
 make load-favorita-bigquery ARGS="--gcs-location gs://favorita-vertex-ai/source_data"
 ```
 
-The service account needs read access to the GCS bucket and permission to load data into `tds-favorita.raw_favorita` (or your configured project/dataset).
+The service account needs read access to the GCS bucket and permission to load data into the configured raw BigQuery dataset.
 
 ### dbt commands (Docker)
 
@@ -283,7 +303,7 @@ Narrative docs and exposures are configured in the dbt project (`docs-paths` in 
 | [`docs/consulting_package.md`](docs/consulting_package.md) | Consulting package hub (architecture, accelerators, delivery artifacts) |
 | [`dbt/models/exposures.yml`](dbt/models/exposures.yml) | Lineage **exposures** linking models to BQML forecasts, Vertex training, calendar/holiday context, and store master data |
 
-Defined exposures include `favorita_company_forecast`, `favorita_store_product_features`, `favorita_vertex_training`, `favorita_operational_calendar`, and `favorita_store_master`. In the docs site, open the lineage graph and select an exposure to highlight upstream models.
+Defined exposures document how transformed tables feed ML and operational use cases. In the docs site, open the lineage graph and select an exposure to highlight upstream models.
 
 Generate and browse docs locally (no `dbt run` required):
 
@@ -341,8 +361,6 @@ make vertex-run-docker VERTEX_CONFIG_NAME=favorita_store_n1d_xgboost
 make vertex-submit VERTEX_CONFIG_NAME=favorita_store_n1d_xgboost VERTEX_STEP=predict
 make help    # lists all vertex-* targets
 ```
-
-Aliases: `make model-train` → `vertex-train-docker`, etc.
 
 Full detail: **[vertex/README.md](vertex/README.md)**.
 
@@ -447,7 +465,7 @@ make requirements-lock
 
 ### Option 1: BigQuery ML (SQL-based workflows)
 
-1. **Load raw data to BigQuery** (from GCS `.csv.7z` archives)
+1. **Load raw data to BigQuery** (from the configured GCS source)
    ```bash
    make load-favorita-bigquery
    ```
@@ -496,12 +514,13 @@ Key environment variables (see `env.example` for full list):
 - `GOOGLE_PROJECT_ID`: Your GCP project ID
 - `GOOGLE_APPLICATION_CREDENTIALS`: Service account key on the host (e.g. `./credentials/your-key.json`)
 - `GOOGLE_APPLICATION_CREDENTIALS_CONTAINER`: Same file inside Docker (e.g. `/app/credentials/your-key.json`); required for `make vertex-*` and dbt in the container
-- `GCS_RAW_DATA_BUCKET`: GCS source for `.csv.7z` archives (`make load-favorita-bigquery`)
-- `BQ_RAW_DATASET`: BigQuery dataset for raw tables (default: `raw_favorita`)
+- `GCS_RAW_DATA_BUCKET`: GCS source for raw files (`make load-favorita-bigquery` for the current demo loader)
+- `BQ_RAW_DATASET`: BigQuery dataset for raw tables
 - `DBT_DATASET`: BigQuery dataset name for dbt models
 - `VERTEX_AI_STAGING_BUCKET`: GCS prefix for Vertex Custom Job staging (required for `VERTEX_MODE=vertex`)
 - `VERTEX_AI_MODEL_BUCKET`: GCS bucket for model artifacts (optional; paths also set in `model_config.yaml`)
-- `VERTEX_TRAINING_IMAGE`: Container image URI for Custom Jobs (e.g. Artifact Registry `.../tds-favorita:latest`)
+- `VERTEX_TRAINING_IMAGE`: Digest-pinned container image URI for Custom Jobs (Artifact Registry
+  `.../tds-favorita@sha256:<digest>`; generated by `make vertex-docker-push`)
 - `VERTEX_MODE` / `SYNC`: Make variables for Docker vs Vertex submit vs wait (see `make help`)
 - `MLFLOW_TRACKING_URI`: Where Vertex jobs log experiments (default `file:./mlruns`; GCS optional)
 - `MLFLOW_REGISTER_MODEL`: When `true`, register GCS catalog pointers in MLflow Model Registry on train
@@ -526,28 +545,19 @@ Tests are located in `vertex/tests/` and `orchestration/tests/`. Run with:
 make test
 ```
 
-## What's Missing for End-to-End Predictions
+## Platform roadmap
 
-To run end-to-end predictions from a local Dockerized environment, you'll need:
+The current platform is strongest as a production-style GCP demand forecasting foundation: dbt feature engineering, BigQuery ML and Vertex training paths, experiment tracking, orchestration, CI, IaC, and documented implementation specs. The next layer is the contracts work that makes downstream reuse clean across projects:
 
-1. ✅ **Docker setup** - Complete
-2. ✅ **dbt configuration** - Complete
-3. ✅ **Vertex AI setup** - Config-driven jobs, Docker + Custom Job submit (see [vertex/README.md](vertex/README.md))
-4. ✅ **Model training scripts** - XGBoost train / predict / optimize
-5. ✅ **Prediction scripts** - Unified BigQuery prediction schema
-6. ✅ **Prefect orchestration** - Manual and scheduled dbt, Vertex train, and ML pipeline (optimize → train → predict) deployments ([orchestration/README.md](orchestration/README.md))
-   - Or use `make` commands for simple workflows
-7. ✅ **Experiment tracking** - MLflow + Vertex AI Experiments; GCS-canonical artifacts with MLflow catalog on train (`gcs_model_catalog.json`; optional Model Registry via `MLFLOW_REGISTER_MODEL`)
-   - ⚠️ Cloud Logging integration for Vertex AI (optional)
-8. ⚠️ **Model serving** - For production:
-   - Vertex AI Model Registry for model versioning
-   - Vertex AI Endpoints for online predictions
-   - Or BigQuery ML for batch predictions
-9. ✅ **CI/CD** - GitHub Actions for lint, pytest, and dbt parse/compile/docs (see [Continuous integration](#continuous-integration))
-10. ✅ **dbt Docs content** - Project overview and exposures (see [dbt documentation and lineage](#dbt-documentation-and-lineage))
-11. ✅ **Hosted dbt Docs** - GitHub Pages via [docs.yml](.github/workflows/docs.yml) (enable Pages → GitHub Actions in repo settings)
-12. ⚠️ **Warehouse CI** - Optional: add a protected workflow with GCP secrets for `dbt build` / `dbt test` on a dev dataset
-13. ⚠️ **Automated retraining** - Scheduled jobs for model refresh (Composer, Cloud Run, or dbt Cloud)
+- forecast contract and canonical output schema
+- rolling-origin backtesting and comparable baseline/champion semantics
+- point-in-time feature availability rules
+- multi-horizon and probabilistic forecast output
+- demand data model, eligibility, and hierarchy/reconciliation policies
+- forecast operations: override, approval, publish, rollback
+- monitoring, SLOs, and integration contracts
+
+See [docs/specs/README.md](docs/specs/README.md) for the spec-driven roadmap.
 
 ## License
 

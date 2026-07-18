@@ -2,7 +2,7 @@
 
 # Client rollout playbook
 
-Four-week template for deploying the Favorita forecasting **accelerator pattern** on a client GCP organization. Adjust duration based on data readiness and enterprise gates (IAM, VPC-SC, InfoSec review).
+Four-week template for deploying the GCP demand forecasting platform in a client GCP organization. Adjust duration based on data readiness, dbt feature-model complexity, and enterprise gates (IAM, VPC-SC, InfoSec review).
 
 ---
 
@@ -60,14 +60,14 @@ gantt
 
 ### Goals
 
-- Land raw data (or Favorita demo data for POC)
+- Land raw data or approved demo data for POC
 - Run dbt staging + intermediate through first successful `dbt test`
 
 ### Activities
 
 | Day | Activity | Commands / artifacts |
 |-----|----------|---------------------|
-| 1–2 | Adapt load script or client ingest | `scripts/load_favorita_to_bigquery.py` or client ETL |
+| 1–2 | Adapt load script or client ingest | Project loader or client ETL |
 | 2–3 | Customize staging models if source differs | `dbt/models/staging/` |
 | 3–4 | Build / validate `int_sales_*` grains | `make dbt-run`, `make dbt-test` |
 | 4 | Apply Vertex output DDL | `make vertex-bq-ddl` |
@@ -75,7 +75,7 @@ gantt
 
 ### Exit criteria
 
-- [ ] `raw_favorita` (or client raw dataset) populated
+- [ ] Client raw dataset populated
 - [ ] `int_sales_store_daily` (or chosen grain) passes tests
 - [ ] Vertex BQ tables exist
 
@@ -103,7 +103,7 @@ gantt
 
 ### Exit criteria
 
-- [ ] Rows in `ml_model_metadata` and `ml_model_predictions`
+- [ ] Rows in `ml_model_metadata`, `ml_model_predictions`, and canonical forecast output tables
 - [ ] At least one BQML and one Vertex model with documented test metrics
 - [ ] Client agrees on champion candidate
 

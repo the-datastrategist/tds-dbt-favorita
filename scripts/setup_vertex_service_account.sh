@@ -57,8 +57,6 @@ fi
 echo "=== Grant least-privilege roles (vertex/ops/README.md) ==="
 for ROLE in \
   roles/aiplatform.user \
-  roles/storage.objectAdmin \
-  roles/bigquery.dataEditor \
   roles/bigquery.jobUser; do
   gcloud projects add-iam-policy-binding "${PROJECT}" \
     --member="serviceAccount:${SA_EMAIL}" \
@@ -67,6 +65,9 @@ for ROLE in \
     --quiet >/dev/null
   echo "  granted ${ROLE}"
 done
+
+echo "Data-plane IAM is intentionally not granted at project scope."
+echo "Use terraform/modules/iam-vertex-sa to grant bucket- and dataset-scoped access."
 
 echo "=== Allow ${CALLER_ACCOUNT} to act as ${SA_EMAIL} ==="
 CALLER_MEMBER="serviceAccount:${CALLER_ACCOUNT}"

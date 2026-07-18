@@ -14,6 +14,7 @@ from typing import Any, Optional
 
 import pandas as pd
 
+from vertex.config.feature_availability import validate_model_features_from_config
 from vertex.config.load_config import (
     DEFAULT_CONFIG_PATH,
     explain_enabled,
@@ -27,6 +28,7 @@ from vertex.utils.data_loading import load_data_from_config
 from vertex.utils.data_utils import get_hash
 from vertex.utils.explain import build_explain_rows, compute_tree_shap_top_features
 from vertex.utils.features import prepare_feature_matrix
+from vertex.utils.forecast_outputs import write_forecast_outputs_if_configured
 from vertex.utils.ml_utils import sanitize_feature_columns
 from vertex.utils.predictions import build_standard_prediction_rows, new_predict_run_id
 
@@ -113,6 +115,11 @@ def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         date_column=date_column,
     )
     model_input = prepare_model_input(X)
+    validate_model_features_from_config(
+        config,
+        list(model_input.columns),
+        context=f"{config_name} prediction features",
+    )
     predictions = pd.Series(model.predict(model_input), index=X.index)
 
     run_at = dt.utcnow()
@@ -152,20 +159,10 @@ def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         actual_column=target_column if target_column in df.columns else None,
     )
 
-    load_to_bigquery(
-        data=prediction_rows,
-        table_id=prediction_table,
-        project_id=project_id,
-        if_exists="append",
-    )
-    logger.info(
-        "Wrote %s predictions to %s (predict_run_id=%s)",
-        len(prediction_rows),
-        prediction_table,
-        predict_run_id,
-    )
-
-    explain_count = 0
+    # Build explanations before any BigQuery writes. Explanation failures should
+    # not leave a predict run partially persisted and force a duplicate retry.
+    explain_table = None
+    explain_rows = None
     if explain_enabled(config):
         explain_table = outputs.get("explain_table")
         if not explain_table:
@@ -180,6 +177,33 @@ def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
             top_feature_attributions=top_feature_attributions,
             base_value=base_value,
         )
+
+    load_to_bigquery(
+        data=prediction_rows,
+        table_id=prediction_table,
+        project_id=project_id,
+        if_exists="append",
+    )
+    logger.info(
+        "Wrote %s predictions to %s (predict_run_id=%s)",
+        len(prediction_rows),
+        prediction_table,
+        predict_run_id,
+    )
+    forecast_output_count = write_forecast_outputs_if_configured(
+        config=config,
+        prediction_rows=prediction_rows,
+        project_id=project_id,
+    )
+    if forecast_output_count:
+        logger.info(
+            "Wrote %s canonical forecast outputs (predict_run_id=%s)",
+            forecast_output_count,
+            predict_run_id,
+        )
+
+    explain_count = 0
+    if explain_rows is not None and explain_table is not None:
         load_to_bigquery(
             data=explain_rows,
             table_id=explain_table,
@@ -199,6 +223,7 @@ def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         "model_id": model_id,
         "model_run_id": resolved_run_id,
         "prediction_count": len(prediction_rows),
+        "forecast_output_count": forecast_output_count,
         "explain_count": explain_count,
         "model_gcs_uri": model_gcs_uri,
     }

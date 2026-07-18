@@ -17,6 +17,7 @@ from typing import Any, Optional
 import pandas as pd
 from xgboost import XGBRegressor
 
+from vertex.config.feature_availability import validate_model_features_from_config
 from vertex.config.load_config import DEFAULT_CONFIG_PATH, get_job_spec, load_model_config
 from vertex.utils.artifacts import (
     VERTEX_SKLEARN_SERVING_IMAGE,
@@ -141,6 +142,11 @@ def run_train_xgboost(
         excluded_columns=excluded_columns,
         categorical_columns=categorical_columns,
         date_column=date_column,
+    )
+    validate_model_features_from_config(
+        config,
+        features,
+        context=f"{config_name} training features",
     )
     logger.info("Using %s features", len(features))
 

@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from vertex.config.load_config import (
-    get_model_type,
-    load_all_configs,
     load_model_config,
     load_raw_config,
 )
@@ -40,29 +38,12 @@ def resolve_pipeline_name(
     for pipeline_name, definition in pipelines.items():
         if definition.get("config") == name_or_config:
             return pipeline_name
-        legacy = definition.get("configs") or {}
-        if name_or_config in legacy.values():
-            return pipeline_name
     config_names = sorted(c for definition in pipelines.values() if (c := definition.get("config")))
     raise ValueError(
         f"Pipeline {name_or_config!r} not found. "
         f"Pipeline keys: {sorted(pipelines.keys())}. "
         f"Model config names: {config_names}"
     )
-
-
-def find_config_by_family_and_type(
-    model_family: str,
-    model_type: str,
-    config_path: str | Path | None = None,
-) -> Optional[str]:
-    """Return config name matching model_family and model_type."""
-    for config in load_all_configs(config_path):
-        if config.get("model_family") != model_family:
-            continue
-        if get_model_type(config) == model_type:
-            return config.get("name")
-    return None
 
 
 def resolve_pipeline_model_config(
@@ -74,28 +55,10 @@ def resolve_pipeline_model_config(
     pipelines = load_pipeline_definitions(config_path)
     definition = pipelines[pipeline_name]
 
-    explicit = definition.get("config")
-    if explicit:
-        return str(explicit)
-
-    # Legacy: configs.train or per-step map
-    legacy = definition.get("configs") or {}
-    if legacy.get("train"):
-        return str(legacy["train"])
-
-    model_family = definition["model_family"]
-    model_type = definition["model_type"]
-    name = find_config_by_family_and_type(
-        model_family,
-        model_type,
-        config_path=config_path,
-    )
-    if not name:
-        raise ValueError(
-            f"No model config for pipeline={pipeline_name!r} "
-            f"(family={model_family!r}, type={model_type!r})"
-        )
-    return name
+    model_config = definition.get("config")
+    if not model_config:
+        raise ValueError(f"Pipeline {pipeline_name!r} must define config")
+    return str(model_config)
 
 
 def resolve_pipeline_step_configs(
@@ -114,12 +77,7 @@ def resolve_pipeline_step_configs(
     steps = list(definition.get("steps") or ["optimize", "train", "predict"])
     model_config = resolve_pipeline_model_config(pipeline_name, config_path)
 
-    # Legacy explicit per-step config names (deprecated)
-    explicit = definition.get("configs") or {}
-    resolved: dict[str, str] = {}
-    for step in steps:
-        resolved[step] = explicit.get(step) or model_config
-    return resolved
+    return {step: model_config for step in steps}
 
 
 def load_pipeline_vertex_config(

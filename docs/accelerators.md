@@ -10,7 +10,7 @@ Accelerators are **pre-built components** in this repository that shorten client
 
 ```mermaid
 mindmap
-  root((tds-favorita accelerators))
+  root((GCP demand forecasting platform))
     dbt
       staging incremental models
       int_sales_* feature grains
@@ -49,8 +49,8 @@ mindmap
 
 | Asset | Path | Purpose |
 |-------|------|---------|
-| Staging layer | `dbt/models/staging/` | Incremental cleansed tables from `raw_favorita` |
-| Feature tables | `dbt/models/intermediate/int_sales_*.sql` | Partitioned ML features at four grains |
+| Staging layer | `dbt/models/staging/` | Project-specific cleansed source tables |
+| Feature tables | `dbt/models/intermediate/int_sales_*.sql` | Project-specific partitioned ML features at selected grains |
 | BQML marts | `dbt/models/marts/ml_models/` | Train, predict, evaluate, explain via macros |
 | Vertex staging | `dbt/models/staging/stg_vertex_*.sql` | Views over Vertex-written BQ tables |
 | Model leaderboard | `ml_model_leaderboard`, `ml_model_champion` | Unified BQML + Vertex metrics, ranked, champion-flagged per grain |
@@ -79,7 +79,7 @@ mindmap
 | Explainability | `vertex/utils/explain.py`, `stg_vertex_model_explain` | Per-prediction SHAP top-K feature attributions (xgboost, random_forest) |
 | Experiment tracking | `vertex/utils/experiment_tracking.py` | MLflow + Vertex Experiments |
 | MLflow catalog | `vertex/utils/mlflow_catalog.py` | GCS pointer artifacts |
-| BQ DDL | `vertex/ddl/vertex_bq_tables.sql` | Metadata, performance, predictions, job runs |
+| BQ DDL | `vertex/ddl/vertex_bq_tables.sql` | Metadata, performance, predictions, backtest records, job runs |
 | Ops runbook | `vertex/ops/README.md` | IAM, GCS layout, Scheduler, monitoring |
 | KFP compile | `vertex/pipelines/compile.py` | CI-validated pipeline JSON |
 
@@ -138,7 +138,7 @@ GCS remains **canonical** for model binaries; MLflow stores pointers, not duplic
 | `requirements.txt` / `requirements-dev.txt` | Locked pip deps via pip-tools |
 | `.github/workflows/ci.yml` | Lint, test, config validate, KFP compile, dbt parse |
 | `.github/workflows/docs.yml` | Hosted dbt Docs on GitHub Pages |
-| `scripts/load_favorita_to_bigquery.py` | GCS → raw BigQuery ingestion |
+| Raw-data loader scripts | GCS → raw BigQuery ingestion pattern; replace or extend per project |
 | `scripts/apply_vertex_bq_ddl.py` | Apply Vertex output DDL |
 | `terraform/` | Versioned GCP provisioning: APIs, IAM, BigQuery datasets, GCS buckets, Artifact Registry per environment |
 | `.github/workflows/terraform.yml` | `fmt`/`validate` on every PR touching `terraform/` |
@@ -149,13 +149,17 @@ GCS remains **canonical** for model binaries; MLflow stores pointers, not duplic
 
 | Lever | Where to change |
 |-------|-----------------|
-| Feature grain | Add / modify `int_sales_*`, point `train_sql_query` in YAML |
+| Feature grain | Add / modify project dbt feature models, point `train_sql_query` in YAML |
 | New model family | `vertex/models/<family>/` + registry + YAML configs |
 | BQML model | `dbt_project.yml` → `vars.model_configs` |
 | Schedule | `prefect.yaml` or Cloud Scheduler (prod) |
 | Cost tier | BQML-only vs Vertex pipelines; `machine_type`, `trial_count` |
 | Tracking store | `MLFLOW_TRACKING_URI=gs://...` |
 | Chargeback | `GCP_CLIENT_LABEL`, `vertex.labels` in YAML |
+
+## Reuse boundary
+
+The reusable accelerators are the GCP platform patterns, model execution framework, metadata tables, orchestration, tracking, testing conventions, and docs structure. The dbt source and feature models are expected to change by project. They form the canonical adapter from raw client data into forecast-ready tables; a formal plugin or connector framework is intentionally out of scope for now.
 
 ---
 

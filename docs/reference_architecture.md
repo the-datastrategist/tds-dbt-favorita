@@ -2,7 +2,9 @@
 
 # Reference architecture — GCP demand forecasting
 
-Modern retail and CPG forecasting on Google Cloud typically separates **feature engineering in the warehouse**, **model training** (warehouse-native or custom), **orchestration**, and **consumption** (BI, planning systems, or APIs). This project implements that pattern on BigQuery + Vertex AI.
+Modern demand forecasting on Google Cloud typically separates **feature engineering in the warehouse**, **model training** (warehouse-native or custom), **orchestration**, and **consumption** (BI, planning systems, or APIs). This project implements that pattern on BigQuery + Vertex AI.
+
+The architecture is intentionally GCP-specific. Portability across clouds is out of scope; portability across forecasting projects comes from contracts, dbt conventions, and configuration.
 
 ---
 
@@ -10,8 +12,8 @@ Modern retail and CPG forecasting on Google Cloud typically separates **feature 
 
 | Layer | GCP services | This repo |
 |-------|--------------|-----------|
-| **Ingestion** | GCS, BigQuery load jobs | `scripts/load_favorita_to_bigquery.py`, `raw_favorita` |
-| **Analytics engineering** | BigQuery, dbt | `dbt/models/staging`, `intermediate`, `marts` |
+| **Ingestion** | GCS, BigQuery load jobs | Source-specific loaders into a raw BigQuery dataset |
+| **Analytics engineering** | BigQuery, dbt | Project-owned staging, feature, eligibility, and mart models |
 | **ML — warehouse** | BigQuery ML | `dbt/models/marts/ml_models/bqml_model_*` |
 | **ML — custom** | Vertex Custom Jobs, PipelineJobs, GCS | `vertex/` + `model_config.yaml` |
 | **Orchestration** | Prefect OSS (local) → Cloud Scheduler / Workflows (prod) | `orchestration/`, `prefect.yaml` |
@@ -26,10 +28,10 @@ Modern retail and CPG forecasting on Google Cloud typically separates **feature 
 ```mermaid
 flowchart LR
   subgraph Ingest
-    Kaggle[Kaggle .csv.7z]
+    Source[Operational source data]
     GCS[(GCS raw bucket)]
-    BQRaw[(BigQuery raw_favorita)]
-    Kaggle --> GCS --> BQRaw
+    BQRaw[(BigQuery raw dataset)]
+    Source --> GCS --> BQRaw
   end
 
   subgraph dbt["dbt on BigQuery"]
@@ -46,7 +48,7 @@ flowchart LR
     Opt[optimize]
     Pred[predict]
     GCSModels[(GCS model artifacts)]
-    BQMeta[(favorita_model_* tables)]
+    BQMeta[(forecast / model metadata tables)]
     Int --> Train
     Int --> Opt --> Train --> Pred
     Train --> GCSModels
@@ -122,7 +124,7 @@ flowchart TB
     XGB[xgboost / random_forest]
     TS[arima / sarima]
     GCSArt[GCS artifacts]
-    Unified[ml_model_predictions]
+    Unified["ml_model_predictions / canonical forecast output"]
   end
 
   BQMLPath --> BQPred
@@ -140,18 +142,19 @@ flowchart TB
 
 ---
 
-## Feature grains
+## Project-specific dbt feature layer
 
-Forecasting granularity is a core architecture decision. This repo materializes four intermediate tables:
+Forecasting granularity is a core architecture decision. The platform expects each implementation to provide dbt models that express its planning grains, entity keys, target definition, and covariates.
 
-| Grain | Model | Primary consumers |
-|-------|-------|-------------------|
-| Company-day | `int_sales_daily` | BQML default, executive rollup |
-| Store-day | `int_sales_store_daily` | Vertex XGBoost / RF / ARIMA default |
-| Store-product-day | `int_sales_store_product_daily` | Item-level demand |
-| Store–product-family-day | `int_sales_store_product_family_daily` | Category planning |
+| Layer | Project responsibility |
+|-------|------------------------|
+| Raw sources | Land source data in BigQuery with reproducible ingestion |
+| Staging | Clean, type, deduplicate, and document source-aligned tables |
+| Features | Build point-in-time-correct training/scoring features at selected grains |
+| Eligibility | Define which entities/dates should be forecasted and why exclusions occur |
+| Marts | Expose forecast-ready inputs and downstream forecast outputs |
 
-All grains share staging foundations: date spine, Ecuador holidays (including `transferred`), oil prices, promotions, and store attributes.
+This is the canonical adapter layer: a new project adapts raw demand, product, location, calendar, price, promotion, inventory, and other operational sources into the feature and contract shape used by the platform. A formal plugin/connector framework is out of scope for now.
 
 ---
 

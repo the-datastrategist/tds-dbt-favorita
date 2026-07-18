@@ -9,19 +9,9 @@ from vertex.config.load_config import list_run_config_names
 
 def list_train_config_names(
     config_path: str | Path | None = None,
-    *,
-    include_legacy_aliases: bool = False,
 ) -> list[str]:
-    """
-    Return sorted train config names with include_in_run: true.
-
-    By default excludes legacy aliases such as train_xgboost.
-    """
-    return list_run_config_names(
-        config_path,
-        step="train",
-        include_legacy_aliases=include_legacy_aliases,
-    )
+    """Return sorted model config names with include_in_run: true."""
+    return list_run_config_names(config_path)
 
 
 def resolve_train_config_names(
@@ -29,16 +19,12 @@ def resolve_train_config_names(
     *,
     train_all: bool = False,
     config_path: str | Path | None = None,
-    include_legacy_aliases: bool = False,
 ) -> list[str]:
     """Resolve which train configs to run from flow parameters."""
     if train_all:
         if config_name:
             raise ValueError("Set either config_name or train_all=true, not both.")
-        return list_train_config_names(
-            config_path,
-            include_legacy_aliases=include_legacy_aliases,
-        )
+        return list_train_config_names(config_path)
 
     if config_name:
         return [config_name]

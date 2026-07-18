@@ -2,7 +2,7 @@
 
 # Engineering specs — roadmap items
 
-Working specs for the **longer-horizon roadmap items** already flagged (but not designed) elsewhere in this repo: [`docs/client_rollout.md`](../client_rollout.md#post-rollout-weeks-58-optional) "Post-rollout" table, [`docs/iac.md`](../iac.md#terraform-roadmap) "Terraform roadmap", and [`vertex/README.md`](../../vertex/README.md#adding-a-model-family) "Planned: prophet".
+Working specs for the **longer-horizon roadmap items** already flagged (but not designed) elsewhere in this repo: [`docs/client_rollout.md`](../client_rollout.md#post-rollout-weeks-58-optional) "Post-rollout" table, [`docs/iac.md`](../iac.md#terraform-roadmap) "Terraform roadmap", [`vertex/README.md`](../../vertex/README.md#adding-a-model-family) "Planned: prophet", and [`docs/demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) for the broader open-source demand forecasting platform roadmap.
 
 These are **internal implementation specs**, not client-facing collateral — contrast with the [consulting package](../consulting_package.md) (case study, benchmarks, rollout playbook), which documents what's *already shipped*. A spec here should graduate into an accelerator entry in [accelerators.md](../accelerators.md) once implemented.
 
@@ -26,13 +26,24 @@ These are **internal implementation specs**, not client-facing collateral — co
 | [Prediction accuracy monitoring](prediction_accuracy_monitoring.md) | Shipped | `client_rollout.md` → "Drift / accuracy monitoring" | dbt tests + mart that catch production accuracy degradation vs. training-time metrics |
 | [Terraform modules](terraform_modules.md) | Shipped | `iac.md` → "Terraform roadmap" | Codify the manual GCP setup scripts as reviewable, per-environment IaC |
 | [Workload Identity Federation](workload_identity_federation.md) | In progress | `iac.md` → security checklist "prefer WIF" | Remove long-lived SA key files from CI, local dev, and Vertex Custom Jobs |
-| [Prophet model family](prophet_model_family.md) | Shipped | `vertex/README.md` → "Planned: prophet" | Add `prophet` as a third time-series family via the existing registry pattern |
+| [Prophet model family](prophet_model_family.md) | Shipped | `vertex/README.md` → model families | Add `prophet` as a third time-series family via the existing registry pattern |
+| [Forecast contract and canonical output](forecast_contract_and_output.md) | Proposed | `demand_forecasting_platform_recommendations.md` → P0 forecast contract | Define the forecast problem, provenance, status lifecycle, and canonical forecast output tables |
+| [Rolling-origin backtesting and model lifecycle](backtesting_and_model_lifecycle.md) | Proposed | `demand_forecasting_platform_recommendations.md` → P0 backtesting/champion semantics | Add comparable rolling-origin evaluation, baselines, lifecycle states, and promotion gates |
+| [Point-in-time feature availability](point_in_time_feature_availability.md) | Proposed | `demand_forecasting_platform_recommendations.md` → P0 feature correctness | Register feature availability, prevent leakage, and record source cutoffs on forecast runs |
+| [Forecasting methods, horizons, cold start, and intermittent demand](forecasting_methods.md) | Proposed | `demand_forecasting_platform_recommendations.md` → P0/P1 methods | Make multi-horizon, probabilistic, cold-start, and intermittent-demand behavior explicit |
+| [Hierarchical reconciliation](hierarchical_reconciliation.md) | Proposed | `demand_forecasting_platform_recommendations.md` → P1 reconciliation | Configure hierarchies and guarantee coherent published forecasts across levels |
+| [Demand data model](demand_data_model.md) | Proposed | `demand_forecasting_platform_recommendations.md` → P1 demand data | Distinguish observed sales from demand and model inventory, eligibility, lifecycle, prices, and promotions |
+| [Forecast operations](forecast_operations.md) | Proposed | `demand_forecasting_platform_recommendations.md` → P1/P2 operations | Separate scoring/retraining/tuning and add override, approval, publication, revision, and rollback workflows |
+| [Monitoring, alerts, and SLOs](monitoring_and_slos.md) | Proposed | `demand_forecasting_platform_recommendations.md` → P1 monitoring | Define forecast freshness, completeness, accuracy, drift, calibration, pipeline, and cost monitoring |
+| [Integration contracts and forecast delivery](integration_contracts.md) | Proposed | `demand_forecasting_platform_recommendations.md` → P2 integrations | Provide stable warehouse, API, export, webhook, and publication contracts |
+| [Open-source product readiness](open_source_product_readiness.md) | Proposed | `demand_forecasting_platform_recommendations.md` → P3 open source | Add governance, first-run quickstart, roadmap, compatibility, extension, and modularization plans |
 
 ---
 
 ## Related documents
 
 - [Client rollout](../client_rollout.md) — where these items surface as "Backlog" / "Post-rollout"
+- [Demand forecasting platform recommendations](../demand_forecasting_platform_recommendations.md) — roadmap behind the new platform-level specs
 - [IaC and GCP operations](../iac.md) — current manual state each spec replaces
 - [Accelerators](../accelerators.md) — where shipped specs get catalogued
 

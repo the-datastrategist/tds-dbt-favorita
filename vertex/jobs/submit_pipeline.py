@@ -21,7 +21,7 @@ from vertex.config.pipelines import (
     resolve_pipeline_name,
     resolve_pipeline_step_configs,
 )
-from vertex.jobs.gcp import resolve_gcp_settings, standard_labels
+from vertex.jobs.gcp import resolve_gcp_settings, standard_labels, validate_immutable_image_uri
 from vertex.pipelines.compile import compile_favorita_pipeline
 
 logger = logging.getLogger(__name__)
@@ -60,6 +60,7 @@ def submit_pipeline(
         **(pipelines[pipeline_key].get("vertex") or {}),
     }
     settings = resolve_gcp_settings(merged)
+    validate_immutable_image_uri(settings.training_image)
 
     if compile_first or template_path is None:
         template_path = compile_favorita_pipeline(

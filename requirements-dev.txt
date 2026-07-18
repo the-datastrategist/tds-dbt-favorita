@@ -9,9 +9,15 @@ agate==1.9.1
     #   dbt-adapters
     #   dbt-common
     #   dbt-core
+aiohappyeyeballs==2.7.1
+    # via aiohttp
+aiohttp==3.14.1
+    # via mlflow
+aiosignal==1.4.0
+    # via aiohttp
 aiosqlite==0.22.1
     # via prefect
-alembic==1.18.4
+alembic==1.18.5
     # via
     #   mlflow
     #   optuna
@@ -24,13 +30,13 @@ annotated-doc==0.0.4
     #   typer
 annotated-types==0.7.0
     # via pydantic
-anyio==4.13.0
+anyio==4.14.2
     # via
     #   google-genai
     #   httpx
     #   prefect
     #   starlette
-apprise==1.10.0
+apprise==1.12.0
     # via prefect
 asgi-lifespan==2.1.0
     # via prefect
@@ -38,12 +44,13 @@ asyncpg==0.31.0
     # via prefect
 attrs==26.1.0
     # via
+    #   aiohttp
     #   cyclopts
     #   jsonschema
     #   referencing
 babel==2.18.0
     # via agate
-backports-zstd==1.5.0
+backports-zstd==1.6.0
     # via py7zr
 beartype==0.22.9
     # via py-key-value-aio
@@ -55,34 +62,38 @@ brotli==1.2.0
     # via py7zr
 burner-redis==0.1.7
     # via pydocket
-cachetools==5.5.2
+cachetools==7.1.4
     # via
     #   mlflow-skinny
+    #   mlflow-tracing
     #   prefect
     #   py-key-value-aio
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   apprise
+    #   google-cloud-aiplatform
     #   httpcore
     #   httpx
     #   kfp-server-api
     #   kubernetes
     #   requests
-cffi==2.0.0
+cffi==2.1.0
     # via cryptography
-charset-normalizer==3.4.7
+charset-normalizer==3.4.9
     # via requests
-click==8.4.1
+click==8.4.2
     # via
     #   apprise
     #   black
+    #   click-option-group
     #   dbt-core
-    #   dbt-semantic-interfaces
     #   flask
     #   kfp
     #   mlflow-skinny
     #   prefect
     #   uvicorn
+click-option-group==0.5.7
+    # via kfp
 cloudpickle==3.1.2
     # via
     #   mlflow-skinny
@@ -95,58 +106,66 @@ colorama==0.4.6
     # via
     #   dbt-common
     #   griffecli
-colorlog==6.10.1
+colorlog==6.11.0
     # via optuna
-contourpy==1.3.2
+contourpy==1.3.3
     # via matplotlib
 coolname==5.0.0
     # via prefect
-coverage==7.14.1
+coverage==7.15.2
     # via pytest-cov
 cronsim==2.7
     # via pydocket
-cryptography==48.0.0
+cryptography==48.0.1
     # via
     #   google-auth
+    #   mlflow
     #   prefect
 cycler==0.12.1
     # via matplotlib
-cyclopts==4.16.1
+cyclopts==4.21.1
     # via prefect
 daff==1.4.2
     # via dbt-core
-databricks-sdk==0.112.0
-    # via mlflow-skinny
-dateparser==1.4.0
+databricks-sdk==0.121.0
+    # via
+    #   mlflow-skinny
+    #   mlflow-tracing
+dateparser==1.4.1
     # via prefect
-db-dtypes==1.6.0
+db-dtypes==1.7.1
     # via
     #   google-cloud-bigquery
     #   pandas-gbq
-dbt-adapters==1.7.0
+dbt-adapters==1.24.5
     # via
     #   dbt-bigquery
     #   dbt-core
-dbt-bigquery==1.8.3
+dbt-bigquery==1.12.0
     # via -r requirements.in
-dbt-common==1.10.0
+dbt-common==1.38.0
     # via
     #   dbt-adapters
     #   dbt-bigquery
     #   dbt-core
-dbt-core==1.8.8
+dbt-core==1.12.0
     # via
     #   -r requirements.in
     #   dbt-bigquery
+dbt-core-experimental-parser==2.0.0a4
+    # via dbt-core
 dbt-extractor==0.6.0
     # via dbt-core
-dbt-semantic-interfaces==0.5.1
-    # via dbt-core
-deepdiff==7.0.1
+dbt-protos==1.0.541
+    # via
+    #   dbt-adapters
+    #   dbt-common
+    #   dbt-core
+deepdiff==8.6.2
     # via dbt-common
 distro==1.9.0
     # via google-genai
-docker==7.1.0
+docker==7.2.0
     # via
     #   mlflow
     #   prefect
@@ -157,23 +176,33 @@ docstring-parser==0.18.0
     #   kfp
 exceptiongroup==1.3.1
     # via prefect
-fastapi==0.136.3
+fastapi==0.139.2
     # via
     #   mlflow-skinny
     #   prefect
+fastjsonschema==2.21.2
+    # via nbformat
 flake8==7.3.0
     # via -r requirements-dev.in
 flask==3.1.3
+    # via
+    #   flask-cors
+    #   mlflow
+flask-cors==6.0.5
     # via mlflow
 fonttools==4.63.0
     # via matplotlib
-fsspec==2026.4.0
+frozenlist==1.8.0
+    # via
+    #   aiohttp
+    #   aiosignal
+fsspec==2026.6.0
     # via prefect
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.50
+gitpython==3.1.52
     # via mlflow-skinny
-google-api-core==2.30.3
+google-api-core==2.32.0
     # via
     #   dbt-bigquery
     #   google-cloud-aiplatform
@@ -184,9 +213,10 @@ google-api-core==2.30.3
     #   google-cloud-storage
     #   kfp
     #   pandas-gbq
-google-auth==2.53.0
+google-auth==2.56.0
     # via
     #   databricks-sdk
+    #   dbt-bigquery
     #   google-api-core
     #   google-auth-oauthlib
     #   google-cloud-aiplatform
@@ -204,9 +234,11 @@ google-auth-oauthlib==1.4.0
     # via
     #   pandas-gbq
     #   pydata-google-auth
-google-cloud-aiplatform==1.154.0
-    # via -r requirements.in
-google-cloud-bigquery==3.41.0
+google-cloud-aiplatform==1.161.0
+    # via
+    #   -r requirements.in
+    #   dbt-bigquery
+google-cloud-bigquery==3.42.2
     # via
     #   -r requirements.in
     #   dbt-bigquery
@@ -216,11 +248,11 @@ google-cloud-core==2.6.0
     # via
     #   google-cloud-bigquery
     #   google-cloud-storage
-google-cloud-dataproc==5.27.0
+google-cloud-dataproc==5.30.0
     # via dbt-bigquery
-google-cloud-resource-manager==1.17.0
+google-cloud-resource-manager==1.18.0
     # via google-cloud-aiplatform
-google-cloud-storage==2.19.0
+google-cloud-storage==3.1.1
     # via
     #   -r requirements.in
     #   dbt-bigquery
@@ -230,9 +262,9 @@ google-crc32c==1.8.0
     # via
     #   google-cloud-storage
     #   google-resumable-media
-google-genai==2.7.0
+google-genai==2.11.0
     # via google-cloud-aiplatform
-google-resumable-media==2.9.0
+google-resumable-media==2.10.0
     # via
     #   google-cloud-bigquery
     #   google-cloud-storage
@@ -243,7 +275,7 @@ googleapis-common-protos==1.75.0
     #   grpcio-status
 graphene==3.4.3
     # via mlflow
-graphql-core==3.2.8
+graphql-core==3.2.11
     # via
     #   graphene
     #   graphql-relay
@@ -251,13 +283,13 @@ graphql-relay==3.2.0
     # via graphene
 graphviz==0.21
     # via prefect
-greenlet==3.5.1
+greenlet==3.5.3
     # via sqlalchemy
-griffe==2.0.2
+griffe==2.1.0
     # via prefect
-griffecli==2.0.2
+griffecli==2.1.0
     # via griffe
-griffelib==2.0.2
+griffelib==2.1.0
     # via
     #   griffe
     #   griffecli
@@ -265,7 +297,7 @@ grpc-google-iam-v1==0.14.4
     # via
     #   google-cloud-dataproc
     #   google-cloud-resource-manager
-grpcio==1.80.0
+grpcio==1.82.1
     # via
     #   google-api-core
     #   google-cloud-bigquery
@@ -274,9 +306,9 @@ grpcio==1.80.0
     #   googleapis-common-protos
     #   grpc-google-iam-v1
     #   grpcio-status
-grpcio-status==1.62.3
+grpcio-status==1.81.1
     # via google-api-core
-gunicorn==23.0.0
+gunicorn==26.0.0
     # via mlflow
 h11==0.16.0
     # via
@@ -286,7 +318,7 @@ h2==4.3.0
     # via httpx
 holidays==0.100
     # via prophet
-hpack==4.1.0
+hpack==4.2.0
     # via h2
 httpcore==1.0.9
     # via
@@ -296,20 +328,23 @@ httpx==0.28.1
     # via
     #   google-genai
     #   prefect
-humanize==4.15.0
+huey==3.2.1
+    # via mlflow
+humanize==4.16.0
     # via
     #   jinja2-humanize-extension
     #   prefect
 hyperframe==6.1.0
     # via h2
-idna==3.17
+idna==3.18
     # via
     #   anyio
     #   httpx
     #   requests
-importlib-metadata==6.11.0
+    #   yarl
+importlib-metadata==9.0.0
     # via
-    #   dbt-semantic-interfaces
+    #   metricflow
     #   mlflow-skinny
 importlib-resources==7.1.0
     # via prophet
@@ -317,7 +352,7 @@ inflate64==1.0.4
     # via py7zr
 iniconfig==2.3.0
     # via pytest
-isodate==0.6.1
+isodate==0.7.2
     # via
     #   agate
     #   dbt-common
@@ -329,10 +364,9 @@ jinja2==3.1.6
     # via
     #   dbt-common
     #   dbt-core
-    #   dbt-semantic-interfaces
     #   flask
     #   jinja2-humanize-extension
-    #   mlflow
+    #   metricflow
     #   prefect
 jinja2-humanize-extension==0.4.0
     # via prefect
@@ -347,19 +381,23 @@ jsonpointer==3.1.1
 jsonschema==4.26.0
     # via
     #   dbt-common
-    #   dbt-semantic-interfaces
+    #   dbt-core
+    #   metricflow
+    #   nbformat
     #   prefect
 jsonschema-specifications==2025.9.1
     # via jsonschema
+jupyter-core==5.9.1
+    # via nbformat
 kagglehub==1.0.0
     # via -r requirements.in
-kagglesdk==0.1.26
+kagglesdk==0.1.34
     # via kagglehub
-kfp==2.13.0
+kfp==2.17.0
     # via -r requirements.in
-kfp-pipeline-spec==0.6.0
+kfp-pipeline-spec==2.17.0
     # via kfp
-kfp-server-api==2.4.0
+kfp-server-api==2.17.0
     # via kfp
 kiwisolver==1.5.0
     # via matplotlib
@@ -367,18 +405,14 @@ kubernetes==30.1.0
     # via kfp
 leather==0.4.1
     # via agate
-librt==0.11.0
+librt==0.13.0
     # via mypy
 llvmlite==0.48.0
     # via numba
-logbook==1.5.3
-    # via dbt-core
 mako==1.3.12
     # via alembic
 markdown==3.10.2
-    # via
-    #   apprise
-    #   mlflow
+    # via apprise
 markdown-it-py==4.2.0
     # via rich
 markupsafe==3.0.3
@@ -387,12 +421,12 @@ markupsafe==3.0.3
     #   jinja2
     #   mako
     #   werkzeug
-mashumaro==3.22
+mashumaro==3.17
     # via
     #   dbt-adapters
     #   dbt-common
     #   dbt-core
-matplotlib==3.10.9
+matplotlib==3.11.0
     # via
     #   mlflow
     #   prophet
@@ -400,16 +434,22 @@ mccabe==0.7.0
     # via flake8
 mdurl==0.1.2
     # via markdown-it-py
-minimal-snowplow-tracker==0.0.2
+metricflow==0.211.0
     # via dbt-core
-mlflow==2.22.5
+mlflow==3.14.0
     # via -r requirements.in
-mlflow-skinny==2.22.5
+mlflow-skinny==3.14.0
+    # via mlflow
+mlflow-tracing==3.14.0
     # via mlflow
 more-itertools==10.8.0
-    # via dbt-semantic-interfaces
-msgpack==1.1.2
+    # via metricflow
+msgpack==1.2.1
     # via mashumaro
+multidict==6.7.1
+    # via
+    #   aiohttp
+    #   yarl
 multivolumefile==0.2.3
     # via py7zr
 mypy==1.19.1
@@ -418,7 +458,11 @@ mypy-extensions==1.1.0
     # via
     #   black
     #   mypy
-networkx==3.4.2
+narwhals==2.24.0
+    # via scikit-learn
+nbformat==5.10.4
+    # via dbt-bigquery
+networkx==3.6.1
     # via dbt-core
 numba==0.66.0
     # via shap
@@ -439,33 +483,41 @@ numpy==1.26.4
     #   scikit-learn
     #   scipy
     #   shap
+    #   skops
     #   stanio
     #   statsmodels
     #   xgboost
-nvidia-nccl-cu12==2.30.4
+nvidia-nccl-cu12==2.30.7
     # via xgboost
 oauthlib==3.3.1
     # via
     #   kubernetes
     #   requests-oauthlib
-opentelemetry-api==1.42.1
+opentelemetry-api==1.44.0
     # via
     #   mlflow-skinny
+    #   mlflow-tracing
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
     #   prefect
     #   pydocket
-opentelemetry-sdk==1.42.1
-    # via mlflow-skinny
-opentelemetry-semantic-conventions==0.63b1
+opentelemetry-proto==1.44.0
+    # via
+    #   mlflow-skinny
+    #   mlflow-tracing
+opentelemetry-sdk==1.44.0
+    # via
+    #   mlflow-skinny
+    #   mlflow-tracing
+opentelemetry-semantic-conventions==0.65b0
     # via opentelemetry-sdk
 optuna==3.6.2
     # via -r requirements.in
-ordered-set==4.1.0
+orderly-set==5.5.0
     # via deepdiff
 orjson==3.11.9
     # via prefect
-packaging==24.2
+packaging==26.2
     # via
     #   black
     #   db-dtypes
@@ -476,11 +528,13 @@ packaging==24.2
     #   kagglehub
     #   matplotlib
     #   mlflow-skinny
+    #   mlflow-tracing
     #   optuna
     #   pandas-gbq
     #   prefect
     #   pytest
     #   shap
+    #   skops
     #   statsmodels
 pandas==2.3.3
     # via
@@ -497,7 +551,7 @@ pandas-gbq==0.35.0
     # via google-cloud-bigquery
 parsedatetime==2.6
     # via agate
-pathspec==0.12.1
+pathspec==1.0.4
     # via
     #   black
     #   dbt-common
@@ -508,35 +562,44 @@ patsy==1.0.2
     # via statsmodels
 pendulum==3.2.0
     # via prefect
-pillow==12.2.0
+pillow==12.3.0
     # via matplotlib
 platformdirs==4.10.0
-    # via black
+    # via
+    #   black
+    #   jupyter-core
 pluggy==1.6.0
     # via
     #   prefect
     #   pytest
     #   pytest-cov
-prefect==3.7.2
+prefect==3.7.8
     # via -r requirements.in
+prettytable==3.18.0
+    # via skops
 prometheus-client==0.25.0
     # via
     #   prefect
     #   pydocket
+propcache==0.5.2
+    # via
+    #   aiohttp
+    #   yarl
 prophet==1.3.0
     # via -r requirements.in
-proto-plus==1.28.0
+proto-plus==1.28.1
     # via
     #   google-api-core
     #   google-cloud-aiplatform
     #   google-cloud-dataproc
     #   google-cloud-resource-manager
-protobuf==4.25.9
+protobuf==6.33.6
     # via
     #   databricks-sdk
     #   dbt-adapters
     #   dbt-common
     #   dbt-core
+    #   dbt-protos
     #   google-api-core
     #   google-cloud-aiplatform
     #   google-cloud-dataproc
@@ -548,6 +611,8 @@ protobuf==4.25.9
     #   kfp
     #   kfp-pipeline-spec
     #   mlflow-skinny
+    #   mlflow-tracing
+    #   opentelemetry-proto
     #   proto-plus
 psutil==7.2.2
     # via
@@ -555,19 +620,19 @@ psutil==7.2.2
     #   py7zr
 py-key-value-aio==0.4.5
     # via pydocket
-py7zr==1.1.0
+py7zr==1.1.3
     # via -r requirements.in
-pyarrow==19.0.1
+pyarrow==24.0.0
     # via
     #   db-dtypes
     #   google-cloud-bigquery
     #   mlflow
     #   pandas-gbq
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via pyasn1-modules
 pyasn1-modules==0.4.2
     # via google-auth
-pybcj==1.0.7
+pybcj==1.0.8
     # via py7zr
 pycodestyle==2.14.0
     # via flake8
@@ -577,11 +642,13 @@ pycryptodomex==3.23.0
     # via py7zr
 pydantic==2.13.4
     # via
-    #   dbt-semantic-interfaces
+    #   dbt-core
     #   fastapi
     #   google-cloud-aiplatform
     #   google-genai
+    #   metricflow
     #   mlflow-skinny
+    #   mlflow-tracing
     #   prefect
     #   pydantic-extra-types
     #   pydantic-settings
@@ -591,11 +658,11 @@ pydantic-core==2.46.4
     #   pydantic
 pydantic-extra-types==2.11.1
     # via prefect
-pydantic-settings==2.14.1
+pydantic-settings==2.14.2
     # via prefect
 pydata-google-auth==1.9.1
     # via pandas-gbq
-pydocket==0.21.0
+pydocket==0.23.0
     # via prefect
 pyflakes==3.4.0
     # via flake8
@@ -608,7 +675,7 @@ pyparsing==3.3.2
     # via matplotlib
 pyppmd==1.3.1
     # via py7zr
-pytest==9.0.3
+pytest==9.1.1
     # via
     #   -r requirements-dev.in
     #   pytest-cov
@@ -621,18 +688,21 @@ python-dateutil==2.9.0.post0
     # via
     #   dateparser
     #   dbt-common
-    #   dbt-semantic-interfaces
     #   google-cloud-bigquery
     #   graphene
     #   holidays
     #   kfp-server-api
     #   kubernetes
     #   matplotlib
+    #   metricflow
     #   pandas
     #   pendulum
     #   prefect
 python-dotenv==1.2.2
-    # via pydantic-settings
+    # via
+    #   dbt-core
+    #   mlflow-skinny
+    #   pydantic-settings
 python-json-logger==4.1.0
     # via pydocket
 python-slugify==8.0.4
@@ -655,16 +725,18 @@ pyyaml==6.0.3
     #   -r requirements.in
     #   apprise
     #   dbt-core
-    #   dbt-semantic-interfaces
     #   kagglehub
     #   kfp
     #   kubernetes
+    #   metricflow
     #   mlflow-skinny
     #   optuna
     #   prefect
+rapidfuzz==3.14.5
+    # via metricflow
 readchar==4.2.2
     # via prefect
-redis==8.0.0
+redis==8.0.1
     # via
     #   py-key-value-aio
     #   pydocket
@@ -672,9 +744,10 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-regex==2026.5.9
+    #   metricflow
+regex==2026.7.10
     # via dateparser
-requests==2.34.2
+requests==2.33.0
     # via
     #   -r requirements.in
     #   apprise
@@ -689,11 +762,12 @@ requests==2.34.2
     #   google-genai
     #   kagglehub
     #   kagglesdk
+    #   kfp
     #   kubernetes
-    #   minimal-snowplow-tracker
     #   mlflow-skinny
     #   requests-oauthlib
     #   requests-toolbelt
+    #   snowplow-tracker
 requests-oauthlib==2.0.0
     # via
     #   apprise
@@ -710,9 +784,9 @@ rich==15.0.0
     #   pydocket
     #   rich-rst
     #   typer
-rich-rst==2.0.1
+rich-rst==2.1.0
     # via cyclopts
-rpds-py==0.30.0
+rpds-py==2026.6.3
     # via
     #   jsonschema
     #   referencing
@@ -720,16 +794,18 @@ ruamel-yaml==0.19.1
     # via prefect
 ruamel-yaml-clib==0.2.15
     # via prefect
-scikit-learn==1.7.2
+scikit-learn==1.9.0
     # via
     #   -r requirements.in
     #   mlflow
     #   shap
-scipy==1.15.3
+    #   skops
+scipy==1.17.1
     # via
     #   mlflow
     #   scikit-learn
     #   shap
+    #   skops
     #   statsmodels
     #   xgboost
 semver==3.0.4
@@ -740,12 +816,12 @@ shellingham==1.5.4
     # via typer
 six==1.17.0
     # via
-    #   isodate
     #   kfp-server-api
     #   kubernetes
-    #   minimal-snowplow-tracker
     #   python-dateutil
     #   rfc3339-validator
+skops==0.14.0
+    # via mlflow
 slicer==0.0.8
     # via shap
 smmap==5.0.3
@@ -755,24 +831,33 @@ sniffio==1.3.1
     #   asgi-lifespan
     #   google-genai
     #   prefect
-sqlalchemy==2.0.50
+snowplow-tracker==1.1.0
+    # via dbt-core
+sqlalchemy==2.0.51
     # via
     #   alembic
     #   mlflow
     #   optuna
     #   prefect
+sqlglot==30.12.0
+    # via metricflow
 sqlparse==0.5.5
     # via
     #   dbt-core
     #   mlflow-skinny
 stanio==0.5.1
     # via cmdstanpy
-starlette==1.2.0
-    # via fastapi
+starlette==1.3.1
+    # via
+    #   fastapi
+    #   mlflow-skinny
+    #   prefect
 statsmodels==0.14.6
     # via -r requirements.in
 tabulate==0.10.0
-    # via kfp
+    # via
+    #   kfp
+    #   metricflow
 tenacity==9.1.4
     # via google-genai
 text-unidecode==1.3
@@ -783,25 +868,30 @@ threadpoolctl==3.6.0
     # via scikit-learn
 toml==0.10.2
     # via prefect
-tqdm==4.67.3
+tqdm==4.69.0
     # via
     #   cmdstanpy
     #   kagglehub
     #   optuna
     #   prophet
     #   shap
-typer==0.26.3
+traitlets==5.15.1
+    # via
+    #   jupyter-core
+    #   nbformat
+typer==0.27.0
     # via pydocket
 types-pyyaml==6.0.12.20260518
     # via -r requirements-dev.in
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via
+    #   aiohttp
+    #   aiosignal
     #   alembic
     #   anyio
     #   dbt-adapters
     #   dbt-common
     #   dbt-core
-    #   dbt-semantic-interfaces
     #   exceptiongroup
     #   fastapi
     #   google-cloud-aiplatform
@@ -809,6 +899,7 @@ typing-extensions==4.15.0
     #   graphene
     #   grpcio
     #   mashumaro
+    #   metricflow
     #   mlflow-skinny
     #   mypy
     #   opentelemetry-api
@@ -822,6 +913,7 @@ typing-extensions==4.15.0
     #   pydocket
     #   referencing
     #   shap
+    #   snowplow-tracker
     #   sqlalchemy
     #   starlette
     #   typing-inspection
@@ -830,35 +922,42 @@ typing-inspection==0.4.2
     #   fastapi
     #   pydantic
     #   pydantic-settings
-tzdata==2026.2
+tzdata==2026.3
     # via
     #   pandas
     #   pendulum
-tzlocal==5.3.1
+tzlocal==5.4.4
     # via dateparser
 uncalled-for==0.3.2
     # via pydocket
 urllib3==2.7.0
     # via
+    #   databricks-sdk
     #   docker
     #   kfp
     #   kfp-server-api
     #   kubernetes
     #   requests
-uvicorn==0.48.0
+uvicorn==0.51.0
     # via
     #   mlflow-skinny
     #   prefect
+wcwidth==0.8.2
+    # via prettytable
 websocket-client==1.9.0
     # via kubernetes
-websockets==16.0
+websockets==16.1
     # via
     #   google-genai
     #   prefect
 werkzeug==3.1.8
-    # via flask
+    # via
+    #   flask
+    #   flask-cors
 xgboost==3.2.0
     # via -r requirements.in
+yarl==1.24.2
+    # via aiohttp
 zipp==4.1.0
     # via importlib-metadata
 

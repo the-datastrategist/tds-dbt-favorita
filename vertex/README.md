@@ -1,6 +1,8 @@
-# Vertex AI — custom model training
+# Vertex AI — custom demand forecasting models
 
-Python training, prediction, and hyperparameter optimization for Favorita forecasting. Jobs are driven by **`config/model_config.yaml`**, executed locally in Docker or submitted as **Vertex AI Custom Jobs**.
+Python training, prediction, and hyperparameter optimization for GCP demand forecasting projects. Jobs are driven by **`config/model_config.yaml`**, executed locally in Docker or submitted as **Vertex AI Custom Jobs**.
+
+The checked-in config names and output table names are implementation defaults. New projects should adapt `model_config.yaml`, BigQuery table names, GCS paths, and dbt feature queries to their forecast contract and project-specific dbt models.
 
 For dbt, data loading, and the full repo workflow, see the [root README](../README.md).
 
@@ -151,8 +153,6 @@ make vertex-run-docker VERTEX_CONFIG_NAME=favorita_store_n1d_xgboost
 make vertex-submit VERTEX_CONFIG_NAME=favorita_store_n1d_xgboost SYNC=1
 ```
 
-Legacy aliases still work: `make model-train` → `vertex-train-docker`, etc.
-
 Override default config names:
 
 ```bash
@@ -187,7 +187,8 @@ Each iteration pins `inputs.model_run_id` on predict so artifacts do not cross d
    GOOGLE_PROJECT_ID=your-project
    VERTEX_AI_REGION=us-central1
    VERTEX_AI_STAGING_BUCKET=gs://your-bucket/vertex-staging
-   VERTEX_TRAINING_IMAGE=us-central1-docker.pkg.dev/your-project/repo/tds-favorita:latest
+   # `make vertex-docker-push` prints the digest-pinned value after publishing.
+   VERTEX_TRAINING_IMAGE=us-central1-docker.pkg.dev/your-project/repo/tds-favorita@sha256:<digest>
    ```
 
 2. Build, tag, and push the image your project uses for training.
@@ -264,7 +265,7 @@ vertex:
   register_model: false      # Vertex AI Model Registry upload (GCS artifact for endpoints)
 ```
 
-Vertex AI Model Registry upload uses `artifacts.register_from_manifest` when `vertex.register_model: true`, not the legacy `VertexModelSaver` path.
+Vertex AI Model Registry upload uses `artifacts.register_from_manifest` when `vertex.register_model: true`.
 
 ### View MLflow runs locally
 
@@ -414,6 +415,8 @@ dbt models: `stg_vertex_model_predictions`, `stg_vertex_model_metadata`, `stg_ve
 |-------|--------|
 | `Config with name '…' not found` | Config `name` in YAML matches `--config-name` / `VERTEX_*_CONFIG` |
 | `No model artifacts` | Run train first; GCS path matches `inputs.gcs_model_path` and `artifact_config_name` |
+| `without manifest joblib_sha256` | Retrain or republish the legacy joblib model; unverified pickle artifacts are rejected |
+| `checksum mismatch` | Do not load the artifact; investigate replacement/corruption and bucket writers |
 | `VERTEX_AI_STAGING_BUCKET must be set` | `.env` or `vertex.staging_bucket` in config |
 | `VERTEX_TRAINING_IMAGE` | Image exists in Artifact Registry and job SA can pull it |
 | BigQuery load errors | Tables created from `ddl/vertex_bq_tables.sql`; SA has `bigquery.dataEditor` |

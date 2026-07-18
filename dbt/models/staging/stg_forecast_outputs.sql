@@ -1,0 +1,37 @@
+{{ config(
+    materialized='view',
+    tags=['forecast_contract', 'staging']
+) }}
+
+select
+    forecast_output_id,
+    source_prediction_id,
+    forecast_run_id,
+    forecast_contract_name,
+    forecast_contract_hash,
+    forecast_origin,
+    target_date,
+    horizon,
+    grain,
+    entity_key_json,
+    target,
+    target_unit,
+    prediction_p10,
+    prediction_p50,
+    prediction_p90,
+    statistical_forecast,
+    planner_override,
+    approved_forecast,
+    published_forecast,
+    forecast_status,
+    model_run_id,
+    model_id,
+    config_name,
+    model_family,
+    model_type,
+    feature_version,
+    code_sha,
+    data_cutoff,
+    model_artifact_uri,
+    created_at
+from {{ source('vertex_ml', 'forecast_outputs') }}

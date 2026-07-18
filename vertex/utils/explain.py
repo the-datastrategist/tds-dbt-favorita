@@ -49,15 +49,34 @@ def compute_tree_shap_top_features(
     ``model_input`` rows must be in the same order as the caller's predictions/prediction
     rows, since the result list is aligned positionally (no index is carried through shap).
     """
-    import shap  # heavy optional dependency; only imported when explain is enabled
+    if model.__class__.__module__.startswith("xgboost"):
+        # XGBoost's native contribution API is the source of truth for Tree SHAP
+        # and avoids compatibility failures when SHAP lags XGBoost's model JSON
+        # format (for example XGBoost 3.2 serializes base_score as "[5E-1]").
+        import xgboost as xgb
 
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(model_input)
-    if isinstance(shap_values, list):  # multi-output models; these are single-target regressors
-        shap_values = shap_values[0]
-    base_value = explainer.expected_value
-    if isinstance(base_value, (list, tuple, np.ndarray)):
-        base_value = np.ravel(base_value)[0]
+        booster = model.get_booster()
+        contributions = booster.predict(
+            xgb.DMatrix(model_input, feature_names=list(model_input.columns)),
+            pred_contribs=True,
+        )
+        if contributions.ndim != 2 or contributions.shape[1] != len(model_input.columns) + 1:
+            raise ValueError(
+                "Expected XGBoost SHAP contributions to contain one value per feature "
+                "plus a bias column"
+            )
+        shap_values = contributions[:, :-1]
+        base_value = contributions[0, -1]
+    else:
+        import shap  # heavy optional dependency; only imported when explain is enabled
+
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(model_input)
+        if isinstance(shap_values, list):
+            shap_values = shap_values[0]
+        base_value = explainer.expected_value
+        if isinstance(base_value, (list, tuple, np.ndarray)):
+            base_value = np.ravel(base_value)[0]
 
     feature_names = list(model_input.columns)
     top_features: list[list[dict[str, float]]] = []

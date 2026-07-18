@@ -8,15 +8,43 @@ variable "sa_id" {
   default     = "sa-vertex-ml"
 }
 
+variable "prediction_sa_id" {
+  description = "Service account ID for prediction jobs. Defaults to <sa_id>-predict."
+  type        = string
+  default     = null
+}
+
 variable "roles" {
   description = "Least-privilege roles granted to the Vertex pipeline service account. Keep this the single source of truth instead of vertex/ops/README.md's duplicated list."
   type        = list(string)
   default = [
     "roles/aiplatform.user",
-    "roles/storage.objectAdmin",
-    "roles/bigquery.dataEditor",
     "roles/bigquery.jobUser",
   ]
+}
+
+variable "bucket_names" {
+  description = "Buckets where the Vertex service account may read and write objects."
+  type        = set(string)
+  default     = []
+}
+
+variable "dataset_ids" {
+  description = "BigQuery dataset IDs where the Vertex service account may edit data."
+  type        = set(string)
+  default     = []
+}
+
+variable "prediction_bucket_names" {
+  description = "Model buckets the prediction service account may read."
+  type        = set(string)
+  default     = []
+}
+
+variable "prediction_dataset_ids" {
+  description = "Datasets the prediction service account may query and write."
+  type        = set(string)
+  default     = []
 }
 
 variable "caller_member" {

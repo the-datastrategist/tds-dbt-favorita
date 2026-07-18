@@ -10,6 +10,8 @@ from typing import Any, cast
 
 import yaml
 
+from vertex.config.feature_availability import load_feature_availability_registry
+from vertex.config.forecast_contract import load_forecast_contract
 from vertex.utils.data_loading import has_step_data_source
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent / "model_config.yaml"
@@ -142,25 +144,13 @@ def apply_job_step(config: dict[str, Any], step: str) -> dict[str, Any]:
 
 def list_run_config_names(
     config_path: str | Path | None = None,
-    *,
-    step: str | None = "train",
-    include_legacy_aliases: bool = False,
 ) -> list[str]:
-    """
-    Return sorted config names with include_in_run: true.
-
-    Unified configs are model-level (no job.step in YAML). When step is set,
-    every include_in_run config is eligible — the step is applied at job runtime.
-    """
-    del step  # retained for API compatibility; step is runtime-only now
+    """Return sorted model config names with include_in_run: true."""
     names: list[str] = []
     for config in load_all_configs(config_path):
         if not config_include_in_run(config):
             continue
-        name = config.get("name", "")
-        if not include_legacy_aliases and name.startswith("train_"):
-            continue
-        names.append(name)
+        names.append(config.get("name", ""))
     return sorted(names)
 
 
@@ -183,18 +173,10 @@ def get_job_spec(config: dict[str, Any]) -> dict[str, Any]:
     """
     Return normalized job routing fields: step, model_type, model_family.
 
-    Step must be set on config.job.step (via apply_job_step or legacy YAML).
+    Step must be set on config.job.step via apply_job_step.
     """
     job = config.get("job") or {}
     step = job.get("step")
-    if not step:
-        name = config.get("name", "")
-        if "_train" in name or name.startswith("train_"):
-            step = "train"
-        elif "_predict" in name or name.startswith("predict_"):
-            step = "predict"
-        elif "_optimize" in name or name.startswith("optimize_"):
-            step = "optimize"
     model_type = get_model_type(config)
     if not step or not model_type:
         raise ValueError(
@@ -222,6 +204,7 @@ def validate_config_for_step(
     inputs = config.get("inputs") or {}
     outputs = config.get("outputs") or {}
     config_name = spec["config_name"]
+    _validate_forecast_feature_contract(config)
 
     if step in ("train", "optimize"):
         if not has_step_data_source(inputs, step):
@@ -267,6 +250,27 @@ def validate_config_for_step(
         trial_count = inputs.get("trial_count")
         if trial_count is None or int(trial_count) < 1:
             raise ValueError(f"{config_name}: inputs.trial_count must be >= 1")
+
+
+def _validate_forecast_feature_contract(config: dict[str, Any]) -> None:
+    """Validate forecast contract feature declarations when forecast outputs are configured."""
+    outputs = config.get("outputs") or {}
+    inputs = config.get("inputs") or {}
+    contract_path = (
+        outputs.get("forecast_contract_path")
+        or config.get("forecast_contract_path")
+        or inputs.get("forecast_contract_path")
+    )
+    if not contract_path and not outputs.get("forecast_output_table"):
+        return
+    contract = load_forecast_contract(contract_path)
+    registry_path = (
+        inputs.get("feature_availability_path")
+        or outputs.get("feature_availability_path")
+        or config.get("feature_availability_path")
+    )
+    registry = load_feature_availability_registry(registry_path)
+    registry.validate_forecast_contract(contract.spec)
 
 
 def validate_config_all_steps(config: dict[str, Any]) -> None:

@@ -5,6 +5,7 @@ from datetime import datetime
 import pandas as pd
 import pytest
 from sklearn.ensemble import RandomForestRegressor
+from xgboost import XGBRegressor
 
 from vertex.utils.explain import (
     STANDARD_EXPLAIN_COLUMNS,
@@ -29,6 +30,24 @@ def _fit_random_forest():
 
 @pytest.mark.unit
 class TestComputeTreeShapTopFeatures:
+    def test_xgboost_uses_native_contributions_with_bracketed_base_score(self):
+        X_train = pd.DataFrame(
+            {"feature_a": [1.0, 2.0, 3.0, 4.0], "feature_b": [4.0, 3.0, 2.0, 1.0]}
+        )
+        model = XGBRegressor(n_estimators=3, max_depth=2, base_score=0.5, random_state=0)
+        model.fit(X_train, [1.0, 2.0, 3.0, 4.0])
+
+        # XGBoost 3.2 emits the representation that SHAP 0.49.1 fails to parse.
+        assert model.get_booster().save_config().find('"base_score":"[5E-1]"') >= 0
+
+        top_features, base_value = compute_tree_shap_top_features(
+            model, X_train.iloc[:2], top_k_features=2
+        )
+
+        assert len(top_features) == 2
+        assert all(len(row) == 2 for row in top_features)
+        assert isinstance(base_value, float)
+
     def test_returns_per_row_top_k_sorted_by_abs_attribution(self):
         model = _fit_random_forest()
         model_input = pd.DataFrame({"feature_a": [1.0, 5.0], "feature_b": [6.0, 2.0]})

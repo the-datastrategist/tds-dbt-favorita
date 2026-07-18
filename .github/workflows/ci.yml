@@ -10,6 +10,9 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   PYTHONPATH: .
   GOOGLE_PROJECT_ID: ci-placeholder
@@ -24,9 +27,9 @@ jobs:
     name: Python lint and tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.11"
           cache: pip
@@ -49,6 +52,9 @@ jobs:
       - name: Validate model configs
         run: python -m vertex.config.validate_all
 
+      - name: Validate rolling-origin backtest plan
+        run: python -m vertex.jobs.backtest --dry-run
+
       - name: Unit tests
         run: pytest -m unit --cov-fail-under=65
 
@@ -64,9 +70,9 @@ jobs:
     name: dbt parse, compile, and docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.11"
           cache: pip
@@ -75,8 +81,21 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
-      - name: Placeholder service account key
-        run: echo '{}' > /tmp/ci-service-account.json
+      - name: Create offline-only service account key
+        run: |
+          openssl genrsa -out /tmp/ci-private-key.pem 2048
+          jq --null-input \
+            --rawfile private_key /tmp/ci-private-key.pem \
+            '{
+              type: "service_account",
+              project_id: "ci-placeholder",
+              private_key_id: "ci-placeholder",
+              private_key: $private_key,
+              client_email: "dbt-ci@ci-placeholder.iam.gserviceaccount.com",
+              client_id: "000000000000000000000",
+              auth_uri: "https://accounts.google.com/o/oauth2/auth",
+              token_uri: "https://oauth2.googleapis.com/token"
+            }' > /tmp/ci-service-account.json
 
       - name: Install dbt packages
         run: dbt deps --project-dir dbt

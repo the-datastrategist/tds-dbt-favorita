@@ -1,6 +1,6 @@
 {% docs vertex_consulting_package %}
 
-# Vertex AI consulting package — Favorita forecasting
+# Vertex AI consulting package — GCP demand forecasting platform
 
 **Vertex AI's role** in this engagement: run **config-driven custom ML** (train, predict, optimize) and **KFP pipelines** on BigQuery features, with GCS artifacts, unified prediction tables, and production IAM/scheduling patterns.
 
@@ -48,7 +48,7 @@ flowchart LR
   Run --> Reg[registry model_type × step]
   Reg --> Mod[xgboost / sklearn / timeseries]
   Mod --> GCS[(GCS joblib + manifest)]
-  Mod --> BQ[(favorita_model_*)]
+  Mod --> BQ[(model / forecast tables)]
   Mod --> MLflow[MLflow + Vertex Experiments]
 
   Submit[vertex.jobs.submit] --> CJ[Vertex Custom Job]
@@ -69,9 +69,9 @@ flowchart LR
 
 | Pipeline | Steps |
 |----------|-------|
-| `favorita_xgboost` | optimize → train → predict |
-| `favorita_random_forest` | optimize → train → predict |
-| `favorita_arima` | train → predict |
+| project XGBoost pipeline | optimize → train → predict |
+| project random forest pipeline | optimize → train → predict |
+| project ARIMA pipeline | train → predict |
 
 ---
 
@@ -109,7 +109,7 @@ make vertex-validate-configs
 |-------|----------|
 | `ml_model_metadata` | Training lineage, artifact URIs |
 | `ml_model_performance` | Holdout metrics (JSON) |
-| `ml_model_predictions` | Unified prediction fact |
+| `ml_model_predictions` / canonical forecast output | Prediction and publication facts |
 | `ml_model_optimize` | Optuna trials |
 | `ml_vertex_job_runs` | Orchestration audit |
 
@@ -163,7 +163,7 @@ From `vertex/ops/README.md`:
 
 ## Related documents
 
-- [vertex/README.md](../../../vertex/README.md) — operational detail
+- [vertex/README.md](../../vertex/README.md) — operational detail
 - [Benchmarks](../benchmarks.md)
 - [Reference architecture](../reference_architecture.md)
 - Other products: [dbt](../dbt/consulting_package.md) · [MLflow](../mlflow/consulting_package.md) · [Prefect](../prefect/consulting_package.md)

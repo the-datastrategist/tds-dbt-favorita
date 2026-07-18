@@ -20,6 +20,7 @@ from vertex.models.timeseries.ts_common import (
 from vertex.utils.artifacts import load_joblib_from_gcs, resolve_latest_artifact
 from vertex.utils.bigquery_utils import load_to_bigquery
 from vertex.utils.data_loading import load_data_from_config
+from vertex.utils.forecast_outputs import write_forecast_outputs_if_configured
 from vertex.utils.predictions import build_standard_prediction_rows, new_predict_run_id
 
 logger = logging.getLogger(__name__)
@@ -63,7 +64,10 @@ def run_predict_timeseries(config: dict[str, Any]) -> dict[str, Any]:
         model_run_id=model_run_id,
     )
     joblib_uri = manifest.get("joblib_gcs_uri") or artifact_uri
-    bundle = load_joblib_from_gcs(joblib_uri)
+    bundle = load_joblib_from_gcs(
+        joblib_uri,
+        expected_sha256=manifest.get("joblib_sha256"),
+    )
 
     df = load_data_from_config(config)
     entity_column = manifest.get("entity_column", entity_column)
@@ -141,10 +145,22 @@ def run_predict_timeseries(config: dict[str, Any]) -> dict[str, Any]:
         if_exists="append",
     )
     logger.info("Wrote %s %s predictions", len(prediction_rows), predict_scope)
+    forecast_output_count = write_forecast_outputs_if_configured(
+        config=config,
+        prediction_rows=prediction_rows,
+        project_id=project_id,
+    )
+    if forecast_output_count:
+        logger.info(
+            "Wrote %s canonical forecast outputs (predict_run_id=%s)",
+            forecast_output_count,
+            predict_run_id,
+        )
 
     return {
         "predict_run_id": predict_run_id,
         "prediction_count": len(prediction_rows),
+        "forecast_output_count": forecast_output_count,
         "predict_scope": predict_scope,
     }
 

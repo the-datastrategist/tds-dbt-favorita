@@ -1,6 +1,8 @@
-# dbt project (Favorita)
+# dbt project
 
-dbt models, tests, macros, and profiles for the Favorita forecasting pipeline. All commands run in Docker via the repo root Makefile (see [../README.md](../README.md) for setup, credentials, and CI).
+dbt models, tests, macros, and profiles for the current demand forecasting implementation. All commands run in Docker via the repo root Makefile (see [../README.md](../README.md) for setup, credentials, and CI).
+
+In this platform, dbt is the project-specific adapter layer. A new implementation is expected to change or replace the staging and feature models so raw operational data maps into the forecast-ready grains, targets, covariates, eligibility rules, and marts needed by that use case.
 
 ## Layout
 
