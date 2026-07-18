@@ -16,6 +16,7 @@
   * [Client rollout](client_rollout.md)
   * [Clean rebuild runbook](clean_rebuild.md)
   * [Infrastructure and GCP operations](iac.md)
+  * [GCP and GitHub bootstrap](gcp_bootstrap.md)
   * [Accelerators](accelerators.md)
   * [dbt lineage and catalog](dbt-docs.md)
 
@@ -38,6 +39,7 @@
   * [Prediction accuracy monitoring](specs/prediction_accuracy_monitoring.md)
   * [Hierarchical reconciliation](specs/hierarchical_reconciliation.md)
   * [Forecast operations](specs/forecast_operations.md)
+  * [Scheduled publication pipeline](specs/scheduled_forecast_publication_pipeline.md)
   * [Integration contracts](specs/integration_contracts.md)
   * [Monitoring and SLOs](specs/monitoring_and_slos.md)
   * [Terraform modules](specs/terraform_modules.md)

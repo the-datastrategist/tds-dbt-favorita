@@ -137,7 +137,7 @@ GCS remains **canonical** for model binaries; MLflow stores pointers, not duplic
 | `Makefile` | Single interface for dbt, Vertex, MLflow, Prefect |
 | `requirements.txt` / `requirements-dev.txt` | Locked pip deps via pip-tools |
 | `.github/workflows/ci.yml` | Lint, test, config validate, KFP compile, dbt parse |
-| `.github/workflows/docs.yml` | Hosted dbt Docs on GitHub Pages |
+| `.github/workflows/docs.yml` | Hosted Docsify portal and dbt Docs on GitHub Pages |
 | Raw-data loader scripts | GCS → raw BigQuery ingestion pattern; replace or extend per project |
 | `scripts/apply_vertex_bq_ddl.py` | Apply Vertex output DDL |
 | `terraform/` | Versioned GCP provisioning: APIs, IAM, BigQuery datasets, GCS buckets, Artifact Registry per environment |

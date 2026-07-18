@@ -39,20 +39,33 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
-      - name: Placeholder service account key
-        run: echo '{}' > /tmp/ci-service-account.json
+      # dbt-bigquery validates the configured credential file while generating
+      # an empty catalog. A syntactically valid, ephemeral key prevents it from
+      # falling back to interactive `gcloud auth application-default login`;
+      # the docs commands below never use this credential against BigQuery.
+      - name: Create offline dbt credentials
+        run: |
+          openssl genrsa -out /tmp/ci-private-key.pem 2048
+          jq --null-input \
+            --rawfile private_key /tmp/ci-private-key.pem \
+            '{
+              type: "service_account",
+              project_id: "ci-placeholder",
+              private_key_id: "ci-placeholder",
+              private_key: $private_key,
+              client_email: "dbt-ci@ci-placeholder.iam.gserviceaccount.com",
+              client_id: "000000000000000000000",
+              auth_uri: "https://accounts.google.com/o/oauth2/auth",
+              token_uri: "https://oauth2.googleapis.com/token"
+            }' > /tmp/ci-service-account.json
 
       - name: Install dbt packages
         run: dbt deps --project-dir dbt
 
-      - name: Parse and compile
-        run: |
-          dbt parse --project-dir dbt
-          dbt compile --project-dir dbt \
-            --no-populate-cache \
-            --no-introspect \
-            --threads 1 \
-            --exclude config.materialized:incremental
+      # Keep the Pages build warehouse-independent. Compilation is validated in
+      # authenticated CI; this job only needs a manifest and an empty catalog.
+      - name: Parse dbt project
+        run: dbt parse --project-dir dbt
 
       - name: Generate dbt docs
         run: |

@@ -2,7 +2,7 @@
 
 # SPEC: Forecast contract and canonical output
 
-**Status:** Proposed
+**Status:** In progress
 **Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P0 "Introduce a forecast contract"
 
 ---
@@ -113,6 +113,28 @@ data_cutoff
 created_at
 ```
 
+Rows eligible for scheduled publication additionally require:
+
+```text
+forecast_strategy
+fallback_reason
+confidence_flag
+calibration_method
+calibration_run_id
+hierarchy_version
+reconciliation_method
+reconciliation_run_id
+publication_version
+prefect_flow_run_id
+```
+
+`fallback_reason` may be null when the primary strategy succeeds. Reconciliation identifiers may
+be null only when the validated contract declares no hierarchy and records method `none`. The
+publication writer rejects rows missing required stage lineage, configured horizons or quantiles,
+or ordered quantiles. The complete stage order, pinned run identity, visibility boundary, quality
+gates, failure behavior, and idempotency rules are defined by the authoritative
+[scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md).
+
 Use a normalized quantile child table if configurable quantiles become too wide for stable table evolution.
 
 ### 4. dbt staging and marts
@@ -164,6 +186,8 @@ Initial implementation can adapt the existing model prediction fact table into `
 - A named forecast contract can be validated from YAML.
 - A multi-horizon forecast run records one canonical output row per entity/date/horizon.
 - Every canonical forecast row has provenance and lifecycle status.
+- Every published row has routing, calibration, reconciliation, orchestration, and publication
+  version lineage applicable to its contract.
 - Existing model predictions can be queried through `stg_forecast_outputs`.
 
 ## Related documents
@@ -172,6 +196,7 @@ Initial implementation can adapt the existing model prediction fact table into `
 - [Forecasting methods](forecasting_methods.md)
 - [Backtesting and model lifecycle](backtesting_and_model_lifecycle.md)
 - [Forecast operations](forecast_operations.md)
+- [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md)
 - [Integration contracts](integration_contracts.md)
 
 {% enddocs %}

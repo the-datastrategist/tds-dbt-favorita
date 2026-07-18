@@ -16,6 +16,24 @@ Flow code lives under `orchestration/` (not `prefect/`) so it does not shadow th
 | `prefect-vertex-train-model-schedule` | `prefect-vertex-train-model` | Daily training (07:00 UTC) |
 | `prefect-vertex-ml-pipeline-manual` | `prefect-vertex-ml-pipeline` | On-demand ML pipeline (optimize → train → predict) |
 | `prefect-vertex-ml-pipeline-scheduled` | `prefect-vertex-ml-pipeline` | Weekly XGBoost pipeline (Sunday 08:00 UTC) |
+| `prefect-model-lifecycle-manual` | `prefect-model-lifecycle` | On-demand rolling-origin evaluation and governed promotion |
+| `prefect-model-lifecycle-scheduled` | `prefect-model-lifecycle` | Weekly lifecycle evaluation (Sunday 10:00 UTC) |
+| `prefect-forecast-publication-manual` | `prefect-forecast-publication` | Validate a canonical run and optionally create an idempotent publication |
+
+The manual forecast-publication deployment implements the gated publication boundary. Its required
+stage order is:
+
+```text
+route -> forecast -> calibrate -> reconcile -> validate -> approve/publish
+```
+
+The current flow accepts a concrete `forecast_run_id`, `publication_mode`, and `idempotency_key`.
+Use `draft_only` to validate without writing approvals or publications, or `auto_publish` to create
+both after every gate passes. Stage writes are retry-safe and append-only; failed validation cannot
+create a published version. Automatic run selection and the production schedule remain the next
+slice, after freshness and completeness thresholds are configurable. The authoritative keys,
+lineage fields, gates, and exception behavior are defined in the [forecast operations scheduled-publication
+contract](../docs/specs/forecast_operations.md#6-end-to-end-scheduled-publication-path).
 
 ## Prerequisites
 
@@ -150,3 +168,11 @@ Optional entries in `.env` (see `env.example`):
 - `PREFECT_DEFAULT_VERTEX_MODE` — default `vertex_mode` for Vertex flows (`docker` or `vertex`)
 
 Scheduled cron expressions are defined in `prefect.yaml`; edit there to change times or timezones.
+
+The lifecycle deployment runs after the scheduled ML pipeline, resolves the latest reproducible
+artifact, persists rolling-origin evidence and gate checks, and atomically replaces the current
+champion only when every configured promotion gate passes.
+
+Model lifecycle selects the champion; forecast publication scores that champion and applies
+routing, calibration, and reconciliation. The two schedules must remain separate so daily scoring
+does not retrain or promote a model.

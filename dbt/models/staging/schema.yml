@@ -1,6 +1,40 @@
 version: 2
 
 models:
+  - name: stg_model_candidates
+    description: Immutable model candidate registrations with a canonical model-scope key.
+    columns:
+      - name: candidate_id
+        data_tests: [unique, not_null]
+      - name: model_scope_key
+        data_tests: [not_null]
+      - name: backtest_run_id
+        data_tests: [not_null]
+
+  - name: stg_model_promotion_checks
+    description: Promotion gate evidence recorded for model candidates.
+    columns:
+      - name: promotion_check_id
+        data_tests: [unique, not_null]
+      - name: candidate_id
+        data_tests: [not_null]
+      - name: passed
+        data_tests: [not_null]
+
+  - name: stg_model_lifecycle_events
+    description: Append-only audited state transitions for model candidates.
+    columns:
+      - name: lifecycle_event_id
+        data_tests: [unique, not_null]
+      - name: candidate_id
+        data_tests: [not_null]
+      - name: to_state
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [candidate, champion, rejected, retired]
+
   - name: stg_backtest_runs
     description: Backtest execution records enriched with explicit comparison semantics.
     columns:

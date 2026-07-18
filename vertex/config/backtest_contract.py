@@ -143,6 +143,10 @@ class BacktestContract:
             **cast(dict[str, Any], self.spec["metric_policy"]),
         }
 
+    @property
+    def promotion_gates(self) -> dict[str, Any]:
+        return cast(dict[str, Any], self.spec.get("promotion_gates") or {})
+
     def origin_plan_rows(self) -> list[dict[str, Any]]:
         """Return serializable origin/horizon rows for dry-run planning and tests."""
         rows: list[dict[str, Any]] = []
@@ -305,6 +309,13 @@ def validate_backtest_contract(raw: dict[str, Any]) -> BacktestContract:
     ):
         if field in gates and float(gates[field]) < 0:
             raise ValueError(f"backtest.promotion_gates.{field} must be >= 0")
+    completeness = float(gates.get("min_prediction_completeness", 0))
+    if completeness > 1:
+        raise ValueError("backtest.promotion_gates.min_prediction_completeness must be <= 1")
+    if "require_reproducible_artifact" in gates and not isinstance(
+        gates["require_reproducible_artifact"], bool
+    ):
+        raise ValueError("backtest.promotion_gates.require_reproducible_artifact must be boolean")
 
     return BacktestContract(
         raw={"backtest": spec},

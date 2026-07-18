@@ -2,7 +2,7 @@
 
 # SPEC: Point-in-time feature availability
 
-**Status:** Proposed
+**Status:** In progress
 **Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P0 "Enforce point-in-time feature correctness"
 
 ---
@@ -91,6 +91,15 @@ feature_materialization_id
 
 Add registry-driven docs to staging/intermediate schema descriptions where practical. At minimum, add a page `docs/feature_availability.md` documenting the feature classes and how to add a feature safely.
 
+### 6. Scheduled publication integration
+
+The publication pipeline freezes `source_cutoff_json`, `feature_availability_hash`,
+`feature_materialization_id`, and the eligible entity snapshot before scoring. These values are
+part of the logical run identity, so a changed cutoff or rematerialized feature set creates a new
+run rather than mutating an in-flight forecast. Any source timestamp beyond its allowed cutoff is
+a blocking publication-gate failure. Locking, retries, and atomic draft visibility are defined by
+the [scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md).
+
 ## Implementation plan
 
 1. Add registry YAML and loader.
@@ -118,5 +127,6 @@ Add registry-driven docs to staging/intermediate schema descriptions where pract
 - [Forecast contract and canonical output](forecast_contract_and_output.md)
 - [Backtesting and model lifecycle](backtesting_and_model_lifecycle.md)
 - [Demand data model](demand_data_model.md)
+- [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md)
 
 {% enddocs %}

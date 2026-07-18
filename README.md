@@ -17,7 +17,7 @@ The platform is intentionally **GCP-first**. It provides reusable infrastructure
 - **pip + Docker**: Locked dependencies in `requirements.txt`; all local commands run in Docker
 - **Testing**: pytest for Vertex utilities; dbt data tests on staging and intermediate models
 - **CI/CD**: GitHub Actions on every push and PR (Python lint/tests, `dbt parse` / `dbt compile` / `dbt docs generate`)
-- **Hosted dbt Docs**: GitHub Pages deploy on push to `main` / `master` (see [Hosted documentation](#hosted-documentation))
+- **Hosted documentation**: Docsify portal and dbt Docs deploy together to GitHub Pages on pushes to `main` / `master` (see [Hosted documentation](#hosted-documentation))
 - **dbt Docs & lineage**: Project overview ([`docs/overview.md`](docs/overview.md)), exposures for ML and operational consumers (`dbt/models/exposures.yml`)
 - **Code Quality**: Black, flake8, and mypy for code quality
 - **Consulting package**: Architecture diagrams, accelerators inventory, case study, benchmarks, rollout playbook, and IaC guidance ([docs/consulting_package.md](docs/consulting_package.md))
@@ -72,7 +72,7 @@ flowchart TB
 
   subgraph GH["GitHub"]
     Actions[GitHub Actions CI]
-    Pages["GitHub Pages\ndbt Docs"]
+    Pages["GitHub Pages\nDocsify + dbt Docs"]
   end
 
   subgraph GCP["GCP project"]
@@ -176,6 +176,11 @@ More detail (dual ML path, operational sequence, security/environments, CI/CD): 
 
 ## Setup
 
+For a new GCP environment—or an existing environment Terraform must adopt—start with the
+**[guided GCP and GitHub bootstrap](docs/gcp_bootstrap.md)**. It covers cloning, local
+authentication, safe adoption, WIF, and GitHub configuration. Continue below for the local Docker
+runtime.
+
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
@@ -188,7 +193,7 @@ More detail (dual ML path, operational sequence, security/environments, CI/CD): 
    # Edit .env with your Google Cloud credentials and configuration
    ```
 
-3. **Set up Google Cloud credentials**
+3. **Set up local Docker credentials**
    ```bash
    mkdir -p credentials
    # Place your service account key JSON in credentials/ (gitignored)
@@ -198,7 +203,9 @@ More detail (dual ML path, operational sequence, security/environments, CI/CD): 
    GOOGLE_APPLICATION_CREDENTIALS=./credentials/your-key.json
    GOOGLE_APPLICATION_CREDENTIALS_CONTAINER=/app/credentials/your-key.json
    ```
-   The repo is bind-mounted at `/app`, so keys must live under `credentials/` — do not use an empty placeholder `service-account-key.json` unless that file contains valid JSON.
+   These credentials are for local Docker commands, not GitHub Actions. GitHub uses keyless WIF
+   configured by the guided bootstrap. The repo is bind-mounted at `/app`, so key files must live
+   under `credentials/`—do not use an empty placeholder unless it contains valid JSON.
 
 4. **Ensure raw data is in GCS**
    Place project source files in the bucket/prefix from `GCS_RAW_DATA_BUCKET` (see `env.example`). The current sample loader expects the public demo CSV archive shape; production implementations should replace or extend the loader and dbt sources for their own operational data.
@@ -320,13 +327,14 @@ make dbt-docs-serve     # reuse existing artifacts without regenerating
 
 ### Hosted documentation
 
-After you enable **Settings → Pages → Build and deployment → GitHub Actions**, pushes to `main` / `master` run [`.github/workflows/docs.yml`](.github/workflows/docs.yml) and publish static dbt Docs.
+After you enable **Settings → Pages → Build and deployment → GitHub Actions**, pushes to `main` / `master` run [`.github/workflows/docs.yml`](.github/workflows/docs.yml) and publish the Docsify portal and static dbt Docs together.
 
-**Public URL (replace org/repo with yours):**
+**Published sites:**
 
-`https://<github-org-or-user>.github.io/<repository-name>/`
+- [Documentation portal](https://the-datastrategist.github.io/tds-dbt-favorita/)
+- [dbt Docs lineage and catalog](https://the-datastrategist.github.io/tds-dbt-favorita/dbt-docs/)
 
-The site includes the [project overview](docs/overview.md), model catalog, and [exposures](dbt/models/exposures.yml) on the lineage graph. No BigQuery credentials are required to browse it.
+The portal contains the narrative platform and delivery documentation. The dbt Docs subsite contains the model catalog and [exposures](dbt/models/exposures.yml) on the lineage graph. No BigQuery credentials are required to browse either site.
 
 ### Vertex AI model commands
 

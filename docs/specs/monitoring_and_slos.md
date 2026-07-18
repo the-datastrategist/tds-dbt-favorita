@@ -55,6 +55,11 @@ Add or extend dbt marts:
 | `forecast_drift` | target and feature drift |
 | `forecast_pipeline_health` | success, duration, retries, cost labels |
 
+The scheduled publication pipeline additionally emits per-stage status, duration, attempt count,
+input/output row counts, exception counts, lock ownership, and component run IDs. Monitoring must
+distinguish a technically successful stage from a run that failed its publication gates, and must
+alert when a nonterminal run exceeds the contract's maximum duration.
+
 ### 3. Alert policy config
 
 Add a YAML alert contract:
@@ -114,5 +119,6 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 - [Forecast operations](forecast_operations.md)
 - [Terraform modules](terraform_modules.md)
 - [IaC and GCP operations](../iac.md)
+- [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md)
 
 {% enddocs %}

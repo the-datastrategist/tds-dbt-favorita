@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from vertex.config.backtest_contract import load_backtest_contract
 from vertex.config.load_config import (
     DEFAULT_CONFIG_PATH,
     apply_job_step,
@@ -21,6 +22,7 @@ from vertex.config.load_config import (
     load_model_config,
     validate_config_for_step,
 )
+from vertex.evaluation.model_lifecycle_persistence import resolve_champion_config_name
 from vertex.models.registry import ensure_registered, run_registered
 from vertex.utils.experiment_tracking import ExperimentRunContext
 from vertex.utils.tracking import finish_job_run, start_job_run
@@ -116,8 +118,15 @@ def main() -> None:
     parser.add_argument(
         "--config-name",
         "-c",
-        required=True,
+        required=False,
         help="Named config block in the YAML file",
+    )
+    parser.add_argument("--resolve-champion", action="store_true")
+    parser.add_argument("--backtest-contract-path", default=None)
+    parser.add_argument("--candidate-table", default="tds-favorita.favorita.model_candidates")
+    parser.add_argument(
+        "--lifecycle-event-table",
+        default="tds-favorita.favorita.model_lifecycle_events",
     )
     parser.add_argument(
         "--step",
@@ -139,6 +148,19 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    if args.resolve_champion and args.config_name:
+        parser.error("use either --config-name or --resolve-champion, not both")
+    if not args.resolve_champion and not args.config_name:
+        parser.error("--config-name or --resolve-champion is required")
+    config_name = args.config_name
+    if args.resolve_champion:
+        config_name = resolve_champion_config_name(
+            load_backtest_contract(args.backtest_contract_path),
+            candidate_table=args.candidate_table,
+            event_table=args.lifecycle_event_table,
+        )
+    assert config_name is not None
+
     update_config: bool | None = None
     if args.no_update_config:
         update_config = False
@@ -147,13 +169,13 @@ def main() -> None:
 
     try:
         run_job(
-            config_name=args.config_name,
+            config_name=config_name,
             config_path=args.config_path,
             step_override=args.step,
             update_config=update_config,
         )
     except Exception:
-        logger.exception("Job failed for config %s", args.config_name)
+        logger.exception("Job failed for config %s", config_name)
         sys.exit(1)
 
 

@@ -10,6 +10,8 @@ from vertex.utils.data_utils import (
     split_by_time_percentile,
 )
 
+pytestmark = pytest.mark.unit
+
 
 class TestGetHashId:
     """Test hash ID generation."""

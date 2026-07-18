@@ -235,6 +235,52 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_metrics` (
 PARTITION BY forecast_origin
 CLUSTER BY backtest_contract_name, horizon, baseline_name, backtest_run_id;
 
+-- Immutable registrations. Current state and champion history are derived from
+-- model_lifecycle_events so retries never update or erase an earlier decision.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.model_candidates` (
+  candidate_id STRING NOT NULL,
+  model_scope_json JSON NOT NULL,
+  model_config_name STRING NOT NULL,
+  model_family STRING NOT NULL,
+  model_type STRING NOT NULL,
+  backtest_run_id STRING NOT NULL,
+  backtest_contract_hash STRING NOT NULL,
+  artifact_uri STRING,
+  initial_state STRING NOT NULL,
+  registered_by STRING NOT NULL,
+  registered_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY DATE(registered_at)
+CLUSTER BY model_config_name, model_family, candidate_id;
+
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.model_promotion_checks` (
+  promotion_check_id STRING NOT NULL,
+  candidate_id STRING NOT NULL,
+  check_name STRING NOT NULL,
+  observed_value FLOAT64,
+  threshold_value FLOAT64 NOT NULL,
+  passed BOOL NOT NULL,
+  details_json JSON,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+CLUSTER BY candidate_id, check_name, passed;
+
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.model_lifecycle_events` (
+  lifecycle_event_id STRING NOT NULL,
+  candidate_id STRING NOT NULL,
+  event_type STRING NOT NULL,
+  from_state STRING,
+  to_state STRING NOT NULL,
+  replaces_candidate_id STRING,
+  reason STRING,
+  actor STRING NOT NULL,
+  occurred_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY DATE(occurred_at)
+CLUSTER BY candidate_id, event_type, to_state;
+
 -- SHAP feature attributions for tree-based Vertex predictions (xgboost, random_forest);
 -- one row per prediction_id in ml_model_predictions when explain.enabled is set.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.favorita_model_explain` (
@@ -330,6 +376,11 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_outputs` (
   forecast_strategy STRING NOT NULL,
   fallback_reason STRING,
   confidence_flag STRING NOT NULL,
+  calibration_method STRING,
+  calibration_run_id STRING,
+  hierarchy_version STRING,
+  reconciliation_method STRING NOT NULL,
+  reconciliation_run_id STRING,
   statistical_forecast FLOAT64 NOT NULL,
   planner_override FLOAT64,
   approved_forecast FLOAT64,
@@ -357,6 +408,93 @@ ADD COLUMN IF NOT EXISTS fallback_reason STRING;
 
 ALTER TABLE `tds-favorita.favorita.forecast_outputs`
 ADD COLUMN IF NOT EXISTS confidence_flag STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS calibration_method STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS calibration_run_id STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS hierarchy_version STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS reconciliation_method STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS reconciliation_run_id STRING;
+
+-- Versioned hierarchy nodes used by reconciliation runs.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_hierarchy_nodes` (
+  hierarchy_name STRING NOT NULL,
+  hierarchy_version STRING NOT NULL,
+  node_id STRING NOT NULL,
+  level_name STRING NOT NULL,
+  level_position INT64 NOT NULL,
+  node_key_json JSON NOT NULL,
+  effective_from DATE NOT NULL,
+  effective_to DATE,
+  created_at TIMESTAMP NOT NULL
+)
+CLUSTER BY hierarchy_name, hierarchy_version, level_name;
+
+-- Single-parent hierarchy edges and optional top-down allocation weights.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_hierarchy_edges` (
+  hierarchy_name STRING NOT NULL,
+  hierarchy_version STRING NOT NULL,
+  parent_node_id STRING NOT NULL,
+  child_node_id STRING NOT NULL,
+  allocation_weight FLOAT64,
+  weight_source STRING,
+  effective_from DATE NOT NULL,
+  effective_to DATE,
+  created_at TIMESTAMP NOT NULL
+)
+CLUSTER BY hierarchy_name, hierarchy_version, parent_node_id;
+
+-- One audit record per reconciliation execution.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_reconciliation_runs` (
+  reconciliation_run_id STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  hierarchy_name STRING NOT NULL,
+  hierarchy_version STRING NOT NULL,
+  reconciliation_method STRING NOT NULL,
+  tolerance_abs FLOAT64 NOT NULL,
+  run_status STRING NOT NULL,
+  input_row_count INT64,
+  output_row_count INT64,
+  violation_count INT64,
+  started_at TIMESTAMP NOT NULL,
+  finished_at TIMESTAMP,
+  error_message STRING
+)
+PARTITION BY DATE(started_at)
+CLUSTER BY hierarchy_name, reconciliation_method, run_status;
+
+-- Reconciled forecasts remain separately queryable from immutable base outputs.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_reconciled_outputs` (
+  reconciliation_output_id STRING NOT NULL,
+  reconciliation_run_id STRING NOT NULL,
+  forecast_output_id STRING,
+  forecast_run_id STRING NOT NULL,
+  hierarchy_name STRING NOT NULL,
+  hierarchy_version STRING NOT NULL,
+  node_id STRING NOT NULL,
+  level_name STRING NOT NULL,
+  forecast_origin TIMESTAMP NOT NULL,
+  target_date DATE NOT NULL,
+  horizon INT64 NOT NULL,
+  base_prediction_p10 FLOAT64,
+  base_prediction_p50 FLOAT64,
+  base_prediction_p90 FLOAT64,
+  prediction_p10 FLOAT64,
+  prediction_p50 FLOAT64 NOT NULL,
+  prediction_p90 FLOAT64,
+  reconciliation_method STRING NOT NULL,
+  created_at TIMESTAMP NOT NULL
+)
+PARTITION BY DATE(forecast_origin)
+CLUSTER BY hierarchy_name, level_name, reconciliation_method;
 
 -- Forecast status transition history.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_status_history` (

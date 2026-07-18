@@ -1,6 +1,31 @@
 version: 2
 
 models:
+  - name: ml_model_lifecycle_current
+    description: Latest derived lifecycle state and audit event for every registered candidate.
+    columns:
+      - name: candidate_id
+        data_tests: [unique, not_null]
+      - name: lifecycle_state
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [candidate, champion, rejected, retired]
+
+  - name: ml_model_current_champion
+    description: At most one latest champion per canonical target, grain, and horizon scope.
+    columns:
+      - name: candidate_id
+        data_tests: [unique, not_null]
+      - name: model_scope_key
+        data_tests: [unique, not_null]
+      - name: lifecycle_state
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [champion]
+
   - name: bqml_model_train
     description: >
       Creates BigQuery ML models from model_configs in dbt_project.yml. Training data is read from

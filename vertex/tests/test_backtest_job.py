@@ -1,14 +1,19 @@
 """Tests for backtest input mode routing."""
 
 import copy
-from unittest.mock import patch
+import json
+import sys
+from types import SimpleNamespace
+from unittest.mock import ANY, patch
 
+import pandas as pd
 import pytest
 
 from vertex.config.backtest_contract import BacktestContract, load_backtest_contract
 from vertex.jobs.backtest import (
     build_bigquery_history_query,
     build_bigquery_model_history_query,
+    main,
     run_backtest,
     run_baseline_backtest,
 )
@@ -99,3 +104,50 @@ def test_input_is_required_outside_bigquery_mode():
 
     with pytest.raises(ValueError, match="input_csv is required"):
         run_backtest()
+
+
+@pytest.mark.unit
+def test_main_dry_run_prints_plan_without_loading_history(capsys):
+    plan = [{"origin": "2024-01-01", "horizon": 7}]
+    with (
+        patch.object(sys, "argv", ["backtest", "--dry-run"]),
+        patch("vertex.jobs.backtest.build_backtest_plan", return_value=plan),
+        patch("vertex.jobs.backtest.run_backtest") as runner,
+    ):
+        main()
+
+    assert json.loads(capsys.readouterr().out) == plan
+    runner.assert_not_called()
+
+
+@pytest.mark.unit
+def test_main_scores_and_persists_through_shared_contract(capsys):
+    result = SimpleNamespace(
+        backtest_run_id="run-1",
+        predictions=pd.DataFrame([{"prediction_id": "prediction-1"}]),
+        metrics=pd.DataFrame([{"metric_name": "wape", "metric_value": 0.1}]),
+    )
+    argv = [
+        "backtest",
+        "--input-csv",
+        "history.csv",
+        "--persist",
+        "--project-id",
+        "billing-project",
+    ]
+    with (
+        patch.object(sys, "argv", argv),
+        patch("vertex.jobs.backtest.build_backtest_plan", return_value=[]),
+        patch("vertex.jobs.backtest.load_backtest_contract"),
+        patch("vertex.jobs.backtest.run_backtest", return_value=result) as runner,
+        patch("vertex.jobs.backtest.persist_backtest_result") as persist,
+    ):
+        main()
+
+    runner.assert_called_once_with(
+        "history.csv", ANY, use_bigquery=False, project_id="billing-project"
+    )
+    persist.assert_called_once()
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["backtest_run_id"] == "run-1"
+    assert payload["prediction_count"] == 1

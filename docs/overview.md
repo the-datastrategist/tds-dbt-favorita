@@ -44,7 +44,7 @@ flowchart TB
 
   subgraph GH["GitHub"]
     Actions[GitHub Actions CI]
-    Pages["GitHub Pages\ndbt Docs"]
+    Pages["GitHub Pages\nDocsify + dbt Docs"]
   end
 
   subgraph GCP["GCP project"]

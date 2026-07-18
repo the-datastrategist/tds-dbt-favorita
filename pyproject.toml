@@ -61,7 +61,7 @@ markers = [
     "slow: Slow running tests",
 ]
 
-# Unit-test coverage gate (CI --cov-fail-under=65) applies to library code.
+# Unit-test coverage gate (Make/CI --cov-fail-under=75) applies to library code.
 # Omit GCP Custom Job submitters and family train/predict/optimize CLIs (integration-heavy).
 [tool.coverage.run]
 source = ["vertex"]
