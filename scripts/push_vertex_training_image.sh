@@ -63,6 +63,7 @@ gcloud auth print-access-token | docker login -u oauth2accesstoken --password-st
 
 echo "=== Build and push immutable release image ==="
 BUILDER_NAME="${DOCKER_BUILDX_BUILDER:-tds-favorita-release}"
+TARGET_PLATFORM="${DOCKER_TARGET_PLATFORM:-linux/amd64}"
 if ! docker buildx inspect "${BUILDER_NAME}" >/dev/null 2>&1; then
   docker buildx create \
     --name "${BUILDER_NAME}" \
@@ -75,6 +76,7 @@ docker buildx inspect --bootstrap "${BUILDER_NAME}" >/dev/null
 
 if ! docker buildx build \
   --builder "${BUILDER_NAME}" \
+  --platform "${TARGET_PLATFORM}" \
   --target production \
   --tag "${REMOTE_IMAGE}" \
   --label "org.opencontainers.image.revision=${GIT_SHA}" \
@@ -90,7 +92,10 @@ if ! docker buildx build \
   exit 1
 fi
 
-DIGEST="$(docker buildx imagetools inspect "${REMOTE_IMAGE}" --format '{{.Manifest.Digest}}')"
+DIGEST="$(
+  docker buildx imagetools inspect "${REMOTE_IMAGE}" --format '{{json .Manifest}}' \
+    | python3 -c 'import json, sys; print(json.load(sys.stdin)["digest"])'
+)"
 if [[ ! "${DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
   echo "Could not resolve an immutable digest for ${REMOTE_IMAGE}: ${DIGEST}" >&2
   exit 1
