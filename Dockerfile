@@ -1,5 +1,5 @@
 # Pin the official multi-platform base image so production builds cannot drift silently.
-FROM python:3.11-slim@sha256:db3ff2e1800a8581e2c48a27c3995339d47bdf046da21c7627accd3d51053a93 AS builder
+FROM python:3.14-slim@sha256:d3400aa122fa42cf0af0dbe8ec3091b047eac5c8f7e3539f7135e86d855dc015 AS builder
 
 # System environment settings
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -18,7 +18,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-FROM python:3.11-slim@sha256:db3ff2e1800a8581e2c48a27c3995339d47bdf046da21c7627accd3d51053a93 AS runtime
+FROM python:3.14-slim@sha256:d3400aa122fa42cf0af0dbe8ec3091b047eac5c8f7e3539f7135e86d855dc015 AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
