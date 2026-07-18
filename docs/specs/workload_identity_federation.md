@@ -2,7 +2,7 @@
 
 # SPEC: Workload Identity Federation
 
-**Status:** In progress
+**Status:** Implemented (project bootstrap required)
 **Roadmap reference:** [`iac.md`](../iac.md#security-checklist) security checklist — "Service account keys not in repo; prefer Workload Identity Federation"; [`vertex/ops/README.md`](../../vertex/ops/README.md#security-checklist) same item; [`client_rollout.md`](../client_rollout.md#post-rollout-weeks-58-optional) — "Workload Identity Federation | Replace SA keys"
 
 ---
@@ -32,12 +32,11 @@ The third row is a latent bug worth fixing regardless of WIF: `creds = os.getenv
 - Removing key-file support for **local development**. `GOOGLE_APPLICATION_CREDENTIALS` + a downloaded key remains the simplest onboarding path for `make docker-bash` / `make vertex-train` on a laptop; WIF impersonation from a laptop (via `gcloud auth application-default login --impersonate-service-account`) is a nice-to-have, not a requirement, and adds setup friction for a repo whose audience includes prospective clients evaluating the demo.
 - Cloud Scheduler → Cloud Run (`iac.md` Scheduling Pattern A) — once built, that Cloud Run service should run as an attached service account (no key file, no WIF needed — it's already a first-party GCP workload), which is a natural continuation of this spec but out of scope until Cloud Run trigger service exists.
 
-## Implementation notes (as shipped so far)
+## Implementation notes
 
-Rollout step 1 is done. Steps 2–4 are no longer blocked on tooling (the [Terraform modules
-spec](terraform_modules.md) has since shipped, so `iam-vertex-sa` exists to extend) — they're
-blocked purely on having a real GCP project/org to provision the WIF pool/provider against,
-which this repo doesn't have:
+All repository changes are shipped. A client must still bootstrap the resources in its real GCP
+project and configure the protected GitHub `dev` environment as documented in
+[`terraform/README.md`](../../terraform/README.md#keyless-github-actions-plan):
 
 - **Done:** the dead-code removal in `vertex/jobs/gcp.py` — `worker_pool_spec` no longer
   propagates `GOOGLE_APPLICATION_CREDENTIALS` into the Custom Job container env. Added
@@ -49,30 +48,32 @@ which this repo doesn't have:
 - **Done:** [Terraform modules](terraform_modules.md) shipped, including `iam-vertex-sa`, so the
   `google_iam_workload_identity_pool*` resources this spec calls for have a module to live in —
   removing that tooling blocker on steps 2–3.
-- **Not done:** the CI `google-github-actions/auth` step and the WIF pool/provider Terraform
-  resources themselves (rollout steps 2–3) — creating a WIF pool/provider requires a real GCP
-  project. Revisit once a CI job actually needs live GCP access (e.g. `terraform plan` against a
-  real project).
+- **Done:** `terraform/modules/github-wif` creates a dedicated CI service account, GitHub OIDC
+  pool/provider restricted to the configured `owner/repository`, impersonation binding, read-only
+  project access, and state-bucket-only lock access.
+- **Done:** `.github/workflows/terraform.yml` authenticates the dev plan through
+  `google-github-actions/auth`, requests `id-token: write` only on that job, rejects fork PRs, and
+  retains a human-readable plan for seven days. It has no apply step.
 
 ## Design
 
 ### 1. CI: `google-github-actions/auth` + WIF
 
 ```yaml
-# .github/workflows/ci.yml (new step, only for jobs that need real GCP — none exist yet)
+# .github/workflows/terraform.yml (`plan-dev` job)
 permissions:
   contents: read
   id-token: write   # required for WIF
 
 steps:
   - id: auth
-    uses: google-github-actions/auth@v2
+    uses: google-github-actions/auth@v3
     with:
       workload_identity_provider: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider
       service_account: ci-runner@PROJECT_ID.iam.gserviceaccount.com
 ```
 
-Provisioned by the [Terraform spec](terraform_modules.md)'s `iam-vertex-sa` module (extended with a WIF pool/provider resource) or a small standalone `workload-identity` Terraform module:
+Provisioned by the standalone `terraform/modules/github-wif` module:
 
 ```hcl
 resource "google_iam_workload_identity_pool" "github" {
@@ -123,9 +124,12 @@ The **machine that calls `vertex.jobs.submit`** (a developer's laptop, or eventu
 ## Rollout
 
 1. Land the `vertex/jobs/gcp.py` dead-code removal independently — it's a small, safe cleanup with no WIF dependency.
-2. Ship the WIF Terraform resources alongside (or as an extension of) the [Terraform spec](terraform_modules.md)'s `iam-vertex-sa` module.
-3. Add the `google-github-actions/auth` step to CI **only when a real CI job needs it** (e.g. Terraform `plan` in dev) — don't add unused auth wiring speculatively.
-4. Update security checklists in `iac.md` and `vertex/ops/README.md` to reflect the new state.
+2. Ship the standalone WIF Terraform module and opt-in dev wiring. **Done.**
+3. Add `google-github-actions/auth` to the real Terraform dev plan job. **Done.**
+4. Bootstrap the module in the client's dev project and configure the protected GitHub `dev`
+   environment. **Per-client operation; see `terraform/README.md`.**
+5. Update security checklists in `iac.md` and `vertex/ops/README.md` after that client bootstrap,
+   so they state deployed facts rather than repository capability.
 
 ## Open questions
 
@@ -135,7 +139,7 @@ The **machine that calls `vertex.jobs.submit`** (a developer's laptop, or eventu
 ## Related documents
 
 - [Specs index](README.md)
-- [Terraform modules](terraform_modules.md) — where the WIF pool/provider resources live
+- [Terraform modules](terraform_modules.md) — broader GCP provisioning design
 - [IaC and GCP operations](../iac.md#security-checklist)
 - `vertex/ops/README.md` — security checklist
 

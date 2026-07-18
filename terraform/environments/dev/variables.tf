@@ -57,3 +57,31 @@ variable "caller_member" {
   description = "Identity allowed to act as the Vertex service account, e.g. \"user:you@example.com\". See modules/iam-vertex-sa."
   type        = string
 }
+
+variable "enable_github_wif" {
+  description = "Create repository-scoped GitHub OIDC trust and its Terraform plan identity."
+  type        = bool
+  default     = false
+}
+
+variable "github_repository" {
+  description = "Repository trusted by WIF, in owner/name form. Required when enable_github_wif is true."
+  type        = string
+  default     = "placeholder/placeholder"
+
+  validation {
+    condition     = !var.enable_github_wif || var.github_repository != "placeholder/placeholder"
+    error_message = "Set github_repository to the real owner/name when enable_github_wif is true."
+  }
+}
+
+variable "terraform_state_bucket" {
+  description = "Existing dev GCS backend bucket granted to the plan-only CI identity."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = !var.enable_github_wif || var.terraform_state_bucket != ""
+    error_message = "Set terraform_state_bucket when enable_github_wif is true."
+  }
+}

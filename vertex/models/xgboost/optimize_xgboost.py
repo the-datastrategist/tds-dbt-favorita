@@ -86,9 +86,16 @@ def run_optimize_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         categorical_columns=categorical_columns,
         date_column=date_column,
     )
-    validate_model_features_from_config(
+    registry = validate_model_features_from_config(
         config,
         features,
+        context=f"{config_name} optimization features",
+    )
+    registry.validate_frame_cutoffs(
+        df.loc[df_features.index],
+        features,
+        cutoff=df.loc[df_features.index, date_column],
+        date_column=date_column,
         context=f"{config_name} optimization features",
     )
     sort_column = date_column if date_column in df_features.columns else None

@@ -103,9 +103,16 @@ def run_train_random_forest(
         categorical_columns=categorical_columns,
         date_column=date_column,
     )
-    validate_model_features_from_config(
+    registry = validate_model_features_from_config(
         config,
         features,
+        context=f"{config_name} training features",
+    )
+    registry.validate_frame_cutoffs(
+        df.loc[df_features.index],
+        features,
+        cutoff=df.loc[df_features.index, date_column],
+        date_column=date_column,
         context=f"{config_name} training features",
     )
 

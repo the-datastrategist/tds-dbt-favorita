@@ -1,0 +1,45 @@
+* Start here
+  * [Platform overview](overview.md)
+  * [Reference architecture](reference_architecture.md)
+  * [Case study](case_study.md)
+  * [Implementation recommendations](demand_forecasting_platform_recommendations.md)
+
+* Forecasting platform
+  * [Forecast contract](forecast_contract.md)
+  * [Feature availability](feature_availability.md)
+  * [Forecasting methods](forecasting_methods.md)
+  * [Backtesting and evaluation](backtesting_and_evaluation.md)
+  * [Model benchmarks](benchmarks.md)
+
+* Delivery and operations
+  * [Delivery artifacts](delivery_artifacts.md)
+  * [Client rollout](client_rollout.md)
+  * [Clean rebuild runbook](clean_rebuild.md)
+  * [Infrastructure and GCP operations](iac.md)
+  * [Accelerators](accelerators.md)
+  * [dbt lineage and catalog](dbt-docs.md)
+
+* Consulting package
+  * [Package overview](consulting_package.md)
+  * [dbt](dbt/consulting_package.md)
+  * [Vertex AI](vertex/consulting_package.md)
+  * [Prefect](prefect/consulting_package.md)
+  * [MLflow](mlflow/consulting_package.md)
+
+* Engineering specs
+  * [Specs overview](specs/README.md)
+  * [Demand data model](specs/demand_data_model.md)
+  * [Forecast contract and output](specs/forecast_contract_and_output.md)
+  * [Point-in-time feature availability](specs/point_in_time_feature_availability.md)
+  * [Forecasting methods](specs/forecasting_methods.md)
+  * [Prophet model family](specs/prophet_model_family.md)
+  * [Backtesting and model lifecycle](specs/backtesting_and_model_lifecycle.md)
+  * [Model leaderboard mart](specs/model_leaderboard_mart.md)
+  * [Prediction accuracy monitoring](specs/prediction_accuracy_monitoring.md)
+  * [Hierarchical reconciliation](specs/hierarchical_reconciliation.md)
+  * [Forecast operations](specs/forecast_operations.md)
+  * [Integration contracts](specs/integration_contracts.md)
+  * [Monitoring and SLOs](specs/monitoring_and_slos.md)
+  * [Terraform modules](specs/terraform_modules.md)
+  * [Workload Identity Federation](specs/workload_identity_federation.md)
+  * [Open-source product readiness](specs/open_source_product_readiness.md)

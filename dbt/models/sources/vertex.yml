@@ -55,6 +55,21 @@ sources:
       - name: forecast_status_history
         description: Forecast lifecycle transition history for approval, publication, supersession, and failure events
 
+      - name: forecast_exceptions
+        description: Append-only forecast exceptions requiring operational review
+
+      - name: forecast_overrides
+        description: Append-only audited planner adjustments that preserve statistical forecasts
+
+      - name: forecast_approvals
+        description: Append-only approval decisions for statistical or planner-adjusted forecasts
+
+      - name: forecast_publications
+        description: Append-only versioned publication attempts and downstream delivery outcomes
+
+      - name: forecast_revisions
+        description: Append-only supersession and rollback lineage between publication versions
+
       - name: backtest_runs
         description: Immutable rolling-origin backtest executions and their comparison semantics
 

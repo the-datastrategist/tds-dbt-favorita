@@ -27,6 +27,9 @@ deployments:
         timezone: UTC
         active: true
 
+  # vertex_mode: docker — runs train/predict/optimize inline in this worker's
+  # ml-pipeline container (fast, free, no Vertex quota) for manual/local iteration.
+  # Never used for scheduled deployments below — see vertex_mode: vertex there.
   - name: prefect-vertex-train-model-manual
     entrypoint: orchestration/flows/vertex.py:prefect_vertex_train_model_flow
     work_pool:
@@ -38,21 +41,26 @@ deployments:
       vertex_mode: docker
       sync: false
 
+  # vertex_mode: vertex — scheduled runs always submit a Vertex Custom Job rather
+  # than executing training inline in the Prefect worker container. This keeps the
+  # worker as a thin orchestrator and avoids duplicating Vertex-managed compute /
+  # IAM / experiment tracking with a second local execution path.
   - name: prefect-vertex-train-model-schedule
     entrypoint: orchestration/flows/vertex.py:prefect_vertex_train_model_flow
     work_pool:
       name: default
-    description: Scheduled Vertex training (default single config; set train_all in UI/API).
+    description: Scheduled Vertex training (submits a Custom Job; default single config, set train_all in UI/API).
     parameters:
       config_name: favorita_store_n1d_xgboost
       train_all: false
-      vertex_mode: docker
-      sync: false
+      vertex_mode: vertex
+      sync: true
     schedules:
       - cron: "0 7 * * *"
         timezone: UTC
         active: true
 
+  # vertex_mode: docker — see note above; manual/local iteration only.
   - name: prefect-vertex-ml-pipeline-manual
     entrypoint: orchestration/flows/vertex_pipeline.py:prefect_vertex_ml_pipeline_flow
     work_pool:
@@ -65,15 +73,17 @@ deployments:
       skip_optimize: false
       skip_predict: false
 
+  # vertex_mode: vertex — scheduled runs submit a KFP PipelineJob to Vertex AI
+  # instead of running each step inline in the worker container. See note above.
   - name: prefect-vertex-ml-pipeline-scheduled
     entrypoint: orchestration/flows/vertex_pipeline.py:prefect_vertex_ml_pipeline_flow
     work_pool:
       name: default
-    description: Weekly scheduled XGBoost ML pipeline (docker, full steps).
+    description: Weekly scheduled XGBoost ML pipeline (submits a Vertex PipelineJob, full steps).
     parameters:
       pipeline_name: favorita_xgboost
-      vertex_mode: docker
-      sync: false
+      vertex_mode: vertex
+      sync: true
       skip_optimize: false
       skip_predict: false
     schedules:

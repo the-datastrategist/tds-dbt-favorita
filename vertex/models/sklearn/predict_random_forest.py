@@ -108,9 +108,16 @@ def run_predict_random_forest(config: dict[str, Any]) -> dict[str, Any]:
     bool_cols = model_input.select_dtypes(include="bool").columns
     if len(bool_cols) > 0:
         model_input[bool_cols] = model_input[bool_cols].astype(int)
-    validate_model_features_from_config(
+    registry = validate_model_features_from_config(
         config,
         list(model_input.columns),
+        context=f"{config_name} prediction features",
+    )
+    cutoff_metadata = registry.validate_frame_cutoffs(
+        df.loc[model_input.index],
+        list(model_input.columns),
+        cutoff=df.loc[model_input.index, date_column],
+        date_column=date_column,
         context=f"{config_name} prediction features",
     )
     predictions = pd.Series(model.predict(model_input), index=X.index)
@@ -163,6 +170,7 @@ def run_predict_random_forest(config: dict[str, Any]) -> dict[str, Any]:
         config=config,
         prediction_rows=prediction_rows,
         project_id=project_id,
+        feature_cutoff_metadata=cutoff_metadata,
     )
     if forecast_output_count:
         logger.info(

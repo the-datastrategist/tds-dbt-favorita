@@ -115,9 +115,16 @@ def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         date_column=date_column,
     )
     model_input = prepare_model_input(X)
-    validate_model_features_from_config(
+    registry = validate_model_features_from_config(
         config,
         list(model_input.columns),
+        context=f"{config_name} prediction features",
+    )
+    cutoff_metadata = registry.validate_frame_cutoffs(
+        df.loc[model_input.index],
+        list(model_input.columns),
+        cutoff=df.loc[model_input.index, date_column],
+        date_column=date_column,
         context=f"{config_name} prediction features",
     )
     predictions = pd.Series(model.predict(model_input), index=X.index)
@@ -194,6 +201,7 @@ def run_predict_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         config=config,
         prediction_rows=prediction_rows,
         project_id=project_id,
+        feature_cutoff_metadata=cutoff_metadata,
     )
     if forecast_output_count:
         logger.info(

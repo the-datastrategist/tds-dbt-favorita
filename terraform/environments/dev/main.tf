@@ -66,3 +66,16 @@ module "cloud_scheduler" {
   region     = var.region
   enabled    = false
 }
+
+# Opt-in because creating a WIF pool requires a real project and the state bucket must already
+# exist. Bootstrap once with a trusted human identity, then CI can run keyless plans.
+module "github_wif" {
+  count  = var.enable_github_wif ? 1 : 0
+  source = "../../modules/github-wif"
+
+  project_id        = var.project_id
+  github_repository = var.github_repository
+  state_bucket_name = var.terraform_state_bucket
+
+  depends_on = [module.gcp_apis]
+}

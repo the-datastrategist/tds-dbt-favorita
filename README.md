@@ -87,9 +87,11 @@ flowchart TB
   BI["BI / dashboards\n(client-specific)"]
 
   Make --> Compose
-  Compose --> BQ
-  Compose --> GCS
-  Compose --> Vertex
+  Compose -->|dbt + ingestion| BQ
+  Compose -->|dbt + ingestion| GCS
+  Compose -.->|dev-only: VERTEX_MODE=docker| GCS
+  Compose -.->|dev-only: VERTEX_MODE=docker| BQ
+  Compose -->|submit job| Vertex
   Compose --> MLflow
   Prefect --> Compose
   Vertex --> GCS
@@ -100,6 +102,8 @@ flowchart TB
   Actions --> Pages
   BQ --> BI
 ```
+
+`ml-pipeline` always talks to BigQuery/GCS directly for dbt and raw ingestion — that's not ML compute and has no Vertex equivalent. For **training / predict / optimize**, the direct-write arrows (dashed) are a **local-dev-only** path (`VERTEX_MODE=docker`, used by the manual Prefect deployments and `make vertex-train` etc.) for fast, free iteration. **Scheduled** deployments in `prefect.yaml` always use `VERTEX_MODE=vertex`, so production/scheduled ML compute only ever reaches BigQuery/GCS through Vertex AI Custom Jobs / PipelineJobs — the container just submits the job.
 
 ### Data flow diagram
 
