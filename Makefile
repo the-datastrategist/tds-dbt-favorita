@@ -31,7 +31,7 @@ endif
 	vertex-submit-train vertex-submit-predict vertex-submit-optimize \
 	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
 	dbt-vertex dbt-backtest vertex-bq-ddl vertex-validate-config vertex-validate-configs \
-	vertex-backfill vertex-backtest-plan vertex-backtest prefect-flow-vertex-backfill \
+	vertex-backfill vertex-backtest-plan vertex-backtest vertex-backtest-persist prefect-flow-vertex-backfill \
 	docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
 
 help: ## Show this help message
@@ -349,8 +349,8 @@ vertex-pipeline-train-only: ## Pipeline without optimize/predict steps
 dbt-vertex: vertex-bq-ddl ## Ensure Vertex tables exist, then build Vertex-only staging and monitoring models
 	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:vertex --exclude tag:bqml tag:backtest $(ARGS)
 
-dbt-backtest: vertex-bq-ddl ## Build optional backtest staging models after applying their DDL
-	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:backtest --exclude tag:bqml $(ARGS)
+dbt-backtest: vertex-bq-ddl ## Build and test backtest staging, leaderboard, and champion models
+	docker compose run --rm ml-pipeline dbt build --project-dir dbt --target $(DBT_TARGET) --select tag:backtest $(ARGS)
 
 vertex-bq-ddl: ## Create BigQuery tables for Vertex ML outputs (once per environment)
 	docker compose run --rm ml-pipeline python scripts/apply_vertex_bq_ddl.py
@@ -370,19 +370,25 @@ VERTEX_BACKTEST_CONTRACT ?= $(VERTEX_DIR)/config/backtest_contract.yaml
 VERTEX_BACKTEST_INPUT ?=
 VERTEX_BACKTEST_INPUT_MODE ?= bigquery
 VERTEX_BACKTEST_PROJECT ?=
+VERTEX_BACKTEST_PERSIST ?= false
 VERTEX_BACKTEST_INPUT_FLAG = $(if $(filter csv,$(VERTEX_BACKTEST_INPUT_MODE)),--input-csv $(VERTEX_BACKTEST_INPUT),--input-bigquery)
+VERTEX_BACKTEST_PERSIST_FLAG = $(if $(filter true 1 yes,$(VERTEX_BACKTEST_PERSIST)),--persist,)
 
 vertex-backtest-plan: ## Validate a backtest contract and print its rolling-origin plan
 	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.backtest \
 		--contract-path $(VERTEX_BACKTEST_CONTRACT) \
 		--dry-run
 
-vertex-backtest: ## Score baselines from BigQuery (default) or CSV (VERTEX_BACKTEST_INPUT_MODE=csv)
+vertex-backtest: ## Score model + baselines; set VERTEX_BACKTEST_PERSIST=true to persist
 	@if [ "$(VERTEX_BACKTEST_INPUT_MODE)" = "csv" ]; then test -n "$(VERTEX_BACKTEST_INPUT)" || (echo "Set VERTEX_BACKTEST_INPUT to a CSV path" && exit 1); fi
 	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.backtest \
 		--contract-path $(VERTEX_BACKTEST_CONTRACT) \
 		$(VERTEX_BACKTEST_INPUT_FLAG) \
-		$(if $(VERTEX_BACKTEST_PROJECT),--project-id $(VERTEX_BACKTEST_PROJECT),)
+		$(if $(VERTEX_BACKTEST_PROJECT),--project-id $(VERTEX_BACKTEST_PROJECT),) \
+		$(VERTEX_BACKTEST_PERSIST_FLAG)
+
+vertex-backtest-persist: ## Score and idempotently persist model + baseline backtest records
+	@$(MAKE) vertex-backtest VERTEX_BACKTEST_PERSIST=true
 
 # Walk-forward backfill: train + predict per anchor date (see vertex/jobs/backfill.py)
 VERTEX_BACKFILL_CONFIG ?= favorita_store_n1d_xgboost

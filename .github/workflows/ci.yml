@@ -81,8 +81,21 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
-      - name: Placeholder service account key
-        run: echo '{}' > /tmp/ci-service-account.json
+      - name: Create offline-only service account key
+        run: |
+          openssl genrsa -out /tmp/ci-private-key.pem 2048
+          jq --null-input \
+            --rawfile private_key /tmp/ci-private-key.pem \
+            '{
+              type: "service_account",
+              project_id: "ci-placeholder",
+              private_key_id: "ci-placeholder",
+              private_key: $private_key,
+              client_email: "dbt-ci@ci-placeholder.iam.gserviceaccount.com",
+              client_id: "000000000000000000000",
+              auth_uri: "https://accounts.google.com/o/oauth2/auth",
+              token_uri: "https://oauth2.googleapis.com/token"
+            }' > /tmp/ci-service-account.json
 
       - name: Install dbt packages
         run: dbt deps --project-dir dbt

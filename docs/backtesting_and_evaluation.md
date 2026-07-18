@@ -69,7 +69,19 @@ execution path.
 
 The command prints a stable backtest run ID and aggregate/segment metric records. Append-only BigQuery table contracts are defined in `vertex/ddl/vertex_bq_tables.sql` as `backtest_runs`, `backtest_predictions`, and `backtest_metrics`. Apply them with `make vertex-bq-ddl`.
 
-Pass `--persist` to write them. Persistence uses insert-only `MERGE` statements keyed by `backtest_run_id`, `prediction_id`, and `metric_id`. The same contract and input fingerprint therefore produce a no-op retry: existing immutable rows are neither duplicated nor updated.
+Persist a completed run and then build/test the comparison marts with:
+
+```bash
+make vertex-backtest-persist
+make dbt-backtest
+```
+
+`VERTEX_BACKTEST_PERSIST=true make vertex-backtest` is equivalent to the first command.
+Persistence uses insert-only `MERGE` statements keyed by `backtest_run_id`, `prediction_id`,
+and `metric_id`. The same contract and input fingerprint therefore produce a no-op retry:
+existing immutable rows are neither duplicated nor updated. `make dbt-backtest` applies the
+Vertex DDL, builds the backtest staging, leaderboard, and champion models, and executes their
+dbt tests.
 
 The dbt staging layer exposes these records through `stg_backtest_runs`,
 `stg_backtest_predictions`, and `stg_backtest_metrics`. The model leaderboard and champion

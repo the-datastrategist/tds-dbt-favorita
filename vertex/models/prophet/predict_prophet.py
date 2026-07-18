@@ -62,7 +62,10 @@ def run_predict_prophet(config: dict[str, Any]) -> dict[str, Any]:
         model_run_id=model_run_id,
     )
     joblib_uri = manifest.get("joblib_gcs_uri") or artifact_uri
-    bundle = load_joblib_from_gcs(joblib_uri)
+    bundle = load_joblib_from_gcs(
+        joblib_uri,
+        expected_sha256=manifest.get("joblib_sha256"),
+    )
 
     df = load_data_from_config(config)
     entity_column = manifest.get("entity_column", entity_column)

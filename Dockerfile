@@ -36,6 +36,11 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=builder /opt/venv /opt/venv
 
+# Build frontends are unnecessary at runtime. Removing both the base-image and
+# virtualenv copies also keeps their vendored packages out of vulnerability scans.
+RUN /usr/local/bin/python -m pip uninstall --yes setuptools wheel \
+    && /opt/venv/bin/python -m pip uninstall --yes setuptools wheel
+
 COPY . .
 
 RUN mkdir -p vertex/models/tmp dbt/target
