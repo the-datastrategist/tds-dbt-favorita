@@ -22,7 +22,7 @@ endif
 .PHONY: help install requirements-lock format lint test clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring load-favorita-gcs load-favorita-bigquery \
 	dbt-deps dbt-debug dbt-seed dbt-run dbt-run-full-refresh dbt-run-model dbt-run-operation dbt-create-table \
 	dbt-train dbt-predict dbt-build dbt-test dbt-compile dbt-list dbt-snapshot dbt-source-freshness dbt-clean \
-	dbt-ui dbt-docs dbt-docs-generate dbt-docs-serve \
+	docs-serve dbt-ui dbt-docs dbt-docs-generate dbt-docs-serve \
 	mlflow-ui prefect-ui prefect-server prefect-work-pool-create prefect-worker prefect-deploy \
 	prefect-run-dbt prefect-run-vertex-train prefect-run-vertex-train-all prefect-run-vertex-pipeline \
 	prefect-flow-dbt prefect-flow-vertex-train prefect-flow-vertex-pipeline \
@@ -178,10 +178,15 @@ dbt-source-freshness: ## Check configured source freshness
 dbt-clean: ## Remove dbt/target and dbt/dbt_packages via `dbt clean`
 	docker compose run --rm ml-pipeline dbt clean --project-dir dbt
 
+DOCS_PORT ?= 3000
 DBT_DOCS_PORT ?= 8080
 # dbt-core's catalog parser requests table_owner, but dbt-bigquery does not
 # return that optional field. Suppress only agate's resulting harmless warning.
 DBT_DOCS_PYTHONWARNINGS ?= ignore::RuntimeWarning:agate.type_tester
+
+docs-serve: ## Serve the Docsify documentation portal (http://127.0.0.1:3000)
+	@echo "Open in your browser: http://127.0.0.1:$(DOCS_PORT)"
+	python3 -m http.server $(DOCS_PORT) --bind 127.0.0.1 --directory docs
 
 dbt-docs-generate: ## Generate static dbt Docs site (dbt/target/)
 	docker compose run --rm -e PYTHONWARNINGS="$(DBT_DOCS_PYTHONWARNINGS)" ml-pipeline dbt docs generate --project-dir dbt

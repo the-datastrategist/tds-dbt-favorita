@@ -1,0 +1,25 @@
+:root {
+  --theme-color: #147d74;
+  --sidebar-width: 19rem;
+  --content-max-width: 980px;
+}
+
+.markdown-section {
+  max-width: var(--content-max-width);
+}
+
+.cover-main > p:last-child a {
+  border-radius: 0.35rem;
+}
+
+.sidebar-nav > ul > li > p {
+  color: #34495e;
+  font-weight: 700;
+  margin-top: 1.25rem;
+}
+
+@media screen and (max-width: 768px) {
+  :root {
+    --sidebar-width: 17rem;
+  }
+}

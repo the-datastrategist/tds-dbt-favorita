@@ -1,7 +1,7 @@
-# Publish static dbt Docs to GitHub Pages (overview, lineage, exposures).
+# Publish the Docsify portal and dbt Docs to GitHub Pages.
 # Enable: repo Settings → Pages → Build and deployment → GitHub Actions.
 
-name: Deploy dbt Docs
+name: Deploy documentation
 
 on:
   push:
@@ -62,10 +62,16 @@ jobs:
             --no-populate-cache \
             --threads 1
 
+      - name: Assemble documentation site
+        run: |
+          mkdir -p _site/dbt-docs
+          cp -R docs/. _site/
+          cp -R dbt/target/. _site/dbt-docs/
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
-          path: dbt/target
+          path: _site
 
   deploy:
     name: Deploy to GitHub Pages
