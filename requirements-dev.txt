@@ -54,7 +54,7 @@ backports-zstd==1.6.0
     # via py7zr
 beartype==0.22.9
     # via py-key-value-aio
-black==25.12.0
+black==26.3.1
     # via -r requirements-dev.in
 blinker==1.9.0
     # via flask
