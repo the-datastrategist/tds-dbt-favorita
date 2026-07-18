@@ -163,9 +163,7 @@ class FeatureAvailabilityRegistry:
         source_cutoffs: dict[str, str] = {}
         for column in metadata_columns:
             if column not in df.columns:
-                raise ValueError(
-                    f"{context} is missing point-in-time metadata column {column!r}"
-                )
+                raise ValueError(f"{context} is missing point-in-time metadata column {column!r}")
             values = pd.to_datetime(df[column], errors="coerce")
             if values.isna().any():
                 raise ValueError(f"{context} has null or invalid values in {column!r}")
