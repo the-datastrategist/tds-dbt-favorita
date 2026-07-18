@@ -87,6 +87,8 @@ def _json_safe(value: Any) -> Any:
 def _coerce_value_for_bq_type(value: Any, bq_type: str) -> Any:
     if value is None:
         return None
+    if isinstance(value, (np.floating, float)) and math.isnan(float(value)):
+        return None
     if bq_type == "JSON":
         if isinstance(value, (dict, list)):
             parsed: Any = value
@@ -105,6 +107,10 @@ def _coerce_value_for_bq_type(value: Any, bq_type: str) -> Any:
             return ts.to_pydatetime().isoformat(sep=" ", timespec="seconds")
         if isinstance(value, datetime):
             return value.isoformat(sep=" ", timespec="seconds")
+        if isinstance(value, date):
+            return datetime.combine(value, datetime.min.time()).isoformat(
+                sep=" ", timespec="seconds"
+            )
         return value
     if bq_type == "DATE":
         if isinstance(value, pd.Timestamp):
@@ -187,7 +193,10 @@ def _table_field_types(table_id: str, project_id: str) -> dict[str, str]:
     table_id = validate_bq_table_id(table_id)
     client = bigquery.Client(project=project_id)
     table = client.get_table(table_id)
-    return {field.name: field.field_type for field in table.schema}
+    return {
+        field.name: (f"ARRAY<{field.field_type}>" if field.mode == "REPEATED" else field.field_type)
+        for field in table.schema
+    }
 
 
 def _bq_param(
@@ -195,7 +204,13 @@ def _bq_param(
     value: Any,
     *,
     bq_type: Optional[str] = None,
-) -> bigquery.ScalarQueryParameter:
+) -> bigquery.ScalarQueryParameter | bigquery.ArrayQueryParameter:
+    if bq_type and bq_type.startswith("ARRAY<") and bq_type.endswith(">"):
+        element_type = bq_type.removeprefix("ARRAY<").removesuffix(">")
+        return bigquery.ArrayQueryParameter(name, element_type, list(value or []))
+    if bq_type == "JSON":
+        encoded = None if value is None else json.dumps(_json_safe(value), sort_keys=True)
+        return bigquery.ScalarQueryParameter(name, "JSON", encoded)
     if bq_type == "DATE":
         if isinstance(value, pd.Timestamp):
             value = value.date()
@@ -205,6 +220,8 @@ def _bq_param(
     if bq_type == "TIMESTAMP":
         if isinstance(value, pd.Timestamp):
             value = value.to_pydatetime()
+        elif isinstance(value, date) and not isinstance(value, datetime):
+            value = datetime.combine(value, datetime.min.time())
         return bigquery.ScalarQueryParameter(name, "TIMESTAMP", value)
     if value is None:
         return bigquery.ScalarQueryParameter(name, bq_type or "STRING", None)

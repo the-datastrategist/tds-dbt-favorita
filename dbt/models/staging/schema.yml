@@ -633,6 +633,12 @@ models:
         description: Contract hash used to produce this forecast.
         data_tests:
           - not_null
+      - name: contract_enforced
+        description: >
+          True when the row was written by the hardened canonical contract writer.
+          Legacy append-only rows are exposed as false and remain queryable.
+        data_tests:
+          - not_null
       - name: forecast_origin
         description: Timestamp when the forecast was issued.
         data_tests:
@@ -663,15 +669,31 @@ models:
       - name: forecast_strategy
         description: Forecast method selected by the series routing policy.
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                where: contract_enforced
       - name: fallback_reason
         description: Reason the preferred entity strategy was not used, when applicable.
       - name: confidence_flag
         description: Routing confidence assigned to the selected forecast strategy.
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                where: contract_enforced
           - accepted_values:
               values: ['high', 'medium', 'low']
+              config:
+                where: contract_enforced
+      - name: calibration_method
+        description: Interval calibration method applied to the forecast.
+      - name: calibration_run_id
+        description: Calibration run that produced the forecast intervals.
+      - name: hierarchy_version
+        description: Hierarchy version used for reconciliation, when applicable.
+      - name: reconciliation_method
+        description: Reconciliation method applied to the forecast.
+      - name: reconciliation_run_id
+        description: Reconciliation run identifier, when reconciliation was applied.
       - name: statistical_forecast
         description: Raw model/statistical forecast before planner overrides.
       - name: planner_override
@@ -703,7 +725,9 @@ models:
       - name: feature_version
         description: Stable feature definition or materialization version.
         data_tests:
-          - not_null
+          - not_null:
+              config:
+                where: contract_enforced
       - name: code_sha
         description: Source code SHA used for the forecast job.
         data_tests:
@@ -825,13 +849,16 @@ models:
 
   - name: stg_forecast_approvals
     description: Append-only decisions selecting statistical or adjusted forecast values.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [idempotency_key, forecast_output_id]
     columns:
       - name: approval_id
         description: Deterministic identifier for the approval decision.
         data_tests: [not_null, unique]
       - name: idempotency_key
-        description: Key used to deduplicate a retried approval command.
-        data_tests: [not_null, unique]
+        description: Batch-scoped key used with forecast_output_id to deduplicate a retried approval command.
+        data_tests: [not_null]
       - name: forecast_output_id
         description: Forecast output receiving the decision.
         data_tests:
@@ -863,13 +890,15 @@ models:
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns: [forecast_output_id, destination, publication_version]
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [idempotency_key, forecast_output_id]
     columns:
       - name: publication_id
         description: Deterministic identifier for a publication version.
         data_tests: [not_null, unique]
       - name: idempotency_key
-        description: Key used to deduplicate a retried publication command.
-        data_tests: [not_null, unique]
+        description: Batch-scoped key used with forecast_output_id to deduplicate a retried publication command.
+        data_tests: [not_null]
       - name: forecast_output_id
         description: Forecast output being published.
         data_tests:

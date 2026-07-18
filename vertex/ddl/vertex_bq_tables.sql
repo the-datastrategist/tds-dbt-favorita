@@ -310,6 +310,7 @@ CLUSTER BY model_family, model_type, config_name;
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_contracts` (
   forecast_contract_name STRING NOT NULL,
   forecast_contract_hash STRING NOT NULL,
+  contract_enforced BOOL NOT NULL,
   registered_at TIMESTAMP NOT NULL,
   target STRING NOT NULL,
   target_unit STRING,
@@ -399,6 +400,9 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_outputs` (
 )
 PARTITION BY DATE(forecast_origin)
 CLUSTER BY forecast_contract_name, forecast_status, config_name;
+
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS contract_enforced BOOL;
 
 ALTER TABLE `tds-favorita.favorita.forecast_outputs`
 ADD COLUMN IF NOT EXISTS forecast_strategy STRING;
