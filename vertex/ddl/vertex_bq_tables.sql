@@ -372,3 +372,99 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_status_history` (
 )
 PARTITION BY DATE(changed_at)
 CLUSTER BY forecast_run_id, new_status;
+
+-- Append-only exception queue records. exception_id and idempotency_key are
+-- deterministic logical keys; writers must use insert-only MERGE semantics.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_exceptions` (
+  exception_id STRING NOT NULL,
+  idempotency_key STRING NOT NULL,
+  forecast_output_id STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  exception_type STRING NOT NULL,
+  severity STRING NOT NULL,
+  exception_status STRING NOT NULL,
+  detected_at TIMESTAMP NOT NULL,
+  detected_by STRING NOT NULL,
+  details_json JSON,
+  resolved_at TIMESTAMP,
+  resolved_by STRING,
+  resolution_comment STRING,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY DATE(detected_at)
+CLUSTER BY forecast_run_id, exception_status, severity;
+
+-- Planner-entered adjustments. The canonical statistical_forecast remains
+-- immutable; an override is a separate audited event selected at approval time.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_overrides` (
+  override_id STRING NOT NULL,
+  idempotency_key STRING NOT NULL,
+  forecast_output_id STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  override_value FLOAT64 NOT NULL,
+  reason_code STRING NOT NULL,
+  comment STRING NOT NULL,
+  overridden_at TIMESTAMP NOT NULL,
+  overridden_by STRING NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY DATE(overridden_at)
+CLUSTER BY forecast_run_id, reason_code, overridden_by;
+
+-- Append-only approval decisions. override_id is populated when the approved
+-- value came from a planner adjustment rather than the statistical forecast.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_approvals` (
+  approval_id STRING NOT NULL,
+  idempotency_key STRING NOT NULL,
+  forecast_output_id STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  override_id STRING,
+  decision STRING NOT NULL,
+  approved_value FLOAT64,
+  reason_code STRING,
+  comment STRING,
+  decided_at TIMESTAMP NOT NULL,
+  decided_by STRING NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY DATE(decided_at)
+CLUSTER BY forecast_run_id, decision, decided_by;
+
+-- Immutable publication attempts and delivery outcomes. Deterministic
+-- publication_id/idempotency_key pairs make retries safe without overwrites.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_publications` (
+  publication_id STRING NOT NULL,
+  idempotency_key STRING NOT NULL,
+  forecast_output_id STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  approval_id STRING NOT NULL,
+  publication_version INT64 NOT NULL,
+  published_value FLOAT64 NOT NULL,
+  destination STRING NOT NULL,
+  delivery_status STRING NOT NULL,
+  delivery_reference STRING,
+  published_at TIMESTAMP NOT NULL,
+  published_by STRING NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY DATE(published_at)
+CLUSTER BY forecast_run_id, destination, delivery_status;
+
+-- Supersession and rollback lineage. Records point from a prior publication to
+-- its replacement; rollback republishes an earlier value as a new version.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_revisions` (
+  revision_id STRING NOT NULL,
+  idempotency_key STRING NOT NULL,
+  forecast_output_id STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  prior_publication_id STRING NOT NULL,
+  replacement_publication_id STRING,
+  revision_type STRING NOT NULL,
+  reason_code STRING NOT NULL,
+  comment STRING NOT NULL,
+  revised_at TIMESTAMP NOT NULL,
+  revised_by STRING NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY DATE(revised_at)
+CLUSTER BY forecast_run_id, revision_type, revised_by;

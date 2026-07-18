@@ -713,6 +713,217 @@ models:
         data_tests:
           - not_null
 
+  - name: stg_forecast_exceptions
+    description: Append-only exception queue events for forecast outputs requiring review.
+    columns:
+      - name: exception_id
+        description: Deterministic identifier for the logical exception record.
+        data_tests: [not_null, unique]
+      - name: idempotency_key
+        description: Caller-supplied or deterministic key used to make retries safe.
+        data_tests: [not_null, unique]
+      - name: forecast_output_id
+        description: Forecast output that triggered the exception.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_forecast_outputs')
+              field: forecast_output_id
+      - name: forecast_run_id
+        description: Forecast run that produced the output.
+        data_tests: [not_null]
+      - name: exception_type
+        description: Machine-readable exception category.
+        data_tests: [not_null]
+      - name: severity
+        description: Operational severity assigned to the exception.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['low', 'medium', 'high', 'critical']
+      - name: exception_status
+        description: State captured by this exception record.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['open', 'acknowledged', 'resolved', 'dismissed']
+      - name: detected_at
+        description: Timestamp when the exception was detected.
+        data_tests: [not_null]
+      - name: detected_by
+        description: Rule or service that detected the exception.
+        data_tests: [not_null]
+
+  - name: stg_forecast_overrides
+    description: Audited planner adjustments stored separately from immutable statistical forecasts.
+    columns:
+      - name: override_id
+        description: Deterministic identifier for the override.
+        data_tests: [not_null, unique]
+      - name: idempotency_key
+        description: Key used to deduplicate a retried override command.
+        data_tests: [not_null, unique]
+      - name: forecast_output_id
+        description: Forecast output being adjusted.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_forecast_outputs')
+              field: forecast_output_id
+      - name: forecast_run_id
+        description: Forecast run containing the output.
+        data_tests: [not_null]
+      - name: override_value
+        description: Planner-entered adjusted forecast value.
+        data_tests: [not_null]
+      - name: reason_code
+        description: Required machine-readable rationale for the adjustment.
+        data_tests: [not_null]
+      - name: comment
+        description: Required human-readable audit comment.
+        data_tests: [not_null]
+      - name: overridden_at
+        description: Timestamp when the adjustment was entered.
+        data_tests: [not_null]
+      - name: overridden_by
+        description: Planner or service that entered the adjustment.
+        data_tests: [not_null]
+
+  - name: stg_forecast_approvals
+    description: Append-only decisions selecting statistical or adjusted forecast values.
+    columns:
+      - name: approval_id
+        description: Deterministic identifier for the approval decision.
+        data_tests: [not_null, unique]
+      - name: idempotency_key
+        description: Key used to deduplicate a retried approval command.
+        data_tests: [not_null, unique]
+      - name: forecast_output_id
+        description: Forecast output receiving the decision.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_forecast_outputs')
+              field: forecast_output_id
+      - name: override_id
+        description: Selected planner override, when approval uses an adjusted value.
+        data_tests:
+          - relationships:
+              to: ref('stg_forecast_overrides')
+              field: override_id
+      - name: decision
+        description: Approval decision.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['approved', 'rejected']
+      - name: decided_at
+        description: Timestamp when the decision was recorded.
+        data_tests: [not_null]
+      - name: decided_by
+        description: Planner or service responsible for the decision.
+        data_tests: [not_null]
+
+  - name: stg_forecast_publications
+    description: Immutable, versioned publication attempts and downstream delivery outcomes.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [forecast_output_id, destination, publication_version]
+    columns:
+      - name: publication_id
+        description: Deterministic identifier for a publication version.
+        data_tests: [not_null, unique]
+      - name: idempotency_key
+        description: Key used to deduplicate a retried publication command.
+        data_tests: [not_null, unique]
+      - name: forecast_output_id
+        description: Forecast output being published.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_forecast_outputs')
+              field: forecast_output_id
+      - name: approval_id
+        description: Approval decision authorizing publication.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_forecast_approvals')
+              field: approval_id
+      - name: publication_version
+        description: Monotonically increasing version within output and destination.
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              inclusive: true
+      - name: published_value
+        description: Frozen approved value sent downstream.
+        data_tests: [not_null]
+      - name: destination
+        description: Downstream system or integration target.
+        data_tests: [not_null]
+      - name: delivery_status
+        description: Outcome of this immutable publication attempt.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['pending', 'delivered', 'failed']
+      - name: published_at
+        description: Timestamp when publication was attempted.
+        data_tests: [not_null]
+      - name: published_by
+        description: Actor or service responsible for publication.
+        data_tests: [not_null]
+
+  - name: stg_forecast_revisions
+    description: Supersession and rollback lineage between immutable publication versions.
+    columns:
+      - name: revision_id
+        description: Deterministic identifier for the revision event.
+        data_tests: [not_null, unique]
+      - name: idempotency_key
+        description: Key used to deduplicate a retried revision command.
+        data_tests: [not_null, unique]
+      - name: forecast_output_id
+        description: Forecast output whose publication lineage changed.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_forecast_outputs')
+              field: forecast_output_id
+      - name: prior_publication_id
+        description: Publication superseded by this revision.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_forecast_publications')
+              field: publication_id
+      - name: replacement_publication_id
+        description: New publication version, once created.
+        data_tests:
+          - relationships:
+              to: ref('stg_forecast_publications')
+              field: publication_id
+      - name: revision_type
+        description: Whether the event supersedes a value or rolls back to an earlier value.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['supersede', 'rollback']
+      - name: reason_code
+        description: Required machine-readable rationale for the revision.
+        data_tests: [not_null]
+      - name: comment
+        description: Required human-readable audit comment.
+        data_tests: [not_null]
+      - name: revised_at
+        description: Timestamp when the revision was requested.
+        data_tests: [not_null]
+      - name: revised_by
+        description: Planner or service responsible for the revision.
+        data_tests: [not_null]
+
   - name: stg_vertex_model_explain
     description: >
       SHAP feature attributions for tree-based Vertex predictions (xgboost, random_forest)
