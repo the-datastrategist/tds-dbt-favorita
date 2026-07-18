@@ -6,6 +6,9 @@ The platform is intentionally **GCP-first**. It provides reusable infrastructure
 
 **Consulting package** — reference architecture, accelerators, and delivery artifacts for client engagements: **[docs/consulting_package.md](docs/consulting_package.md)** (rendered in hosted dbt Docs via `make dbt-ui`).
 
+**New user?** Follow [Generate your first forecast](docs/first_forecast.md) for the supported path
+from environment validation through canonical forecast output in BigQuery.
+
 ## Features
 
 - **dbt + BigQuery ML**: Train and deploy ML models directly in BigQuery
@@ -220,6 +223,10 @@ runtime.
 ## Usage
 
 Pipeline commands (dbt, data load, and the default Vertex train/predict targets) run in Docker via `make`. Pass extra CLI flags with `ARGS`, for example `make load-favorita-bigquery ARGS="--dry-run"` for the current demo loader.
+
+For a guided first run with validation and verification queries, use
+**[Generate your first forecast](docs/first_forecast.md)**. The commands below are the condensed
+reference.
 
 ### Run from Docker (recommended)
 

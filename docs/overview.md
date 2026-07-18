@@ -4,6 +4,10 @@
 
 Production-style demand forecasting platform for Google Cloud, built by [The Data Strategist](https://www.thedatastrategist.com). It demonstrates a reusable GCP pattern for governed dbt features, **BigQuery ML** baselines, **Vertex AI** custom models, experiment tracking, orchestration, and forecast operations.
 
+To configure the reference implementation and generate a persisted canonical forecast, start with
+[Generate your first forecast](first_forecast.md). Use this page for the architectural context
+behind that walkthrough.
+
 The platform is intentionally **GCP-first** and intentionally **dbt-adapted per project**. Each implementation maps its own operational data into forecast-ready dbt models, because demand features, source systems, covariates, and planning grains vary by business.
 
 ## Consulting package
@@ -111,11 +115,19 @@ The checked-in dbt project names these models with `int_sales_*` conventions. A 
 
 ## How to run
 
-1. Load raw data into BigQuery
-2. Build features (excludes BQML): `make dbt-run`
-3. **BQML path:** `make dbt-train` then `make dbt-predict`
-4. **Vertex path:** `make vertex-train` / `make vertex-predict` (see `vertex/config/model_config.yaml`)
-5. **Vertex staging in dbt:** `make dbt-vertex`
+The full validated sequence is documented in [Generate your first forecast](first_forecast.md).
+At a high level:
+
+1. Bootstrap GCP/GitHub and validate the forecast, feature, model, and backtest contracts.
+2. Load raw data and build project-specific dbt features.
+3. Apply the canonical forecast-output DDL.
+4. Train and predict with the configured Vertex model.
+5. Build the dbt consumption views and verify `forecast_runs` and `forecast_outputs`.
+6. Backtest and promote before enabling scheduled champion-to-draft execution.
+
+The scheduled publication pipeline currently ends at a validated visible draft. Approval,
+delivery integrations, and full operational SLO coverage should be evaluated against the
+[specification status table](specs/README.md) before production use.
 
 For a controlled reset or recovery that preserves the raw dataset and reconstructs the derived dataset, use the [Clean Rebuild Runbook](clean_rebuild.md). Do not use dataset deletion for routine deployments or maintenance.
 

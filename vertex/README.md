@@ -4,7 +4,9 @@ Python training, prediction, and hyperparameter optimization for GCP demand fore
 
 The checked-in config names and output table names are implementation defaults. New projects should adapt `model_config.yaml`, BigQuery table names, GCS paths, and dbt feature queries to their forecast contract and project-specific dbt models.
 
-For dbt, data loading, and the full repo workflow, see the [root README](../README.md).
+For dbt, data loading, and the full repo workflow, see the [root README](../README.md). New users
+should follow [Generate your first forecast](../docs/first_forecast.md) before using the advanced
+model and submission options below.
 
 ## Architecture
 

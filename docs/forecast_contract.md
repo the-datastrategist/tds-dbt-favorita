@@ -39,7 +39,7 @@ forecast:
 | `known_future_features` | Covariates available at forecast origin for future target dates. |
 | `observed_features` | Covariates only available after observation and therefore subject to cutoffs/lags. |
 | `hierarchy` | Business hierarchy levels used by reconciliation and reporting. |
-| `reconciliation_policy` | Reconciliation method; use `none` until hierarchy reconciliation is implemented. |
+| `reconciliation_policy` | Reconciliation method. Use `none` for a first run; enable a configured hierarchy method only after its scheduled-path validation is accepted. |
 | `demand_policy` | Whether the target represents observed sales, adjusted demand, or another policy. |
 
 ## Canonical Output
