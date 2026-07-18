@@ -90,7 +90,10 @@ if ! docker buildx build \
   exit 1
 fi
 
-DIGEST="$(docker buildx imagetools inspect "${REMOTE_IMAGE}" --format '{{.Manifest.Digest}}')"
+DIGEST="$(
+  docker buildx imagetools inspect "${REMOTE_IMAGE}" --format '{{json .Manifest}}' \
+    | python3 -c 'import json, sys; print(json.load(sys.stdin)["digest"])'
+)"
 if [[ ! "${DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
   echo "Could not resolve an immutable digest for ${REMOTE_IMAGE}: ${DIGEST}" >&2
   exit 1
