@@ -80,10 +80,13 @@ mindmap
 | Experiment tracking | `vertex/utils/experiment_tracking.py` | MLflow + Vertex Experiments |
 | MLflow catalog | `vertex/utils/mlflow_catalog.py` | GCS pointer artifacts |
 | BQ DDL | `vertex/ddl/vertex_bq_tables.sql` | Metadata, performance, predictions, backtest records, job runs |
+| Forecast contract | `vertex/config/forecast_contract.py`, `vertex/config/forecast_contract_acceptance_h7.yaml` | Validated, hash-stable forecasting problem definition and live acceptance fixture |
+| Canonical output | `vertex/utils/forecast_outputs.py`, `dbt/models/staging/stg_forecast_*.sql` | Provenance-complete append-only forecasts with explicit legacy migration boundary |
+| Contract acceptance | `scripts/accept_forecast_contract.py` | Reusable live persistence, approval, publication, and invariant validation |
 | Ops runbook | `vertex/ops/README.md` | IAM, GCS layout, Scheduler, monitoring |
 | KFP compile | `vertex/pipelines/compile.py` | CI-validated pipeline JSON |
 
-**Commands:** `make vertex-train`, `make vertex-predict`, `make vertex-optimize`, `make vertex-pipeline-submit`, `make vertex-bq-ddl`
+**Commands:** `make vertex-train`, `make vertex-predict`, `make vertex-optimize`, `make vertex-pipeline-submit`, `make vertex-bq-ddl`, `make vertex-forecast-contract-accept`
 
 **Model types:** `xgboost`, `random_forest`, `arima`, `sarima`, `prophet`
 

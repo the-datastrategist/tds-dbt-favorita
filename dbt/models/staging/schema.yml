@@ -849,13 +849,16 @@ models:
 
   - name: stg_forecast_approvals
     description: Append-only decisions selecting statistical or adjusted forecast values.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [idempotency_key, forecast_output_id]
     columns:
       - name: approval_id
         description: Deterministic identifier for the approval decision.
         data_tests: [not_null, unique]
       - name: idempotency_key
-        description: Key used to deduplicate a retried approval command.
-        data_tests: [not_null, unique]
+        description: Batch-scoped key used with forecast_output_id to deduplicate a retried approval command.
+        data_tests: [not_null]
       - name: forecast_output_id
         description: Forecast output receiving the decision.
         data_tests:
@@ -887,13 +890,15 @@ models:
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns: [forecast_output_id, destination, publication_version]
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [idempotency_key, forecast_output_id]
     columns:
       - name: publication_id
         description: Deterministic identifier for a publication version.
         data_tests: [not_null, unique]
       - name: idempotency_key
-        description: Key used to deduplicate a retried publication command.
-        data_tests: [not_null, unique]
+        description: Batch-scoped key used with forecast_output_id to deduplicate a retried publication command.
+        data_tests: [not_null]
       - name: forecast_output_id
         description: Forecast output being published.
         data_tests:

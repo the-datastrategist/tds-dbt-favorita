@@ -22,7 +22,7 @@ These are **internal implementation specs**, not client-facing collateral — co
 
 Status reviewed **2026-07-18**. The completion figures are implementation estimates, while
 the status column continues to use the acceptance-based definitions above. Across the full
-platform roadmap, the current implementation is approximately **75% complete**.
+platform roadmap, the current implementation is approximately **79% complete**.
 
 | Spec | Status | Completion | Roadmap reference | Summary |
 |------|--------|-----------:|--------------------|---------|
@@ -31,7 +31,7 @@ platform roadmap, the current implementation is approximately **75% complete**.
 | [Terraform modules](terraform_modules.md) | Shipped | 100% | `iac.md` → "Terraform roadmap" | Codify the manual GCP setup scripts as reviewable, per-environment IaC |
 | [Workload Identity Federation](workload_identity_federation.md) | Shipped | 100% | `iac.md` → security checklist "prefer WIF" | Live-accepted repository-scoped GitHub OIDC authentication, keyless Terraform planning, and ADC-based dbt access |
 | [Prophet model family](prophet_model_family.md) | Shipped | 100% | `vertex/README.md` → model families | Add `prophet` as a third time-series family via the existing registry pattern |
-| [Forecast contract and canonical output](forecast_contract_and_output.md) | In progress | 90% | `demand_forecasting_platform_recommendations.md` → P0 forecast contract | Contract validation, canonical output DDL, staging, provenance, and the default writer path are implemented; a real GCP smoke test and accelerator graduation remain |
+| [Forecast contract and canonical output](forecast_contract_and_output.md) | Shipped | 100% | `demand_forecasting_platform_recommendations.md` → P0 forecast contract | Live-accepted contract validation, canonical persistence, provenance, lifecycle publication, staging, and append-only migration boundary |
 | [Rolling-origin backtesting and model lifecycle](backtesting_and_model_lifecycle.md) | Shipped | 100% | `demand_forecasting_platform_recommendations.md` → P0 backtesting/champion semantics | Live-accepted rolling-origin evaluation, governed promotion gates, scheduled lifecycle orchestration, and current-state warehouse views |
 | [Point-in-time feature availability](point_in_time_feature_availability.md) | In progress | 90% | `demand_forecasting_platform_recommendations.md` → P0 feature correctness | Origin-specific cutoff enforcement, registry validation, persisted cutoff evidence, and model-path integration are implemented; live acceptance and accelerator graduation remain |
 | [Forecasting methods, horizons, cold start, and intermittent demand](forecasting_methods.md) | In progress | 85% | `demand_forecasting_platform_recommendations.md` → P0/P1 methods | Horizon-aware models, intermittent-demand baselines, probabilistic calibration, cold-start fallbacks, and strategy routing are implemented; complete scheduled publication-path validation remains |

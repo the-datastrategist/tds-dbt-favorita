@@ -2,7 +2,7 @@
 
 # SPEC: Forecast contract and canonical output
 
-**Status:** In progress
+**Status:** Shipped
 **Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P0 "Introduce a forecast contract"
 
 ---
@@ -180,6 +180,20 @@ Initial implementation can adapt the existing model prediction fact table into `
 - DDL applicator test or dry-run validation for new tables.
 - dbt parse/compile/docs generation.
 - A local or GCP smoke test that writes a 7-day forecast and confirms every row has origin, target date, horizon, model version, feature version, code SHA, and data cutoff.
+
+## Implementation and acceptance
+
+The contract loader, canonical BigQuery tables, model-writer integration, publication lifecycle,
+dbt staging, and validation tests are implemented. New canonical rows carry
+`contract_enforced = true`; historical append-only rows remain available through staging as
+`contract_enforced = false`, which provides an explicit migration boundary without rewriting
+history.
+
+Live GCP acceptance passed on 2026-07-18 using 51 real horizon-7 XGBoost predictions. The run
+persisted 51 canonical outputs, automatically approved and published all 51, and reported zero
+horizon, quantile-order, provenance, or delivery-status violations. The complete forecast staging
+suite subsequently passed 107 data tests. See
+[forecast contract acceptance evidence](../acceptance/forecast_contract_2026-07-18.md).
 
 ## Acceptance criteria
 
