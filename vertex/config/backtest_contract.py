@@ -25,6 +25,8 @@ ALLOWED_BASELINES = frozenset(
         "same_period_last_year",
         "moving_average",
         "croston_sba_tsb",
+        "croston_sba",
+        "tsb",
     }
 )
 ALLOWED_METRICS = frozenset(
@@ -65,6 +67,18 @@ class BacktestContract:
     @property
     def model_config_name(self) -> str:
         return str(self.spec["model_config_name"])
+
+    @property
+    def model_config(self) -> dict[str, Any]:
+        return load_model_config(self.model_config_name)
+
+    @property
+    def model_type(self) -> str:
+        return str(self.model_config["model_type"])
+
+    @property
+    def model_family(self) -> str:
+        return str(self.model_config["model_family"])
 
     @property
     def horizons(self) -> list[int]:

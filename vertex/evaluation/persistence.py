@@ -16,6 +16,8 @@ def _run_row(result: BaselineBacktestResult, contract: BacktestContract) -> dict
         "backtest_contract_name": contract.name,
         "backtest_contract_hash": contract.hash,
         "model_config_name": contract.model_config_name,
+        "model_family": contract.model_family,
+        "model_type": contract.model_type,
         "target": contract.target,
         "grain": contract.grain,
         "metric_policy_json": json.dumps(

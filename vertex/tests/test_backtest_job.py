@@ -6,7 +6,12 @@ from unittest.mock import patch
 import pytest
 
 from vertex.config.backtest_contract import BacktestContract, load_backtest_contract
-from vertex.jobs.backtest import build_bigquery_history_query, run_baseline_backtest
+from vertex.jobs.backtest import (
+    build_bigquery_history_query,
+    build_bigquery_model_history_query,
+    run_backtest,
+    run_baseline_backtest,
+)
 from vertex.tests.test_backtest_scoring import _history
 
 
@@ -19,7 +24,7 @@ def test_bigquery_mode_loads_configured_bounded_history(run_query):
 
     query = run_query.call_args.args[0]
     assert "`tds-favorita.favorita.int_sales_store_daily`" in query
-    assert "DATE '2016-02-03'" in query
+    assert "DATE '2015-08-01'" in query
     assert "DATE '2016-09-05'" in query
     assert run_query.call_args.kwargs == {"project_id": "billing-project"}
     assert result.predictions.empty is False
@@ -66,6 +71,18 @@ def test_bigquery_query_selects_only_required_deduplicated_columns():
 
 
 @pytest.mark.unit
+def test_model_history_query_wraps_configured_training_input_and_bounds_dates():
+    contract = load_backtest_contract()
+
+    query = build_bigquery_model_history_query(contract)
+
+    assert "from `tds-favorita.favorita.int_sales_store_daily`" in query
+    assert "sales_store_n7d_same_dow is not null" in query
+    assert "model_history.`date` BETWEEN DATE '2015-08-01'" in query
+    assert "AND DATE '2016-09-05'" in query
+
+
+@pytest.mark.unit
 def test_csv_mode_remains_available(tmp_path):
     csv_path = tmp_path / "history.csv"
     _history().to_csv(csv_path, index=False)
@@ -79,3 +96,6 @@ def test_csv_mode_remains_available(tmp_path):
 def test_input_is_required_outside_bigquery_mode():
     with pytest.raises(ValueError, match="input_csv is required"):
         run_baseline_backtest()
+
+    with pytest.raises(ValueError, match="input_csv is required"):
+        run_backtest()

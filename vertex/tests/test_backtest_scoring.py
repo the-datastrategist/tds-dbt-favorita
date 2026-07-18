@@ -8,7 +8,11 @@ import pandas as pd
 import pytest
 
 from vertex.config.backtest_contract import BacktestContract, load_backtest_contract
-from vertex.evaluation.backtesting import PREDICTION_COLUMNS, score_baselines
+from vertex.evaluation.backtesting import (
+    PREDICTION_COLUMNS,
+    score_baselines,
+    score_model_and_baselines,
+)
 
 
 def _contract(*, baselines=None, segment_columns=None) -> BacktestContract:
@@ -138,7 +142,72 @@ class TestBaselineScoring:
 
     def test_rejects_baseline_without_scorer(self):
         with pytest.raises(ValueError, match="do not have scorers"):
-            score_baselines(_history(), _contract(baselines=["croston_sba_tsb"]))
+            score_baselines(_history(), _contract(baselines=["not_implemented"]))
+
+    def test_same_period_last_year_uses_same_calendar_date(self):
+        history = pd.concat(
+            [
+                _history(),
+                pd.DataFrame(
+                    [
+                        {
+                            "store_nbr": 1,
+                            "store_segment": "large",
+                            "date": "2015-08-08",
+                            "sales_store": 42,
+                        }
+                    ]
+                ),
+            ],
+            ignore_index=True,
+        )
+
+        result = score_baselines(
+            history,
+            _contract(baselines=["same_period_last_year"]),
+            backtest_run_id="run-1",
+        )
+
+        store_one = result.predictions[result.predictions["entity_key_json"] == '{"store_nbr":1}']
+        assert store_one.iloc[0]["prediction"] == 42
+
+    def test_intermittent_demand_baselines_are_deterministic(self):
+        contract = _contract(baselines=["croston_sba", "tsb", "croston_sba_tsb"])
+        first = score_baselines(_history(), contract, backtest_run_id="run-1")
+        second = score_baselines(_history(), contract, backtest_run_id="run-1")
+
+        pd.testing.assert_series_equal(
+            first.predictions["prediction"], second.predictions["prediction"]
+        )
+        store_two = first.predictions[first.predictions["entity_key_json"] == '{"store_nbr":2}']
+        assert store_two["prediction"].tolist() == [0.0, 0.0, 0.0]
+
+    def test_scores_configured_model_on_same_origin_and_run(self):
+        history = _history()
+        history["sales_store_n7d_same_dow"] = history["sales_store"].shift(-7)
+        history["numeric_feature"] = range(len(history))
+        seen: dict[str, pd.DataFrame] = {}
+
+        def fit_predict(train_rows, predict_rows, _model_config):
+            seen["train"] = train_rows
+            seen["predict"] = predict_rows
+            return pd.Series(14.0, index=predict_rows.index)
+
+        result = score_model_and_baselines(
+            history,
+            _contract(baselines=["zero_demand"]),
+            backtest_run_id="run-1",
+            fit_predict=fit_predict,
+        )
+
+        model_rows = result.predictions[
+            result.predictions["baseline_name"] == "favorita_store_h7_xgboost"
+        ]
+        assert len(model_rows) == 2
+        assert model_rows["prediction"].tolist() == [14.0, 14.0]
+        assert seen["train"]["date"].max() == date(2016, 7, 25)
+        assert seen["predict"]["date"].unique().tolist() == [date(2016, 8, 1)]
+        assert set(result.predictions["backtest_run_id"]) == {"run-1"}
 
     def test_generated_ids_are_stable_for_same_contract_and_input(self):
         first = score_baselines(_history(), _contract(baselines=["zero_demand"]))

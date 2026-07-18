@@ -40,19 +40,32 @@ The first supported baseline names are:
 - `moving_average`
 - `croston_sba_tsb`
 
-Local deterministic scoring is implemented for `zero_demand`, `last_observation`, `seasonal_naive_7d`, and `moving_average`. Scoring uses actuals available through each origin and evaluates against the actual at `origin + horizon`. Baselines that lack sufficient history emit a null prediction so prediction completeness remains auditable.
+Scoring is implemented for every listed baseline. `croston_sba_tsb` averages bias-adjusted
+Croston and TSB forecasts; the individual `croston_sba` and `tsb` names are also accepted.
+Scoring uses actuals available through each origin and evaluates against the actual at
+`origin + horizon`. Baselines that lack sufficient history emit a null prediction so
+prediction completeness remains auditable.
 
-Run baseline scoring directly from the configured BigQuery history table:
+Run the configured direct-horizon ML model and all baselines from the model's bounded
+BigQuery feature input:
 
 ```bash
 make vertex-backtest
 ```
 
-The runner selects only the configured entity, date, actual, and segment columns and bounds the query to the training and evaluation window. When `max_entities` is set, a deterministic entity-selection CTE applies that limit before history is downloaded. For local testing, retain the CSV path:
+For each origin, model labels are limited to target dates at or before the origin; the direct
+horizon model is refit and predicts the feature row at the origin. The runner bounds the query
+to the necessary training, prior-year baseline, and evaluation window. When `max_entities` is
+set, a deterministic entity-selection CTE applies that limit before history is downloaded.
+For local testing, retain the CSV path; the CSV must contain the model's configured features
+and target column:
 
 ```bash
 make vertex-backtest VERTEX_BACKTEST_INPUT_MODE=csv VERTEX_BACKTEST_INPUT=path/to/history.csv
 ```
+
+Pass `--baselines-only` directly to the Python CLI to retain the narrow deterministic-only
+execution path.
 
 The command prints a stable backtest run ID and aggregate/segment metric records. Append-only BigQuery table contracts are defined in `vertex/ddl/vertex_bq_tables.sql` as `backtest_runs`, `backtest_predictions`, and `backtest_metrics`. Apply them with `make vertex-bq-ddl`.
 

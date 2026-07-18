@@ -6,6 +6,8 @@ select
     metrics.backtest_contract_name,
     metrics.backtest_contract_hash,
     runs.model_config_name,
+    runs.model_family,
+    runs.model_type,
     runs.target,
     runs.grain,
     runs.metric_policy_json,

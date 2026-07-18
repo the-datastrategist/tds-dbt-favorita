@@ -1,8 +1,9 @@
-"""Deterministic baseline scoring for rolling-origin backtests."""
+"""Rolling-origin scoring for configured models and deterministic baselines."""
 
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Any
@@ -14,7 +15,16 @@ from vertex.config.backtest_contract import BacktestContract
 from vertex.utils.data_utils import get_hash
 
 SUPPORTED_SCORING_BASELINES = frozenset(
-    {"zero_demand", "last_observation", "seasonal_naive_7d", "moving_average"}
+    {
+        "zero_demand",
+        "last_observation",
+        "seasonal_naive_7d",
+        "same_period_last_year",
+        "moving_average",
+        "croston_sba",
+        "tsb",
+        "croston_sba_tsb",
+    }
 )
 
 PREDICTION_COLUMNS = [
@@ -57,6 +67,9 @@ class BaselineBacktestResult:
     backtest_run_id: str
     predictions: pd.DataFrame
     metrics: pd.DataFrame
+
+
+ModelFitPredict = Callable[[pd.DataFrame, pd.DataFrame, dict[str, Any]], pd.Series]
 
 
 def _json_key(values: dict[str, Any]) -> str:
@@ -149,11 +162,72 @@ def _baseline_prediction(
             entity_row=entity_row,
             lookup_date=lookup_date,
         )
+    if baseline == "same_period_last_year":
+        try:
+            lookup_date = target_date.replace(year=target_date.year - 1)
+        except ValueError:  # February 29 uses the last valid day in the prior year.
+            lookup_date = target_date.replace(year=target_date.year - 1, day=28)
+        if lookup_date > origin:
+            return None
+        return _lookup_actual(
+            history,
+            entity_columns=contract.entity_columns,
+            date_column=contract.date_column,
+            actual_column=contract.actual_column,
+            entity_row=entity_row,
+            lookup_date=lookup_date,
+        )
     if baseline == "moving_average":
         if observed.empty:
             return None
         return float(observed.tail(contract.moving_average_window)[contract.actual_column].mean())
+    if baseline in {"croston_sba", "tsb", "croston_sba_tsb"}:
+        demand = observed[contract.actual_column].astype(float).clip(lower=0).to_numpy()
+        if demand.size == 0:
+            return None
+        sba = _croston_sba(demand)
+        tsb = _tsb(demand)
+        if baseline == "croston_sba":
+            return sba
+        if baseline == "tsb":
+            return tsb
+        return float((sba + tsb) / 2)
     raise ValueError(f"Baseline scoring is not implemented for {baseline!r}")
+
+
+def _croston_sba(demand: np.ndarray, alpha: float = 0.1) -> float:
+    """Return the bias-adjusted Croston forecast for non-negative demand."""
+    nonzero = np.flatnonzero(demand > 0)
+    if nonzero.size == 0:
+        return 0.0
+    first = int(nonzero[0])
+    size = float(demand[first])
+    interval = float(first + 1)
+    elapsed = 1
+    for value in demand[first + 1 :]:
+        if value > 0:
+            size += alpha * (float(value) - size)
+            interval += alpha * (elapsed - interval)
+            elapsed = 1
+        else:
+            elapsed += 1
+    return float((1 - alpha / 2) * size / interval)
+
+
+def _tsb(demand: np.ndarray, alpha: float = 0.1, beta: float = 0.1) -> float:
+    """Return a Teunter-Syntetos-Babai intermittent-demand forecast."""
+    nonzero = np.flatnonzero(demand > 0)
+    if nonzero.size == 0:
+        return 0.0
+    first = int(nonzero[0])
+    size = float(demand[first])
+    probability = 1.0 / float(first + 1)
+    for value in demand[first + 1 :]:
+        occurrence = 1.0 if value > 0 else 0.0
+        probability += beta * (occurrence - probability)
+        if occurrence:
+            size += alpha * (float(value) - size)
+    return float(probability * size)
 
 
 def _metric_row(group: pd.DataFrame, metadata: dict[str, Any]) -> dict[str, Any]:
@@ -288,3 +362,154 @@ def score_baselines(
     predictions = pd.DataFrame(rows, columns=PREDICTION_COLUMNS)
     metrics = _build_metrics(predictions, contract)
     return BaselineBacktestResult(run_id, predictions, metrics)
+
+
+def _fit_predict_tabular_model(
+    train_rows: pd.DataFrame,
+    predict_rows: pd.DataFrame,
+    model_config: dict[str, Any],
+) -> pd.Series:
+    """Fit the configured tabular model and predict one origin's entity rows."""
+    from vertex.models.xgboost.train_xgboost import (
+        DEFAULT_MODEL_PARAMETERS,
+        train_sklearn_xgboost,
+    )
+    from vertex.utils.features import prepare_feature_matrix
+    from vertex.utils.optimize_params import resolve_model_parameters
+
+    model_type = str(model_config["model_type"])
+    if model_type not in {"xgboost", "xgboost_sklearn"}:
+        raise ValueError(
+            "Rolling-origin ML scoring currently supports xgboost configurations; "
+            f"got {model_type!r}"
+        )
+    inputs = model_config.get("inputs") or {}
+    target_column = str(inputs["target_column"])
+    date_column = str(inputs.get("date_column", "date"))
+    excluded_columns = list(inputs.get("excluded_columns") or [])
+    categorical_columns = list(inputs.get("categorical_columns") or [])
+
+    train_matrix, features, _ = prepare_feature_matrix(
+        train_rows,
+        target_column=target_column,
+        excluded_columns=excluded_columns,
+        categorical_columns=categorical_columns,
+        date_column=date_column,
+    )
+    if not features or train_matrix.empty:
+        raise ValueError("Rolling-origin model training produced no complete feature rows")
+
+    prediction_input = predict_rows.copy()
+    if target_column not in prediction_input.columns:
+        prediction_input[target_column] = 0.0
+    prediction_matrix, _, _ = prepare_feature_matrix(
+        prediction_input,
+        target_column=target_column,
+        excluded_columns=excluded_columns,
+        categorical_columns=categorical_columns,
+        date_column=date_column,
+    )
+    X_predict = prediction_matrix.reindex(columns=features, fill_value=0)
+    params, _ = resolve_model_parameters(model_config, DEFAULT_MODEL_PARAMETERS)
+    model = train_sklearn_xgboost(
+        train_matrix[features],
+        train_matrix[target_column],
+        model_parameters=params,
+    )
+    return pd.Series(model.predict(X_predict), index=X_predict.index, dtype=float)
+
+
+def score_model_and_baselines(
+    frame: pd.DataFrame,
+    contract: BacktestContract,
+    *,
+    backtest_run_id: str | None = None,
+    fit_predict: ModelFitPredict | None = None,
+) -> BaselineBacktestResult:
+    """Score the configured ML model and baselines on identical rolling origins."""
+    if len(contract.horizons) != 1:
+        raise ValueError("Configured ML backtesting currently requires exactly one direct horizon")
+    model_config = contract.model_config
+    inputs = model_config.get("inputs") or {}
+    target_column = str(inputs["target_column"])
+    date_column = str(inputs.get("date_column", contract.date_column))
+    if date_column != contract.date_column:
+        raise ValueError("Model and backtest contracts must use the same date column")
+    if target_column not in frame.columns:
+        raise ValueError(f"Backtest model input is missing target column {target_column!r}")
+
+    data = _validate_input_frame(frame, contract)
+    fingerprint = pd.util.hash_pandas_object(data, index=False).tolist()
+    run_id = backtest_run_id or get_hash(
+        {
+            "backtest_contract_hash": contract.hash,
+            "model_config_hash": get_hash(model_config),
+            "input_row_hashes": [int(value) for value in fingerprint],
+        }
+    )
+    baseline_result = score_baselines(data, contract, backtest_run_id=run_id)
+    horizon = contract.horizons[0]
+    predict_fn = fit_predict or _fit_predict_tabular_model
+    model_rows: list[dict[str, Any]] = []
+
+    for origin in contract.origins:
+        train_start = origin - timedelta(days=contract.train_window_days + horizon)
+        train_end = origin - timedelta(days=horizon)
+        train_rows = data[
+            data[contract.date_column].gt(train_start)
+            & data[contract.date_column].le(train_end)
+            & data[target_column].notna()
+        ]
+        predict_rows = data[data[contract.date_column].eq(origin)]
+        if contract.max_entities is not None:
+            predict_rows = predict_rows.head(contract.max_entities)
+        if predict_rows.empty:
+            raise ValueError(f"No model feature rows are available at forecast origin {origin}")
+        predictions = predict_fn(train_rows, predict_rows, model_config)
+        target_date = origin + timedelta(days=horizon)
+
+        for row_index, entity_row in predict_rows.iterrows():
+            entity_key = _json_key(
+                {column: entity_row[column] for column in contract.entity_columns}
+            )
+            segment_key = _json_key(
+                {column: entity_row[column] for column in contract.segment_columns}
+            )
+            actual = _lookup_actual(
+                data,
+                entity_columns=contract.entity_columns,
+                date_column=contract.date_column,
+                actual_column=contract.actual_column,
+                entity_row=entity_row,
+                lookup_date=target_date,
+            )
+            identity = {
+                "backtest_run_id": run_id,
+                "forecast_origin": origin.isoformat(),
+                "target_date": target_date.isoformat(),
+                "horizon": horizon,
+                "entity_key_json": entity_key,
+                "segment_key_json": segment_key,
+                "baseline_name": contract.model_config_name,
+            }
+            model_rows.append(
+                {
+                    "prediction_id": get_hash(identity),
+                    **identity,
+                    "backtest_contract_name": contract.name,
+                    "backtest_contract_hash": contract.hash,
+                    "actual": actual,
+                    "prediction": (
+                        float(predictions.loc[row_index])
+                        if row_index in predictions.index
+                        else None
+                    ),
+                }
+            )
+
+    model_predictions = pd.DataFrame(model_rows, columns=PREDICTION_COLUMNS)
+    predictions = pd.concat(
+        [baseline_result.predictions, model_predictions],
+        ignore_index=True,
+    )
+    return BaselineBacktestResult(run_id, predictions, _build_metrics(predictions, contract))

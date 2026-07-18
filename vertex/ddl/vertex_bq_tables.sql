@@ -148,6 +148,8 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_runs` (
   backtest_contract_name STRING NOT NULL,
   backtest_contract_hash STRING NOT NULL,
   model_config_name STRING NOT NULL,
+  model_family STRING NOT NULL,
+  model_type STRING NOT NULL,
   target STRING NOT NULL,
   grain STRING NOT NULL,
   metric_policy_json STRING NOT NULL,
@@ -172,6 +174,12 @@ ADD COLUMN IF NOT EXISTS grain STRING;
 
 ALTER TABLE `tds-favorita.favorita.backtest_runs`
 ADD COLUMN IF NOT EXISTS metric_policy_json STRING;
+
+ALTER TABLE `tds-favorita.favorita.backtest_runs`
+ADD COLUMN IF NOT EXISTS model_family STRING;
+
+ALTER TABLE `tds-favorita.favorita.backtest_runs`
+ADD COLUMN IF NOT EXISTS model_type STRING;
 
 -- Append-only rolling-origin backtest predictions. prediction_id is a stable
 -- logical key; writers must append new records and must not update prior runs.

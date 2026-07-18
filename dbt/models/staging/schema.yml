@@ -10,6 +10,9 @@ models:
         data_tests: [not_null]
       - name: grain
         data_tests: [not_null]
+      - name: model_type
+        description: Algorithm used by the configured ML candidate.
+        data_tests: [not_null]
       - name: primary_metric
         data_tests:
           - not_null
@@ -35,6 +38,9 @@ models:
       - name: target
         data_tests: [not_null]
       - name: grain
+        data_tests: [not_null]
+      - name: model_config_name
+        description: Configured ML candidate scored alongside the baselines.
         data_tests: [not_null]
       - name: horizon
         data_tests: [not_null]

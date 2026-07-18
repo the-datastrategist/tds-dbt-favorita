@@ -73,8 +73,14 @@ backtest_leaderboard as (
         'vertex' as platform,
         metrics.baseline_name as config_name,
         metrics.backtest_run_id as model_run_id,
-        'baseline' as model_family,
-        'baseline' as model_type,
+        case
+            when metrics.baseline_name = metrics.model_config_name then metrics.model_family
+            else 'baseline'
+        end as model_family,
+        case
+            when metrics.baseline_name = metrics.model_config_name then metrics.model_type
+            else 'baseline'
+        end as model_type,
         metrics.target,
         metrics.grain,
         metrics.horizon,
@@ -92,6 +98,9 @@ backtest_leaderboard as (
     group by
         metrics.baseline_name,
         metrics.backtest_run_id,
+        metrics.model_config_name,
+        metrics.model_family,
+        metrics.model_type,
         metrics.target,
         metrics.grain,
         metrics.horizon,

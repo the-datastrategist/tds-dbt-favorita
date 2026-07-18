@@ -38,6 +38,8 @@ def test_backtest_tables_match_normalized_record_contracts():
         "target STRING NOT NULL",
         "grain STRING NOT NULL",
         "metric_policy_json STRING NOT NULL",
+        "model_family STRING NOT NULL",
+        "model_type STRING NOT NULL",
     }
 
     assert "CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_predictions`" in ddl

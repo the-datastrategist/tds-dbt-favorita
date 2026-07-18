@@ -5,6 +5,8 @@ select
     backtest_contract_name,
     backtest_contract_hash,
     model_config_name,
+    model_family,
+    model_type,
     target,
     grain,
     metric_policy_json,
@@ -19,3 +21,4 @@ from {{ source('vertex_ml', 'backtest_runs') }}
 where target is not null
     and grain is not null
     and metric_policy_json is not null
+    and model_type is not null
