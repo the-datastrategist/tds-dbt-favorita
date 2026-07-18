@@ -87,6 +87,20 @@ Add dbt tests:
 - published reconciled child sums equal parent totals within tolerance
 - no orphan nodes for eligible forecast rows
 
+### 6. Scheduled publication integration
+
+Reconciliation consumes calibrated base forecasts and is the final numerical transformation before
+publication validation. When quantiles are configured, it reconciles every quantile and must
+preserve both hierarchy coherence and `P10 <= P50 <= P90`. It emits the canonical forecast keys,
+`hierarchy_version`, `reconciliation_method`, and `reconciliation_run_id`, while retaining the
+unreconciled values for audit and metric comparison.
+
+Failure to meet the configured coherence tolerance blocks publication for the affected scope; the
+flow must not substitute unreconciled forecasts silently. Contracts with no hierarchy explicitly
+record reconciliation method `none`. Ordering, partial-failure policy, and publication gates are
+defined by the authoritative [scheduled publication
+path](forecast_operations.md#6-end-to-end-scheduled-publication-path).
+
 ## Implementation plan
 
 1. Add `docs/hierarchical_reconciliation.md`.
@@ -115,5 +129,6 @@ Add dbt tests:
 - [Forecast contract and canonical output](forecast_contract_and_output.md)
 - [Forecasting methods](forecasting_methods.md)
 - [Integration contracts](integration_contracts.md)
+- [Forecast operations](forecast_operations.md#6-end-to-end-scheduled-publication-path)
 
 {% enddocs %}

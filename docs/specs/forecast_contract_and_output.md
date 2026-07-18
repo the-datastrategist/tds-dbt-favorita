@@ -113,6 +113,28 @@ data_cutoff
 created_at
 ```
 
+Rows eligible for scheduled publication additionally require:
+
+```text
+forecast_strategy
+fallback_reason
+confidence_flag
+calibration_method
+calibration_run_id
+hierarchy_version
+reconciliation_method
+reconciliation_run_id
+publication_version
+prefect_flow_run_id
+```
+
+`fallback_reason` may be null when the primary strategy succeeds. Reconciliation identifiers may
+be null only when the validated contract declares no hierarchy and records method `none`. The
+publication writer rejects rows missing required stage lineage, configured horizons or quantiles,
+or ordered quantiles. The complete stage order, quality gates, failure behavior, and idempotency
+rules are defined in the [scheduled publication
+path](forecast_operations.md#6-end-to-end-scheduled-publication-path).
+
 Use a normalized quantile child table if configurable quantiles become too wide for stable table evolution.
 
 ### 4. dbt staging and marts
@@ -164,6 +186,8 @@ Initial implementation can adapt the existing model prediction fact table into `
 - A named forecast contract can be validated from YAML.
 - A multi-horizon forecast run records one canonical output row per entity/date/horizon.
 - Every canonical forecast row has provenance and lifecycle status.
+- Every published row has routing, calibration, reconciliation, orchestration, and publication
+  version lineage applicable to its contract.
 - Existing model predictions can be queried through `stg_forecast_outputs`.
 
 ## Related documents

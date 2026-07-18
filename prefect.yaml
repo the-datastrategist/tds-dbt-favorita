@@ -9,6 +9,10 @@ push: null
 pull: null
 
 deployments:
+  # Planned scheduled forecast-publication deployment (not registered until its flow entrypoint
+  # exists): route -> forecast -> calibrate -> reconcile -> validate -> approve/publish.
+  # Required parameters: contract_name, contract_version, forecast_origin, publication_mode,
+  # and idempotency_key. See docs/specs/forecast_operations.md for gates and failure semantics.
   - name: prefect-dbt-run-manual
     entrypoint: orchestration/flows/dbt.py:prefect_dbt_run_flow
     work_pool:

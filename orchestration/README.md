@@ -19,6 +19,19 @@ Flow code lives under `orchestration/` (not `prefect/`) so it does not shadow th
 | `prefect-model-lifecycle-manual` | `prefect-model-lifecycle` | On-demand rolling-origin evaluation and governed promotion |
 | `prefect-model-lifecycle-scheduled` | `prefect-model-lifecycle` | Weekly lifecycle evaluation (Sunday 10:00 UTC) |
 
+The scheduled forecast-publication deployment is the next orchestration slice and is not yet
+registered in `prefect.yaml`. Its required stage order is:
+
+```text
+route -> forecast -> calibrate -> reconcile -> validate -> approve/publish
+```
+
+The flow will accept `contract_name`, `contract_version`, `forecast_origin`, `publication_mode`,
+and `idempotency_key`. Stage writes must be retry-safe and append-only; failed validation must not
+create a published version. The authoritative keys, lineage fields, gates, and exception behavior
+are defined in the [forecast operations scheduled-publication
+contract](../docs/specs/forecast_operations.md#6-end-to-end-scheduled-publication-path).
+
 ## Prerequisites
 
 - Docker image built (`make install` or `make docker-build`)
@@ -156,3 +169,7 @@ Scheduled cron expressions are defined in `prefect.yaml`; edit there to change t
 The lifecycle deployment runs after the scheduled ML pipeline, resolves the latest reproducible
 artifact, persists rolling-origin evidence and gate checks, and atomically replaces the current
 champion only when every configured promotion gate passes.
+
+Model lifecycle selects the champion; forecast publication scores that champion and applies
+routing, calibration, and reconciliation. The two schedules must remain separate so daily scoring
+does not retrain or promote a model.
