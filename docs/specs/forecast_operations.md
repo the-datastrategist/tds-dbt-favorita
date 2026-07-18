@@ -2,7 +2,7 @@
 
 # SPEC: Forecast operations, overrides, approval, and publication
 
-**Status:** Proposed
+**Status:** In progress
 **Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P1 "Separate daily scoring from retraining and tuning" and P2 "Build a forecast operations layer"
 
 ---
@@ -92,9 +92,12 @@ Metrics should be computed by planner/team, reason code, horizon, segment, and h
 
 ### 6. End-to-end scheduled publication path
 
-This section is the authoritative integration contract for scheduled forecast publication. The
-component specs define their own algorithms and schemas; the publication flow owns their ordering,
-failure semantics, and the decision to expose a forecast to downstream consumers.
+The authoritative integration contract is the
+[scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md). That spec
+owns stage ordering, pinned run identity, locks, retries, cross-stage row envelopes, numerical
+validation, partial-failure policy, and atomic visibility. This spec owns the business lifecycle
+after a complete draft exists: override, approval, publication, revision, rollback, and delivery
+status.
 
 ```text
 load contract and champion
@@ -163,10 +166,9 @@ Before approval or automatic publication, the flow must verify:
 - freshness and point-in-time cutoff compliance
 - configured completeness, confidence, and exception-count thresholds
 
-The Prefect deployment must expose contract name/version, forecast origin, publication mode
-(`draft_only`, `require_approval`, or `auto_publish`), and an idempotency key. Task retries may not
-repeat already committed stage writes. The publication record stores the Prefect flow-run ID and
-the component run IDs so an operator can trace a published value back through routing,
+The Prefect parameter and retry contracts, including `draft_only`, `require_approval`, and
+`auto_publish`, are defined in the pipeline spec. The publication record stores the Prefect
+flow-run ID and component run IDs so an operator can trace a published value back through routing,
 calibration, reconciliation, model, features, and source cutoff.
 
 ## Implementation plan
@@ -209,5 +211,6 @@ calibration, reconciliation, model, features, and source cutoff.
 - [Backtesting and model lifecycle](backtesting_and_model_lifecycle.md)
 - [Monitoring and SLOs](monitoring_and_slos.md)
 - [Integration contracts](integration_contracts.md)
+- [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md)
 
 {% enddocs %}

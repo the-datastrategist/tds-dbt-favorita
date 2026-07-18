@@ -2,7 +2,7 @@
 
 # SPEC: Forecasting methods, horizons, cold start, and intermittent demand
 
-**Status:** Proposed
+**Status:** In progress
 **Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P0 "Implement multi-horizon forecasting", P1 "Add probabilistic forecasts", and P1 "Add cold-start and intermittent-demand routing"
 
 ---
@@ -111,9 +111,9 @@ calibration before reconciliation; routing must not publish directly.
 
 All configured quantiles must share the same selected strategy for a given entity, origin, target
 date, and horizon. A routing failure may use only a fallback declared by the contract. Otherwise it
-creates a forecast exception and blocks publication for that scope. Ordering, retries, publication
-gates, and idempotency are defined by the authoritative [scheduled publication
-path](forecast_operations.md#6-end-to-end-scheduled-publication-path).
+creates a forecast exception and blocks publication for that scope. Ordering, retries, frozen
+eligibility, publication gates, and idempotency are defined by the authoritative
+[scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md).
 
 ## Implementation plan
 
@@ -146,6 +146,7 @@ path](forecast_operations.md#6-end-to-end-scheduled-publication-path).
 - [Backtesting and model lifecycle](backtesting_and_model_lifecycle.md)
 - [Demand data model](demand_data_model.md)
 - [Prophet model family](prophet_model_family.md)
-- [Forecast operations](forecast_operations.md#6-end-to-end-scheduled-publication-path)
+- [Forecast operations](forecast_operations.md)
+- [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md)
 
 {% enddocs %}
