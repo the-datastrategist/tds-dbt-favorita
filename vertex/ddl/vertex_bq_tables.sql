@@ -358,6 +358,78 @@ ADD COLUMN IF NOT EXISTS fallback_reason STRING;
 ALTER TABLE `tds-favorita.favorita.forecast_outputs`
 ADD COLUMN IF NOT EXISTS confidence_flag STRING;
 
+-- Versioned hierarchy nodes used by reconciliation runs.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_hierarchy_nodes` (
+  hierarchy_name STRING NOT NULL,
+  hierarchy_version STRING NOT NULL,
+  node_id STRING NOT NULL,
+  level_name STRING NOT NULL,
+  level_position INT64 NOT NULL,
+  node_key_json JSON NOT NULL,
+  effective_from DATE NOT NULL,
+  effective_to DATE,
+  created_at TIMESTAMP NOT NULL
+)
+CLUSTER BY hierarchy_name, hierarchy_version, level_name;
+
+-- Single-parent hierarchy edges and optional top-down allocation weights.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_hierarchy_edges` (
+  hierarchy_name STRING NOT NULL,
+  hierarchy_version STRING NOT NULL,
+  parent_node_id STRING NOT NULL,
+  child_node_id STRING NOT NULL,
+  allocation_weight FLOAT64,
+  weight_source STRING,
+  effective_from DATE NOT NULL,
+  effective_to DATE,
+  created_at TIMESTAMP NOT NULL
+)
+CLUSTER BY hierarchy_name, hierarchy_version, parent_node_id;
+
+-- One audit record per reconciliation execution.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_reconciliation_runs` (
+  reconciliation_run_id STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  hierarchy_name STRING NOT NULL,
+  hierarchy_version STRING NOT NULL,
+  reconciliation_method STRING NOT NULL,
+  tolerance_abs FLOAT64 NOT NULL,
+  run_status STRING NOT NULL,
+  input_row_count INT64,
+  output_row_count INT64,
+  violation_count INT64,
+  started_at TIMESTAMP NOT NULL,
+  finished_at TIMESTAMP,
+  error_message STRING
+)
+PARTITION BY DATE(started_at)
+CLUSTER BY hierarchy_name, reconciliation_method, run_status;
+
+-- Reconciled forecasts remain separately queryable from immutable base outputs.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_reconciled_outputs` (
+  reconciliation_output_id STRING NOT NULL,
+  reconciliation_run_id STRING NOT NULL,
+  forecast_output_id STRING,
+  forecast_run_id STRING NOT NULL,
+  hierarchy_name STRING NOT NULL,
+  hierarchy_version STRING NOT NULL,
+  node_id STRING NOT NULL,
+  level_name STRING NOT NULL,
+  forecast_origin TIMESTAMP NOT NULL,
+  target_date DATE NOT NULL,
+  horizon INT64 NOT NULL,
+  base_prediction_p10 FLOAT64,
+  base_prediction_p50 FLOAT64,
+  base_prediction_p90 FLOAT64,
+  prediction_p10 FLOAT64,
+  prediction_p50 FLOAT64 NOT NULL,
+  prediction_p90 FLOAT64,
+  reconciliation_method STRING NOT NULL,
+  created_at TIMESTAMP NOT NULL
+)
+PARTITION BY DATE(forecast_origin)
+CLUSTER BY hierarchy_name, level_name, reconciliation_method;
+
 -- Forecast status transition history.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_status_history` (
   status_event_id STRING NOT NULL,
