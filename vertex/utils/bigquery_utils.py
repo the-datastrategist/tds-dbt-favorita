@@ -7,6 +7,7 @@ import math
 import numbers
 import os
 import re
+import uuid
 from datetime import date, datetime
 from functools import lru_cache
 from typing import Any, Optional, Union
@@ -292,10 +293,11 @@ def insert_rows_idempotent(
     id_column: str,
     project_id: Optional[str] = None,
 ) -> None:
-    """Insert immutable rows once, using a stable logical ID as the merge key.
+    """Batch-insert immutable rows once, using a stable logical ID.
 
-    Existing rows are deliberately left unchanged. This makes retries safe while
-    preserving the append-only contract for audit records.
+    Rows are streamed to a short-lived staging table and merged in one BigQuery
+    job. Existing destination rows are left unchanged, so retries remain safe
+    without issuing one query job per record.
     """
     records = data if isinstance(data, list) else data.to_dict(orient="records")
     ids = [row.get(id_column) for row in records]
@@ -303,15 +305,54 @@ def insert_rows_idempotent(
         raise ValueError(f"Every row must include non-empty id column {id_column!r}")
     if len(ids) != len(set(ids)):
         raise ValueError(f"Duplicate {id_column!r} values in persistence batch")
+    if not records:
+        return
 
-    for row in records:
-        merge_row_to_bigquery(
-            row,
-            table_id,
-            merge_key=id_column,
-            project_id=project_id,
-            update_matched=False,
-        )
+    project_id = project_id or os.getenv("GOOGLE_PROJECT_ID")
+    if not project_id:
+        raise EnvironmentError("GOOGLE_PROJECT_ID must be set")
+    table_id = validate_bq_table_id(table_id)
+    id_column = validate_bq_identifier(id_column, label="id_column")
+
+    client = bigquery.Client(project=project_id)
+    destination = client.get_table(table_id)
+    field_types = {field.name: field.field_type for field in destination.schema}
+    if id_column not in field_types:
+        raise ValueError(f"Destination table must include id column {id_column!r}")
+    supplied_columns = {column for row in records for column in row}
+    staging_schema = [field for field in destination.schema if field.name in supplied_columns]
+    columns = [field.name for field in staging_schema]
+
+    table_ref = destination.reference
+    staging_name = f"_staging_{table_ref.table_id}_{uuid.uuid4().hex}"
+    staging_id = f"{table_ref.project}.{table_ref.dataset_id}.{staging_name}"
+    staging = bigquery.Table(staging_id, schema=staging_schema)
+    staging.expires = datetime.utcnow() + pd.Timedelta(hours=1)
+    client.create_table(staging)
+
+    try:
+        prepared = [_prepare_row_for_insert(row, field_types) for row in records]
+        for offset in range(0, len(prepared), INSERT_ROWS_BATCH_SIZE):
+            batch = prepared[offset : offset + INSERT_ROWS_BATCH_SIZE]
+            errors = client.insert_rows_json(staging, batch)
+            if errors:
+                raise RuntimeError(
+                    f"BigQuery staging insert for {table_id} failed "
+                    f"(rows {offset}-{offset + len(batch) - 1}): {errors}"
+                )
+
+        insert_cols = ", ".join(columns)
+        insert_vals = ", ".join(f"S.{column}" for column in columns)
+        query = f"""
+            MERGE `{table_id}` AS T
+            USING `{staging_id}` AS S
+            ON T.{id_column} = S.{id_column}
+            WHEN NOT MATCHED THEN
+              INSERT ({insert_cols}) VALUES ({insert_vals})
+        """
+        client.query(query).result()
+    finally:
+        client.delete_table(staging, not_found_ok=True)
 
 
 def vertex_safe_run_id(*parts: str) -> str:
