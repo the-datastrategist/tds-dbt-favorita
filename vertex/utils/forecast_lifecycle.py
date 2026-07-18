@@ -30,7 +30,9 @@ def validate_status_transition(previous_status: str | None, new_status: str) -> 
         validate_forecast_status(previous_status)
     validate_forecast_status(new_status)
     if new_status not in ALLOWED_TRANSITIONS[previous_status]:
-        raise ValueError(f"invalid forecast status transition: {previous_status!r} -> {new_status!r}")
+        raise ValueError(
+            f"invalid forecast status transition: {previous_status!r} -> {new_status!r}"
+        )
 
 
 def build_status_events(

@@ -223,9 +223,7 @@ class TestBaselineScoring:
                 history,
                 _contract(baselines=["zero_demand"]),
                 backtest_run_id="run-1",
-                fit_predict=lambda train, predict, config: pd.Series(
-                    1.0, index=predict.index
-                ),
+                fit_predict=lambda train, predict, config: pd.Series(1.0, index=predict.index),
             )
 
     def test_generated_ids_are_stable_for_same_contract_and_input(self):

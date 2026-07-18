@@ -11,7 +11,12 @@ from vertex.utils.forecast_lifecycle import build_status_events, validate_status
 @pytest.mark.unit
 @pytest.mark.parametrize(
     ("previous", "new"),
-    [(None, "draft"), ("draft", "approved"), ("approved", "published"), ("published", "superseded")],
+    [
+        (None, "draft"),
+        ("draft", "approved"),
+        ("approved", "published"),
+        ("published", "superseded"),
+    ],
 )
 def test_valid_status_transitions(previous, new):
     validate_status_transition(previous, new)

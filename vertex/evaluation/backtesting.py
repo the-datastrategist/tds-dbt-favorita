@@ -543,9 +543,7 @@ def score_model_and_baselines(
                         sort_keys=True,
                         separators=(",", ":"),
                     ),
-                    "feature_availability_hash": cutoff_metadata[
-                        "feature_availability_hash"
-                    ],
+                    "feature_availability_hash": cutoff_metadata["feature_availability_hash"],
                 }
             )
 
@@ -554,7 +552,7 @@ def score_model_and_baselines(
         [baseline_result.predictions, model_predictions],
         ignore_index=True,
     )
-    predictions["feature_availability_hash"] = predictions[
-        "feature_availability_hash"
-    ].fillna(registry.hash)
+    predictions["feature_availability_hash"] = predictions["feature_availability_hash"].fillna(
+        registry.hash
+    )
     return BaselineBacktestResult(run_id, predictions, _build_metrics(predictions, contract))
