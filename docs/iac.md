@@ -73,6 +73,36 @@ VERTEX_PIPELINE_SERVICE_ACCOUNT=sa-vertex-ml@PROJECT.iam.gserviceaccount.com
 
 Custom Jobs and PipelineJobs use this account when set.
 
+### Local / orchestrator identity (defense-in-depth)
+
+`sa-vertex-ml` above is the identity **Vertex Custom Jobs and PipelineJobs run as**. It's a
+separate concern from the identity the `ml-pipeline` container itself uses locally
+(`GOOGLE_APPLICATION_CREDENTIALS`, e.g. a key for `sa-vertex-local-dev@PROJECT`) — the container
+needs to run `dbt` and raw ingestion (which always write directly to BigQuery/GCS, no Vertex
+equivalent) plus optionally exercise `VERTEX_MODE=docker` for fast local ML iteration. Only
+`sa-vertex-ml` should ever run scheduled/production ML training, predict, and optimize — see
+[overview.md](overview.md#system-diagram) and `prefect.yaml` (`vertex_mode: vertex` on every
+`*-schedule` deployment).
+
+To keep that boundary enforced by IAM rather than convention alone in staging/prod:
+
+| Role | Scope | Grant to |
+|------|-------|----------|
+| `roles/bigquery.dataEditor` | Dataset `raw_favorita`, staging/feature portion of `favorita` | Local/orchestrator identity (dbt writes) |
+| `roles/bigquery.jobUser` | Project | Both identities (dbt and Vertex both run queries) |
+| `roles/storage.objectAdmin` | Raw bucket only | Local/orchestrator identity (ingestion) |
+| `roles/aiplatform.user` | Project | Local/orchestrator identity (submit only — no compute) |
+| `roles/bigquery.dataEditor` | ML output tables (`ml_model_*`, `ml_vertex_job_runs`, `backtest_*`, `forecast_*`) | `sa-vertex-ml` only |
+| `roles/storage.objectAdmin` | Staging + models buckets | `sa-vertex-ml` only |
+
+Caveat: the ML output tables above live in the **same** `favorita` dataset as the dbt feature
+models (see `vertex/ddl/vertex_bq_tables.sql`), and BigQuery dataset-level IAM can't separate
+them from dbt-owned tables. Enforcing the split with a dataset-level grant alone isn't possible;
+either use BigQuery **table-level** IAM bindings on just the `ml_*`/`backtest_*`/`forecast_*`
+tables, or move them to a dedicated dataset (e.g. `favorita_ml`) that only `sa-vertex-ml` can
+write to. Until one of those is in place, treat `VERTEX_MODE=vertex`-only scheduling as the
+primary control and this IAM split as defense-in-depth, not a hard guarantee.
+
 ---
 
 ## GCS layout (recommended)

@@ -31,6 +31,14 @@ VERTEX_PREDICTION_SERVICE_ACCOUNT=sa-vertex-ml-predict@PROJECT.iam.gserviceaccou
 
 Custom Jobs and PipelineJobs use this account when set.
 
+**Keep this identity distinct from the local/orchestrator identity** the `ml-pipeline`
+container runs as (`GOOGLE_APPLICATION_CREDENTIALS`). The local identity still needs to write
+BigQuery/GCS directly for dbt and raw ingestion (and, for local iteration only, `VERTEX_MODE=docker`
+training runs) — but every *scheduled* Prefect deployment in `prefect.yaml` uses
+`vertex_mode: vertex`, so production training/predict/optimize only ever runs as `sa-vertex-ml`.
+See [docs/iac.md](../../docs/iac.md#local--orchestrator-identity-defense-in-depth) for the
+recommended role split and its dataset-sharing caveat.
+
 Provision this (and the rest of this runbook's resources) via versioned Terraform instead of
 by hand — see [`terraform/README.md`](../../terraform/README.md) and
 [`docs/specs/terraform_modules.md`](../../docs/specs/terraform_modules.md). The
