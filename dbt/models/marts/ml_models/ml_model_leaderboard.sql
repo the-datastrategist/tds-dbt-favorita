@@ -43,6 +43,7 @@ with vertex_leaderboard as (
     where metric_set = 'test'
 ),
 
+{% if var('include_bqml_leaderboard', true) %}
 bqml_leaderboard as (
     select
         'bqml' as platform,
@@ -68,6 +69,7 @@ bqml_leaderboard as (
         on evaluate.model_name = wape.model_name
         and evaluate.run_date = wape.run_date
 ),
+{% endif %}
 
 backtest_leaderboard as (
     select
@@ -112,8 +114,10 @@ backtest_leaderboard as (
 
 unioned as (
     select * from vertex_leaderboard
+    {% if var('include_bqml_leaderboard', true) %}
     union all
     select * from bqml_leaderboard
+    {% endif %}
     union all
     select * from backtest_leaderboard
 )

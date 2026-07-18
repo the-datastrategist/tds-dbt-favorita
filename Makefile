@@ -350,7 +350,7 @@ dbt-vertex: vertex-bq-ddl ## Ensure Vertex tables exist, then build Vertex-only 
 	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:vertex --exclude tag:bqml tag:backtest $(ARGS)
 
 dbt-backtest: vertex-bq-ddl ## Build and test backtest staging, leaderboard, and champion models
-	docker compose run --rm ml-pipeline dbt build --project-dir dbt --target $(DBT_TARGET) --select tag:backtest $(ARGS)
+	docker compose run --rm ml-pipeline dbt build --project-dir dbt --target $(DBT_TARGET) --select tag:backtest --vars '{include_bqml_leaderboard: false}' $(ARGS)
 
 vertex-bq-ddl: ## Create BigQuery tables for Vertex ML outputs (once per environment)
 	docker compose run --rm ml-pipeline python scripts/apply_vertex_bq_ddl.py
