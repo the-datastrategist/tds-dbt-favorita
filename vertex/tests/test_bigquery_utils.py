@@ -1,6 +1,7 @@
 """Tests for BigQuery load helpers."""
 
 import json
+from datetime import date, datetime
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -64,6 +65,20 @@ class TestBigQueryUtils:
         assert prepared["config_name"] == "favorita_store_n1d_xgboost"
         assert "unknown_col" not in prepared
 
+    def test_prepare_row_promotes_date_to_timestamp(self):
+        prepared = _prepare_row_for_insert(
+            {"data_cutoff": date(2024, 1, 2)}, {"data_cutoff": "TIMESTAMP"}
+        )
+
+        assert prepared["data_cutoff"] == "2024-01-02 00:00:00"
+
+    def test_prepare_row_maps_nan_string_value_to_null(self):
+        prepared = _prepare_row_for_insert(
+            {"fallback_reason": float("nan")}, {"fallback_reason": "STRING"}
+        )
+
+        assert prepared["fallback_reason"] is None
+
     def test_query_parameter_honors_date_schema(self):
         value = pd.Timestamp("2024-01-02")
 
@@ -71,6 +86,24 @@ class TestBigQueryUtils:
 
         assert parameter.type_ == "DATE"
         assert parameter.value.isoformat() == "2024-01-02"
+
+    def test_query_parameter_promotes_date_to_timestamp(self):
+        parameter = _bq_param("data_cutoff", date(2024, 1, 2), bq_type="TIMESTAMP")
+
+        assert parameter.type_ == "TIMESTAMP"
+        assert parameter.value == datetime(2024, 1, 2)
+
+    def test_query_parameter_honors_repeated_string_schema(self):
+        parameter = _bq_param("dimensions", ["store_id", "product_id"], bq_type="ARRAY<STRING>")
+
+        assert parameter.array_type == "STRING"
+        assert parameter.values == ["store_id", "product_id"]
+
+    def test_query_parameter_honors_json_schema(self):
+        parameter = _bq_param("contract_json", {"horizons": [7]}, bq_type="JSON")
+
+        assert parameter.type_ == "JSON"
+        assert json.loads(parameter.value) == {"horizons": [7]}
 
     def test_validate_bq_table_id_accepts_two_and_three_part_refs(self):
         assert validate_bq_table_id("favorita.int_sales_daily") == "favorita.int_sales_daily"

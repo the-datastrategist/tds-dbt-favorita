@@ -33,7 +33,7 @@ endif
 	vertex-train-docker vertex-predict-docker vertex-optimize-docker \
 	vertex-submit-train vertex-submit-predict vertex-submit-optimize \
 	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
-	dbt-vertex dbt-backtest vertex-bq-ddl vertex-validate-config vertex-validate-configs \
+	dbt-vertex dbt-backtest vertex-bq-ddl vertex-forecast-contract-accept vertex-validate-config vertex-validate-configs \
 	vertex-backfill vertex-backtest-plan vertex-backtest vertex-backtest-persist prefect-flow-vertex-backfill \
 	vertex-lifecycle-plan vertex-lifecycle-evaluate vertex-lifecycle-promote vertex-lifecycle-rollback \
 	docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
@@ -365,6 +365,17 @@ dbt-backtest: vertex-bq-ddl ## Build and test backtest staging, leaderboard, and
 
 vertex-bq-ddl: ## Create BigQuery tables for Vertex ML outputs (once per environment)
 	docker compose run --rm ml-pipeline python scripts/apply_vertex_bq_ddl.py
+
+VERTEX_FORECAST_SOURCE_RUN_ID ?=
+VERTEX_FORECAST_PROJECT ?= tds-favorita
+VERTEX_FORECAST_TABLE_PREFIX ?= tds-favorita.favorita
+
+vertex-forecast-contract-accept: vertex-bq-ddl ## Persist and publish a live horizon-7 canonical acceptance batch
+	@test -n "$(VERTEX_FORECAST_SOURCE_RUN_ID)" || (echo "Set VERTEX_FORECAST_SOURCE_RUN_ID" && exit 1)
+	$(DOCKER_RUN) python scripts/accept_forecast_contract.py \
+		--source-run-id "$(VERTEX_FORECAST_SOURCE_RUN_ID)" \
+		--project-id "$(VERTEX_FORECAST_PROJECT)" \
+		--table-prefix "$(VERTEX_FORECAST_TABLE_PREFIX)"
 
 vertex-validate-config: ## Validate a model config (MODEL=favorita_store_n1d_xgboost)
 	@test -n "$(MODEL)" || (echo "Set MODEL, e.g. make vertex-validate-config MODEL=favorita_store_n1d_xgboost" && exit 1)

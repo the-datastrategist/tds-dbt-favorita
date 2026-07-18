@@ -266,6 +266,8 @@ def test_write_forecast_outputs_persists_contract_run_rows_and_status_events():
     assert merge.call_args_list[1].args[1] == "project.dataset.runs"
     assert insert.call_args_list[0].args[1] == "project.dataset.outputs"
     assert insert.call_args_list[1].args[1] == "project.dataset.status"
+    output_rows = insert.call_args_list[0].args[0]
+    assert output_rows["contract_enforced"].tolist() == [True]
 
 
 @pytest.mark.unit
