@@ -320,6 +320,22 @@ Consumer views must join only a single successful `forecast_run_id` and `publica
 5. Add dbt consumer, quality, and monitoring views.
 6. Run local, then live draft-only acceptance before enabling approval or auto-publication.
 
+## Current implementation
+
+- The initial production contract publishes the governed horizon-7 champion and fails closed when
+  prediction horizons do not match its contract.
+- Prefect resolves the current champion, scores it without exposing the model writer's intermediate
+  draft, and executes routing, split-conformal calibration, reconciliation/no-op reconciliation,
+  and validation in the authoritative order.
+- Logical run, stage, output, calibration, and validation IDs are deterministic. A BigQuery-backed
+  lease prevents concurrent visibility for the same contract and origin.
+- Stage evidence, blocking-gate evidence, and canonical output rows persist before the final
+  `forecast_runs.run_status = 'draft'` record. `forecast_visible_drafts` enforces that atomic
+  boundary for consumers.
+- Failed logical runs persist retry-stable blocking exceptions without making partial output visible.
+- Remaining acceptance work is live draft-only execution, delivery confirmation, and enabling
+  hierarchical contracts after joint-feasibility fixtures pass.
+
 ## Open questions
 
 - **Non-blocking — Data/operations:** tune default calibration-coverage and publish-delay
