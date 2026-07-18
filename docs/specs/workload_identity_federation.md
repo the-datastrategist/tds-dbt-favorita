@@ -65,10 +65,10 @@ environment. New client projects must repeat the documented bootstrap in
 - **Accepted 2026-07-18:** the live bootstrap verified the repository-scoped pool/provider,
   CI service account and IAM bindings, populated all protected GitHub `dev` variables, and
   produced a zero-change Terraform plan. GitHub Actions run
-  [`29648312277`](https://github.com/the-datastrategist/tds-dbt-favorita/actions/runs/29648312277)
-  successfully exchanged the GitHub OIDC token, described the live project, and read the remote
-  Terraform state without a service-account key. The run also exposed and led to the correction
-  of the dbt profile from key-file authentication to the dedicated `wif` ADC target.
+  [`29650216690`](https://github.com/the-datastrategist/tds-dbt-favorita/actions/runs/29650216690)
+  successfully exchanged the GitHub OIDC token, described the live project, read the remote
+  Terraform state, produced a clean plan, and completed dbt authentication and compilation using
+  the dedicated `wif` ADC target without a service-account key.
 
 ## Design
 
