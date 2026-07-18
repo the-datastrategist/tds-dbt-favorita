@@ -115,20 +115,37 @@ class TestBigQueryUtils:
         assert len(first_batch.args[1]) == INSERT_ROWS_BATCH_SIZE
         assert len(second_batch.args[1]) == 50
 
-    @patch("vertex.utils.bigquery_utils.merge_row_to_bigquery")
-    def test_idempotent_insert_uses_stable_id_without_updates(self, merge_row):
+    @patch("vertex.utils.bigquery_utils.bigquery.Client")
+    def test_idempotent_insert_batches_rows_through_staging_table(self, client_cls):
         rows = [{"prediction_id": "p-1", "prediction": 10.0}]
+        client = MagicMock()
+        client_cls.return_value = client
+        destination = MagicMock()
+        prediction_id_field = MagicMock()
+        prediction_id_field.name = "prediction_id"
+        prediction_id_field.field_type = "STRING"
+        prediction_field = MagicMock()
+        prediction_field.name = "prediction"
+        prediction_field.field_type = "FLOAT64"
+        destination.schema = [prediction_id_field, prediction_field]
+        destination.reference.project = "proj"
+        destination.reference.dataset_id = "ds"
+        destination.reference.table_id = "predictions"
+        client.get_table.return_value = destination
+        client.insert_rows_json.return_value = []
 
         insert_rows_idempotent(
             rows, "proj.ds.predictions", id_column="prediction_id", project_id="proj"
         )
 
-        merge_row.assert_called_once_with(
-            rows[0],
-            "proj.ds.predictions",
-            merge_key="prediction_id",
-            project_id="proj",
-            update_matched=False,
+        client.create_table.assert_called_once()
+        client.insert_rows_json.assert_called_once()
+        merge_sql = client.query.call_args.args[0]
+        assert "MERGE `proj.ds.predictions`" in merge_sql
+        assert "ON T.prediction_id = S.prediction_id" in merge_sql
+        assert "WHEN MATCHED" not in merge_sql
+        client.delete_table.assert_called_once_with(
+            client.create_table.call_args.args[0], not_found_ok=True
         )
 
     def test_idempotent_insert_rejects_duplicate_ids(self):
