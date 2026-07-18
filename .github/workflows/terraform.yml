@@ -58,23 +58,20 @@ jobs:
       TF_VAR_enable_github_wif: "true"
       TF_VAR_github_repository: ${{ github.repository }}
       TF_VAR_terraform_state_bucket: ${{ vars.GCP_DEV_TF_STATE_BUCKET }}
+      WIF_PROVIDER: ${{ vars.GCP_DEV_WIF_PROVIDER }}
+      WIF_SERVICE_ACCOUNT: ${{ vars.GCP_DEV_WIF_SERVICE_ACCOUNT }}
+      DEV_PLAN_CONFIGURED: ${{ vars.GCP_DEV_PROJECT_ID != '' && vars.GCP_DEV_CLIENT_LABEL != '' && vars.GCP_DEV_CALLER_MEMBER != '' && vars.GCP_DEV_TF_STATE_BUCKET != '' && vars.GCP_DEV_WIF_PROVIDER != '' && vars.GCP_DEV_WIF_SERVICE_ACCOUNT != '' }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
-      - name: Check dev environment configuration
-        env:
-          WIF_PROVIDER: ${{ vars.GCP_DEV_WIF_PROVIDER }}
-          WIF_SERVICE_ACCOUNT: ${{ vars.GCP_DEV_WIF_SERVICE_ACCOUNT }}
+      - name: Report unconfigured dev plan
+        if: env.DEV_PLAN_CONFIGURED != 'true'
         run: |
-          for variable in TF_VAR_project_id TF_VAR_client_label TF_VAR_caller_member TF_VAR_terraform_state_bucket WIF_PROVIDER WIF_SERVICE_ACCOUNT; do
-            if [ -z "${!variable}" ]; then
-              echo "GitHub dev environment variable backing ${variable} is not configured" >&2
-              exit 1
-            fi
-          done
+          echo "::notice::Skipping the authenticated dev plan because the GitHub dev environment is not fully configured. See terraform/README.md#keyless-github-actions-plan."
 
       - id: auth
         name: Authenticate to Google Cloud with WIF
+        if: env.DEV_PLAN_CONFIGURED == 'true'
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
           project_id: ${{ vars.GCP_DEV_PROJECT_ID }}
@@ -82,20 +79,24 @@ jobs:
           service_account: ${{ vars.GCP_DEV_WIF_SERVICE_ACCOUNT }}
 
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        if: env.DEV_PLAN_CONFIGURED == 'true'
         with:
           terraform_wrapper: false
 
       - name: init (dev remote state)
+        if: env.DEV_PLAN_CONFIGURED == 'true'
         working-directory: terraform/environments/dev
         run: terraform init -input=false -backend-config="bucket=${TF_VAR_terraform_state_bucket}"
 
       - name: plan (never apply)
+        if: env.DEV_PLAN_CONFIGURED == 'true'
         working-directory: terraform/environments/dev
         run: |
           terraform plan -input=false -no-color -out=tfplan
           terraform show -no-color tfplan > terraform-plan.txt
 
       - name: retain human-readable plan
+        if: env.DEV_PLAN_CONFIGURED == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: terraform-dev-plan-${{ github.run_id }}
