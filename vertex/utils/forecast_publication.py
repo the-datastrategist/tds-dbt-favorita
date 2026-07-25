@@ -38,6 +38,93 @@ def load_forecast_run(
     ).to_dataframe()
 
 
+def load_prediction_run(
+    predict_run_id: str,
+    *,
+    prediction_table: str,
+    project_id: str | None = None,
+) -> pd.DataFrame:
+    """Load one immutable standard-prediction batch for staged publication."""
+    if not predict_run_id:
+        raise ValueError("predict_run_id is required")
+    table = validate_bq_table_id(prediction_table)
+    client = bigquery.Client(project=project_id)
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[bigquery.ScalarQueryParameter("predict_run_id", "STRING", predict_run_id)]
+    )
+    return client.query(
+        f"SELECT * FROM `{table}` WHERE predict_run_id = @predict_run_id",
+        job_config=job_config,
+    ).to_dataframe()
+
+
+def load_calibration_history(
+    model_config_name: str,
+    *,
+    backtest_prediction_table: str,
+    project_id: str | None = None,
+) -> pd.DataFrame:
+    """Load strictly out-of-sample model residual evidence from rolling backtests."""
+    if not model_config_name:
+        raise ValueError("model_config_name is required")
+    table = validate_bq_table_id(backtest_prediction_table)
+    client = bigquery.Client(project=project_id)
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("model_config_name", "STRING", model_config_name)
+        ]
+    )
+    return client.query(
+        f"""
+        SELECT actual, prediction, horizon, entity_key_json, forecast_origin, target_date
+        FROM `{table}`
+        WHERE baseline_name = @model_config_name
+          AND actual IS NOT NULL
+          AND prediction IS NOT NULL
+        """,
+        job_config=job_config,
+    ).to_dataframe()
+
+
+def load_hierarchy_version(
+    hierarchy_name: str,
+    hierarchy_version: str,
+    *,
+    node_table: str,
+    edge_table: str,
+    project_id: str | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Load one pinned hierarchy graph with parameterized queries."""
+    if not hierarchy_name or not hierarchy_version:
+        raise ValueError("hierarchy_name and hierarchy_version are required")
+    nodes_id = validate_bq_table_id(node_table)
+    edges_id = validate_bq_table_id(edge_table)
+    client = bigquery.Client(project=project_id)
+    parameters = [
+        bigquery.ScalarQueryParameter("hierarchy_name", "STRING", hierarchy_name),
+        bigquery.ScalarQueryParameter("hierarchy_version", "STRING", hierarchy_version),
+    ]
+    nodes = client.query(
+        f"""
+        SELECT * FROM `{nodes_id}`
+        WHERE hierarchy_name = @hierarchy_name AND hierarchy_version = @hierarchy_version
+        """,
+        job_config=bigquery.QueryJobConfig(query_parameters=parameters),
+    ).to_dataframe()
+    edges = client.query(
+        f"""
+        SELECT * FROM `{edges_id}`
+        WHERE hierarchy_name = @hierarchy_name AND hierarchy_version = @hierarchy_version
+        """,
+        job_config=bigquery.QueryJobConfig(query_parameters=parameters),
+    ).to_dataframe()
+    if nodes.empty or edges.empty:
+        raise ValueError(
+            f"hierarchy {hierarchy_name!r} version {hierarchy_version!r} is incomplete"
+        )
+    return nodes, edges
+
+
 def validate_publication_batch(rows: pd.DataFrame, contract: ForecastContract) -> None:
     """Fail closed unless a draft batch is complete, calibrated, and reconciled."""
     required = {

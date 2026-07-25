@@ -28,7 +28,7 @@ endif
 	mlflow-ui prefect-ui prefect-server prefect-work-pool-create prefect-worker prefect-deploy \
 	prefect-run-dbt prefect-run-vertex-train prefect-run-vertex-train-all prefect-run-vertex-pipeline \
 	prefect-run-model-lifecycle prefect-flow-dbt prefect-flow-vertex-train prefect-flow-vertex-pipeline \
-	prefect-flow-model-lifecycle \
+	prefect-flow-model-lifecycle prefect-run-scheduled-forecast prefect-flow-scheduled-forecast \
 	vertex-train vertex-predict vertex-optimize vertex-run vertex-run-docker vertex-submit \
 	vertex-train-docker vertex-predict-docker vertex-optimize-docker \
 	vertex-submit-train vertex-submit-predict vertex-submit-optimize \
@@ -539,6 +539,10 @@ prefect-run-model-lifecycle: ## Trigger manual governed model lifecycle deployme
 	$(DOCKER_RUN) -e PREFECT_API_URL=$(PREFECT_API_URL_DOCKER) prefect deployment run \
 		'prefect-model-lifecycle/prefect-model-lifecycle-manual'
 
+prefect-run-scheduled-forecast: ## Trigger scheduled champion-to-draft forecast deployment
+	$(DOCKER_RUN) -e PREFECT_API_URL=$(PREFECT_API_URL_DOCKER) prefect deployment run \
+		'prefect-scheduled-forecast-pipeline/prefect-scheduled-forecast-pipeline-daily'
+
 # Run flows directly in Docker (no Prefect server; for development)
 prefect-flow-dbt: ## Run prefect-dbt-run flow once in Docker
 	$(DOCKER_RUN) python -c "from orchestration.flows.dbt import prefect_dbt_run_flow; prefect_dbt_run_flow()"
@@ -557,6 +561,9 @@ skip_optimize=$(if $(filter 1 true yes,$(SKIP_OPTIMIZE)),True,False), skip_predi
 
 prefect-flow-model-lifecycle: ## Run governed model lifecycle flow once in Docker
 	$(DOCKER_RUN) python -c "from orchestration.flows.model_lifecycle import prefect_model_lifecycle_flow; prefect_model_lifecycle_flow()"
+
+prefect-flow-scheduled-forecast: ## Score champion and create a validated draft in Docker
+	$(DOCKER_RUN) python -c "from orchestration.flows.scheduled_forecast_pipeline import prefect_scheduled_forecast_pipeline_flow; prefect_scheduled_forecast_pipeline_flow()"
 
 # --- CLEANUP COMMANDS ---
 

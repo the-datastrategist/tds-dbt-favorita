@@ -1,0 +1,134 @@
+"""Tests for the ordered scheduled forecast publication stages."""
+
+from datetime import datetime, timezone
+
+import pandas as pd
+import pytest
+
+from vertex.config.forecast_contract import load_forecast_contract
+from vertex.evaluation.forecast_pipeline import (
+    ForecastRunPins,
+    eligibility_snapshot_id,
+    execute_forecast_pipeline,
+)
+
+ORIGIN = pd.Timestamp("2026-07-18")
+
+
+def _predictions() -> pd.DataFrame:
+    run_at = datetime(2026, 7, 18, 9, tzinfo=timezone.utc)
+    return pd.DataFrame(
+        [
+            {
+                "prediction_id": f"prediction-{store_id}",
+                "predict_run_id": "source-run",
+                "model_run_id": "model-run-1",
+                "model_id": "model-1",
+                "config_name": "favorita_store_h7_xgboost",
+                "model_family": "tree",
+                "model_type": "xgboost",
+                "run_at": run_at,
+                "date": ORIGIN,
+                "forecast_date": ORIGIN + pd.Timedelta(days=7),
+                "forecast_horizon": 7,
+                "store_id": store_id,
+                "prediction": 10.0 + store_id,
+                "model_artifact_uri": "gs://models/run/model.json",
+            }
+            for store_id in (1, 2)
+        ]
+    )
+
+
+def _calibration() -> pd.DataFrame:
+    rows = []
+    for store_id in (1, 2):
+        entity = f'{{"store_id":{store_id}}}'
+        for index in range(30):
+            prediction = 10.0 + store_id
+            rows.append(
+                {
+                    "entity_key_json": entity,
+                    "horizon": 7,
+                    "actual": prediction + (-1.0 if index % 2 else 1.0),
+                    "prediction": prediction,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def _pins(predictions: pd.DataFrame) -> ForecastRunPins:
+    contract = load_forecast_contract("vertex/config/forecast_contract_publication.yaml")
+    return ForecastRunPins(
+        champion_candidate_id="candidate-1",
+        model_run_id="model-run-1",
+        feature_version="features-1",
+        data_cutoff=ORIGIN,
+        source_cutoff_json={"sales": "2026-07-18"},
+        eligibility_snapshot_id=eligibility_snapshot_id(predictions, contract),
+        code_sha="abc123",
+    )
+
+
+@pytest.mark.unit
+def test_pipeline_is_deterministic_and_produces_validated_draft() -> None:
+    contract = load_forecast_contract("vertex/config/forecast_contract_publication.yaml")
+    predictions = _predictions()
+    pins = _pins(predictions)
+    completed = datetime(2026, 7, 18, 10, tzinfo=timezone.utc)
+
+    first = execute_forecast_pipeline(
+        predictions,
+        _calibration(),
+        contract=contract,
+        pins=pins,
+        completed_at=completed,
+    )
+    retry = execute_forecast_pipeline(
+        predictions,
+        _calibration(),
+        contract=contract,
+        pins=pins,
+        completed_at=completed,
+    )
+
+    assert first.forecast_run_id == retry.forecast_run_id
+    assert first.rows["forecast_output_id"].tolist() == retry.rows["forecast_output_id"].tolist()
+    assert [stage["stage_name"] for stage in first.stage_records] == [
+        "score",
+        "route",
+        "calibrate",
+        "reconcile",
+        "validate",
+    ]
+    assert first.rows["forecast_status"].eq("draft").all()
+    assert first.rows["forecast_strategy"].eq("global_model").all()
+    assert first.rows["calibration_run_id"].notna().all()
+    assert first.rows["reconciliation_method"].eq("none").all()
+    assert all(check["passed"] for check in first.validation_checks)
+
+
+@pytest.mark.unit
+def test_pipeline_rejects_changed_eligibility_after_pinning() -> None:
+    contract = load_forecast_contract("vertex/config/forecast_contract_publication.yaml")
+    predictions = _predictions()
+    pins = _pins(predictions)
+    changed = predictions.iloc[:1].copy()
+
+    with pytest.raises(ValueError, match="pinned eligibility snapshot"):
+        execute_forecast_pipeline(changed, _calibration(), contract=contract, pins=pins)
+
+
+@pytest.mark.unit
+def test_pipeline_blocks_data_cutoff_after_origin() -> None:
+    contract = load_forecast_contract("vertex/config/forecast_contract_publication.yaml")
+    predictions = _predictions()
+    pins = ForecastRunPins(
+        **{
+            **_pins(predictions).__dict__,
+            "data_cutoff": ORIGIN + pd.Timedelta(days=1),
+        }
+    )
+
+    with pytest.raises(ValueError, match="point_in_time_cutoff"):
+        execute_forecast_pipeline(predictions, _calibration(), contract=contract, pins=pins)

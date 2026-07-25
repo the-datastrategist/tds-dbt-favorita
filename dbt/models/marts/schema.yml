@@ -1,6 +1,29 @@
 version: 2
 
 models:
+  - name: forecast_visible_drafts
+    description: Canonical forecasts exposed only after the scheduled run crosses its atomic draft boundary.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - forecast_run_id
+              - entity_key_json
+              - target_date
+              - horizon
+    columns:
+      - name: forecast_output_id
+        data_tests: [unique, not_null]
+      - name: forecast_run_id
+        data_tests: [not_null]
+      - name: calibration_run_id
+        data_tests: [not_null]
+      - name: forecast_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [draft, approved, published]
+
   - name: ml_model_lifecycle_current
     description: Latest derived lifecycle state and audit event for every registered candidate.
     columns:

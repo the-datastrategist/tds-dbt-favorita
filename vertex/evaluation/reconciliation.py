@@ -228,7 +228,11 @@ def reconcile_forecasts(
             )
             indexed[column] = pd.Series(reconciled)
         reconciled_columns = list(value_columns)
-        indexed[reconciled_columns] = indexed[reconciled_columns].cummax(axis=1)
+        if (indexed[reconciled_columns].diff(axis=1).iloc[:, 1:] < 0).any(axis=None):
+            raise ValueError(
+                "reconciliation produced crossed quantiles; publication requires a joint "
+                "coherent and monotonic solution"
+            )
         indexed["reconciliation_method"] = method
         output.append(indexed.reset_index())
     return pd.concat(output, ignore_index=True) if output else forecasts.copy()

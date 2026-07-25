@@ -55,6 +55,12 @@ sources:
       - name: forecast_status_history
         description: Forecast lifecycle transition history for approval, publication, supersession, and failure events
 
+      - name: forecast_pipeline_stage_runs
+        description: Ordered, retry-stable stage evidence for scheduled forecast publication runs
+
+      - name: forecast_validation_checks
+        description: Immutable publication-gate results evaluated before atomic draft visibility
+
       - name: forecast_exceptions
         description: Append-only forecast exceptions requiring operational review
 

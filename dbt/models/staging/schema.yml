@@ -601,6 +601,48 @@ models:
         description: Hash of the feature availability registry used to validate this run.
       - name: feature_materialization_id
         description: Optional feature materialization or plan version identifier.
+      - name: champion_candidate_id
+        description: Champion candidate pinned once for the complete scheduled publication run.
+      - name: eligibility_snapshot_id
+        description: Stable fingerprint of the frozen entity, target-date, and horizon population.
+
+  - name: stg_forecast_pipeline_stage_runs
+    description: Ordered append-only component evidence for scheduled publication runs.
+    columns:
+      - name: stage_run_id
+        data_tests: [unique, not_null]
+      - name: forecast_run_id
+        data_tests: [not_null]
+      - name: stage_name
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [score, route, calibrate, reconcile, validate]
+      - name: stage_position
+        data_tests: [not_null]
+      - name: stage_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [completed, failed]
+
+  - name: stg_forecast_validation_checks
+    description: Immutable blocking and warning gate results evaluated before draft visibility.
+    columns:
+      - name: validation_check_id
+        data_tests: [unique, not_null]
+      - name: forecast_run_id
+        data_tests: [not_null]
+      - name: check_name
+        data_tests: [not_null]
+      - name: severity
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [blocking, warning]
+      - name: passed
+        data_tests: [not_null]
 
   - name: stg_forecast_outputs
     description: >

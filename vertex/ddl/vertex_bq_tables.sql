@@ -351,11 +351,66 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_runs` (
   model_run_id STRING,
   model_id STRING,
   config_name STRING,
+  champion_candidate_id STRING,
+  eligibility_snapshot_id STRING,
   row_count INT64,
   error_message STRING
 )
 PARTITION BY DATE(started_at)
 CLUSTER BY forecast_contract_name, run_type, run_status;
+
+ALTER TABLE `tds-favorita.favorita.forecast_runs`
+ADD COLUMN IF NOT EXISTS champion_candidate_id STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_runs`
+ADD COLUMN IF NOT EXISTS eligibility_snapshot_id STRING;
+
+-- Ordered component evidence. Stable stage_run_id values make identical retries no-ops.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_pipeline_stage_runs` (
+  stage_run_id STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  stage_name STRING NOT NULL,
+  stage_position INT64 NOT NULL,
+  component_run_id STRING NOT NULL,
+  input_fingerprint STRING NOT NULL,
+  output_fingerprint STRING NOT NULL,
+  stage_status STRING NOT NULL,
+  input_row_count INT64 NOT NULL,
+  output_row_count INT64 NOT NULL,
+  started_at TIMESTAMP NOT NULL,
+  finished_at TIMESTAMP,
+  error_message STRING
+)
+PARTITION BY DATE(started_at)
+CLUSTER BY forecast_run_id, stage_position, stage_status;
+
+-- Immutable quality gates evaluated before the draft visibility boundary.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_validation_checks` (
+  validation_check_id STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  check_name STRING NOT NULL,
+  severity STRING NOT NULL,
+  passed BOOL NOT NULL,
+  observed_value FLOAT64,
+  threshold_value FLOAT64,
+  details_json JSON,
+  checked_at TIMESTAMP NOT NULL
+)
+PARTITION BY DATE(checked_at)
+CLUSTER BY forecast_run_id, severity, passed;
+
+-- Mutable operational leases. Forecast evidence and outputs remain append-only.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_pipeline_locks` (
+  lock_key STRING NOT NULL,
+  forecast_contract_hash STRING NOT NULL,
+  forecast_origin TIMESTAMP NOT NULL,
+  owner_id STRING NOT NULL,
+  acquired_at TIMESTAMP NOT NULL,
+  heartbeat_at TIMESTAMP NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  released_at TIMESTAMP
+)
+CLUSTER BY forecast_contract_hash, forecast_origin;
 
 -- Canonical forecast output rows. Initial predict jobs write draft statistical forecasts.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_outputs` (
