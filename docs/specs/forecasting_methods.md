@@ -125,6 +125,14 @@ eligibility, publication gates, and idempotency are defined by the authoritative
 6. Add routing rules and strategy metadata to canonical output.
 7. Update benchmarks to report metrics by horizon and strategy.
 
+## Current implementation
+
+Horizon-aware scoring, intermittent-demand baselines, cold-start classification and fallback
+routing, split-conformal P10/P50/P90 calibration, and canonical strategy/calibration lineage are
+implemented. The scheduled pipeline applies these stages before reconciliation and persists their
+stage and validation evidence. Remaining work is live end-to-end acceptance of the complete
+champion-to-draft path and durable acceptance evidence.
+
 ## Testing & validation
 
 - Unit tests for horizon expansion and validation.

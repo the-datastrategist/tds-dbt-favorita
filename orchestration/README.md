@@ -161,7 +161,7 @@ The Prefect **worker** runs inside `ml-pipeline`. Flow tasks call `python -m ver
 
 ```
 orchestration/
-  flows/          # @flow definitions (dbt, vertex train, vertex ML pipeline)
+  flows/          # @flow definitions (dbt, Vertex, lifecycle, scheduled draft, publication)
   tasks/          # @task implementations (in-container python/dbt)
   utils/          # repo root, .env, train + pipeline config resolution
 prefect.yaml      # deployment definitions (repo root)

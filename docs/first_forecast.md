@@ -185,8 +185,10 @@ calibration/reconciliation inputs exist:
 make prefect-flow-scheduled-forecast
 ```
 
-That flow currently creates a validated, atomically visible draft. Planner approval, publication,
-delivery integrations, and full operational SLO coverage remain roadmap work; consult the
+That flow creates a validated, atomically visible draft. A separate manual Prefect deployment can
+validate that draft or create an idempotent approval/publication after all gates pass. Planner
+review and override workflows, delivery integrations, live scheduled-path acceptance, and full
+operational SLO coverage remain roadmap work; consult the
 [specification status table](specs/README.md) before treating those stages as production-complete.
 
 ## Where to go next

@@ -112,6 +112,14 @@ substitute unreconciled forecasts silently. Contracts with no hierarchy explicit
 6. Add MinT once backtest residual covariance is available.
 7. Route published forecasts through reconciliation before publication.
 
+## Current implementation
+
+Hierarchy validation, bottom-up, top-down, middle-out, and MinT reconciliation are implemented.
+The scheduled pipeline loads the pinned hierarchy version when the forecast contract declares a
+reconciliation policy, reconciles every configured quantile before validation, and prevents an
+incoherent result from becoming a visible draft. The default publication contract remains
+unreconciled; live acceptance with a configured hierarchy is still required.
+
 ## Testing & validation
 
 - Unit tests for hierarchy graph validation.

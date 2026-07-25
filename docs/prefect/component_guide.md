@@ -97,6 +97,10 @@ flowchart LR
 | `prefect-vertex-train-model-schedule` | Daily 07:00 | Training |
 | `prefect-vertex-ml-pipeline-manual` | On demand | optimize → train → predict |
 | `prefect-vertex-ml-pipeline-scheduled` | Sun 08:00 | XGBoost full pipeline |
+| `prefect-model-lifecycle-manual` | On demand | Rolling-origin evaluation and governed promotion |
+| `prefect-model-lifecycle-scheduled` | Sun 10:00 | Governed lifecycle evaluation |
+| `prefect-scheduled-forecast-pipeline-daily` | Daily 09:00 | Champion scoring to validated atomic draft |
+| `prefect-forecast-publication-manual` | On demand | Validate or idempotently publish a canonical run |
 
 ### Key commands
 
@@ -109,11 +113,20 @@ make prefect-worker              # execute runs
 make prefect-run-dbt
 make prefect-run-vertex-train
 make prefect-run-vertex-pipeline VERTEX_PIPELINE=favorita_xgboost
+make prefect-run-model-lifecycle
+make prefect-run-scheduled-forecast
 
 # Dev: no server required
 make prefect-flow-dbt
 make prefect-flow-vertex-pipeline SKIP_OPTIMIZE=1
+make prefect-flow-model-lifecycle
+make prefect-flow-scheduled-forecast
 ```
+
+The scheduled forecast flow pins the governed champion, scores without exposing intermediate
+drafts, routes, calibrates, reconciles when configured, validates, and writes the `draft` run
+record last. Consumers should read `forecast_visible_drafts`; the manual publication deployment
+owns the later gated approval/publication boundary.
 
 ### Flow parameters (Vertex)
 
