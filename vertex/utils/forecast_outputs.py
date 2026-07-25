@@ -248,6 +248,8 @@ def build_contract_registration_row(
         "hierarchy": spec.get("hierarchy") or [],
         "reconciliation_policy": contract.reconciliation_policy,
         "demand_policy": contract.demand_policy,
+        "routing_policy_json": contract.routing,
+        "calibration_policy_json": contract.calibration,
         "contract_json": contract.raw,
         "is_active": True,
     }

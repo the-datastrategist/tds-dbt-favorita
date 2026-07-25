@@ -22,6 +22,17 @@ VALID_DEMAND_POLICIES = frozenset(
         "external_unconstrained_demand",
     }
 )
+VALID_FORECAST_STRATEGIES = frozenset(
+    {
+        "entity_model",
+        "global_model",
+        "aggregate_allocation",
+        "intermittent_rate_baseline",
+        "seasonal_baseline",
+        "business_default",
+    }
+)
+VALID_CALIBRATION_METHODS = frozenset({"symmetric_split_conformal"})
 
 
 @dataclass(frozen=True)
@@ -85,6 +96,14 @@ class ForecastContract:
     @property
     def demand_policy(self) -> str:
         return str(self.spec["demand_policy"])
+
+    @property
+    def routing(self) -> dict[str, Any]:
+        return cast(dict[str, Any], self.spec["routing"])
+
+    @property
+    def calibration(self) -> dict[str, Any]:
+        return cast(dict[str, Any], self.spec["calibration"])
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -164,6 +183,65 @@ def validate_forecast_contract(raw: dict[str, Any]) -> ForecastContract:
         raise ValueError("forecast.hierarchy is required when reconciliation_policy != none")
     if hierarchy and not all(isinstance(item, str) and item for item in hierarchy):
         raise ValueError("forecast.hierarchy must contain non-empty strings")
+
+    routing = spec.setdefault(
+        "routing",
+        {
+            "allowed_strategies": sorted(VALID_FORECAST_STRATEGIES),
+            "fallback_order": {
+                "cold_start": ["global_model", "business_default"],
+                "intermittent": ["intermittent_rate_baseline", "global_model", "business_default"],
+            },
+            "business_default": 0.0,
+            "minimum_history": 28,
+            "minimum_nonzero_observations": 3,
+            "intermittent_adi_threshold": 1.32,
+        },
+    )
+    if not isinstance(routing, dict):
+        raise ValueError("forecast.routing must be a mapping")
+    allowed = routing.get("allowed_strategies")
+    if not isinstance(allowed, list) or not allowed:
+        raise ValueError("forecast.routing.allowed_strategies must be a non-empty list")
+    unknown = sorted(set(allowed).difference(VALID_FORECAST_STRATEGIES))
+    if unknown:
+        raise ValueError(f"forecast.routing contains unsupported strategies: {unknown}")
+    fallback_order = routing.get("fallback_order")
+    if not isinstance(fallback_order, dict):
+        raise ValueError("forecast.routing.fallback_order must be a mapping")
+    for classification in ("cold_start", "intermittent"):
+        order = fallback_order.get(classification)
+        if not isinstance(order, list) or not order:
+            raise ValueError(
+                f"forecast.routing.fallback_order.{classification} must be a non-empty list"
+            )
+        if not set(order).issubset(set(allowed)):
+            raise ValueError(
+                f"forecast.routing.fallback_order.{classification} must use allowed strategies"
+            )
+    for field in ("minimum_history", "minimum_nonzero_observations"):
+        if int(routing.get(field, 0)) < 1:
+            raise ValueError(f"forecast.routing.{field} must be positive")
+    if float(routing.get("intermittent_adi_threshold", 0)) <= 0:
+        raise ValueError("forecast.routing.intermittent_adi_threshold must be positive")
+
+    calibration = spec.setdefault(
+        "calibration",
+        {
+            "method": "symmetric_split_conformal",
+            "lookback_origins": 12,
+            "minimum_residuals": 20,
+        },
+    )
+    if not isinstance(calibration, dict):
+        raise ValueError("forecast.calibration must be a mapping")
+    if calibration.get("method") not in VALID_CALIBRATION_METHODS:
+        raise ValueError(
+            f"forecast.calibration.method must be one of {sorted(VALID_CALIBRATION_METHODS)}"
+        )
+    for field in ("lookback_origins", "minimum_residuals"):
+        if int(calibration.get(field, 0)) < 1:
+            raise ValueError(f"forecast.calibration.{field} must be positive")
 
     return ForecastContract(raw={"forecast": spec})
 

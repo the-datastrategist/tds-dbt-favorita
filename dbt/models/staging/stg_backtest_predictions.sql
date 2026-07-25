@@ -13,5 +13,8 @@ select
     baseline_name,
     actual,
     prediction,
+    prediction_p10,
+    prediction_p50,
+    prediction_p90,
     created_at
 from {{ source('vertex_ml', 'backtest_predictions') }}

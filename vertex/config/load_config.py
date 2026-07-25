@@ -22,7 +22,9 @@ VALID_STEPS = frozenset({"train", "predict", "optimize"})
 
 # Tree ensembles supported by shap.TreeExplainer; ARIMA/SARIMA are not tree models
 # and do not have a supported explain path.
-SHAP_SUPPORTED_MODEL_TYPES = frozenset({"xgboost", "xgboost_sklearn", "random_forest"})
+SHAP_SUPPORTED_MODEL_TYPES = frozenset(
+    {"xgboost", "xgboost_sklearn", "xgboost_direct", "random_forest"}
+)
 DEFAULT_EXPLAIN_TOP_K_FEATURES = 20
 
 
@@ -205,6 +207,7 @@ def validate_config_for_step(
     outputs = config.get("outputs") or {}
     config_name = spec["config_name"]
     _validate_forecast_feature_contract(config)
+    _validate_prediction_horizons(config)
 
     if step in ("train", "optimize"):
         if not has_step_data_source(inputs, step):
@@ -212,7 +215,7 @@ def validate_config_for_step(
                 f"{config_name}: train/optimize inputs need train_sql_query, "
                 "sql_file, or source_table"
             )
-        if not inputs.get("target_column"):
+        if not inputs.get("target_column") and not inputs.get("target_columns_by_horizon"):
             raise ValueError(f"{config_name}: inputs.target_column required")
 
     if step == "train":
@@ -271,6 +274,43 @@ def _validate_forecast_feature_contract(config: dict[str, Any]) -> None:
     )
     registry = load_feature_availability_registry(registry_path)
     registry.validate_forecast_contract(contract.spec)
+
+
+def _validate_prediction_horizons(config: dict[str, Any]) -> None:
+    """Ensure a configured prediction batch is compatible with its forecast contract."""
+    inputs = config.get("inputs") or {}
+    raw_horizons = inputs.get("prediction_horizons")
+    if raw_horizons is None:
+        return
+    if not isinstance(raw_horizons, list) or not raw_horizons:
+        raise ValueError(f"{config.get('name')}: inputs.prediction_horizons must be non-empty")
+    horizons = [int(value) for value in raw_horizons]
+    if any(value < 1 for value in horizons) or len(horizons) != len(set(horizons)):
+        raise ValueError(
+            f"{config.get('name')}: inputs.prediction_horizons must be unique positive integers"
+        )
+    outputs = config.get("outputs") or {}
+    contract_path = (
+        outputs.get("forecast_contract_path")
+        or config.get("forecast_contract_path")
+        or inputs.get("forecast_contract_path")
+    )
+    contract = load_forecast_contract(contract_path)
+    if not set(horizons).issubset(set(contract.horizons)):
+        raise ValueError(
+            f"{config.get('name')}: prediction horizons must be declared by the forecast contract"
+        )
+    if inputs.get("require_complete_horizon_batch") and set(horizons) != set(contract.horizons):
+        raise ValueError(
+            f"{config.get('name')}: complete horizon batch must match {contract.horizons}"
+        )
+    if (
+        inputs.get("forecast_horizon") is not None
+        and int(inputs["forecast_horizon"]) not in horizons
+    ):
+        raise ValueError(
+            f"{config.get('name')}: forecast_horizon must be included in prediction_horizons"
+        )
 
 
 def validate_config_all_steps(config: dict[str, Any]) -> None:

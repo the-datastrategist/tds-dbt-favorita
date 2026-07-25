@@ -16,6 +16,7 @@ from vertex.config.feature_availability import (
     load_feature_availability_registry,
     registry_path_from_config,
 )
+from vertex.evaluation.calibration import probabilistic_metrics
 from vertex.utils.data_utils import get_hash
 
 SUPPORTED_SCORING_BASELINES = frozenset(
@@ -44,6 +45,9 @@ PREDICTION_COLUMNS = [
     "baseline_name",
     "actual",
     "prediction",
+    "prediction_p10",
+    "prediction_p50",
+    "prediction_p90",
     "data_cutoff",
     "source_cutoff_json",
     "feature_availability_hash",
@@ -64,6 +68,10 @@ METRIC_COLUMNS = [
     "mae",
     "bias",
     "prediction_completeness",
+    "pinball_loss",
+    "interval_coverage",
+    "interval_width",
+    "calibration_error",
 ]
 
 
@@ -264,6 +272,24 @@ def _metric_row(group: pd.DataFrame, metadata: dict[str, Any]) -> dict[str, Any]
         "bias": bias,
         "prediction_completeness": completeness,
     }
+    quantile_columns = {"prediction_p10", "prediction_p50", "prediction_p90"}
+    if quantile_columns.issubset(group.columns):
+        row.update(
+            {
+                key: value
+                for key, value in probabilistic_metrics(group).items()
+                if key != "observation_count"
+            }
+        )
+    else:
+        row.update(
+            {
+                "pinball_loss": None,
+                "interval_coverage": None,
+                "interval_width": None,
+                "calibration_error": None,
+            }
+        )
     row["metric_id"] = get_hash(row)
     return row
 

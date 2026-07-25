@@ -196,6 +196,9 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_predictions` (
   baseline_name STRING NOT NULL,
   actual FLOAT64,
   prediction FLOAT64,
+  prediction_p10 FLOAT64,
+  prediction_p50 FLOAT64,
+  prediction_p90 FLOAT64,
   data_cutoff TIMESTAMP NOT NULL,
   source_cutoff_json JSON NOT NULL,
   feature_availability_hash STRING,
@@ -212,6 +215,15 @@ ADD COLUMN IF NOT EXISTS source_cutoff_json JSON;
 
 ALTER TABLE `tds-favorita.favorita.backtest_predictions`
 ADD COLUMN IF NOT EXISTS feature_availability_hash STRING;
+
+ALTER TABLE `tds-favorita.favorita.backtest_predictions`
+ADD COLUMN IF NOT EXISTS prediction_p10 FLOAT64;
+
+ALTER TABLE `tds-favorita.favorita.backtest_predictions`
+ADD COLUMN IF NOT EXISTS prediction_p50 FLOAT64;
+
+ALTER TABLE `tds-favorita.favorita.backtest_predictions`
+ADD COLUMN IF NOT EXISTS prediction_p90 FLOAT64;
 
 -- Append-only metrics derived from backtest_predictions. metric_id is stable
 -- for a run/origin/horizon/baseline/segment metric record.
@@ -230,10 +242,47 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_metrics` (
   mae FLOAT64,
   bias FLOAT64,
   prediction_completeness FLOAT64,
+  pinball_loss FLOAT64,
+  interval_coverage FLOAT64,
+  interval_width FLOAT64,
+  calibration_error FLOAT64,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
 )
 PARTITION BY forecast_origin
 CLUSTER BY backtest_contract_name, horizon, baseline_name, backtest_run_id;
+
+ALTER TABLE `tds-favorita.favorita.backtest_metrics`
+ADD COLUMN IF NOT EXISTS pinball_loss FLOAT64;
+
+ALTER TABLE `tds-favorita.favorita.backtest_metrics`
+ADD COLUMN IF NOT EXISTS interval_coverage FLOAT64;
+
+ALTER TABLE `tds-favorita.favorita.backtest_metrics`
+ADD COLUMN IF NOT EXISTS interval_width FLOAT64;
+
+ALTER TABLE `tds-favorita.favorita.backtest_metrics`
+ADD COLUMN IF NOT EXISTS calibration_error FLOAT64;
+
+-- Append-only series profiles used to prove and reproduce routing decisions.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_series_classifications` (
+  classification_id STRING NOT NULL,
+  classification_run_id STRING NOT NULL,
+  forecast_contract_name STRING NOT NULL,
+  forecast_contract_hash STRING NOT NULL,
+  forecast_origin TIMESTAMP NOT NULL,
+  entity_key_json STRING NOT NULL,
+  history_length INT64 NOT NULL,
+  nonzero_observation_count INT64 NOT NULL,
+  average_demand_interval FLOAT64,
+  coefficient_of_variation_squared FLOAT64,
+  is_intermittent BOOL NOT NULL,
+  is_cold_start BOOL NOT NULL,
+  recommended_strategy STRING NOT NULL,
+  routing_policy_hash STRING NOT NULL,
+  classified_at TIMESTAMP NOT NULL
+)
+PARTITION BY DATE(forecast_origin)
+CLUSTER BY forecast_contract_name, recommended_strategy, routing_policy_hash;
 
 -- Immutable registrations. Current state and champion history are derived from
 -- model_lifecycle_events so retries never update or erase an earlier decision.
@@ -326,11 +375,19 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_contracts` (
   hierarchy ARRAY<STRING>,
   reconciliation_policy STRING,
   demand_policy STRING,
+  routing_policy_json JSON,
+  calibration_policy_json JSON,
   contract_json JSON,
   is_active BOOL
 )
 PARTITION BY DATE(registered_at)
 CLUSTER BY forecast_contract_name, forecast_contract_hash;
+
+ALTER TABLE `tds-favorita.favorita.forecast_contracts`
+ADD COLUMN IF NOT EXISTS routing_policy_json JSON;
+
+ALTER TABLE `tds-favorita.favorita.forecast_contracts`
+ADD COLUMN IF NOT EXISTS calibration_policy_json JSON;
 
 -- Forecast scoring / publication run audit.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_runs` (

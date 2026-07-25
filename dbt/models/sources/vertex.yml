@@ -85,6 +85,9 @@ sources:
       - name: backtest_metrics
         description: Append-only horizon and segment metrics produced by rolling-origin backtests
 
+      - name: forecast_series_classifications
+        description: Append-only series profiles and routing-policy lineage
+
       - name: model_candidates
         description: Immutable model candidate registrations and reproducibility evidence
 

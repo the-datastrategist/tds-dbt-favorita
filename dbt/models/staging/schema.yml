@@ -1,6 +1,22 @@
 version: 2
 
 models:
+  - name: stg_forecast_series_classifications
+    description: Immutable series classifications used by forecast strategy routing.
+    columns:
+      - name: classification_id
+        data_tests: [unique, not_null]
+      - name: entity_key_json
+        data_tests: [not_null]
+      - name: recommended_strategy
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [entity_model, global_model, intermittent_rate_baseline]
+      - name: routing_policy_hash
+        data_tests: [not_null]
+
   - name: stg_model_candidates
     description: Immutable model candidate registrations with a canonical model-scope key.
     columns:

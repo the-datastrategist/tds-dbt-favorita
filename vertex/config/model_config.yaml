@@ -18,6 +18,7 @@ defaults:
     forecast_runs_table: tds-favorita.favorita.forecast_runs
     forecast_output_table: tds-favorita.favorita.forecast_outputs
     forecast_status_history_table: tds-favorita.favorita.forecast_status_history
+    forecast_classification_table: tds-favorita.favorita.forecast_series_classifications
     forecast_contract_path: vertex/config/forecast_contract.yaml
     feature_availability_path: vertex/config/feature_availability.yaml
     optimize_table: tds-favorita.favorita.ml_model_optimize
@@ -46,6 +47,61 @@ pipelines:
     steps: [train, predict]
 
 configs:
+
+  - name: favorita_store_h1_7_direct_xgboost
+    description: Seven direct XGBoost estimators for exact daily store demand horizons 1 through 7
+    model_family: favorita_store_daily
+    model_type: xgboost_direct
+    inputs:
+      train_sql_query: |
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        where sales_store_n7d_same_dow is not null
+      predict_sql_query: |
+        select *
+        from `tds-favorita.favorita.int_sales_store_daily`
+        where sales_store_n7d_same_dow is not null
+      target_column: sales_store_n1d
+      target_columns_by_horizon:
+        1: sales_store_n1d
+        2: sales_store_n2d
+        3: sales_store_n3d
+        4: sales_store_n4d
+        5: sales_store_n5d
+        6: sales_store_n6d
+        7: sales_store_n7d_same_dow
+      prediction_horizons: [1, 2, 3, 4, 5, 6, 7]
+      require_complete_horizon_batch: true
+      date_column: date
+      entity_column: store_nbr
+      id_columns: [store_nbr]
+      excluded_columns:
+        - store_nbr
+        - date
+        - sales_store_n1d
+        - sales_store_n2d
+        - sales_store_n3d
+        - sales_store_n4d
+        - sales_store_n5d
+        - sales_store_n6d
+        - sales_store_n7d_same_dow
+        - sales_store_n7d
+        - sales_store_n14d
+        - sales_store_n28d
+        - sales_store_n30d
+        - sales_store_n60d
+        - sales_store_n90d
+      gcs_model_path: gs://favorita-vertex-models/
+      test_size: 0.2
+      model_params:
+        objective: reg:squarederror
+        eval_metric: mae
+        n_estimators: 100
+        learning_rate: 0.1
+        max_depth: 5
+        random_state: 42
+        n_jobs: -1
+    outputs: {}
 
   - name: favorita_store_h7_xgboost
     description: Direct XGBoost model for store sales exactly seven days after the forecast origin
