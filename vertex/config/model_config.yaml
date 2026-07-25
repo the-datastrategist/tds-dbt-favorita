@@ -131,6 +131,11 @@ configs:
         - date
         - sales_store_n7d_same_dow
         - sales_store_n1d
+        - sales_store_n2d
+        - sales_store_n3d
+        - sales_store_n4d
+        - sales_store_n5d
+        - sales_store_n6d
         - sales_store_n7d
         - sales_store_n14d
         - sales_store_n28d
