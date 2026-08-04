@@ -111,7 +111,7 @@ coolname==5.0.0
     # via prefect
 cronsim==2.7
     # via pydocket
-cryptography==48.0.1
+cryptography==49.0.0
     # via
     #   google-auth
     #   mlflow
@@ -193,7 +193,7 @@ fsspec==2026.6.0
     # via prefect
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.55
+gitpython==3.1.57
     # via mlflow-skinny
 google-api-core==2.32.0
     # via
@@ -423,11 +423,11 @@ mdurl==0.1.2
     # via markdown-it-py
 metricflow==0.211.0
     # via dbt-core
-mlflow==3.14.0
+mlflow==3.15.1
     # via -r requirements.in
-mlflow-skinny==3.14.0
+mlflow-skinny==3.15.1
     # via mlflow
-mlflow-tracing==3.14.0
+mlflow-tracing==3.15.1
     # via mlflow
 more-itertools==10.8.0
     # via metricflow
