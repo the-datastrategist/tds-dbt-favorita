@@ -193,7 +193,7 @@ fsspec==2026.6.0
     # via prefect
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.55
+gitpython==3.1.57
     # via mlflow-skinny
 google-api-core==2.32.0
     # via
