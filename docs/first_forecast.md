@@ -90,7 +90,23 @@ make vertex-bq-ddl
 ```
 
 This creates the model metadata tables and the canonical `forecast_runs` and `forecast_outputs`
-contracts. Re-running the command is safe; schema evolution uses `IF NOT EXISTS` operations.
+contracts, including the append-only `source_ingestion_runs` table. Re-running the command is safe;
+schema evolution uses `IF NOT EXISTS` operations.
+
+Record the completed Favorita snapshot load after the table exists:
+
+```bash
+make source-ingestion-record \
+  SOURCE=favorita_sales \
+  STATUS=succeeded \
+  WATERMARK=2017-08-15T00:00:00Z \
+  ROW_COUNT=125497040
+```
+
+The source is intentionally configured as `static_demo`, so its historical event watermark does
+not create a false freshness alert. The same persistence contract supports continually updating
+sources configured as `continuous`; see [Forecast monitoring and source
+freshness](monitoring_and_slos.md).
 
 ## 5. Train and predict
 

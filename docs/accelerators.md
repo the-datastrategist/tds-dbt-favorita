@@ -57,13 +57,14 @@ mindmap
 | Vertex staging | `dbt/models/staging/stg_vertex_*.sql` | Views over Vertex-written BQ tables |
 | Model leaderboard | `ml_model_leaderboard`, `ml_model_champion` | Unified BQML + Vertex metrics, ranked, champion-flagged per grain |
 | Accuracy monitoring | `ml_prediction_accuracy_rolling`, `assert_no_material_accuracy_drift` | Rolling 7d/28d live accuracy vs. training-time metrics, with a drift test |
+| Source and pipeline health | `source_ingestion_runs`, `forecast_source_health`, `forecast_pipeline_health` | Append-only loader evidence, mode-aware freshness, and scheduled-run gate/output health |
 | Forecast consumption | `stg_forecast_*`, `forecast_visible_drafts` | Contracted run/output/stage/gate views with atomic consumer visibility |
 | Sources | `dbt/models/sources/vertex.yml` | Contract for ML output tables |
-| Selectors | `dbt/selectors.yml` | `daily_refresh`, `ml_features`, `bqml_train`, `bqml_score` |
+| Selectors | `dbt/selectors.yml` | `daily_refresh`, `ml_features`, `bqml_train`, `bqml_score`, `accuracy_monitoring`, `forecast_monitoring` |
 | Exposures | `dbt/models/exposures.yml` | Lineage to ML, dashboard, and app consumers |
 | Docs | `docs/` | Overview + platform guide (`dbt_project.yml` → `docs-paths: ["../docs"]`) |
 
-**Commands:** `make dbt-run`, `make dbt-train`, `make dbt-predict`, `make dbt-vertex`, `make dbt-test`, `make selector-accuracy-monitoring`
+**Commands:** `make dbt-run`, `make dbt-train`, `make dbt-predict`, `make dbt-vertex`, `make dbt-test`, `make selector-accuracy-monitoring`, `make selector-forecast-monitoring`
 
 → Product view: [dbt/component_guide.md](dbt/component_guide.md)
 
@@ -84,7 +85,8 @@ mindmap
 | Explainability | `vertex/utils/explain.py`, `stg_vertex_model_explain` | Per-prediction SHAP top-K feature attributions (xgboost, random_forest) |
 | Experiment tracking | `vertex/utils/experiment_tracking.py` | MLflow + Vertex Experiments |
 | MLflow catalog | `vertex/utils/mlflow_catalog.py` | GCS pointer artifacts |
-| BQ DDL | `vertex/ddl/vertex_bq_tables.sql` | Metadata, predictions, backtests, lifecycle, canonical forecasts, stages, gates, and operations |
+| Source monitoring | `vertex/config/source_monitoring.yaml`, `scripts/record_source_ingestion.py` | Static-demo/continuous policy and idempotent ingestion evidence writer |
+| BQ DDL | `vertex/ddl/vertex_bq_tables.sql` | Ingestion evidence, metadata, predictions, backtests, lifecycle, canonical forecasts, stages, gates, and operations |
 | Ops runbook | `vertex/ops/README.md` | IAM, GCS layout, Scheduler, monitoring |
 | KFP compile | `vertex/pipelines/compile.py` | CI-validated pipeline JSON |
 

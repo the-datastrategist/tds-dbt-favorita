@@ -245,12 +245,20 @@ make dbt-deps
 # 3. Load raw data from GCS into BigQuery (requires GCS_RAW_DATA_BUCKET in .env)
 make load-favorita-bigquery
 
-# 4. Run dbt models (staging → marts; excludes BQML unless selected)
+# 4. (Once) Create Vertex, forecast, and ingestion-evidence tables in BigQuery
+make vertex-bq-ddl
+
+# 5. Record the immutable demo snapshot's load evidence
+make source-ingestion-record SOURCE=favorita_sales STATUS=succeeded \
+  WATERMARK=2017-08-15T00:00:00Z ROW_COUNT=125497040
+
+# 6. Run dbt models (staging → marts; excludes BQML unless selected)
 make dbt-run
 
-# 5. (Once) Create Vertex output tables in BigQuery — see vertex/ddl/vertex_bq_tables.sql
+# 7. Build and test source + scheduled-pipeline health views
+make selector-forecast-monitoring
 
-# 6. Train / predict / optimize with Vertex (runs in Docker by default)
+# 8. Train / predict / optimize with Vertex (runs in Docker by default)
 make vertex-train
 make vertex-predict
 # make vertex-optimize   # optional Optuna search
@@ -294,6 +302,12 @@ make load-favorita-bigquery ARGS="--gcs-location gs://favorita-vertex-ai/source_
 ```
 
 The service account needs read access to the GCS bucket and permission to load data into the configured raw BigQuery dataset.
+
+After applying `make vertex-bq-ddl`, append loader evidence with `make source-ingestion-record`.
+The checked-in `favorita_sales` policy is `static_demo`: its historical source watermark is valid
+and does not generate a wall-clock freshness alert. Production adapters should use `continuous`
+when new data is expected on a cadence. See [Forecast monitoring and source
+freshness](docs/monitoring_and_slos.md).
 
 ### dbt commands (Docker)
 

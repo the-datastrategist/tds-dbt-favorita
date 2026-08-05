@@ -78,6 +78,7 @@ Guidance for evaluating, adopting, operating, and extending the platform:
 | Dashboard blueprint | [delivery_artifacts.md](delivery_artifacts.md#dashboard-blueprint) | Blueprint (BI layer planned) |
 | Adoption playbook | [client_rollout.md](client_rollout.md) | Available |
 | IaC / GCP ops | [iac.md](iac.md) + `vertex/ops/README.md` | Runbook + Terraform modules available |
+| Forecast monitoring | [monitoring_and_slos.md](monitoring_and_slos.md) | Source-mode and pipeline-health operations available |
 
 → Index: [delivery_artifacts.md](delivery_artifacts.md)
 
@@ -103,6 +104,7 @@ and planning process.
 - Same feature tables feed BQML and Vertex
 - Config-driven ML without fork-per-model scripts
 - CI validates configs, compiles KFP pipelines, and runs unit tests without GCP
+- Append-only source ingestion evidence with distinct static-demo and continuous freshness semantics
 
 ---
 
