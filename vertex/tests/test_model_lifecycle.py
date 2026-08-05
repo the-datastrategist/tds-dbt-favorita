@@ -92,6 +92,38 @@ def test_failed_gates_require_audited_waiver():
 
 
 @pytest.mark.unit
+def test_baseline_gate_compares_average_wape_per_strategy():
+    contract, result = _result()
+    common = result.metrics.iloc[0].to_dict()
+    result = BaselineBacktestResult(
+        result.backtest_run_id,
+        result.predictions,
+        pd.DataFrame(
+            [
+                {**common, "baseline_name": contract.model_config_name, "wape": 0.08},
+                {**common, "baseline_name": contract.model_config_name, "wape": 0.10},
+                {**common, "baseline_name": "seasonal_naive_7d", "wape": 0.05},
+                {**common, "baseline_name": "seasonal_naive_7d", "wape": 0.20},
+                {**common, "baseline_name": "moving_average", "wape": 0.11},
+                {**common, "baseline_name": "moving_average", "wape": 0.13},
+            ]
+        ),
+    )
+
+    evaluation = evaluate_candidate(
+        result, contract, artifact_uri="gs://models/run-1/model.json", actor="ci", evaluated_at=NOW
+    )
+    improvement = next(
+        check for check in evaluation.checks if check["check_name"] == "baseline_improvement"
+    )
+
+    # Model average is 0.09 and the best baseline average is 0.12. Comparing
+    # against the single-origin 0.05 value would incorrectly reject this model.
+    assert improvement["observed_value"] == pytest.approx(0.25)
+    assert improvement["passed"] is True
+
+
+@pytest.mark.unit
 def test_evaluation_and_rollback_ids_are_retry_stable():
     contract, result = _result()
     first = evaluate_candidate(

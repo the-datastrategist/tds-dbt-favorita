@@ -112,8 +112,13 @@ def evaluate_candidate(
         return None if values.empty else float(values.mean())
 
     model_wape = average(model, "wape")
-    baseline_wapes = pd.to_numeric(baselines["wape"], errors="coerce").dropna()
-    best_baseline_wape = None if baseline_wapes.empty else float(baseline_wapes.min())
+    baseline_wapes = baselines.assign(
+        _wape=pd.to_numeric(baselines["wape"], errors="coerce")
+    ).dropna(subset=["_wape"])
+    baseline_average_wapes = baseline_wapes.groupby("baseline_name")["_wape"].mean()
+    best_baseline_wape = (
+        None if baseline_average_wapes.empty else float(baseline_average_wapes.min())
+    )
     improvement = (
         None
         if model_wape is None or best_baseline_wape in (None, 0)
