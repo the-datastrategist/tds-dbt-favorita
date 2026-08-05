@@ -44,13 +44,14 @@ def test_draft_run_record_is_persisted_after_all_evidence(
         [{"validation_check_id": "check-1"}],
     )
     pins = ForecastRunPins(
-        "candidate-1",
-        "model-run-1",
-        "features-1",
-        pd.Timestamp("2026-07-18"),
-        {"sales": "2026-07-18"},
-        "eligibility-1",
-        "abc123",
+        champion_candidate_id="candidate-1",
+        model_run_id="model-run-1",
+        feature_version="features-1",
+        feature_availability_hash="availability-1",
+        data_cutoff=pd.Timestamp("2026-07-18"),
+        source_cutoff_json={"sales": "2026-07-18"},
+        eligibility_snapshot_id="eligibility-1",
+        code_sha="abc123",
     )
 
     persist_forecast_pipeline_result(
@@ -85,6 +86,10 @@ def test_draft_run_record_is_persisted_after_all_evidence(
     assert merge_row.call_args_list[0].kwargs["update_matched"] is False
     assert merge_row.call_args_list[-1].args[1] == "project.dataset.forecast_runs"
     assert merge_row.call_args_list[-1].args[0]["run_status"] == "draft"
+    assert (
+        merge_row.call_args_list[-1].args[0]["feature_availability_hash"]
+        == "availability-1"
+    )
 
 
 @pytest.mark.unit

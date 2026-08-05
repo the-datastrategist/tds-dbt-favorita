@@ -8,6 +8,7 @@ import pytest
 from vertex.config.forecast_contract import load_forecast_contract
 from vertex.evaluation.forecast_pipeline import (
     ForecastRunPins,
+    build_forecast_run_id,
     eligibility_snapshot_id,
     execute_forecast_pipeline,
 )
@@ -63,6 +64,7 @@ def _pins(predictions: pd.DataFrame) -> ForecastRunPins:
         champion_candidate_id="candidate-1",
         model_run_id="model-run-1",
         feature_version="features-1",
+        feature_availability_hash="availability-1",
         data_cutoff=ORIGIN,
         source_cutoff_json={"sales": "2026-07-18"},
         eligibility_snapshot_id=eligibility_snapshot_id(predictions, contract),
@@ -106,6 +108,23 @@ def test_pipeline_is_deterministic_and_produces_validated_draft() -> None:
     assert first.rows["calibration_run_id"].notna().all()
     assert first.rows["reconciliation_method"].eq("none").all()
     assert all(check["passed"] for check in first.validation_checks)
+
+
+@pytest.mark.unit
+def test_feature_availability_hash_is_a_material_run_pin() -> None:
+    contract = load_forecast_contract("vertex/config/forecast_contract_publication.yaml")
+    predictions = _predictions()
+    pins = _pins(predictions)
+    changed_registry = ForecastRunPins(
+        **{
+            **pins.__dict__,
+            "feature_availability_hash": "availability-2",
+        }
+    )
+
+    assert build_forecast_run_id(
+        contract, forecast_origin=ORIGIN, pins=pins
+    ) != build_forecast_run_id(contract, forecast_origin=ORIGIN, pins=changed_registry)
 
 
 @pytest.mark.unit

@@ -69,7 +69,7 @@ def persist_forecast_pipeline_result(
             "finished_at": now,
             "data_cutoff": pins.data_cutoff,
             "source_cutoff_json": pins.source_cutoff_json,
-            "feature_availability_hash": None,
+            "feature_availability_hash": pins.feature_availability_hash,
             "feature_materialization_id": pins.eligibility_snapshot_id,
             "feature_version": pins.feature_version,
             "code_sha": pins.code_sha,

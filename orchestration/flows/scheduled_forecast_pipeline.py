@@ -11,6 +11,10 @@ from prefect import flow
 
 from vertex.config.backtest_contract import DEFAULT_BACKTEST_CONTRACT_PATH, load_backtest_contract
 from vertex.config.forecast_contract import load_forecast_contract
+from vertex.config.feature_availability import (
+    load_feature_availability_registry,
+    registry_path_from_config,
+)
 from vertex.config.hierarchy import load_hierarchy_config
 from vertex.config.load_config import apply_job_step, load_model_config
 from vertex.evaluation.forecast_pipeline import (
@@ -99,10 +103,12 @@ def run_scheduled_forecast_pipeline_cycle(
     code_sha = get_git_sha()
     if not code_sha:
         raise ValueError("code SHA is required for scheduled publication")
+    feature_registry = load_feature_availability_registry(registry_path_from_config(config))
     pins = ForecastRunPins(
         champion_candidate_id=champion_candidate_id,
         model_run_id=model_run_ids[0],
         feature_version=_feature_version(config),
+        feature_availability_hash=feature_registry.hash,
         data_cutoff=cutoff,
         source_cutoff_json={"model_input_data_cutoff": str(cutoff)},
         eligibility_snapshot_id=eligibility_snapshot_id(predictions, contract),

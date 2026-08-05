@@ -61,6 +61,7 @@ def test_existing_prediction_run_is_transformed_without_rescoring(
 
     score.assert_not_called()
     execute.assert_called_once()
+    assert execute.call_args.kwargs["pins"].feature_availability_hash
     persist.assert_called_once()
     acquire_lock.assert_called_once()
     release_lock.assert_called_once()

@@ -25,6 +25,7 @@ class ForecastRunPins:
     champion_candidate_id: str
     model_run_id: str
     feature_version: str
+    feature_availability_hash: str
     data_cutoff: Any
     source_cutoff_json: dict[str, Any]
     eligibility_snapshot_id: str
@@ -55,6 +56,7 @@ def build_forecast_run_id(
             "champion_candidate_id": pins.champion_candidate_id,
             "model_run_id": pins.model_run_id,
             "feature_version": pins.feature_version,
+            "feature_availability_hash": pins.feature_availability_hash,
             "data_cutoff": str(pd.Timestamp(pins.data_cutoff)),
             "data_cutoff_set": pins.source_cutoff_json,
             "eligibility_snapshot_id": pins.eligibility_snapshot_id,
