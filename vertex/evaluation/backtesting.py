@@ -66,6 +66,8 @@ METRIC_COLUMNS = [
     "prediction_count",
     "wape",
     "mae",
+    "mase",
+    "rmsse",
     "bias",
     "prediction_completeness",
     "pinball_loss",
@@ -263,12 +265,31 @@ def _metric_row(group: pd.DataFrame, metadata: dict[str, Any]) -> dict[str, Any]
         mae = float(error.abs().mean())
         bias = float(error.mean())
 
+    mase = rmsse = None
+    if complete.any() and {"_mase_scale", "_rmsse_scale"}.issubset(group.columns):
+        error = group.loc[complete, "prediction"].astype(float) - group.loc[
+            complete, "actual"
+        ].astype(float)
+        mase_scale = group.loc[complete, "_mase_scale"].astype(float)
+        mase_valid = mase_scale.notna() & mase_scale.gt(0)
+        if mase_valid.any():
+            mase = float((error.loc[mase_valid].abs() / mase_scale.loc[mase_valid]).mean())
+
+        rmsse_scale = group.loc[complete, "_rmsse_scale"].astype(float)
+        rmsse_valid = rmsse_scale.notna() & rmsse_scale.gt(0)
+        if rmsse_valid.any():
+            rmsse = float(
+                np.sqrt(((error.loc[rmsse_valid] ** 2) / rmsse_scale.loc[rmsse_valid]).mean())
+            )
+
     row = {
         **metadata,
         "eligible_count": eligible_count,
         "prediction_count": prediction_count,
         "wape": wape,
         "mae": mae,
+        "mase": mase,
+        "rmsse": rmsse,
         "bias": bias,
         "prediction_completeness": completeness,
     }
@@ -294,7 +315,66 @@ def _metric_row(group: pd.DataFrame, metadata: dict[str, Any]) -> dict[str, Any]
     return row
 
 
-def _build_metrics(predictions: pd.DataFrame, contract: BacktestContract) -> pd.DataFrame:
+def _build_scale_lookup(
+    history: pd.DataFrame,
+    contract: BacktestContract,
+) -> dict[tuple[str, str], tuple[float | None, float | None]]:
+    lookup: dict[tuple[str, str], tuple[float | None, float | None]] = {}
+    entity_rows = history.drop_duplicates(contract.entity_columns)
+    if contract.max_entities is not None:
+        entity_rows = entity_rows.head(contract.max_entities)
+
+    for origin in contract.origins:
+        for _, entity_row in entity_rows.iterrows():
+            observed = history[
+                _entity_mask(history, contract.entity_columns, entity_row)
+                & history[contract.date_column].le(origin)
+                & history[contract.date_column].gt(
+                    origin - timedelta(days=contract.train_window_days)
+                )
+            ].dropna(subset=[contract.actual_column])
+            entity_key = _json_key(
+                {column: entity_row[column] for column in contract.entity_columns}
+            )
+            values = observed.sort_values(contract.date_column)[contract.actual_column].astype(
+                float
+            )
+            differences = values.diff().dropna()
+            if differences.empty:
+                lookup[(origin.isoformat(), entity_key)] = (None, None)
+                continue
+            mase_scale = float(differences.abs().mean())
+            rmsse_scale = float((differences**2).mean())
+            lookup[(origin.isoformat(), entity_key)] = (
+                mase_scale if mase_scale > 0 else None,
+                rmsse_scale if rmsse_scale > 0 else None,
+            )
+    return lookup
+
+
+def _with_scaled_error_context(
+    predictions: pd.DataFrame,
+    scale_lookup: dict[tuple[str, str], tuple[float | None, float | None]] | None,
+) -> pd.DataFrame:
+    if not scale_lookup:
+        return predictions
+    scored = predictions.copy()
+    scales = [
+        scale_lookup.get((str(row.forecast_origin), str(row.entity_key_json)), (None, None))
+        for row in scored.itertuples(index=False)
+    ]
+    scored["_mase_scale"] = [scale[0] for scale in scales]
+    scored["_rmsse_scale"] = [scale[1] for scale in scales]
+    return scored
+
+
+def _build_metrics(
+    predictions: pd.DataFrame,
+    contract: BacktestContract,
+    *,
+    scale_lookup: dict[tuple[str, str], tuple[float | None, float | None]] | None = None,
+) -> pd.DataFrame:
+    predictions = _with_scaled_error_context(predictions, scale_lookup)
     rows: list[dict[str, Any]] = []
     group_columns = ["forecast_origin", "horizon", "baseline_name"]
     for group_key, group in predictions.groupby(group_columns, dropna=False, sort=True):
@@ -398,7 +478,9 @@ def score_baselines(
                         }
                     )
     predictions = pd.DataFrame(rows, columns=PREDICTION_COLUMNS)
-    metrics = _build_metrics(predictions, contract)
+    metrics = _build_metrics(
+        predictions, contract, scale_lookup=_build_scale_lookup(data, contract)
+    )
     return BaselineBacktestResult(run_id, predictions, metrics)
 
 
@@ -581,4 +663,8 @@ def score_model_and_baselines(
     predictions["feature_availability_hash"] = predictions["feature_availability_hash"].fillna(
         registry.hash
     )
-    return BaselineBacktestResult(run_id, predictions, _build_metrics(predictions, contract))
+    return BaselineBacktestResult(
+        run_id,
+        predictions,
+        _build_metrics(predictions, contract, scale_lookup=_build_scale_lookup(data, contract)),
+    )

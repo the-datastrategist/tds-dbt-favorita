@@ -70,8 +70,11 @@ def chronological_train_test_split(
     *,
     test_size: float = 0.2,
     date_column: Optional[str] = None,
+    purge_days: int = 0,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-    """Chronological train/test split on features and target."""
+    """Chronological split with an optional label-horizon purge before validation."""
+    if purge_days < 0:
+        raise ValueError("purge_days must be non-negative")
     work = df.copy()
     if date_column and date_column in work.columns:
         work = work.sort_values(date_column)
@@ -82,8 +85,19 @@ def chronological_train_test_split(
     if split_index <= 0 or split_index >= len(work):
         raise ValueError(f"Invalid split: {len(work)} rows with test_size={test_size}")
 
-    train = work.iloc[:split_index]
-    test = work.iloc[split_index:]
+    if purge_days and date_column and date_column in work.columns:
+        validation_start = pd.Timestamp(work.iloc[split_index][date_column])
+        purge_boundary = validation_start - pd.Timedelta(days=purge_days)
+        train = work[pd.to_datetime(work[date_column]) < purge_boundary]
+        test = work[pd.to_datetime(work[date_column]) >= validation_start]
+        if train.empty or test.empty:
+            raise ValueError(
+                "Horizon purge left an empty training or validation partition: "
+                f"validation_start={validation_start}, purge_days={purge_days}"
+            )
+    else:
+        train = work.iloc[:split_index]
+        test = work.iloc[split_index:]
     return (
         train[feature_list],
         test[feature_list],

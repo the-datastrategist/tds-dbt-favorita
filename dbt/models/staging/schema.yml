@@ -94,6 +94,10 @@ models:
         data_tests: [not_null]
       - name: horizon
         data_tests: [not_null]
+      - name: mase
+        description: Mean absolute scaled error using each entity's pre-origin naive scale.
+      - name: rmsse
+        description: Root mean squared scaled error using each entity's pre-origin naive scale.
 
   - name: stg_favorita_date_spine
     description: >

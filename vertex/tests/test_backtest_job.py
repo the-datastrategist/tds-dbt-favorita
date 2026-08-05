@@ -82,7 +82,7 @@ def test_model_history_query_wraps_configured_training_input_and_bounds_dates():
     query = build_bigquery_model_history_query(contract)
 
     assert "from `tds-favorita.favorita.int_sales_store_daily`" in query
-    assert "sales_store_n7d_same_dow is not null" in query
+    assert "data_split_source" not in query
     assert "model_history.`date` BETWEEN DATE '2015-08-01'" in query
     assert "AND DATE '2016-09-05'" in query
 

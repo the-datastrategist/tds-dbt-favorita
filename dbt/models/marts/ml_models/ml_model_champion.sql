@@ -20,6 +20,8 @@ ranked as (
         case primary_metric
             when 'wape' then wape
             when 'mae' then mae
+            when 'mase' then mase
+            when 'rmsse' then rmsse
         end as primary_metric_value
     from latest_run_per_candidate
     where is_latest_run
@@ -53,6 +55,8 @@ select
     rmse,
     r2,
     wape,
+    mase,
+    rmsse,
     bias,
     prediction_completeness,
     primary_metric_value,

@@ -28,6 +28,7 @@ class TestFeatureAvailabilityRegistry:
         )
         assert registry.match("sales_store_l7d").availability == "observed_lagged"
         assert registry.match("sales_store_n7d").availability == "observed_after_period"
+        assert registry.match("sales_store_n7d_cum").availability == "observed_after_period"
 
     def test_rejects_unregistered_model_feature(self):
         registry = load_feature_availability_registry()

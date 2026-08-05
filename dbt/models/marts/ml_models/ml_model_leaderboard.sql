@@ -37,6 +37,8 @@ with vertex_leaderboard as (
         rmse,
         r2,
         wape,
+        cast(null as float64) as mase,
+        cast(null as float64) as rmsse,
         bias,
         cast(null as float64) as prediction_completeness
     from {{ ref('stg_vertex_model_performance') }}
@@ -62,6 +64,8 @@ bqml_leaderboard as (
         sqrt(evaluate.mean_squared_error) as rmse,
         evaluate.r2_score as r2,
         wape.wape,
+        cast(null as float64) as mase,
+        cast(null as float64) as rmsse,
         cast(null as float64) as bias,
         cast(null as float64) as prediction_completeness
     from {{ ref('bqml_model_evaluate') }} as evaluate
@@ -95,6 +99,14 @@ backtest_leaderboard as (
         cast(null as float64) as rmse,
         cast(null as float64) as r2,
         safe_divide(sum(metrics.wape * metrics.eligible_count), sum(metrics.eligible_count)) as wape,
+        safe_divide(
+            sum(metrics.mase * metrics.prediction_count),
+            sum(if(metrics.mase is not null, metrics.prediction_count, 0))
+        ) as mase,
+        safe_divide(
+            sum(metrics.rmsse * metrics.prediction_count),
+            sum(if(metrics.rmsse is not null, metrics.prediction_count, 0))
+        ) as rmsse,
         safe_divide(sum(metrics.bias * metrics.eligible_count), sum(metrics.eligible_count)) as bias,
         safe_divide(sum(metrics.prediction_count), sum(metrics.eligible_count)) as prediction_completeness
     from {{ ref('stg_backtest_metrics') }} as metrics

@@ -72,18 +72,18 @@ store_sales_daily_window as (
     safe_divide(products_store_on_promotion, products_store)                  as pct_products_store_on_promotion,
     safe_divide(product_families_store_on_promotion, product_families_store)  as pct_product_families_store_on_promotion,
 
-    -- Store sales on the same day of week one calendar week later (e.g. Mon -> next Mon)
-    -- RANGE (keyed on unix_date) rather than ROWS so this is exact even if a calendar date is missing from the data
-    sum(sales_store) over (partition by store_nbr order by unix_date(date) range between 7 following and 7 following)    as sales_store_n7d_same_dow,
-
-    -- Next N-day sales (from the day after date through N days forward)
+    -- Exact daily point targets. RANGE (keyed on unix_date) preserves calendar-day semantics
+    -- even when an entity has no row for an intervening date.
     sum(sales_store) over (partition by store_nbr order by unix_date(date) range between 1 following and 1 following)    as sales_store_n1d,
     sum(sales_store) over (partition by store_nbr order by unix_date(date) range between 2 following and 2 following)    as sales_store_n2d,
     sum(sales_store) over (partition by store_nbr order by unix_date(date) range between 3 following and 3 following)    as sales_store_n3d,
     sum(sales_store) over (partition by store_nbr order by unix_date(date) range between 4 following and 4 following)    as sales_store_n4d,
     sum(sales_store) over (partition by store_nbr order by unix_date(date) range between 5 following and 5 following)    as sales_store_n5d,
     sum(sales_store) over (partition by store_nbr order by unix_date(date) range between 6 following and 6 following)    as sales_store_n6d,
-    sum(sales_store) over (partition by store_nbr order by date rows between 1 following and 7 following)    as sales_store_n7d,
+    sum(sales_store) over (partition by store_nbr order by unix_date(date) range between 7 following and 7 following)    as sales_store_n7d,
+
+    -- Cumulative demand over the complete next-seven-day window.
+    sum(sales_store) over (partition by store_nbr order by unix_date(date) range between 1 following and 7 following)    as sales_store_n7d_cum,
     sum(sales_store) over (partition by store_nbr order by date rows between 1 following and 14 following)   as sales_store_n14d,
     sum(sales_store) over (partition by store_nbr order by date rows between 1 following and 28 following)   as sales_store_n28d,
     sum(sales_store) over (partition by store_nbr order by date rows between 1 following and 30 following)   as sales_store_n30d,

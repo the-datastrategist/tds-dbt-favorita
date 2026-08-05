@@ -34,6 +34,8 @@ def test_backtest_tables_match_normalized_record_contracts():
         "prediction_count INT64 NOT NULL",
         "wape FLOAT64",
         "mae FLOAT64",
+        "mase FLOAT64",
+        "rmsse FLOAT64",
         "bias FLOAT64",
         "prediction_completeness FLOAT64",
     }

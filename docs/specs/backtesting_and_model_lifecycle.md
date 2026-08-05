@@ -152,7 +152,7 @@ Promotion gates:
 
 ### Current implementation
 
-- Rolling-origin ML and baseline scoring, immutable prediction/metric persistence, and comparable leaderboard keys are implemented.
+- Rolling-origin ML and baseline scoring, immutable prediction/metric persistence, scaled-error metrics, and comparable leaderboard keys are implemented.
 - Candidate registration, persisted promotion checks, audited waivers, atomic champion replacement events, and deterministic rollback events are implemented.
 - Scheduled model jobs can resolve the latest champion for the contract scope with `vertex.jobs.run --resolve-champion`.
 - Lifecycle contract validation and write-free planning run through `make vertex-lifecycle-plan` and CI.

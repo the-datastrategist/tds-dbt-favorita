@@ -100,17 +100,11 @@ def _coerce_value_for_bq_type(value: Any, bq_type: str) -> Any:
         # insert_rows_json maps dicts to RECORD; JSON columns need a JSON string.
         return json.dumps(safe) if safe is not None else None
     if bq_type == "TIMESTAMP":
-        if isinstance(value, pd.Timestamp):
-            ts = value
+        if isinstance(value, (str, pd.Timestamp, datetime, date)):
+            ts = pd.Timestamp(value)
             if ts.tzinfo is not None:
                 ts = ts.tz_convert("UTC").tz_localize(None)
             return ts.to_pydatetime().isoformat(sep=" ", timespec="seconds")
-        if isinstance(value, datetime):
-            return value.isoformat(sep=" ", timespec="seconds")
-        if isinstance(value, date):
-            return datetime.combine(value, datetime.min.time()).isoformat(
-                sep=" ", timespec="seconds"
-            )
         return value
     if bq_type == "DATE":
         if isinstance(value, pd.Timestamp):

@@ -22,6 +22,8 @@ select
     metrics.prediction_count,
     metrics.wape,
     metrics.mae,
+    metrics.mase,
+    metrics.rmsse,
     metrics.bias,
     metrics.prediction_completeness,
     metrics.pinball_loss,

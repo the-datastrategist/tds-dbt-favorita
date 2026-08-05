@@ -125,6 +125,22 @@ class TestChronologicalSplit:
         assert len(X_test) == 2
         assert y_train.max() < y_test.min()
 
+    def test_split_purges_forward_label_window(self):
+        dates = pd.date_range("2026-01-01", periods=20, freq="D")
+        df = pd.DataFrame({"date": dates, "x": range(20), "sales": range(20)})
+        _, _, y_train, y_test = chronological_train_test_split(
+            df,
+            ["x"],
+            "sales",
+            test_size=0.2,
+            date_column="date",
+            purge_days=7,
+        )
+
+        assert y_test.index[0] == 16
+        assert y_train.index[-1] == 8
+        assert dates[y_train.index[-1]] + pd.Timedelta(days=7) < dates[y_test.index[0]]
+
 
 @pytest.mark.unit
 class TestPerformanceMetrics:

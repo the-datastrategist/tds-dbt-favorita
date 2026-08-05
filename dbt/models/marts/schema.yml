@@ -280,7 +280,11 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: [mae, wape]
+                values: [mae, wape, mase, rmsse]
+      - name: mase
+        description: Mean absolute scaled error for rolling-origin backtest rows when available.
+      - name: rmsse
+        description: Root mean squared scaled error for rolling-origin backtest rows when available.
       - name: comparable_partition_key
         description: Stable hash of target, grain, horizon, segment, and metric policy.
         data_tests:

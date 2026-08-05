@@ -86,6 +86,7 @@ def run_train_direct_xgboost(config: dict[str, Any]) -> dict[str, Any]:
             target,
             test_size=float(inputs.get("test_size", 0.2)),
             date_column=inputs.get("date_column", "date"),
+            purge_days=int(inputs.get("validation_purge_days", 0)),
         )
         models[horizon] = train_sklearn_xgboost(X_train, y_train, parameters)
     assert common_features is not None

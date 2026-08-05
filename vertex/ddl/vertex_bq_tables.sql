@@ -240,6 +240,8 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_metrics` (
   prediction_count INT64 NOT NULL,
   wape FLOAT64,
   mae FLOAT64,
+  mase FLOAT64,
+  rmsse FLOAT64,
   bias FLOAT64,
   prediction_completeness FLOAT64,
   pinball_loss FLOAT64,
@@ -250,6 +252,12 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_metrics` (
 )
 PARTITION BY forecast_origin
 CLUSTER BY backtest_contract_name, horizon, baseline_name, backtest_run_id;
+
+ALTER TABLE `tds-favorita.favorita.backtest_metrics`
+ADD COLUMN IF NOT EXISTS mase FLOAT64;
+
+ALTER TABLE `tds-favorita.favorita.backtest_metrics`
+ADD COLUMN IF NOT EXISTS rmsse FLOAT64;
 
 ALTER TABLE `tds-favorita.favorita.backtest_metrics`
 ADD COLUMN IF NOT EXISTS pinball_loss FLOAT64;

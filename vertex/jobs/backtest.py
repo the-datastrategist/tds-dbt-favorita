@@ -22,7 +22,7 @@ from vertex.evaluation.backtesting import (
 )
 from vertex.evaluation.persistence import persist_backtest_result
 from vertex.utils.bigquery_utils import run_query, validate_bq_identifier
-from vertex.utils.data_loading import resolve_training_sql
+from vertex.utils.data_loading import resolve_backtest_sql
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ def build_bigquery_history_query(contract: BacktestContract) -> str:
 
 def build_bigquery_model_history_query(contract: BacktestContract) -> str:
     """Build a bounded query over the configured model's complete feature input."""
-    model_query = resolve_training_sql(contract.model_config).rstrip(";\n ")
+    model_query = resolve_backtest_sql(contract.model_config).rstrip(";\n ")
     date_column = validate_bq_identifier(contract.date_column, label="history date column")
     history_days = contract.train_window_days + max(contract.horizons)
     if "same_period_last_year" in contract.baselines:

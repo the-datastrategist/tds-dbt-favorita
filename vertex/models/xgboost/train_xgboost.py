@@ -164,6 +164,7 @@ def run_train_xgboost(
         target_column,
         test_size=test_size,
         date_column=sort_column,
+        purge_days=int(inputs.get("validation_purge_days", 0)),
     )
 
     model = train_sklearn_xgboost(X_train, y_train, model_parameters=params)

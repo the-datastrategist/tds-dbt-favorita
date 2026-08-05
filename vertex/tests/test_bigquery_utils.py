@@ -79,6 +79,17 @@ class TestBigQueryUtils:
 
         assert prepared["fallback_reason"] is None
 
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            ("2016-08-08", "2016-08-08 00:00:00"),
+            ("2016-08-08T12:34:56", "2016-08-08 12:34:56"),
+            ("2016-08-08T12:34:56-04:00", "2016-08-08 16:34:56"),
+        ],
+    )
+    def test_coerce_timestamp_strings(self, value: str, expected: str):
+        assert _coerce_value_for_bq_type(value, "TIMESTAMP") == expected
+
     def test_query_parameter_honors_date_schema(self):
         value = pd.Timestamp("2024-01-02")
 

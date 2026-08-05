@@ -3,10 +3,12 @@
 import pytest
 
 from vertex.utils.data_loading import (
+    BACKTEST_SQL_QUERY_KEY,
     PREDICT_SQL_QUERY_KEY,
     TRAIN_SQL_QUERY_KEY,
     has_step_data_source,
     load_data_from_config,
+    resolve_backtest_sql,
     resolve_input_sql,
     resolve_training_sql,
 )
@@ -56,6 +58,19 @@ class TestResolveInputSql:
             },
         )
         assert resolve_training_sql(config) == "SELECT * FROM `proj.ds.train_table`"
+
+    def test_resolve_backtest_sql_uses_dedicated_history_query(self):
+        config = {
+            "inputs": {
+                TRAIN_SQL_QUERY_KEY: "SELECT * FROM train WHERE split = 'train'",
+                BACKTEST_SQL_QUERY_KEY: "SELECT * FROM complete_history",
+            }
+        }
+        assert resolve_backtest_sql(config) == "SELECT * FROM complete_history"
+
+    def test_resolve_backtest_sql_falls_back_to_training_query(self):
+        config = {"inputs": {TRAIN_SQL_QUERY_KEY: "SELECT * FROM train"}}
+        assert resolve_backtest_sql(config) == "SELECT * FROM train"
 
     def test_legacy_source_table(self):
         config = {"inputs": {"source_table": "proj.ds.legacy_table"}}
