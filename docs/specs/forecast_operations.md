@@ -3,7 +3,7 @@
 # SPEC: Forecast operations, overrides, approval, and publication
 
 **Status:** In progress
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P1 "Separate daily scoring from retraining and tuning" and P2 "Build a forecast operations layer"
+**Roadmap reference:** [Specs overview](README.md) — P1 "Separate daily scoring from retraining and tuning" and P2 "Build a forecast operations layer"
 
 ---
 

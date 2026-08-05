@@ -118,7 +118,19 @@ Replace `{project}` and `{dataset}` with your `GOOGLE_PROJECT_ID` and `DBT_DATAS
 ### Full leaderboard (BQML + Vertex, normalized)
 
 ```sql
-SELECT platform, config_name, model_type, grain, mae, rmse, r2, wape, run_at
+SELECT
+  platform,
+  config_name,
+  model_type,
+  grain,
+  mae,
+  rmse,
+  r2,
+  wape,
+  mase,
+  rmsse,
+  prediction_completeness,
+  run_at
 FROM `{project}.{dataset}.ml_model_leaderboard`
 ORDER BY grain, run_at DESC;
 ```
@@ -147,6 +159,11 @@ SELECT
   model_type,
   primary_metric,
   primary_metric_value,
+  wape,
+  mae,
+  mase,
+  rmsse,
+  bias,
   prediction_completeness,
   is_champion,
   run_at

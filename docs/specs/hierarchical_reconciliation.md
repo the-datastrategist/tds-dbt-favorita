@@ -3,7 +3,7 @@
 # SPEC: Hierarchical reconciliation
 
 **Status:** In progress
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P1 "Add hierarchical reconciliation"
+**Roadmap reference:** [Specs overview](README.md) — P1 "Add hierarchical reconciliation"
 
 ---
 

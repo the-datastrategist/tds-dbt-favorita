@@ -4,7 +4,7 @@
   * [Generate your first forecast](first_forecast.md)
   * [Reference architecture](reference_architecture.md)
   * [Case study](case_study.md)
-  * [Implementation recommendations](demand_forecasting_platform_recommendations.md)
+  * [Platform roadmap](specs/README.md)
 
 * Forecasting platform
   * [Forecast contract](forecast_contract.md)

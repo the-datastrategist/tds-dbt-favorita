@@ -3,7 +3,7 @@
 # SPEC: Scheduled forecast publication pipeline
 
 **Status:** In progress (70%)
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — operationalize calibrated, reconciled, governed forecasts
+**Roadmap reference:** [Specs overview](README.md) — operationalize calibrated, reconciled, governed forecasts
 
 ---
 

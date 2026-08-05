@@ -3,7 +3,7 @@
 # SPEC: Open-source product readiness
 
 **Status:** Proposed
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P3 "Open-source product readiness"
+**Roadmap reference:** [Specs overview](README.md) — P3 "Open-source product readiness"
 
 ---
 

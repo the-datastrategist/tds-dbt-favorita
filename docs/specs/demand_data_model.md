@@ -3,7 +3,7 @@
 # SPEC: Demand data model
 
 **Status:** Proposed
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P1 "Handle demand-specific data conditions"
+**Roadmap reference:** [Specs overview](README.md) — P1 "Handle demand-specific data conditions"
 
 ---
 

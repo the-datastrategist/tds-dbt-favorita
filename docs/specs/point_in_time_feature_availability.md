@@ -3,7 +3,7 @@
 # SPEC: Point-in-time feature availability
 
 **Status:** In progress
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P0 "Enforce point-in-time feature correctness"
+**Roadmap reference:** [Specs overview](README.md) — P0 "Enforce point-in-time feature correctness"
 
 ---
 

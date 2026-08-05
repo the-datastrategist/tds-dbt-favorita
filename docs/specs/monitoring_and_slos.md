@@ -3,7 +3,7 @@
 # SPEC: Monitoring, alerts, and SLOs
 
 **Status:** Proposed
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P1 "Expand monitoring and SLOs"
+**Roadmap reference:** [Specs overview](README.md) — P1 "Expand monitoring and SLOs"
 
 ---
 

@@ -3,7 +3,7 @@
 # SPEC: Forecast contract and canonical output
 
 **Status:** Shipped
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P0 "Introduce a forecast contract"
+**Roadmap reference:** [Specs overview](README.md) — P0 "Introduce a forecast contract"
 
 ---
 

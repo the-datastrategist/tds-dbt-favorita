@@ -3,7 +3,7 @@
 # SPEC: Open-source forecasting platform UI
 
 **Status:** Proposed
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P2 forecast operations and integration contracts; P3 open-source product readiness
+**Roadmap reference:** [Specs overview](README.md) — P2 forecast operations and integration contracts; P3 open-source product readiness
 
 ---
 

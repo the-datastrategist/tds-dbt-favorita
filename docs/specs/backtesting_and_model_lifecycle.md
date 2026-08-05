@@ -3,7 +3,7 @@
 # SPEC: Rolling-origin backtesting and model lifecycle
 
 **Status:** Shipped
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P0 "Replace the single holdout with rolling-origin backtesting" and "Fix model benchmark and champion semantics"
+**Roadmap reference:** [Specs overview](README.md) — P0 "Replace the single holdout with rolling-origin backtesting" and "Fix model benchmark and champion semantics"
 
 ---
 
@@ -84,31 +84,43 @@ Store metrics at minimum:
 
 - WAPE
 - MAE
-- MASE or RMSSE
+- MASE
+- RMSSE
 - bias / mean error
 - pinball loss for quantiles
 - interval coverage and interval width
 - prediction completeness
 
-Metric rows must include:
+Metric rows are normalized wide records keyed by run, origin, horizon, baseline/model, and
+segment. They must include:
 
 ```text
+metric_id
+backtest_run_id
 forecast_contract_name
 forecast_contract_hash
-target
-grain
+forecast_origin
 horizon
-segment_key_json
-model_type
-model_config_name
-model_run_id
 baseline_name
-origin_start
-origin_end
-metric_name
-metric_value
+segment_key_json
+eligible_count
+prediction_count
+wape
+mae
+mase
+rmsse
+bias
+prediction_completeness
+pinball_loss
+interval_coverage
+interval_width
+calibration_error
 created_at
 ```
+
+Run-level `target`, `grain`, `model_config_name`, `model_family`, `model_type`,
+`metric_policy_json`, `origin_start`, and `origin_end` live on `backtest_runs` and are joined
+into `stg_backtest_metrics` for leaderboard and champion selection.
 
 ### 5. Comparable leaderboard keys
 
