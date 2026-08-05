@@ -333,8 +333,16 @@ Consumer views must join only a single successful `forecast_run_id` and `publica
   `forecast_runs.run_status = 'draft'` record. `forecast_visible_drafts` enforces that atomic
   boundary for consumers.
 - Failed logical runs persist retry-stable blocking exceptions without making partial output visible.
-- Remaining acceptance work is live draft-only execution, delivery confirmation, and enabling
-  hierarchical contracts after joint-feasibility fixtures pass.
+- Live draft-only execution and an identical idempotent retry passed on 2026-08-05. Downstream
+  delivery and hierarchy-enabled acceptance remain owned by their dedicated specs.
+
+## Shipped evidence
+
+This base pipeline is shipped. Live GCP acceptance persisted the authoritative five-stage order,
+three passing blocking gates, one complete 54-row atomic draft, full component lineage, and no
+duplicates after an identical retry. The accepted identifiers, results, defect history, and
+verification SQL are recorded in
+[scheduled forecast publication acceptance](../acceptance/scheduled_forecast_publication_2026-08-05.md).
 
 ## Open questions
 

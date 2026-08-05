@@ -130,8 +130,7 @@ eligibility, publication gates, and idempotency are defined by the authoritative
 Horizon-aware scoring, intermittent-demand baselines, cold-start classification and fallback
 routing, split-conformal P10/P50/P90 calibration, and canonical strategy/calibration lineage are
 implemented. The scheduled pipeline applies these stages before reconciliation and persists their
-stage and validation evidence. Remaining work is live end-to-end acceptance of the complete
-champion-to-draft path and durable acceptance evidence.
+stage and validation evidence. The complete champion-to-draft path has passed live acceptance.
 
 ## Testing & validation
 
@@ -147,6 +146,14 @@ champion-to-draft path and durable acceptance evidence.
 - Metrics are queryable by horizon.
 - Forecast rows include quantiles or calibrated intervals.
 - Cold-start and intermittent series receive explicit strategies and fallback reasons.
+
+## Shipped evidence
+
+This capability is shipped. The direct model profile and regression suite enforce horizons
+`[1, 2, 3, 4, 5, 6, 7]`; rolling-origin evaluation persists horizon-specific model and baseline
+metrics. Live scheduled acceptance verified strategy lineage, calibrated P10/P50/P90 values,
+quantile ordering, completeness, stage ordering, and retry-safe persistence for the governed
+horizon-7 champion. See [scheduled forecast publication acceptance](../acceptance/scheduled_forecast_publication_2026-08-05.md).
 
 ## Related documents
 
