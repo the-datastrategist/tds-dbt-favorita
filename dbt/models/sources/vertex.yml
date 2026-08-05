@@ -7,6 +7,9 @@ sources:
     database: "{{ env_var('GOOGLE_PROJECT_ID') }}"
     schema: "{{ env_var('DBT_DATASET', 'favorita') }}"
     tables:
+      - name: source_ingestion_runs
+        description: Append-only source loader outcomes and mode-aware freshness policy evidence
+
       - name: ml_model_predictions
         description: Unified prediction rows across model_type (xgboost, random_forest, arima, sarima)
         columns:

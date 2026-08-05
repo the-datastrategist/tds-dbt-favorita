@@ -59,3 +59,9 @@ selectors:
       method: fqn
       value: ml_prediction_accuracy_rolling
       children: true
+
+  - name: forecast_monitoring
+    description: Source ingestion and scheduled forecast pipeline health marts and tests.
+    definition:
+      method: tag
+      value: monitoring

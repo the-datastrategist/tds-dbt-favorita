@@ -1,6 +1,34 @@
 -- BigQuery DDL for Vertex ML orchestration and outputs (Favorita).
 -- Run manually or via your infra pipeline against project tds-favorita.
 
+-- Append-only evidence emitted by source loaders. data_mode controls whether
+-- wall-clock freshness applies (continuous) or is intentionally disabled
+-- while watermark and execution health remain observable (static_demo).
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.source_ingestion_runs` (
+  ingestion_run_id STRING NOT NULL,
+  source_name STRING NOT NULL,
+  source_policy_hash STRING NOT NULL,
+  data_mode STRING NOT NULL,
+  status STRING NOT NULL,
+  started_at TIMESTAMP NOT NULL,
+  finished_at TIMESTAMP NOT NULL,
+  source_watermark TIMESTAMP,
+  ingested_row_count INT64 NOT NULL,
+  table_count INT64 NOT NULL,
+  source_uri STRING,
+  source_table STRING NOT NULL,
+  watermark_column STRING NOT NULL,
+  expected_interval_hours INT64 NOT NULL,
+  allowed_lateness_hours INT64 NOT NULL,
+  evaluate_on_json JSON NOT NULL,
+  code_sha STRING,
+  error_message STRING,
+  details_json JSON NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY DATE(started_at)
+CLUSTER BY source_name, data_mode, status;
+
 -- Job orchestration audit trail
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.ml_vertex_job_runs` (
   job_run_id STRING NOT NULL,

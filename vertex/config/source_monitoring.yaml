@@ -1,0 +1,10 @@
+sources:
+  favorita_sales:
+    data_mode: static_demo
+    source_table: tds-favorita.raw_favorita.raw_favorita_train
+    watermark_column: date
+    expected_interval_hours: 24
+    allowed_lateness_hours: 6
+    evaluate_on:
+      - watermark_advance
+      - manual

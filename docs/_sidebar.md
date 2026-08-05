@@ -43,6 +43,7 @@
   * [Scheduled publication pipeline](specs/scheduled_forecast_publication_pipeline.md)
   * [Integration contracts](specs/integration_contracts.md)
   * [Monitoring and SLOs](specs/monitoring_and_slos.md)
+  * [Monitoring operations](monitoring_and_slos.md)
   * [Terraform modules](specs/terraform_modules.md)
   * [Workload Identity Federation](specs/workload_identity_federation.md)
   * [Open-source product readiness](specs/open_source_product_readiness.md)

@@ -2,14 +2,16 @@
 
 # SPEC: Monitoring, alerts, and SLOs
 
-**Status:** Proposed
+**Status:** In progress
 **Roadmap reference:** [Specs overview](README.md) — P1 "Expand monitoring and SLOs"
 
 ---
 
 ## Summary
 
-The repo has accuracy monitoring and operational notes, but a platform needs end-to-end SLOs and alerting across source freshness, pipeline execution, forecast coverage, publication freshness, data drift, accuracy, calibration, and cost.
+The repo now has accuracy monitoring, mode-aware source ingestion health, and scheduled pipeline
+health. A complete platform still needs alert delivery and end-to-end SLOs across publication
+freshness, feature completeness, data drift, calibration, and cost.
 
 This spec adds `docs/monitoring_and_slos.md`, metric marts, alert policies, and configurable notification routing.
 
@@ -20,6 +22,8 @@ This spec adds `docs/monitoring_and_slos.md`, metric marts, alert policies, and 
 - Route alerts to configurable destinations.
 - Manage GCP alert resources through Terraform where possible.
 - Extend existing prediction accuracy monitoring rather than duplicate it.
+- Distinguish immutable demonstration snapshots from continuously updating sources without
+  weakening loader, watermark, lineage, or pipeline-health controls.
 
 ## Non-goals
 
@@ -46,7 +50,7 @@ Add or extend dbt marts:
 
 | Mart | Signal |
 |------|--------|
-| `forecast_source_freshness` | source lateness and missing feeds |
+| `forecast_source_health` | source execution and mode-aware lateness |
 | `forecast_feature_completeness` | nulls, schema changes, entity coverage |
 | `forecast_prediction_coverage` | eligible vs predicted entities/horizons |
 | `forecast_publication_freshness` | stale or missing published forecasts |
@@ -54,6 +58,11 @@ Add or extend dbt marts:
 | `forecast_calibration` | coverage, interval width, pinball loss |
 | `forecast_drift` | target and feature drift |
 | `forecast_pipeline_health` | success, duration, retries, cost labels |
+
+Implemented source policies declare `static_demo` or `continuous`. Static snapshots do not fail
+wall-clock freshness merely because their event dates are historical. Continuous sources fail once
+the latest successful ingestion exceeds the configured cadence plus grace period. Both modes
+persist immutable ingestion evidence and alert on unsuccessful loads.
 
 The scheduled publication pipeline additionally emits per-stage status, duration, attempt count,
 input/output row counts, exception counts, lock ownership, and component run IDs. Monitoring must
@@ -92,12 +101,13 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 
 ## Implementation plan
 
-1. Add `docs/monitoring_and_slos.md`.
-2. Add monitoring mart models and schema tests.
+1. **Complete:** add `docs/monitoring_and_slos.md` and source-mode policy.
+2. **Complete:** add source and scheduled-pipeline health marts with schema tests.
 3. Add alert policy YAML and loader.
-4. Add Terraform alert module or extend existing modules.
-5. Add Prefect/GCP notification wiring for local and hosted paths.
-6. Update ops runbooks to point from alert to remediation.
+4. Add remaining coverage, publication freshness, calibration, drift, and cost marts.
+5. Add Terraform alert module or extend existing modules.
+6. Add Prefect/GCP notification wiring for local and hosted paths.
+7. Update ops runbooks to point from alert to remediation.
 
 ## Testing & validation
 

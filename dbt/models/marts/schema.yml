@@ -1,6 +1,43 @@
 version: 2
 
 models:
+  - name: forecast_source_health
+    description: Latest source ingestion outcome with mode-aware wall-clock freshness evaluation.
+    columns:
+      - name: source_name
+        data_tests: [unique, not_null]
+      - name: data_mode
+        data_tests: [not_null]
+      - name: health_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [healthy, healthy_static, stale, failed]
+      - name: is_alerting
+        data_tests: [not_null]
+
+  - name: forecast_pipeline_health
+    description: Latest scheduled run per contract with stages, gates, output cardinality, and quantile checks.
+    columns:
+      - name: forecast_run_id
+        data_tests: [unique, not_null]
+      - name: forecast_contract_name
+        data_tests: [unique, not_null]
+      - name: health_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - healthy
+                  - failed
+                  - gates_failed
+                  - missing_outputs
+                  - duplicate_outputs
+                  - cardinality_mismatch
+                  - missing_quantiles
+
   - name: forecast_visible_drafts
     description: Canonical forecasts exposed only after the scheduled run crosses its atomic draft boundary.
     data_tests:
