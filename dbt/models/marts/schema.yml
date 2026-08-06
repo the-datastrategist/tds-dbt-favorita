@@ -425,6 +425,30 @@ models:
         description: WAPE recorded on the held-out test set at training time for this model_run_id.
 
 unit_tests:
+  - name: test_forecast_pipeline_health_accepts_validated_draft_and_rejects_failed_run
+    description: >
+      A scheduled publication finishes in draft after its stages and blocking gates pass. That
+      terminal state must be healthy, while an explicitly failed run remains failed.
+    model: forecast_pipeline_health
+    given:
+      - input: ref('stg_forecast_runs')
+        rows:
+          - {forecast_run_id: draft_run, forecast_contract_name: draft_contract, started_at: '2026-08-05 00:00:00+00', run_status: draft, row_count: 1}
+          - {forecast_run_id: failed_run, forecast_contract_name: failed_contract, started_at: '2026-08-05 00:00:00+00', run_status: failed, row_count: 0}
+      - input: ref('stg_forecast_pipeline_stage_runs')
+        rows:
+          - {forecast_run_id: draft_run, stage_status: completed, stage_position: 1}
+      - input: ref('stg_forecast_validation_checks')
+        rows:
+          - {forecast_run_id: draft_run, severity: blocking, passed: true}
+      - input: ref('stg_forecast_outputs')
+        rows:
+          - {forecast_run_id: draft_run, forecast_output_id: output_1, horizon: 7, prediction_p10: 1, prediction_p50: 2, prediction_p90: 3}
+    expect:
+      rows:
+        - {forecast_run_id: draft_run, run_status: draft, health_status: healthy}
+        - {forecast_run_id: failed_run, run_status: failed, health_status: failed}
+
   - name: test_champion_selection_keeps_company_and_store_grains_separate
     description: >
       A lower company-day error must not displace the store-day champion because grain is

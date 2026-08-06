@@ -16,7 +16,7 @@ with latest_runs as (
     select
         forecast_run_id,
         count(*) as stage_count,
-        countif(stage_status != 'succeeded') as unsuccessful_stage_count,
+        countif(stage_status != 'completed') as unsuccessful_stage_count,
         max(stage_position) as maximum_stage_position
     from {{ ref('stg_forecast_pipeline_stage_runs') }}
     group by forecast_run_id
@@ -50,7 +50,7 @@ select
     coalesce(o.horizon_count, 0) as horizon_count,
     coalesce(o.missing_quantile_count, 0) as missing_quantile_count,
     case
-        when r.run_status != 'succeeded' then 'failed'
+        when r.run_status not in ('succeeded', 'draft') then 'failed'
         when coalesce(s.unsuccessful_stage_count, 0) > 0 then 'failed'
         when coalesce(c.failed_blocking_check_count, 0) > 0 then 'gates_failed'
         when coalesce(o.persisted_output_count, 0) = 0 then 'missing_outputs'

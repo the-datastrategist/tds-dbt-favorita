@@ -13,6 +13,10 @@ The repo now has accuracy monitoring, mode-aware source ingestion health, and sc
 health. A complete platform still needs alert delivery and end-to-end SLOs across publication
 freshness, feature completeness, data drift, calibration, and cost.
 
+The source and scheduled-pipeline health slice passed live GCP acceptance on 2026-08-06. The
+accepted evidence covers static-demo freshness semantics, policy lineage, stage order, blocking
+gates, output cardinality, horizon coverage, quantiles, and forecast provenance.
+
 This spec adds `docs/monitoring_and_slos.md`, metric marts, alert policies, and configurable notification routing.
 
 ## Goals
@@ -130,5 +134,6 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 - [Terraform modules](terraform_modules.md)
 - [IaC and GCP operations](../iac.md)
 - [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md)
+- [Live forecast monitoring acceptance](../acceptance/forecast_monitoring_2026-08-06.md)
 
 {% enddocs %}
