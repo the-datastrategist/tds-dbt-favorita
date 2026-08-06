@@ -7,6 +7,12 @@ updates:
     groups:
       python-dependencies:
         patterns: ["*"]
+    ignore:
+      # MLflow 3.15.1 requires cryptography<50. Dependabot cannot resolve the
+      # first non-vulnerable cryptography release until MLflow lifts that cap.
+      # Keep this aligned with the temporary pip-audit exception in security.yml.
+      - dependency-name: cryptography
+        versions: [">=50.0.0"]
 
   - package-ecosystem: github-actions
     directory: "/"
