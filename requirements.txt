@@ -307,8 +307,10 @@ h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
-h2==4.3.0
-    # via httpx
+h2==4.4.1
+    # via
+    #   -r requirements.in
+    #   httpx
 holidays==0.100
     # via prophet
 hpack==4.2.0
