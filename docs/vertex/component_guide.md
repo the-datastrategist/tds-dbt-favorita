@@ -1,14 +1,16 @@
-{% docs vertex_consulting_package %}
+{% docs vertex_component_guide %}
 
-# Vertex AI consulting package — GCP demand forecasting platform
+# Vertex AI component guide — GCP demand forecasting platform
 
-**Vertex AI's role** in this engagement: run **config-driven custom ML** (train, predict, optimize) and **KFP pipelines** on BigQuery features, with GCS artifacts, unified prediction tables, and production IAM/scheduling patterns.
+**Vertex AI's role** in the platform: run **config-driven custom ML** (train, predict, optimize)
+and **KFP pipelines** on BigQuery features, with GCS artifacts, unified prediction tables, and
+production IAM and scheduling patterns.
 
-Parent overview: [consulting_package.md](../consulting_package.md)
+Parent overview: [platform_guide.md](../platform_guide.md)
 
 ---
 
-## Vertex in the three-layer package
+## Vertex AI in the platform architecture
 
 ```mermaid
 flowchart TB
@@ -127,7 +129,7 @@ dbt staging: `stg_vertex_model_predictions`, `stg_vertex_model_metadata`, `stg_v
 | **Rollout** | Week 3: train/predict; Week 4: pipeline + Scheduler |
 | **IaC** | `vertex/ops/README.md` — SA, buckets, labels, monitoring |
 
-### Consulting pitch points
+### Platform capabilities
 
 - **One YAML config** per model family — no script sprawl per client
 - **Optimize → train** merges best params from GCS automatically
@@ -151,7 +153,7 @@ From `vertex/ops/README.md`:
 
 ---
 
-## Client customization (Vertex)
+## Adapting the Vertex AI layer
 
 1. Point `train_sql_query` / `predict_sql_query` at client `int_sales_*`
 2. Set `gcs_model_path`, output tables in `defaults`
@@ -166,6 +168,6 @@ From `vertex/ops/README.md`:
 - [vertex/README.md](../../vertex/README.md) — operational detail
 - [Benchmarks](../benchmarks.md)
 - [Reference architecture](../reference_architecture.md)
-- Other products: [dbt](../dbt/consulting_package.md) · [MLflow](../mlflow/consulting_package.md) · [Prefect](../prefect/consulting_package.md)
+- Other products: [dbt](../dbt/component_guide.md) · [MLflow](../mlflow/component_guide.md) · [Prefect](../prefect/component_guide.md)
 
 {% enddocs %}

@@ -4,6 +4,6 @@
 
 <p>
   <a href="#/first_forecast">Generate your first forecast</a>
-  <a href="#/overview">Platform overview</a>
+  <a href="#/platform_guide">Explore the open-source platform</a>
   <a href="#/specs/README">Browse engineering specs</a>
 </p>

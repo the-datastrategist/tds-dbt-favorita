@@ -1,14 +1,16 @@
-{% docs mlflow_consulting_package %}
+{% docs mlflow_component_guide %}
 
-# MLflow consulting package — GCP demand forecasting platform
+# MLflow component guide — GCP demand forecasting platform
 
-**MLflow's role** in this engagement: provide **portable experiment tracking** and optional **Model Registry catalog entries** while **GCS remains the canonical store** for model binaries. Every Vertex train, predict, and optimize job logs params, metrics, and tags.
+**MLflow's role** in the platform: provide **portable experiment tracking** and optional **Model
+Registry catalog entries** while **GCS remains the canonical store** for model binaries. Every
+Vertex train, predict, and optimize job logs params, metrics, and tags.
 
-Parent overview: [consulting_package.md](../consulting_package.md)
+Parent overview: [platform_guide.md](../platform_guide.md)
 
 ---
 
-## MLflow in the three-layer package
+## MLflow in the platform architecture
 
 ```mermaid
 flowchart TB
@@ -28,7 +30,7 @@ flowchart TB
 
   subgraph L3["Delivery artifacts"]
     BM[Benchmarks — compare runs in UI]
-    Demo[Screenshot for proposals]
+    Demo[Run comparison UI]
     Handoff[Tracking URI per env]
   end
 
@@ -146,7 +148,7 @@ Docker bind-mounts `./mlruns` at `/app/mlruns` for local UI.
 
 ---
 
-## Client customization (MLflow)
+## Adapting the MLflow layer
 
 1. Set per-env `MLFLOW_TRACKING_URI` and experiment name
 2. Enable `register_model` when client wants Registry workflow
@@ -159,7 +161,7 @@ Docker bind-mounts `./mlruns` at `/app/mlruns` for local UI.
 
 - [vertex/README.md — Experiment tracking](../../vertex/README.md#experiment-tracking)
 - [Benchmarks](../benchmarks.md)
-- [Vertex consulting package](../vertex/consulting_package.md)
-- Other products: [dbt](../dbt/consulting_package.md) · [Prefect](../prefect/consulting_package.md)
+- [Vertex platform guide](../vertex/component_guide.md)
+- Other products: [dbt](../dbt/component_guide.md) · [Prefect](../prefect/component_guide.md)
 
 {% enddocs %}

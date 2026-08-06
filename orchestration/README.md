@@ -18,6 +18,7 @@ Flow code lives under `orchestration/` (not `prefect/`) so it does not shadow th
 | `prefect-vertex-ml-pipeline-scheduled` | `prefect-vertex-ml-pipeline` | Weekly XGBoost pipeline (Sunday 08:00 UTC) |
 | `prefect-model-lifecycle-manual` | `prefect-model-lifecycle` | On-demand rolling-origin evaluation and governed promotion |
 | `prefect-model-lifecycle-scheduled` | `prefect-model-lifecycle` | Weekly lifecycle evaluation (Sunday 10:00 UTC) |
+| `prefect-scheduled-forecast-pipeline-daily` | `prefect-scheduled-forecast-pipeline` | Daily champion scoring through validated atomic draft creation |
 | `prefect-forecast-publication-manual` | `prefect-forecast-publication` | Validate a canonical run and optionally create an idempotent publication |
 
 The manual forecast-publication deployment implements the gated publication boundary. Its required
@@ -136,7 +137,14 @@ make prefect-flow-vertex-train
 make prefect-flow-vertex-train VERTEX_CONFIG=favorita_store_n1d_rf VERTEX_MODE=vertex SYNC=1
 make prefect-flow-vertex-pipeline
 make prefect-flow-vertex-pipeline VERTEX_PIPELINE=favorita_arima SKIP_OPTIMIZE=1 SKIP_PREDICT=1
+make prefect-flow-scheduled-forecast
 ```
+
+The scheduled forecast flow resolves and pins the scoped champion, scores without exposing the
+model writer's intermediate draft, routes series through the global champion, calibrates P10/P50/P90
+from rolling-origin residuals, reconciles when configured, records immutable stage and gate
+evidence, and inserts the `draft` run record last. Downstream consumers query
+`forecast_visible_drafts`, so partial stage writes remain invisible.
 
 ## How tasks relate to Make
 
@@ -153,7 +161,7 @@ The Prefect **worker** runs inside `ml-pipeline`. Flow tasks call `python -m ver
 
 ```
 orchestration/
-  flows/          # @flow definitions (dbt, vertex train, vertex ML pipeline)
+  flows/          # @flow definitions (dbt, Vertex, lifecycle, scheduled draft, publication)
   tasks/          # @task implementations (in-container python/dbt)
   utils/          # repo root, .env, train + pipeline config resolution
 prefect.yaml      # deployment definitions (repo root)

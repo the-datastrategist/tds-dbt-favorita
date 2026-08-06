@@ -1,6 +1,34 @@
 -- BigQuery DDL for Vertex ML orchestration and outputs (Favorita).
 -- Run manually or via your infra pipeline against project tds-favorita.
 
+-- Append-only evidence emitted by source loaders. data_mode controls whether
+-- wall-clock freshness applies (continuous) or is intentionally disabled
+-- while watermark and execution health remain observable (static_demo).
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.source_ingestion_runs` (
+  ingestion_run_id STRING NOT NULL,
+  source_name STRING NOT NULL,
+  source_policy_hash STRING NOT NULL,
+  data_mode STRING NOT NULL,
+  status STRING NOT NULL,
+  started_at TIMESTAMP NOT NULL,
+  finished_at TIMESTAMP NOT NULL,
+  source_watermark TIMESTAMP,
+  ingested_row_count INT64 NOT NULL,
+  table_count INT64 NOT NULL,
+  source_uri STRING,
+  source_table STRING NOT NULL,
+  watermark_column STRING NOT NULL,
+  expected_interval_hours INT64 NOT NULL,
+  allowed_lateness_hours INT64 NOT NULL,
+  evaluate_on_json JSON NOT NULL,
+  code_sha STRING,
+  error_message STRING,
+  details_json JSON NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY DATE(started_at)
+CLUSTER BY source_name, data_mode, status;
+
 -- Job orchestration audit trail
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.ml_vertex_job_runs` (
   job_run_id STRING NOT NULL,
@@ -196,6 +224,9 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_predictions` (
   baseline_name STRING NOT NULL,
   actual FLOAT64,
   prediction FLOAT64,
+  prediction_p10 FLOAT64,
+  prediction_p50 FLOAT64,
+  prediction_p90 FLOAT64,
   data_cutoff TIMESTAMP NOT NULL,
   source_cutoff_json JSON NOT NULL,
   feature_availability_hash STRING,
@@ -213,6 +244,15 @@ ADD COLUMN IF NOT EXISTS source_cutoff_json JSON;
 ALTER TABLE `tds-favorita.favorita.backtest_predictions`
 ADD COLUMN IF NOT EXISTS feature_availability_hash STRING;
 
+ALTER TABLE `tds-favorita.favorita.backtest_predictions`
+ADD COLUMN IF NOT EXISTS prediction_p10 FLOAT64;
+
+ALTER TABLE `tds-favorita.favorita.backtest_predictions`
+ADD COLUMN IF NOT EXISTS prediction_p50 FLOAT64;
+
+ALTER TABLE `tds-favorita.favorita.backtest_predictions`
+ADD COLUMN IF NOT EXISTS prediction_p90 FLOAT64;
+
 -- Append-only metrics derived from backtest_predictions. metric_id is stable
 -- for a run/origin/horizon/baseline/segment metric record.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_metrics` (
@@ -228,12 +268,57 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.backtest_metrics` (
   prediction_count INT64 NOT NULL,
   wape FLOAT64,
   mae FLOAT64,
+  mase FLOAT64,
+  rmsse FLOAT64,
   bias FLOAT64,
   prediction_completeness FLOAT64,
+  pinball_loss FLOAT64,
+  interval_coverage FLOAT64,
+  interval_width FLOAT64,
+  calibration_error FLOAT64,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
 )
 PARTITION BY forecast_origin
 CLUSTER BY backtest_contract_name, horizon, baseline_name, backtest_run_id;
+
+ALTER TABLE `tds-favorita.favorita.backtest_metrics`
+ADD COLUMN IF NOT EXISTS mase FLOAT64;
+
+ALTER TABLE `tds-favorita.favorita.backtest_metrics`
+ADD COLUMN IF NOT EXISTS rmsse FLOAT64;
+
+ALTER TABLE `tds-favorita.favorita.backtest_metrics`
+ADD COLUMN IF NOT EXISTS pinball_loss FLOAT64;
+
+ALTER TABLE `tds-favorita.favorita.backtest_metrics`
+ADD COLUMN IF NOT EXISTS interval_coverage FLOAT64;
+
+ALTER TABLE `tds-favorita.favorita.backtest_metrics`
+ADD COLUMN IF NOT EXISTS interval_width FLOAT64;
+
+ALTER TABLE `tds-favorita.favorita.backtest_metrics`
+ADD COLUMN IF NOT EXISTS calibration_error FLOAT64;
+
+-- Append-only series profiles used to prove and reproduce routing decisions.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_series_classifications` (
+  classification_id STRING NOT NULL,
+  classification_run_id STRING NOT NULL,
+  forecast_contract_name STRING NOT NULL,
+  forecast_contract_hash STRING NOT NULL,
+  forecast_origin TIMESTAMP NOT NULL,
+  entity_key_json STRING NOT NULL,
+  history_length INT64 NOT NULL,
+  nonzero_observation_count INT64 NOT NULL,
+  average_demand_interval FLOAT64,
+  coefficient_of_variation_squared FLOAT64,
+  is_intermittent BOOL NOT NULL,
+  is_cold_start BOOL NOT NULL,
+  recommended_strategy STRING NOT NULL,
+  routing_policy_hash STRING NOT NULL,
+  classified_at TIMESTAMP NOT NULL
+)
+PARTITION BY DATE(forecast_origin)
+CLUSTER BY forecast_contract_name, recommended_strategy, routing_policy_hash;
 
 -- Immutable registrations. Current state and champion history are derived from
 -- model_lifecycle_events so retries never update or erase an earlier decision.
@@ -326,11 +411,19 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_contracts` (
   hierarchy ARRAY<STRING>,
   reconciliation_policy STRING,
   demand_policy STRING,
+  routing_policy_json JSON,
+  calibration_policy_json JSON,
   contract_json JSON,
   is_active BOOL
 )
 PARTITION BY DATE(registered_at)
 CLUSTER BY forecast_contract_name, forecast_contract_hash;
+
+ALTER TABLE `tds-favorita.favorita.forecast_contracts`
+ADD COLUMN IF NOT EXISTS routing_policy_json JSON;
+
+ALTER TABLE `tds-favorita.favorita.forecast_contracts`
+ADD COLUMN IF NOT EXISTS calibration_policy_json JSON;
 
 -- Forecast scoring / publication run audit.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_runs` (
@@ -351,11 +444,66 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_runs` (
   model_run_id STRING,
   model_id STRING,
   config_name STRING,
+  champion_candidate_id STRING,
+  eligibility_snapshot_id STRING,
   row_count INT64,
   error_message STRING
 )
 PARTITION BY DATE(started_at)
 CLUSTER BY forecast_contract_name, run_type, run_status;
+
+ALTER TABLE `tds-favorita.favorita.forecast_runs`
+ADD COLUMN IF NOT EXISTS champion_candidate_id STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_runs`
+ADD COLUMN IF NOT EXISTS eligibility_snapshot_id STRING;
+
+-- Ordered component evidence. Stable stage_run_id values make identical retries no-ops.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_pipeline_stage_runs` (
+  stage_run_id STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  stage_name STRING NOT NULL,
+  stage_position INT64 NOT NULL,
+  component_run_id STRING NOT NULL,
+  input_fingerprint STRING NOT NULL,
+  output_fingerprint STRING NOT NULL,
+  stage_status STRING NOT NULL,
+  input_row_count INT64 NOT NULL,
+  output_row_count INT64 NOT NULL,
+  started_at TIMESTAMP NOT NULL,
+  finished_at TIMESTAMP,
+  error_message STRING
+)
+PARTITION BY DATE(started_at)
+CLUSTER BY forecast_run_id, stage_position, stage_status;
+
+-- Immutable quality gates evaluated before the draft visibility boundary.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_validation_checks` (
+  validation_check_id STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  check_name STRING NOT NULL,
+  severity STRING NOT NULL,
+  passed BOOL NOT NULL,
+  observed_value FLOAT64,
+  threshold_value FLOAT64,
+  details_json JSON,
+  checked_at TIMESTAMP NOT NULL
+)
+PARTITION BY DATE(checked_at)
+CLUSTER BY forecast_run_id, severity, passed;
+
+-- Mutable operational leases. Forecast evidence and outputs remain append-only.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_pipeline_locks` (
+  lock_key STRING NOT NULL,
+  forecast_contract_hash STRING NOT NULL,
+  forecast_origin TIMESTAMP NOT NULL,
+  owner_id STRING NOT NULL,
+  acquired_at TIMESTAMP NOT NULL,
+  heartbeat_at TIMESTAMP NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  released_at TIMESTAMP
+)
+CLUSTER BY forecast_contract_hash, forecast_origin;
 
 -- Canonical forecast output rows. Initial predict jobs write draft statistical forecasts.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_outputs` (

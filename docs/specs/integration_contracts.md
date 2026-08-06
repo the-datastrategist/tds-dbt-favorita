@@ -3,7 +3,7 @@
 # SPEC: Integration contracts and forecast delivery
 
 **Status:** Proposed
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P2 "Publish through a standard integration contract"
+**Roadmap reference:** [Specs overview](README.md) — P2 "Publish through a standard integration contract"
 
 ---
 

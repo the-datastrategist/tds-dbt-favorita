@@ -3,7 +3,7 @@
 # SPEC: Forecast contract and canonical output
 
 **Status:** Shipped
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P0 "Introduce a forecast contract"
+**Roadmap reference:** [Specs overview](README.md) — P0 "Introduce a forecast contract"
 
 ---
 
@@ -203,6 +203,13 @@ suite subsequently passed 107 data tests. See
 - Every published row has routing, calibration, reconciliation, orchestration, and publication
   version lineage applicable to its contract.
 - Existing model predictions can be queried through `stg_forecast_outputs`.
+
+## Shipped evidence
+
+This contract is shipped. Live GCP acceptance produced one provenance-complete, contract-valid
+54-row canonical draft and an identical retry created no duplicate run, output, stage, validation,
+or status records. The accepted run, lineage identifiers, results, and reproducible SQL are
+recorded in [scheduled forecast publication acceptance](../acceptance/scheduled_forecast_publication_2026-08-05.md).
 
 ## Related documents
 

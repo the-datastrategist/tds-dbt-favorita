@@ -21,6 +21,8 @@ select
     model_run_id,
     model_id,
     config_name,
+    champion_candidate_id,
+    eligibility_snapshot_id,
     row_count,
     error_message
 from {{ source('vertex_ml', 'forecast_runs') }}

@@ -1,6 +1,66 @@
 version: 2
 
 models:
+  - name: forecast_source_health
+    description: Latest source ingestion outcome with mode-aware wall-clock freshness evaluation.
+    columns:
+      - name: source_name
+        data_tests: [unique, not_null]
+      - name: data_mode
+        data_tests: [not_null]
+      - name: health_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [healthy, healthy_static, stale, failed]
+      - name: is_alerting
+        data_tests: [not_null]
+
+  - name: forecast_pipeline_health
+    description: Latest scheduled run per contract with stages, gates, output cardinality, and quantile checks.
+    columns:
+      - name: forecast_run_id
+        data_tests: [unique, not_null]
+      - name: forecast_contract_name
+        data_tests: [unique, not_null]
+      - name: health_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - healthy
+                  - failed
+                  - gates_failed
+                  - missing_outputs
+                  - duplicate_outputs
+                  - cardinality_mismatch
+                  - missing_quantiles
+
+  - name: forecast_visible_drafts
+    description: Canonical forecasts exposed only after the scheduled run crosses its atomic draft boundary.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - forecast_run_id
+              - entity_key_json
+              - target_date
+              - horizon
+    columns:
+      - name: forecast_output_id
+        data_tests: [unique, not_null]
+      - name: forecast_run_id
+        data_tests: [not_null]
+      - name: calibration_run_id
+        data_tests: [not_null]
+      - name: forecast_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [draft, approved, published]
+
   - name: ml_model_lifecycle_current
     description: Latest derived lifecycle state and audit event for every registered candidate.
     columns:
@@ -257,7 +317,11 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: [mae, wape]
+                values: [mae, wape, mase, rmsse]
+      - name: mase
+        description: Mean absolute scaled error for rolling-origin backtest rows when available.
+      - name: rmsse
+        description: Root mean squared scaled error for rolling-origin backtest rows when available.
       - name: comparable_partition_key
         description: Stable hash of target, grain, horizon, segment, and metric policy.
         data_tests:
@@ -361,6 +425,30 @@ models:
         description: WAPE recorded on the held-out test set at training time for this model_run_id.
 
 unit_tests:
+  - name: test_forecast_pipeline_health_accepts_validated_draft_and_rejects_failed_run
+    description: >
+      A scheduled publication finishes in draft after its stages and blocking gates pass. That
+      terminal state must be healthy, while an explicitly failed run remains failed.
+    model: forecast_pipeline_health
+    given:
+      - input: ref('stg_forecast_runs')
+        rows:
+          - {forecast_run_id: draft_run, forecast_contract_name: draft_contract, started_at: '2026-08-05 00:00:00+00', run_status: draft, row_count: 1}
+          - {forecast_run_id: failed_run, forecast_contract_name: failed_contract, started_at: '2026-08-05 00:00:00+00', run_status: failed, row_count: 0}
+      - input: ref('stg_forecast_pipeline_stage_runs')
+        rows:
+          - {forecast_run_id: draft_run, stage_status: completed, stage_position: 1}
+      - input: ref('stg_forecast_validation_checks')
+        rows:
+          - {forecast_run_id: draft_run, severity: blocking, passed: true}
+      - input: ref('stg_forecast_outputs')
+        rows:
+          - {forecast_run_id: draft_run, forecast_output_id: output_1, horizon: 7, prediction_p10: 1, prediction_p50: 2, prediction_p90: 3}
+    expect:
+      rows:
+        - {forecast_run_id: draft_run, run_status: draft, health_status: healthy}
+        - {forecast_run_id: failed_run, run_status: failed, health_status: failed}
+
   - name: test_champion_selection_keeps_company_and_store_grains_separate
     description: >
       A lower company-day error must not displace the store-day champion because grain is

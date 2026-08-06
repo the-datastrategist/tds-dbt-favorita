@@ -99,6 +99,13 @@ Recommended schedule (implemented in `prefect.yaml`):
 1. **06:00 UTC** — dbt feature refresh (`prefect-dbt-run-scheduled`)
 2. **07:00 UTC** — optional train-only Custom Job
 3. **Sunday 08:00 UTC** — full XGBoost pipeline (`prefect-vertex-ml-pipeline-scheduled`)
+4. **Daily 09:00 UTC** — governed champion scoring to an atomic draft
+   (`prefect-scheduled-forecast-pipeline-daily`)
+5. **Sunday 10:00 UTC** — rolling-origin lifecycle evaluation and promotion
+   (`prefect-model-lifecycle-scheduled`)
+
+Approval/publication is intentionally on demand through `prefect-forecast-publication-manual`
+until live acceptance, delivery policy, and planner workflow requirements are complete.
 
 Production clients typically replace Prefect OSS with **Cloud Scheduler → Cloud Run/Workflows** calling the same Python entrypoints (`vertex/ops/README.md`).
 
@@ -204,6 +211,6 @@ Warehouse-backed runs (`dbt run`, `dbt test`, Vertex submit) execute in the clie
 
 - [Accelerators](accelerators.md) — what is implemented in this repo
 - [Case study](case_study.md) — business framing
-- Product views: [dbt](dbt/consulting_package.md) · [Vertex](vertex/consulting_package.md) · [MLflow](mlflow/consulting_package.md) · [Prefect](prefect/consulting_package.md)
+- Product views: [dbt](dbt/component_guide.md) · [Vertex](vertex/component_guide.md) · [MLflow](mlflow/component_guide.md) · [Prefect](prefect/component_guide.md)
 
 {% enddocs %}

@@ -1,8 +1,9 @@
 """
 GCP / Vertex AI settings shared by Custom Jobs and Pipeline Jobs.
 
-Consulting template defaults: explicit env vars, optional YAML overrides, resource
-labels for cost allocation, and a dedicated pipeline service account when provided.
+Open-source forecasting platform defaults for GCP: explicit environment variables,
+optional YAML overrides, resource labels for cost allocation, and a dedicated
+pipeline service account when provided.
 """
 
 from __future__ import annotations

@@ -100,17 +100,11 @@ def _coerce_value_for_bq_type(value: Any, bq_type: str) -> Any:
         # insert_rows_json maps dicts to RECORD; JSON columns need a JSON string.
         return json.dumps(safe) if safe is not None else None
     if bq_type == "TIMESTAMP":
-        if isinstance(value, pd.Timestamp):
-            ts = value
+        if isinstance(value, (str, pd.Timestamp, datetime, date)):
+            ts = pd.Timestamp(value)
             if ts.tzinfo is not None:
                 ts = ts.tz_convert("UTC").tz_localize(None)
             return ts.to_pydatetime().isoformat(sep=" ", timespec="seconds")
-        if isinstance(value, datetime):
-            return value.isoformat(sep=" ", timespec="seconds")
-        if isinstance(value, date):
-            return datetime.combine(value, datetime.min.time()).isoformat(
-                sep=" ", timespec="seconds"
-            )
         return value
     if bq_type == "DATE":
         if isinstance(value, pd.Timestamp):
@@ -309,7 +303,7 @@ def insert_rows_idempotent(
     *,
     id_column: str,
     project_id: Optional[str] = None,
-) -> None:
+) -> int:
     """Batch-insert immutable rows once, using a stable logical ID.
 
     Rows are streamed to a short-lived staging table and merged in one BigQuery
@@ -323,7 +317,7 @@ def insert_rows_idempotent(
     if len(ids) != len(set(ids)):
         raise ValueError(f"Duplicate {id_column!r} values in persistence batch")
     if not records:
-        return
+        return 0
 
     project_id = project_id or os.getenv("GOOGLE_PROJECT_ID")
     if not project_id:
@@ -367,7 +361,9 @@ def insert_rows_idempotent(
             WHEN NOT MATCHED THEN
               INSERT ({insert_cols}) VALUES ({insert_vals})
         """
-        client.query(query).result()
+        merge_job = client.query(query)
+        merge_job.result()
+        return int(merge_job.num_dml_affected_rows or 0)
     finally:
         client.delete_table(staging, not_found_ok=True)
 

@@ -248,12 +248,12 @@ models:
         description: "Share of distinct products at the store on `date` that were on promotion."
       - name: pct_product_families_store_on_promotion
         description: "Share of distinct product families at the store on `date` that were on promotion."
-      - name: sales_store_n7d_same_dow
-        description: "Store-level sales exactly 7 days after `date` (same day of week, the following week); used to sanity-check/label same-day-of-week comparisons."
       - name: sales_store_n1d
         description: "Sum of store-level sales over the 1 day(s) after `date` (day 1 through day 1 following); a forward-looking window, distinct from the training label."
       - name: sales_store_n7d
-        description: "Sum of store-level sales over the 7 day(s) after `date` (day 1 through day 7 following); a forward-looking window, distinct from the training label."
+        description: "Store-level demand exactly seven calendar days after `date`; the direct horizon-7 point target."
+      - name: sales_store_n7d_cum
+        description: "Cumulative store-level demand over days 1 through 7 after `date`; not a point-horizon target."
       - name: sales_store_n14d
         description: "Sum of store-level sales over the 14 day(s) after `date` (day 1 through day 14 following); a forward-looking window, distinct from the training label."
       - name: sales_store_n28d

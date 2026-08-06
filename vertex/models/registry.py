@@ -61,6 +61,12 @@ def _lazy_runner(module_attr: tuple[str, str]) -> Runner:
 
 
 def _register_all() -> None:
+    _REGISTRY[("xgboost_direct", "train")] = _lazy_runner(
+        ("vertex.models.xgboost.direct_multi_horizon", "run_train_direct_xgboost")
+    )
+    _REGISTRY[("xgboost_direct", "predict")] = _lazy_runner(
+        ("vertex.models.xgboost.direct_multi_horizon", "run_predict_direct_xgboost")
+    )
     _REGISTRY[("xgboost", "train")] = _lazy_runner(
         ("vertex.models.xgboost.train_xgboost", "run_train_xgboost")
     )

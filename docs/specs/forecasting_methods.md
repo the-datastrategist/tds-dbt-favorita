@@ -3,7 +3,7 @@
 # SPEC: Forecasting methods, horizons, cold start, and intermittent demand
 
 **Status:** In progress
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P0 "Implement multi-horizon forecasting", P1 "Add probabilistic forecasts", and P1 "Add cold-start and intermittent-demand routing"
+**Roadmap reference:** [Specs overview](README.md) — P0 "Implement multi-horizon forecasting", P1 "Add probabilistic forecasts", and P1 "Add cold-start and intermittent-demand routing"
 
 ---
 
@@ -125,6 +125,13 @@ eligibility, publication gates, and idempotency are defined by the authoritative
 6. Add routing rules and strategy metadata to canonical output.
 7. Update benchmarks to report metrics by horizon and strategy.
 
+## Current implementation
+
+Horizon-aware scoring, intermittent-demand baselines, cold-start classification and fallback
+routing, split-conformal P10/P50/P90 calibration, and canonical strategy/calibration lineage are
+implemented. The scheduled pipeline applies these stages before reconciliation and persists their
+stage and validation evidence. The complete champion-to-draft path has passed live acceptance.
+
 ## Testing & validation
 
 - Unit tests for horizon expansion and validation.
@@ -139,6 +146,14 @@ eligibility, publication gates, and idempotency are defined by the authoritative
 - Metrics are queryable by horizon.
 - Forecast rows include quantiles or calibrated intervals.
 - Cold-start and intermittent series receive explicit strategies and fallback reasons.
+
+## Shipped evidence
+
+This capability is shipped. The direct model profile and regression suite enforce horizons
+`[1, 2, 3, 4, 5, 6, 7]`; rolling-origin evaluation persists horizon-specific model and baseline
+metrics. Live scheduled acceptance verified strategy lineage, calibrated P10/P50/P90 values,
+quantile ordering, completeness, stage ordering, and retry-safe persistence for the governed
+horizon-7 champion. See [scheduled forecast publication acceptance](../acceptance/scheduled_forecast_publication_2026-08-05.md).
 
 ## Related documents
 

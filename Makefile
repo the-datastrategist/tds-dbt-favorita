@@ -21,14 +21,14 @@ export GOOGLE_APPLICATION_CREDENTIALS_CONTAINER
 endif
 endif
 
-.PHONY: help install requirements-lock format lint test clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring load-favorita-gcs load-favorita-bigquery \
+.PHONY: help install requirements-lock format lint test clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring selector-forecast-monitoring source-ingestion-record load-favorita-gcs load-favorita-bigquery \
 	dbt-deps dbt-debug dbt-seed dbt-run dbt-run-full-refresh dbt-run-model dbt-run-operation dbt-create-table \
 	dbt-train dbt-predict dbt-build dbt-test dbt-compile dbt-list dbt-snapshot dbt-source-freshness dbt-clean \
 	docs-serve dbt-ui dbt-docs dbt-docs-generate dbt-docs-serve \
 	mlflow-ui prefect-ui prefect-server prefect-work-pool-create prefect-worker prefect-deploy \
 	prefect-run-dbt prefect-run-vertex-train prefect-run-vertex-train-all prefect-run-vertex-pipeline \
 	prefect-run-model-lifecycle prefect-flow-dbt prefect-flow-vertex-train prefect-flow-vertex-pipeline \
-	prefect-flow-model-lifecycle \
+	prefect-flow-model-lifecycle prefect-run-scheduled-forecast prefect-flow-scheduled-forecast \
 	vertex-train vertex-predict vertex-optimize vertex-run vertex-run-docker vertex-submit \
 	vertex-train-docker vertex-predict-docker vertex-optimize-docker \
 	vertex-submit-train vertex-submit-predict vertex-submit-optimize \
@@ -156,6 +156,13 @@ selector-daily-refresh-test: ## Run data tests for daily_refresh + singular data
 
 selector-accuracy-monitoring: ## Build the prediction-accuracy rolling mart + run its drift test
 	docker compose run --rm ml-pipeline dbt build --project-dir dbt --target $(DBT_TARGET) --selector accuracy_monitoring $(ARGS)
+
+selector-forecast-monitoring: ## Build and test source + forecast pipeline health marts
+	docker compose run --rm ml-pipeline dbt build --project-dir dbt --target $(DBT_TARGET) --selector forecast_monitoring $(ARGS)
+
+source-ingestion-record: ## Append ingestion evidence (set SOURCE, STATUS, WATERMARK, ROW_COUNT)
+	@test -n "$(SOURCE)" && test -n "$(STATUS)" || (echo "Set SOURCE and STATUS" && exit 1)
+	$(DOCKER_RUN) python scripts/record_source_ingestion.py --source "$(SOURCE)" --status "$(STATUS)" $(if $(WATERMARK),--source-watermark "$(WATERMARK)") $(if $(ROW_COUNT),--ingested-row-count "$(ROW_COUNT)") $(ARGS)
 
 dbt-train: ## Run features + BQML training models (tag:train)
 	docker compose run --rm ml-pipeline dbt run --project-dir dbt --target $(DBT_TARGET) --select tag:train $(ARGS)
@@ -539,6 +546,10 @@ prefect-run-model-lifecycle: ## Trigger manual governed model lifecycle deployme
 	$(DOCKER_RUN) -e PREFECT_API_URL=$(PREFECT_API_URL_DOCKER) prefect deployment run \
 		'prefect-model-lifecycle/prefect-model-lifecycle-manual'
 
+prefect-run-scheduled-forecast: ## Trigger scheduled champion-to-draft forecast deployment
+	$(DOCKER_RUN) -e PREFECT_API_URL=$(PREFECT_API_URL_DOCKER) prefect deployment run \
+		'prefect-scheduled-forecast-pipeline/prefect-scheduled-forecast-pipeline-daily'
+
 # Run flows directly in Docker (no Prefect server; for development)
 prefect-flow-dbt: ## Run prefect-dbt-run flow once in Docker
 	$(DOCKER_RUN) python -c "from orchestration.flows.dbt import prefect_dbt_run_flow; prefect_dbt_run_flow()"
@@ -557,6 +568,9 @@ skip_optimize=$(if $(filter 1 true yes,$(SKIP_OPTIMIZE)),True,False), skip_predi
 
 prefect-flow-model-lifecycle: ## Run governed model lifecycle flow once in Docker
 	$(DOCKER_RUN) python -c "from orchestration.flows.model_lifecycle import prefect_model_lifecycle_flow; prefect_model_lifecycle_flow()"
+
+prefect-flow-scheduled-forecast: ## Score champion and create a validated draft in Docker
+	$(DOCKER_RUN) python -c "from orchestration.flows.scheduled_forecast_pipeline import prefect_scheduled_forecast_pipeline_flow; prefect_scheduled_forecast_pipeline_flow()"
 
 # --- CLEANUP COMMANDS ---
 

@@ -105,6 +105,7 @@ def run_optimize_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         target_column,
         test_size=test_size,
         date_column=sort_column,
+        purge_days=int(inputs.get("validation_purge_days", 0)),
     )
 
     run_at = dt.utcnow()

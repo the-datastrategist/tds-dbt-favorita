@@ -40,13 +40,13 @@ gantt
 
 | Day | Activity | Owner | Deliverable |
 |-----|----------|-------|-------------|
-| 1–2 | Stakeholder interviews: planning, merchandising, data | Consulting | Requirements doc |
-| 2 | Map source systems → raw BigQuery landing pattern | Consulting + client DE | Source inventory |
+| 1–2 | Stakeholder interviews: planning, merchandising, data | Platform team | Requirements doc |
+| 2 | Map source systems → raw BigQuery landing pattern | Platform team + adopter DE | Source inventory |
 | 3 | Create GCP projects (dev/prod), APIs, datasets | Platform | Project IDs documented |
 | 3–4 | GCS buckets: raw, staging, models, pipeline root | Platform | Bucket URIs in `.env` |
 | 4 | Service account + IAM per [iac.md](iac.md) | Platform | SA email, role worksheet |
 | 5 | Artifact Registry + first Docker image push | Platform | `VERTEX_TRAINING_IMAGE` |
-| 5 | Client `.env` from `env.example` | Consulting | Configured dev environment |
+| 5 | Client `.env` from `env.example` | Platform team | Configured dev environment |
 
 ### Exit criteria
 

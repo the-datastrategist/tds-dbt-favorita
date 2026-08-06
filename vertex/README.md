@@ -4,7 +4,9 @@ Python training, prediction, and hyperparameter optimization for GCP demand fore
 
 The checked-in config names and output table names are implementation defaults. New projects should adapt `model_config.yaml`, BigQuery table names, GCS paths, and dbt feature queries to their forecast contract and project-specific dbt models.
 
-For dbt, data loading, and the full repo workflow, see the [root README](../README.md).
+For dbt, data loading, and the full repo workflow, see the [root README](../README.md). New users
+should follow [Generate your first forecast](../docs/first_forecast.md) before using the advanced
+model and submission options below.
 
 ## Architecture
 
@@ -394,7 +396,7 @@ make vertex-pipeline-train-only VERTEX_PIPELINE=favorita_arima
 make dbt-vertex
 ```
 
-**GCP practices** (consulting template): dedicated pipeline SA (`VERTEX_PIPELINE_SERVICE_ACCOUNT`), customer-owned `VERTEX_AI_PIPELINE_ROOT`, resource labels (`GCP_CLIENT_LABEL`, `GCP_ENVIRONMENT`), and least-privilege IAM — see [ops/README.md](ops/README.md).
+**GCP practices** (open-source forecasting platform): dedicated pipeline SA (`VERTEX_PIPELINE_SERVICE_ACCOUNT`), operator-owned `VERTEX_AI_PIPELINE_ROOT`, resource labels (`GCP_CLIENT_LABEL`, `GCP_ENVIRONMENT`), and least-privilege IAM — see [ops/README.md](ops/README.md).
 
 dbt models: `stg_vertex_model_predictions`, `stg_vertex_model_metadata`, `stg_vertex_job_runs` (sources in `dbt/models/sources/vertex.yml`). Apply DDL once: `vertex/ddl/vertex_bq_tables.sql` (`make vertex-bq-ddl` prints the path).
 

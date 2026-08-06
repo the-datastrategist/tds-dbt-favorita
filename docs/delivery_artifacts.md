@@ -114,7 +114,7 @@ GCP provisioning guidance, IAM matrix, GCS layout, and Scheduler patterns. Both 
 
 ## Supporting collateral checklist
 
-Use during proposals and close:
+Use during platform evaluation and adoption planning:
 
 - [ ] Link to hosted dbt Docs (GitHub Pages)
 - [ ] 5-minute architecture diagram (from [reference_architecture.md](reference_architecture.md))
@@ -128,7 +128,7 @@ Use during proposals and close:
 
 ## Related documents
 
-- [Consulting package overview](consulting_package.md)
-- Product views: [dbt](dbt/consulting_package.md) · [Vertex](vertex/consulting_package.md) · [MLflow](mlflow/consulting_package.md) · [Prefect](prefect/consulting_package.md)
+- [Open-source forecasting platform on GCP](platform_guide.md)
+- Product views: [dbt](dbt/component_guide.md) · [Vertex](vertex/component_guide.md) · [MLflow](mlflow/component_guide.md) · [Prefect](prefect/component_guide.md)
 
 {% enddocs %}

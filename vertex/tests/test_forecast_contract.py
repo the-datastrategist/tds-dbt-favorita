@@ -35,6 +35,8 @@ class TestForecastContract:
         assert contract.name == "store_daily_demand"
         assert contract.horizons == [1, 7]
         assert contract.quantiles == [0.1, 0.5, 0.9]
+        assert contract.routing["fallback_order"]["cold_start"][0] == "global_model"
+        assert contract.calibration["method"] == "symmetric_split_conformal"
         assert contract.hash
 
     def test_rejects_feature_availability_overlap(self):

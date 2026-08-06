@@ -3,7 +3,7 @@
 # SPEC: Point-in-time feature availability
 
 **Status:** In progress
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P0 "Enforce point-in-time feature correctness"
+**Roadmap reference:** [Specs overview](README.md) — P0 "Enforce point-in-time feature correctness"
 
 ---
 
@@ -121,6 +121,14 @@ the [scheduled forecast publication pipeline](scheduled_forecast_publication_pip
 - Every feature used by the default forecast contract is registered.
 - Backtests and production scoring both record feature availability hash and source cutoffs.
 - At least one automated test catches a deliberately leaking feature.
+
+## Shipped evidence
+
+This capability is shipped. The live scheduled run passed the blocking point-in-time cutoff gate
+with its data cutoff equal to the forecast origin and persisted the exact configured
+feature-availability registry hash, feature version, source cutoff, and materialization identity.
+The initial null-hash defect and its corrected append-only successor are documented in
+[scheduled forecast publication acceptance](../acceptance/scheduled_forecast_publication_2026-08-05.md).
 
 ## Related documents
 

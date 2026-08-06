@@ -1,6 +1,48 @@
 version: 2
 
 models:
+  - name: stg_source_ingestion_runs
+    description: Append-only loader outcomes with the source policy active for each run.
+    columns:
+      - name: ingestion_run_id
+        data_tests: [unique, not_null]
+      - name: source_name
+        data_tests: [not_null]
+      - name: source_policy_hash
+        data_tests: [not_null]
+      - name: data_mode
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [static_demo, continuous]
+      - name: status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [succeeded, failed, partial]
+      - name: started_at
+        data_tests: [not_null]
+      - name: finished_at
+        data_tests: [not_null]
+
+  - name: stg_forecast_series_classifications
+    description: Immutable series classifications used by forecast strategy routing.
+    columns:
+      - name: classification_id
+        data_tests: [unique, not_null]
+      - name: entity_key_json
+        data_tests: [not_null]
+      - name: recommended_strategy
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [entity_model, global_model, intermittent_rate_baseline]
+      - name: routing_policy_hash
+        data_tests: [not_null]
+
   - name: stg_model_candidates
     description: Immutable model candidate registrations with a canonical model-scope key.
     columns:
@@ -78,6 +120,10 @@ models:
         data_tests: [not_null]
       - name: horizon
         data_tests: [not_null]
+      - name: mase
+        description: Mean absolute scaled error using each entity's pre-origin naive scale.
+      - name: rmsse
+        description: Root mean squared scaled error using each entity's pre-origin naive scale.
 
   - name: stg_favorita_date_spine
     description: >
@@ -601,6 +647,48 @@ models:
         description: Hash of the feature availability registry used to validate this run.
       - name: feature_materialization_id
         description: Optional feature materialization or plan version identifier.
+      - name: champion_candidate_id
+        description: Champion candidate pinned once for the complete scheduled publication run.
+      - name: eligibility_snapshot_id
+        description: Stable fingerprint of the frozen entity, target-date, and horizon population.
+
+  - name: stg_forecast_pipeline_stage_runs
+    description: Ordered append-only component evidence for scheduled publication runs.
+    columns:
+      - name: stage_run_id
+        data_tests: [unique, not_null]
+      - name: forecast_run_id
+        data_tests: [not_null]
+      - name: stage_name
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [score, route, calibrate, reconcile, validate]
+      - name: stage_position
+        data_tests: [not_null]
+      - name: stage_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [completed, failed]
+
+  - name: stg_forecast_validation_checks
+    description: Immutable blocking and warning gate results evaluated before draft visibility.
+    columns:
+      - name: validation_check_id
+        data_tests: [unique, not_null]
+      - name: forecast_run_id
+        data_tests: [not_null]
+      - name: check_name
+        data_tests: [not_null]
+      - name: severity
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [blocking, warning]
+      - name: passed
+        data_tests: [not_null]
 
   - name: stg_forecast_outputs
     description: >

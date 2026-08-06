@@ -3,7 +3,7 @@
 # SPEC: Scheduled forecast publication pipeline
 
 **Status:** In progress (70%)
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — operationalize calibrated, reconciled, governed forecasts
+**Roadmap reference:** [Specs overview](README.md) — operationalize calibrated, reconciled, governed forecasts
 
 ---
 
@@ -319,6 +319,30 @@ Consumer views must join only a single successful `forecast_run_id` and `publica
 4. Add Prefect orchestration, locking, and resume behavior.
 5. Add dbt consumer, quality, and monitoring views.
 6. Run local, then live draft-only acceptance before enabling approval or auto-publication.
+
+## Current implementation
+
+- The initial production contract publishes the governed horizon-7 champion and fails closed when
+  prediction horizons do not match its contract.
+- Prefect resolves the current champion, scores it without exposing the model writer's intermediate
+  draft, and executes routing, split-conformal calibration, reconciliation/no-op reconciliation,
+  and validation in the authoritative order.
+- Logical run, stage, output, calibration, and validation IDs are deterministic. A BigQuery-backed
+  lease prevents concurrent visibility for the same contract and origin.
+- Stage evidence, blocking-gate evidence, and canonical output rows persist before the final
+  `forecast_runs.run_status = 'draft'` record. `forecast_visible_drafts` enforces that atomic
+  boundary for consumers.
+- Failed logical runs persist retry-stable blocking exceptions without making partial output visible.
+- Live draft-only execution and an identical idempotent retry passed on 2026-08-05. Downstream
+  delivery and hierarchy-enabled acceptance remain owned by their dedicated specs.
+
+## Shipped evidence
+
+This base pipeline is shipped. Live GCP acceptance persisted the authoritative five-stage order,
+three passing blocking gates, one complete 54-row atomic draft, full component lineage, and no
+duplicates after an identical retry. The accepted identifiers, results, defect history, and
+verification SQL are recorded in
+[scheduled forecast publication acceptance](../acceptance/scheduled_forecast_publication_2026-08-05.md).
 
 ## Open questions
 

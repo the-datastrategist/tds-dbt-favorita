@@ -155,7 +155,22 @@ Apply the idempotent Vertex and forecast-output DDL after the derived dataset ex
 make vertex-bq-ddl
 ```
 
-Confirm that the expected job-run, model metadata, performance, optimization, prediction, forecast-contract, forecast-run, forecast-output, and status-history tables exist. The authoritative definitions are in `vertex/ddl/vertex_bq_tables.sql`.
+Confirm that the expected ingestion-run, job-run, model metadata, performance, optimization,
+prediction, forecast-contract, forecast-run, forecast-output, and status-history tables exist. The
+authoritative definitions are in `vertex/ddl/vertex_bq_tables.sql`.
+
+Because the derived dataset was recreated, append new evidence for the preserved raw source before
+building monitoring views. Use the actual maximum source watermark and row count captured in the
+pre-rebuild inventory:
+
+```bash
+make source-ingestion-record \
+  SOURCE=favorita_sales \
+  STATUS=succeeded \
+  WATERMARK=<source-watermark> \
+  ROW_COUNT=<source-row-count> \
+  ARGS='--source-uri <preserved-source-uri>'
+```
 
 ## 7. Rebuild dbt transformations
 
@@ -211,6 +226,7 @@ Stage the new Vertex outputs and rebuild downstream evaluation models:
 ```bash
 make dbt-vertex
 make selector-accuracy-monitoring
+make selector-forecast-monitoring
 make dbt-test
 ```
 
@@ -220,7 +236,12 @@ Start or re-enable orchestration only after the rebuilt environment passes valid
 
 Compare the rebuilt environment with the pre-rebuild inventory. At minimum, verify:
 
-- the raw dataset is unchanged and source freshness is acceptable;
+- the raw dataset is unchanged and its latest ingestion evidence has the expected policy hash,
+  watermark, and row count;
+- `forecast_source_health` reports `healthy_static` for an intentional snapshot or `healthy` for a
+  continuous source inside its configured ingestion window;
+- `forecast_pipeline_health` agrees with the latest scheduled run's stages, gates, cardinality,
+  and quantile coverage;
 - the derived dataset has the intended location, labels, IAM, and lifecycle settings;
 - expected dbt relations and BQML models exist;
 - dbt tests pass;

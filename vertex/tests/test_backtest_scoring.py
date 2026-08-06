@@ -81,6 +81,8 @@ class TestBaselineScoring:
         assert metric["prediction_completeness"] == 1.0
         assert metric["wape"] == 1.0
         assert metric["mae"] == 7.5
+        assert metric["mase"] == 15.0
+        assert metric["rmsse"] == 15.0
         assert metric["bias"] == -7.5
 
     def test_missing_predictions_reduce_completeness(self):
@@ -184,7 +186,7 @@ class TestBaselineScoring:
 
     def test_scores_configured_model_on_same_origin_and_run(self):
         history = _history()
-        history["sales_store_n7d_same_dow"] = history["sales_store"].shift(-7)
+        history["sales_store_n7d"] = history["sales_store"].shift(-7)
         history["sales_store_l1d"] = range(len(history))
         seen: dict[str, pd.DataFrame] = {}
 
@@ -214,7 +216,7 @@ class TestBaselineScoring:
 
     def test_rejects_model_feature_snapshot_created_after_origin(self):
         history = _history()
-        history["sales_store_n7d_same_dow"] = history["sales_store"].shift(-7)
+        history["sales_store_n7d"] = history["sales_store"].shift(-7)
         history["promotion"] = 1
         history["promotion_plan_updated_at"] = pd.Timestamp("2016-08-02")
 
@@ -254,3 +256,5 @@ class TestBaselineScoring:
 
         assert pd.isna(result.metrics.iloc[0]["wape"])
         assert result.metrics.iloc[0]["mae"] == 0
+        assert pd.isna(result.metrics.iloc[0]["mase"])
+        assert pd.isna(result.metrics.iloc[0]["rmsse"])

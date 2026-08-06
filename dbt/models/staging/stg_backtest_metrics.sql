@@ -22,8 +22,14 @@ select
     metrics.prediction_count,
     metrics.wape,
     metrics.mae,
+    metrics.mase,
+    metrics.rmsse,
     metrics.bias,
     metrics.prediction_completeness,
+    metrics.pinball_loss,
+    metrics.interval_coverage,
+    metrics.interval_width,
+    metrics.calibration_error,
     metrics.created_at
 from {{ source('vertex_ml', 'backtest_metrics') }} as metrics
 inner join {{ ref('stg_backtest_runs') }} as runs

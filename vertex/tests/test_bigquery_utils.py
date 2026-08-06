@@ -79,6 +79,17 @@ class TestBigQueryUtils:
 
         assert prepared["fallback_reason"] is None
 
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            ("2016-08-08", "2016-08-08 00:00:00"),
+            ("2016-08-08T12:34:56", "2016-08-08 12:34:56"),
+            ("2016-08-08T12:34:56-04:00", "2016-08-08 16:34:56"),
+        ],
+    )
+    def test_coerce_timestamp_strings(self, value: str, expected: str):
+        assert _coerce_value_for_bq_type(value, "TIMESTAMP") == expected
+
     def test_query_parameter_honors_date_schema(self):
         value = pd.Timestamp("2024-01-02")
 
@@ -166,11 +177,13 @@ class TestBigQueryUtils:
         destination.reference.table_id = "predictions"
         client.get_table.return_value = destination
         client.insert_rows_json.return_value = []
+        client.query.return_value.num_dml_affected_rows = 1
 
-        insert_rows_idempotent(
+        inserted = insert_rows_idempotent(
             rows, "proj.ds.predictions", id_column="prediction_id", project_id="proj"
         )
 
+        assert inserted == 1
         client.create_table.assert_called_once()
         client.insert_rows_json.assert_called_once()
         merge_sql = client.query.call_args.args[0]

@@ -1,0 +1,16 @@
+forecast:
+  name: store_daily_demand_h7_publication
+  target: demand_units
+  target_unit: units
+  dimensions: [store_id]
+  frequency: day
+  timezone: America/New_York
+  issue_schedule: "0 9 * * *"
+  horizons: [7]
+  quantiles: [0.1, 0.5, 0.9]
+  training_window_days: 180
+  known_future_features: [promotion, holiday]
+  observed_features: [sales, transactions]
+  hierarchy: []
+  reconciliation_policy: none
+  demand_policy: observed_sales_only

@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Sequence
+from datetime import datetime, timezone
+from typing import Any, Sequence
 
 import pandas as pd
 
+from vertex.utils.bigquery_utils import insert_rows_idempotent
 from vertex.utils.data_utils import get_hash
 
 
@@ -16,6 +18,18 @@ class RoutingPolicy:
     minimum_history: int = 28
     minimum_nonzero_observations: int = 3
     intermittent_adi_threshold: float = 1.32
+
+    @classmethod
+    def from_contract(cls, routing: dict[str, Any]) -> "RoutingPolicy":
+        return cls(
+            minimum_history=int(routing["minimum_history"]),
+            minimum_nonzero_observations=int(routing["minimum_nonzero_observations"]),
+            intermittent_adi_threshold=float(routing["intermittent_adi_threshold"]),
+        )
+
+    @property
+    def hash(self) -> str:
+        return get_hash(self.__dict__)
 
 
 @dataclass(frozen=True)
@@ -145,3 +159,90 @@ def attach_strategy_metadata(
     result["fallback_reason"] = decision.fallback_reason
     result["confidence_flag"] = decision.confidence_flag
     return result
+
+
+def build_classification_rows(
+    profiles: pd.DataFrame,
+    *,
+    forecast_contract_name: str,
+    forecast_contract_hash: str,
+    forecast_origin: object,
+    policy: RoutingPolicy,
+    classified_at: datetime | None = None,
+) -> pd.DataFrame:
+    """Attach stable append-only identity and policy lineage to series profiles."""
+    now = classified_at or datetime.now(timezone.utc)
+    rows = profiles.copy()
+    if rows.empty:
+        return rows
+    rows["forecast_contract_name"] = forecast_contract_name
+    rows["forecast_contract_hash"] = forecast_contract_hash
+    rows["forecast_origin"] = pd.Timestamp(forecast_origin)
+    rows["routing_policy_hash"] = policy.hash
+    rows["classified_at"] = now
+    rows["classification_id"] = rows.apply(
+        lambda row: get_hash(
+            {
+                "forecast_contract_hash": forecast_contract_hash,
+                "forecast_origin": str(pd.Timestamp(forecast_origin)),
+                "entity_key_json": row["entity_key_json"],
+                "routing_policy_hash": policy.hash,
+            }
+        ),
+        axis=1,
+    )
+    return rows
+
+
+def persist_classification_rows(
+    rows: pd.DataFrame,
+    *,
+    table_id: str,
+    project_id: str | None = None,
+) -> int:
+    """Persist classifications idempotently using their stable logical identity."""
+    if rows.empty:
+        return 0
+    return insert_rows_idempotent(
+        rows,
+        table_id,
+        id_column="classification_id",
+        project_id=project_id,
+    )
+
+
+def route_from_contract(
+    *,
+    is_cold_start: bool,
+    is_intermittent: bool,
+    routing: dict[str, Any],
+    available_strategies: set[str],
+) -> StrategyDecision:
+    """Choose the first available contract-declared strategy."""
+    if is_cold_start:
+        order = routing["fallback_order"]["cold_start"]
+        reason = "cold_start"
+    elif is_intermittent:
+        order = routing["fallback_order"]["intermittent"]
+        reason = "intermittent_demand"
+    else:
+        order = ["entity_model", "global_model", "seasonal_baseline", "business_default"]
+        reason = "entity_model_unavailable"
+    allowed = set(routing["allowed_strategies"])
+    for strategy in order:
+        if strategy not in allowed:
+            continue
+        if strategy in available_strategies or (
+            strategy == "business_default" and routing.get("business_default") is not None
+        ):
+            confidence = (
+                "high"
+                if strategy == "entity_model"
+                else "medium" if strategy in {"global_model", "aggregate_allocation"} else "low"
+            )
+            return StrategyDecision(
+                strategy,
+                None if strategy == "entity_model" else reason,
+                confidence,
+            )
+    raise ValueError("contract-declared forecast strategy fallbacks are exhausted")

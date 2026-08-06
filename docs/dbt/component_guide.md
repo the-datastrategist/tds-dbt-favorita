@@ -1,16 +1,18 @@
-{% docs dbt_consulting_package %}
+{% docs dbt_component_guide %}
 
-# dbt consulting package — GCP demand forecasting platform
+# dbt component guide — GCP demand forecasting platform
 
-**dbt's role** in this engagement: govern the **analytics engineering layer** — raw → staging → ML features → BQML marts → Vertex output staging — with tests, lineage, and documented exposures for ML and BI consumers.
+**dbt's role** in the platform: govern the **analytics engineering layer** — raw → staging → ML
+features → BQML marts → Vertex output staging — with tests, lineage, and documented exposures for
+ML and BI consumers.
 
 The dbt layer is intentionally project-specific. Builders should adapt or replace staging and feature models so their own operational sources map into forecast-ready targets, grains, covariates, eligibility rules, and marts.
 
-Parent overview: [consulting_package.md](../consulting_package.md)
+Parent overview: [platform_guide.md](../platform_guide.md)
 
 ---
 
-## dbt in the three-layer package
+## dbt in the platform architecture
 
 ```mermaid
 flowchart TB
@@ -91,7 +93,7 @@ make dbt-test             # data quality
 make dbt-docs-generate    # catalog + lineage
 ```
 
-### Feature grains (consulting talking points)
+### Feature grains (implementation considerations)
 
 | Model | Grain | Default for |
 |-------|-------|-------------|
@@ -112,7 +114,7 @@ make dbt-docs-generate    # catalog + lineage
 | **Rollout** | Week 2 = dbt staging + tests; Week 4 = `dbt-vertex` |
 | **Lineage** | Exposures for forecast, training, prediction, calendar, and master-data consumers |
 
-### Exposures for client conversations
+### Exploring exposures
 
 Open dbt Docs lineage and highlight the project exposures for:
 
@@ -123,7 +125,7 @@ Open dbt Docs lineage and highlight the project exposures for:
 
 ---
 
-## Client customization (dbt)
+## Adapting the dbt layer
 
 1. Add client sources in `dbt/models/raw/` or update `sources.yml`
 2. Adapt staging column names / grains
@@ -138,6 +140,6 @@ Open dbt Docs lineage and highlight the project exposures for:
 - [Full reference architecture](../reference_architecture.md)
 - [Accelerators](../accelerators.md)
 - [Client rollout](../client_rollout.md) — Week 2 dbt focus
-- Other products: [Vertex](../vertex/consulting_package.md) · [MLflow](../mlflow/consulting_package.md) · [Prefect](../prefect/consulting_package.md)
+- Other products: [Vertex](../vertex/component_guide.md) · [MLflow](../mlflow/component_guide.md) · [Prefect](../prefect/component_guide.md)
 
 {% enddocs %}

@@ -1,14 +1,16 @@
-{% docs prefect_consulting_package %}
+{% docs prefect_component_guide %}
 
-# Prefect consulting package — GCP demand forecasting platform
+# Prefect component guide — GCP demand forecasting platform
 
-**Prefect's role** in this engagement: **orchestrate** recurring dbt feature builds and Vertex ML workloads (train-only or full optimize → train → predict pipelines) with a local OSS demo path that maps cleanly to Cloud Scheduler / Workflows in production.
+**Prefect's role** in the platform: **orchestrate** recurring dbt feature builds and Vertex ML
+workloads (train-only or full optimize → train → predict pipelines) with a local OSS path that maps
+cleanly to Cloud Scheduler or Workflows in production.
 
-Parent overview: [consulting_package.md](../consulting_package.md)
+Parent overview: [platform_guide.md](../platform_guide.md)
 
 ---
 
-## Prefect in the three-layer package
+## Prefect in the platform architecture
 
 ```mermaid
 flowchart TB
@@ -95,6 +97,10 @@ flowchart LR
 | `prefect-vertex-train-model-schedule` | Daily 07:00 | Training |
 | `prefect-vertex-ml-pipeline-manual` | On demand | optimize → train → predict |
 | `prefect-vertex-ml-pipeline-scheduled` | Sun 08:00 | XGBoost full pipeline |
+| `prefect-model-lifecycle-manual` | On demand | Rolling-origin evaluation and governed promotion |
+| `prefect-model-lifecycle-scheduled` | Sun 10:00 | Governed lifecycle evaluation |
+| `prefect-scheduled-forecast-pipeline-daily` | Daily 09:00 | Champion scoring to validated atomic draft |
+| `prefect-forecast-publication-manual` | On demand | Validate or idempotently publish a canonical run |
 
 ### Key commands
 
@@ -107,11 +113,20 @@ make prefect-worker              # execute runs
 make prefect-run-dbt
 make prefect-run-vertex-train
 make prefect-run-vertex-pipeline VERTEX_PIPELINE=favorita_xgboost
+make prefect-run-model-lifecycle
+make prefect-run-scheduled-forecast
 
 # Dev: no server required
 make prefect-flow-dbt
 make prefect-flow-vertex-pipeline SKIP_OPTIMIZE=1
+make prefect-flow-model-lifecycle
+make prefect-flow-scheduled-forecast
 ```
+
+The scheduled forecast flow pins the governed champion, scores without exposing intermediate
+drafts, routes, calibrates, reconciles when configured, validates, and writes the `draft` run
+record last. Consumers should read `forecast_visible_drafts`; the manual publication deployment
+owns the later gated approval/publication boundary.
 
 ### Flow parameters (Vertex)
 
@@ -168,7 +183,7 @@ Makefile defaults worker API to `http://host.docker.internal:4200/api`.
 
 ---
 
-## Client customization (Prefect)
+## Adapting the Prefect layer
 
 1. Edit cron expressions in `prefect.yaml` for client timezone
 2. Set `PREFECT_DEFAULT_VERTEX_MODE=vertex` for GCP execution
@@ -182,6 +197,6 @@ Makefile defaults worker API to `http://host.docker.internal:4200/api`.
 - [orchestration/README.md](../../orchestration/README.md)
 - [Client rollout](../client_rollout.md) — Week 4
 - [IaC — Scheduling](../iac.md#scheduling-production)
-- Other products: [dbt](../dbt/consulting_package.md) · [Vertex](../vertex/consulting_package.md) · [MLflow](../mlflow/consulting_package.md)
+- Other products: [dbt](../dbt/component_guide.md) · [Vertex](../vertex/component_guide.md) · [MLflow](../mlflow/component_guide.md)
 
 {% enddocs %}

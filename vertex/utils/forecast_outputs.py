@@ -225,9 +225,10 @@ def _feature_version(config: dict[str, Any]) -> str:
     )
 
 
-def _contract_registration_row(
+def build_contract_registration_row(
     contract: ForecastContract, registered_at: datetime
 ) -> dict[str, Any]:
+    """Build the immutable registry row for a forecast contract."""
     spec = contract.spec
     return {
         "forecast_contract_name": contract.name,
@@ -247,6 +248,8 @@ def _contract_registration_row(
         "hierarchy": spec.get("hierarchy") or [],
         "reconciliation_policy": contract.reconciliation_policy,
         "demand_policy": contract.demand_policy,
+        "routing_policy_json": contract.routing,
+        "calibration_policy_json": contract.calibration,
         "contract_json": contract.raw,
         "is_active": True,
     }
@@ -314,7 +317,7 @@ def write_forecast_outputs_if_configured(
     assert isinstance(runs_table, str)
     assert isinstance(status_table, str)
     merge_row_to_bigquery(
-        _contract_registration_row(contract, now),
+        build_contract_registration_row(contract, now),
         contract_table,
         merge_key="forecast_contract_hash",
         project_id=project_id,

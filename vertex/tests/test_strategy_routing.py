@@ -7,8 +7,10 @@ from vertex.evaluation.strategy_routing import (
     RoutingPolicy,
     StrategyAvailability,
     attach_strategy_metadata,
+    build_classification_rows,
     choose_forecast_strategy,
     classify_series,
+    route_from_contract,
 )
 
 
@@ -71,3 +73,67 @@ def test_router_fails_when_policy_has_no_available_strategy():
             is_intermittent=False,
             availability=StrategyAvailability(False, False, False, False, False),
         )
+
+
+@pytest.mark.unit
+def test_classification_rows_have_retry_stable_policy_lineage():
+    profiles = classify_series(
+        pd.DataFrame({"store_id": [1] * 30, "demand": [1.0] * 30}),
+        entity_columns=["store_id"],
+        demand_column="demand",
+    )
+    policy = RoutingPolicy()
+    first = build_classification_rows(
+        profiles,
+        forecast_contract_name="daily",
+        forecast_contract_hash="contract",
+        forecast_origin="2026-07-24",
+        policy=policy,
+    )
+    second = build_classification_rows(
+        profiles,
+        forecast_contract_name="daily",
+        forecast_contract_hash="contract",
+        forecast_origin="2026-07-24",
+        policy=policy,
+    )
+    assert first["classification_id"].tolist() == second["classification_id"].tolist()
+    assert first.loc[0, "routing_policy_hash"] == policy.hash
+
+
+@pytest.mark.unit
+def test_contract_routing_covers_cold_intermittent_and_default():
+    routing = {
+        "allowed_strategies": [
+            "entity_model",
+            "global_model",
+            "intermittent_rate_baseline",
+            "business_default",
+        ],
+        "fallback_order": {
+            "cold_start": ["global_model", "business_default"],
+            "intermittent": ["intermittent_rate_baseline", "business_default"],
+        },
+        "business_default": 0.0,
+    }
+    cold = route_from_contract(
+        is_cold_start=True,
+        is_intermittent=False,
+        routing=routing,
+        available_strategies={"global_model"},
+    )
+    intermittent = route_from_contract(
+        is_cold_start=False,
+        is_intermittent=True,
+        routing=routing,
+        available_strategies={"intermittent_rate_baseline"},
+    )
+    default = route_from_contract(
+        is_cold_start=False,
+        is_intermittent=False,
+        routing=routing,
+        available_strategies=set(),
+    )
+    assert cold.forecast_strategy == "global_model"
+    assert intermittent.forecast_strategy == "intermittent_rate_baseline"
+    assert default.forecast_strategy == "business_default"

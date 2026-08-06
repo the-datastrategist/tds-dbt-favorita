@@ -1,8 +1,10 @@
-{% docs consulting_package %}
+{% docs platform_guide %}
 
-# Consulting package — GCP demand forecasting platform
+# Open-source forecasting platform on GCP
 
-This repository is a **productized engagement** from [The Data Strategist](https://www.thedatastrategist.com): a production-style demand-forecasting platform pattern for Google Cloud.
+This repository is an **open-source forecasting platform on GCP**. It provides reusable
+contracts, infrastructure, model execution, evaluation, orchestration, and forecast operations
+while leaving business-specific source adaptation and demand semantics to each implementation.
 
 It is designed for teams that want a reusable GCP foundation while retaining control of their own dbt feature engineering, business definitions, forecast grains, and planning workflow.
 
@@ -12,13 +14,13 @@ It is designed for three audiences:
 |----------|-------------------|
 | **Executive / business** | [Case study](case_study.md) — problem, approach, outcomes |
 | **Platform / data engineering** | [Reference architecture](reference_architecture.md) — layers, flows, GCP services |
-| **Delivery team** | [Accelerators](accelerators.md) + [Client rollout](client_rollout.md) |
+| **Platform adopter** | [Accelerators](accelerators.md) + [Adoption guide](client_rollout.md) |
 
-Product-specific views: [dbt](dbt/consulting_package.md) · [Vertex AI](vertex/consulting_package.md) · [MLflow](mlflow/consulting_package.md) · [Prefect](prefect/consulting_package.md)
+Product-specific views: [dbt](dbt/component_guide.md) · [Vertex AI](vertex/component_guide.md) · [MLflow](mlflow/component_guide.md) · [Prefect](prefect/component_guide.md)
 
 ---
 
-## Three-layer package
+## Platform documentation layers
 
 ```mermaid
 flowchart TB
@@ -35,8 +37,8 @@ flowchart TB
     ACC --> Orch[Prefect flows + Makefile + Docker + CI]
   end
 
-  subgraph L3["3. Delivery artifacts"]
-    DEL[Client-ready collateral]
+  subgraph L3["3. Operating guides"]
+    DEL[Adoption and operations guidance]
     DEL --> CS[Case study]
     DEL --> BM[Benchmarks]
     DEL --> DB[Dashboard blueprint]
@@ -55,7 +57,7 @@ Documents **how** a production GCP forecasting platform is structured: ingestion
 
 ### Layer 2 — Accelerators
 
-Shippable code and configuration that compresses time-to-value on client projects:
+Reusable code and configuration that shorten implementation time:
 
 - dbt models (`staging` → `intermediate` → `marts`) with grain tests and lineage exposures
 - Vertex registry + `model_config.yaml` for XGBoost, Random Forest, ARIMA, SARIMA
@@ -65,29 +67,36 @@ Shippable code and configuration that compresses time-to-value on client project
 
 → Inventory: [accelerators.md](accelerators.md)
 
-### Layer 3 — Delivery artifacts
+### Layer 3 — Operating guides
 
-Collateral used in sales, kickoff, and handoff:
+Guidance for evaluating, adopting, operating, and extending the platform:
 
 | Artifact | Location | Status |
 |----------|----------|--------|
 | Case study | [case_study.md](case_study.md) | Available |
 | Benchmarks | [benchmarks.md](benchmarks.md) | Template + query recipes |
 | Dashboard blueprint | [delivery_artifacts.md](delivery_artifacts.md#dashboard-blueprint) | Blueprint (BI layer planned) |
-| Client rollout playbook | [client_rollout.md](client_rollout.md) | Available |
+| Adoption playbook | [client_rollout.md](client_rollout.md) | Available |
 | IaC / GCP ops | [iac.md](iac.md) + `vertex/ops/README.md` | Runbook + Terraform modules available |
+| Forecast monitoring | [monitoring_and_slos.md](monitoring_and_slos.md) | Source-mode and pipeline-health operations available |
 
 → Index: [delivery_artifacts.md](delivery_artifacts.md)
 
 ---
 
-## Engagement positioning
+## Platform boundaries
 
-**What clients buy:** a **repeatable GCP forecasting platform pattern** — governed features in BigQuery, choice of BQML vs custom Vertex models, orchestrated refresh, auditable predictions, and a path to production IAM/scheduling.
+**What the platform provides:** governed feature and forecast contracts in BigQuery, BQML and
+custom Vertex model paths, orchestrated refreshes, auditable predictions, and production-oriented
+IAM and scheduling patterns.
 
-**What we customize per client:** dataset and grains, model families, schedules, cost tier (BQML-only vs full Vertex pipelines), BI tool, and enterprise controls (VPC-SC, WIF, CMEK).
+**What adopters configure:** datasets and grains, model families, schedules, compute tier,
+delivery destinations, and enterprise controls such as VPC-SC, WIF, and CMEK.
 
-**What the client implementation owns:** the dbt models that map raw operational data into forecast-ready staging, feature, eligibility, hierarchy, and mart layers. This is not a gap in reuse; it is the correct boundary because demand forecasting features vary by industry, source-system maturity, inventory availability, and planning process.
+**What each implementation owns:** the dbt models that map raw operational data into
+forecast-ready staging, feature, eligibility, hierarchy, and mart layers. This boundary is
+intentional because demand signals vary by domain, source-system maturity, inventory visibility,
+and planning process.
 
 **Proof points in this repo:**
 
@@ -95,6 +104,7 @@ Collateral used in sales, kickoff, and handoff:
 - Same feature tables feed BQML and Vertex
 - Config-driven ML without fork-per-model scripts
 - CI validates configs, compiles KFP pipelines, and runs unit tests without GCP
+- Append-only source ingestion evidence with distinct static-demo and continuous freshness semantics
 
 ---
 
@@ -109,9 +119,9 @@ Collateral used in sales, kickoff, and handoff:
 | 4-week rollout | [client_rollout.md](client_rollout.md) |
 | GCP IAM, scheduling, IaC | [iac.md](iac.md) |
 | Roadmap / engineering specs | [specs/README.md](specs/README.md) |
-| dbt-only view | [dbt/consulting_package.md](dbt/consulting_package.md) |
-| Vertex-only view | [vertex/consulting_package.md](vertex/consulting_package.md) |
-| MLflow-only view | [mlflow/consulting_package.md](mlflow/consulting_package.md) |
-| Prefect-only view | [prefect/consulting_package.md](prefect/consulting_package.md) |
+| dbt-only view | [dbt/component_guide.md](dbt/component_guide.md) |
+| Vertex-only view | [vertex/component_guide.md](vertex/component_guide.md) |
+| MLflow-only view | [mlflow/component_guide.md](mlflow/component_guide.md) |
+| Prefect-only view | [prefect/component_guide.md](prefect/component_guide.md) |
 
 {% enddocs %}

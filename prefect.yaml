@@ -113,6 +113,19 @@ deployments:
         timezone: UTC
         active: true
 
+  - name: prefect-scheduled-forecast-pipeline-daily
+    entrypoint: orchestration/flows/scheduled_forecast_pipeline.py:prefect_scheduled_forecast_pipeline_flow
+    work_pool:
+      name: default
+    description: Daily champion scoring through calibrated, validated atomic draft persistence.
+    parameters:
+      actor: prefect-scheduled-forecast-pipeline-daily
+      minimum_calibration_residuals: 20
+    schedules:
+      - cron: "0 9 * * *"
+        timezone: UTC
+        active: true
+
   - name: prefect-forecast-publication-manual
     entrypoint: orchestration/flows/forecast_publication.py:prefect_forecast_publication_flow
     work_pool:

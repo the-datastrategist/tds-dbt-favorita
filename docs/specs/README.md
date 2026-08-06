@@ -2,9 +2,12 @@
 
 # Engineering specs — roadmap items
 
-Working specs for the **longer-horizon roadmap items** already flagged (but not designed) elsewhere in this repo: [`docs/client_rollout.md`](../client_rollout.md#post-rollout-weeks-58-optional) "Post-rollout" table, [`docs/iac.md`](../iac.md#terraform-roadmap) "Terraform roadmap", [`vertex/README.md`](../../vertex/README.md#adding-a-model-family) "Planned: prophet", and [`docs/demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) for the broader open-source demand forecasting platform roadmap.
+Working specs for the **longer-horizon roadmap items** that turn this repo into a production-style GCP demand forecasting platform. The roadmap is now tracked here, alongside [`docs/client_rollout.md`](../client_rollout.md#post-rollout-weeks-58-optional) "Post-rollout" items, [`docs/iac.md`](../iac.md#terraform-roadmap) "Terraform roadmap", and [`vertex/README.md`](../../vertex/README.md#adding-a-model-family) "Planned: prophet".
 
-These are **internal implementation specs**, not client-facing collateral — contrast with the [consulting package](../consulting_package.md) (case study, benchmarks, rollout playbook), which documents what's *already shipped*. A spec here should graduate into an accelerator entry in [accelerators.md](../accelerators.md) once implemented.
+These are implementation specs for planned or evolving platform capabilities. The
+[open-source forecasting platform guide](../platform_guide.md) documents the shipped architecture
+and reusable components.
+A completed spec should graduate into an accelerator entry in [accelerators.md](../accelerators.md).
 
 ---
 
@@ -20,9 +23,9 @@ These are **internal implementation specs**, not client-facing collateral — co
 
 ## Specs
 
-Status reviewed **2026-07-18**. The completion figures are implementation estimates, while
+Status reviewed **2026-08-05**. The completion figures are implementation estimates, while
 the status column continues to use the acceptance-based definitions above. Across the full
-platform roadmap, the current implementation is approximately **79% complete**.
+platform roadmap, the current implementation is approximately **81% complete**.
 
 | Spec | Status | Completion | Roadmap reference | Summary |
 |------|--------|-----------:|--------------------|---------|
@@ -31,24 +34,24 @@ platform roadmap, the current implementation is approximately **79% complete**.
 | [Terraform modules](terraform_modules.md) | Shipped | 100% | `iac.md` → "Terraform roadmap" | Codify the manual GCP setup scripts as reviewable, per-environment IaC |
 | [Workload Identity Federation](workload_identity_federation.md) | Shipped | 100% | `iac.md` → security checklist "prefer WIF" | Live-accepted repository-scoped GitHub OIDC authentication, keyless Terraform planning, and ADC-based dbt access |
 | [Prophet model family](prophet_model_family.md) | Shipped | 100% | `vertex/README.md` → model families | Add `prophet` as a third time-series family via the existing registry pattern |
-| [Forecast contract and canonical output](forecast_contract_and_output.md) | Shipped | 100% | `demand_forecasting_platform_recommendations.md` → P0 forecast contract | Live-accepted contract validation, canonical persistence, provenance, lifecycle publication, staging, and append-only migration boundary |
-| [Rolling-origin backtesting and model lifecycle](backtesting_and_model_lifecycle.md) | Shipped | 100% | `demand_forecasting_platform_recommendations.md` → P0 backtesting/champion semantics | Live-accepted rolling-origin evaluation, governed promotion gates, scheduled lifecycle orchestration, and current-state warehouse views |
-| [Point-in-time feature availability](point_in_time_feature_availability.md) | In progress | 90% | `demand_forecasting_platform_recommendations.md` → P0 feature correctness | Origin-specific cutoff enforcement, registry validation, persisted cutoff evidence, and model-path integration are implemented; live acceptance and accelerator graduation remain |
-| [Forecasting methods, horizons, cold start, and intermittent demand](forecasting_methods.md) | In progress | 85% | `demand_forecasting_platform_recommendations.md` → P0/P1 methods | Horizon-aware models, intermittent-demand baselines, probabilistic calibration, cold-start fallbacks, and strategy routing are implemented; complete scheduled publication-path validation remains |
-| [Hierarchical reconciliation](hierarchical_reconciliation.md) | In progress | 75% | `demand_forecasting_platform_recommendations.md` → P1 reconciliation | Configurable hierarchies, bottom-up/top-down/middle-out/MinT methods, persistence, and tests are implemented; scheduled publication integration remains |
-| [Demand data model](demand_data_model.md) | Proposed | 20% | `demand_forecasting_platform_recommendations.md` → P1 demand data | Distinguish observed sales from demand and model inventory, eligibility, lifecycle, prices, and promotions |
-| [Forecast operations](forecast_operations.md) | In progress | 50% | `demand_forecasting_platform_recommendations.md` → P1/P2 operations | Append-only override, approval, publication, revision, and exception tables plus staging contracts are implemented; workflow services and transition commands remain |
-| [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md) | In progress | 70% | Cross-spec operational integration | Deterministic champion scoring, routing, calibration, reconciliation gates, leases, failure evidence, and atomic draft visibility are implemented; live delivery and hierarchical acceptance remain |
-| [Monitoring, alerts, and SLOs](monitoring_and_slos.md) | Proposed | 35% | `demand_forecasting_platform_recommendations.md` → P1 monitoring | Define forecast freshness, completeness, accuracy, drift, calibration, pipeline, and cost monitoring |
-| [Integration contracts and forecast delivery](integration_contracts.md) | Proposed | 25% | `demand_forecasting_platform_recommendations.md` → P2 integrations | Provide stable warehouse, API, export, webhook, and publication contracts |
-| [Open-source product readiness](open_source_product_readiness.md) | Proposed | 40% | `demand_forecasting_platform_recommendations.md` → P3 open source | Add governance, first-run quickstart, roadmap, compatibility, extension, and modularization plans |
+| [Forecast contract and canonical output](forecast_contract_and_output.md) | Shipped | 100% | Platform roadmap → P0 forecast contract | Live-accepted contract validation, canonical output DDL, staging, complete provenance, lifecycle status, and governed writer paths |
+| [Rolling-origin backtesting and model lifecycle](backtesting_and_model_lifecycle.md) | Shipped | 100% | Platform roadmap → P0 backtesting/champion semantics | Live-accepted rolling-origin evaluation, governed promotion gates, scheduled lifecycle orchestration, and current-state warehouse views |
+| [Point-in-time feature availability](point_in_time_feature_availability.md) | Shipped | 100% | Platform roadmap → P0 feature correctness | Live-accepted origin-specific cutoff enforcement, registry validation, persisted registry/source-cutoff evidence, and model-path integration |
+| [Forecasting methods, horizons, cold start, and intermittent demand](forecasting_methods.md) | Shipped | 100% | Platform roadmap → P0/P1 methods | Seven-horizon direct scoring, intermittent-demand baselines, calibrated quantiles, cold-start routing, and live-accepted scheduled-stage integration |
+| [Hierarchical reconciliation](hierarchical_reconciliation.md) | In progress | 85% | Platform roadmap → P1 reconciliation | Configurable hierarchies, bottom-up/top-down/middle-out/MinT methods, persistence, tests, and scheduled-stage integration are implemented; live hierarchical acceptance remains |
+| [Demand data model](demand_data_model.md) | Proposed | 20% | Platform roadmap → P1 demand data | Distinguish observed sales from demand and model inventory, eligibility, lifecycle, prices, and promotions |
+| [Forecast operations](forecast_operations.md) | In progress | 65% | Platform roadmap → P1/P2 operations | Append-only operation tables, staging contracts, atomic draft creation, and gated idempotent publication are implemented; planner overrides, revision/rollback commands, and delivery remain |
+| [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md) | Shipped | 100% | Cross-spec operational integration | Live-accepted deterministic champion scoring, routing, calibration, reconciliation gates, leases, failure evidence, Prefect deployment, idempotent retry, and atomic draft visibility |
+| [Monitoring, alerts, and SLOs](monitoring_and_slos.md) | In progress | 65% | Platform roadmap → P1 monitoring | Accuracy plus live-accepted mode-aware source and scheduled-pipeline health are implemented; remaining work covers broader SLOs, alert delivery, drift, calibration, and cost |
+| [Integration contracts and forecast delivery](integration_contracts.md) | Proposed | 25% | Platform roadmap → P2 integrations | Provide stable warehouse, API, export, webhook, and publication contracts |
+| [Open-source product readiness](open_source_product_readiness.md) | Proposed | 40% | Platform roadmap → P3 open source | Add governance, first-run quickstart, roadmap, compatibility, extension, and modularization plans |
 
 ---
 
 ## Related documents
 
 - [Client rollout](../client_rollout.md) — where these items surface as "Backlog" / "Post-rollout"
-- [Demand forecasting platform recommendations](../demand_forecasting_platform_recommendations.md) — roadmap behind the new platform-level specs
+- [Open-source forecasting platform guide](../platform_guide.md) — shipped architecture and reusable platform components
 - [IaC and GCP operations](../iac.md) — current manual state each spec replaces
 - [Accelerators](../accelerators.md) — where shipped specs get catalogued
 

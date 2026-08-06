@@ -21,6 +21,8 @@ select
     hierarchy,
     reconciliation_policy,
     demand_policy,
+    routing_policy_json,
+    calibration_policy_json,
     contract_json,
     is_active
 from {{ source('vertex_ml', 'forecast_contracts') }}

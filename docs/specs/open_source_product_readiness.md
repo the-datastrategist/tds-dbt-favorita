@@ -3,7 +3,7 @@
 # SPEC: Open-source product readiness
 
 **Status:** Proposed
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P3 "Open-source product readiness"
+**Roadmap reference:** [Specs overview](README.md) — P3 "Open-source product readiness"
 
 ---
 
@@ -18,7 +18,7 @@ This spec adds `docs/open_source_governance.md`, `docs/product_roadmap.md`, comm
 - Add community and release governance files.
 - Make the first-run experience self-contained without mandatory GCP credentials.
 - Provide a completed reference benchmark and expected outputs.
-- Clarify implemented, planned, experimental, and consulting-only scope.
+- Clarify implemented, planned, experimental, and deployment-specific scope.
 - Document compatibility across Python, dbt, BigQuery, Vertex, Prefect, Terraform, and optional dependencies.
 - Define extension guides for model families, dbt project implementations, and forecast destinations.
 - Create a migration path toward platform core plus project examples.
@@ -84,7 +84,7 @@ Add `docs/product_roadmap.md` with sections:
 - experimental
 - planned
 - out of scope
-- consulting-only examples, if any
+- deployment-specific examples, if any
 
 Use the recommendation document's scope clarification:
 

@@ -20,7 +20,7 @@
       window.$docsify = {
         name: 'TDS Demand Forecasting Platform',
         repo: 'https://github.com/the-datastrategist/tds-dbt-favorita',
-        homepage: 'overview.md',
+        homepage: 'platform_guide.md',
         loadSidebar: true,
         loadNavbar: true,
         coverpage: true,
@@ -31,10 +31,16 @@
           placeholder: 'Search the documentation',
           noData: 'No matching documentation found',
           depth: 3
+        },
+        mermaidConfig: {
+          startOnLoad: false,
+          theme: 'default'
         }
       };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/docsify@4.13.1/lib/docsify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docsify-mermaid@2.0.1/dist/docsify-mermaid.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docsify@4.13.1/lib/plugins/search.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docsify-copy-code@2.1.1/dist/docsify-copy-code.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>

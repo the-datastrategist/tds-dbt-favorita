@@ -18,6 +18,7 @@ mindmap
       stg_vertex_* over ML outputs
       model leaderboard + champion
       prediction accuracy monitoring
+      canonical forecast + visible draft views
       exposures + schema tests
       selectors daily_refresh
     Vertex
@@ -34,6 +35,7 @@ mindmap
     Prefect
       prefect.yaml deployments
       dbt + vertex flows
+      lifecycle + scheduled draft flows
       Docker worker pattern
     Platform
       Makefile 40+ targets
@@ -55,14 +57,16 @@ mindmap
 | Vertex staging | `dbt/models/staging/stg_vertex_*.sql` | Views over Vertex-written BQ tables |
 | Model leaderboard | `ml_model_leaderboard`, `ml_model_champion` | Unified BQML + Vertex metrics, ranked, champion-flagged per grain |
 | Accuracy monitoring | `ml_prediction_accuracy_rolling`, `assert_no_material_accuracy_drift` | Rolling 7d/28d live accuracy vs. training-time metrics, with a drift test |
+| Source and pipeline health | `source_ingestion_runs`, `forecast_source_health`, `forecast_pipeline_health` | Append-only loader evidence, mode-aware freshness, and scheduled-run gate/output health |
+| Forecast consumption | `stg_forecast_*`, `forecast_visible_drafts` | Contracted run/output/stage/gate views with atomic consumer visibility |
 | Sources | `dbt/models/sources/vertex.yml` | Contract for ML output tables |
-| Selectors | `dbt/selectors.yml` | `daily_refresh`, `ml_features`, `bqml_train`, `bqml_score` |
+| Selectors | `dbt/selectors.yml` | `daily_refresh`, `ml_features`, `bqml_train`, `bqml_score`, `accuracy_monitoring`, `forecast_monitoring` |
 | Exposures | `dbt/models/exposures.yml` | Lineage to ML, dashboard, and app consumers |
-| Docs | `docs/` | Overview + consulting package (`dbt_project.yml` → `docs-paths: ["../docs"]`) |
+| Docs | `docs/` | Overview + platform guide (`dbt_project.yml` → `docs-paths: ["../docs"]`) |
 
-**Commands:** `make dbt-run`, `make dbt-train`, `make dbt-predict`, `make dbt-vertex`, `make dbt-test`, `make selector-accuracy-monitoring`
+**Commands:** `make dbt-run`, `make dbt-train`, `make dbt-predict`, `make dbt-vertex`, `make dbt-test`, `make selector-accuracy-monitoring`, `make selector-forecast-monitoring`
 
-→ Product view: [dbt/consulting_package.md](dbt/consulting_package.md)
+→ Product view: [dbt/component_guide.md](dbt/component_guide.md)
 
 ---
 
@@ -75,14 +79,14 @@ mindmap
 | Runners | `vertex/jobs/run.py`, `submit.py`, `submit_pipeline.py` | Docker, Custom Job, PipelineJob entrypoints |
 | Model registry | `vertex/models/registry.py` | `(model_type, step)` → Python module |
 | Families | `vertex/models/xgboost/`, `sklearn/`, `timeseries/`, `prophet/` | XGBoost, RF, ARIMA, SARIMA, Prophet |
+| Forecast contracts | `vertex/config/forecast_contract.py`, `forecast_contract.yaml` | Validated grain, horizon, quantile, routing, calibration, and provenance contract |
+| Forecasting methods | `vertex/models/xgboost/direct_multi_horizon.py`, `vertex/evaluation/` | Seven-horizon direct scoring, baselines, routing, calibration, reconciliation, and lifecycle gates |
 | Predictions schema | `vertex/utils/predictions.py` | Unified prediction fact rows |
 | Explainability | `vertex/utils/explain.py`, `stg_vertex_model_explain` | Per-prediction SHAP top-K feature attributions (xgboost, random_forest) |
 | Experiment tracking | `vertex/utils/experiment_tracking.py` | MLflow + Vertex Experiments |
 | MLflow catalog | `vertex/utils/mlflow_catalog.py` | GCS pointer artifacts |
-| BQ DDL | `vertex/ddl/vertex_bq_tables.sql` | Metadata, performance, predictions, backtest records, job runs |
-| Forecast contract | `vertex/config/forecast_contract.py`, `vertex/config/forecast_contract_acceptance_h7.yaml` | Validated, hash-stable forecasting problem definition and live acceptance fixture |
-| Canonical output | `vertex/utils/forecast_outputs.py`, `dbt/models/staging/stg_forecast_*.sql` | Provenance-complete append-only forecasts with explicit legacy migration boundary |
-| Contract acceptance | `scripts/accept_forecast_contract.py` | Reusable live persistence, approval, publication, and invariant validation |
+| Source monitoring | `vertex/config/source_monitoring.yaml`, `scripts/record_source_ingestion.py` | Static-demo/continuous policy and idempotent ingestion evidence writer |
+| BQ DDL | `vertex/ddl/vertex_bq_tables.sql` | Ingestion evidence, metadata, predictions, backtests, lifecycle, canonical forecasts, stages, gates, and operations |
 | Ops runbook | `vertex/ops/README.md` | IAM, GCS layout, Scheduler, monitoring |
 | KFP compile | `vertex/pipelines/compile.py` | CI-validated pipeline JSON |
 
@@ -90,7 +94,7 @@ mindmap
 
 **Model types:** `xgboost`, `random_forest`, `arima`, `sarima`, `prophet`
 
-→ Product view: [vertex/consulting_package.md](vertex/consulting_package.md)
+→ Product view: [vertex/component_guide.md](vertex/component_guide.md)
 
 ---
 
@@ -106,7 +110,7 @@ mindmap
 
 GCS remains **canonical** for model binaries; MLflow stores pointers, not duplicate joblib files.
 
-→ Product view: [mlflow/consulting_package.md](mlflow/consulting_package.md)
+→ Product view: [mlflow/component_guide.md](mlflow/component_guide.md)
 
 ---
 
@@ -114,7 +118,7 @@ GCS remains **canonical** for model binaries; MLflow stores pointers, not duplic
 
 | Asset | Path | Purpose |
 |-------|------|---------|
-| Flows | `orchestration/flows/` | dbt run, Vertex train, ML pipeline |
+| Flows | `orchestration/flows/` | dbt, Vertex, model lifecycle, scheduled atomic draft, and gated publication |
 | Tasks | `orchestration/tasks/` | In-container python/dbt (no nested Docker) |
 | Deployments | `prefect.yaml` | Manual + scheduled deployments |
 | Makefile targets | `make prefect-*` | Server, worker, deploy, trigger |
@@ -126,8 +130,11 @@ GCS remains **canonical** for model binaries; MLflow stores pointers, not duplic
 | `prefect-dbt-run-scheduled` | Daily 06:00 UTC | Feature refresh |
 | `prefect-vertex-train-model-schedule` | Daily 07:00 UTC | Training |
 | `prefect-vertex-ml-pipeline-scheduled` | Sun 08:00 UTC | optimize → train → predict |
+| `prefect-model-lifecycle-scheduled` | Sun 10:00 UTC | Rolling-origin evaluation and governed champion promotion |
+| `prefect-scheduled-forecast-pipeline-daily` | Daily 09:00 UTC | Champion scoring through validated atomic draft visibility |
+| `prefect-forecast-publication-manual` | On demand | Validate or idempotently publish a canonical run |
 
-→ Product view: [prefect/consulting_package.md](prefect/consulting_package.md)
+→ Product view: [prefect/component_guide.md](prefect/component_guide.md)
 
 ---
 
@@ -143,6 +150,7 @@ GCS remains **canonical** for model binaries; MLflow stores pointers, not duplic
 | `.github/workflows/docs.yml` | Hosted Docsify portal and dbt Docs on GitHub Pages |
 | Raw-data loader scripts | GCS → raw BigQuery ingestion pattern; replace or extend per project |
 | `scripts/apply_vertex_bq_ddl.py` | Apply Vertex output DDL |
+| Governed forecast publication | Contract-pinned champion scoring, point-in-time evidence, stage/gate audit, locks, and atomic drafts |
 | `terraform/` | Versioned GCP provisioning: APIs, IAM, BigQuery datasets, GCS buckets, Artifact Registry per environment |
 | `.github/workflows/terraform.yml` | `fmt`/`validate` on every PR touching `terraform/` |
 

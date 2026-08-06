@@ -1,8 +1,10 @@
 * Start here
+  * [Open-source forecasting platform on GCP](platform_guide.md)
   * [Platform overview](overview.md)
+  * [Generate your first forecast](first_forecast.md)
   * [Reference architecture](reference_architecture.md)
   * [Case study](case_study.md)
-  * [Implementation recommendations](demand_forecasting_platform_recommendations.md)
+  * [Platform roadmap](specs/README.md)
 
 * Forecasting platform
   * [Forecast contract](forecast_contract.md)
@@ -20,12 +22,11 @@
   * [Accelerators](accelerators.md)
   * [dbt lineage and catalog](dbt-docs.md)
 
-* Consulting package
-  * [Package overview](consulting_package.md)
-  * [dbt](dbt/consulting_package.md)
-  * [Vertex AI](vertex/consulting_package.md)
-  * [Prefect](prefect/consulting_package.md)
-  * [MLflow](mlflow/consulting_package.md)
+* Platform components
+  * [dbt](dbt/component_guide.md)
+  * [Vertex AI](vertex/component_guide.md)
+  * [Prefect](prefect/component_guide.md)
+  * [MLflow](mlflow/component_guide.md)
 
 * Engineering specs
   * [Specs overview](specs/README.md)
@@ -42,6 +43,7 @@
   * [Scheduled publication pipeline](specs/scheduled_forecast_publication_pipeline.md)
   * [Integration contracts](specs/integration_contracts.md)
   * [Monitoring and SLOs](specs/monitoring_and_slos.md)
+  * [Monitoring operations](monitoring_and_slos.md)
   * [Terraform modules](specs/terraform_modules.md)
   * [Workload Identity Federation](specs/workload_identity_federation.md)
   * [Open-source product readiness](specs/open_source_product_readiness.md)

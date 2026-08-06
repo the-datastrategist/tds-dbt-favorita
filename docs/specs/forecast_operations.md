@@ -3,7 +3,7 @@
 # SPEC: Forecast operations, overrides, approval, and publication
 
 **Status:** In progress
-**Roadmap reference:** [`demand_forecasting_platform_recommendations.md`](../demand_forecasting_platform_recommendations.md) — P1 "Separate daily scoring from retraining and tuning" and P2 "Build a forecast operations layer"
+**Roadmap reference:** [Specs overview](README.md) — P1 "Separate daily scoring from retraining and tuning" and P2 "Build a forecast operations layer"
 
 ---
 
@@ -181,6 +181,17 @@ calibration, reconciliation, model, features, and source cutoff.
 6. Add FVA dbt mart.
 7. Add runbooks for retries, partial failures, backfills, revisions, and champion rollback.
 8. Add the scheduled publication flow using the stage ordering and gates defined above.
+
+## Current implementation
+
+The scheduled flow now resolves and pins the governed champion, scores independently from
+retraining, persists stage and validation evidence, and exposes a draft only after routing,
+calibration, reconciliation, and blocking gates pass. A separate manual flow validates a concrete
+run and can create retry-safe approval and publication records in `auto_publish` mode.
+
+Planner override services, explicit approve/publish/supersede/rollback commands, downstream
+delivery confirmation, and operational runbooks remain open. The automated scheduled deployment
+therefore stops at `draft`; publication remains an explicit gated action.
 
 ## Testing & validation
 

@@ -12,6 +12,7 @@ from vertex.utils.bigquery_utils import run_query
 TRAIN_STEPS = frozenset({"train", "optimize"})
 TRAIN_SQL_QUERY_KEY = "train_sql_query"
 PREDICT_SQL_QUERY_KEY = "predict_sql_query"
+BACKTEST_SQL_QUERY_KEY = "backtest_sql_query"
 
 
 def _config_step(config: dict[str, Any], step: str | None = None) -> str:
@@ -72,6 +73,15 @@ def resolve_input_sql(config: dict[str, Any], *, step: str | None = None) -> str
 def resolve_training_sql(config: dict[str, Any]) -> str:
     """Resolve inputs.train_sql_query (shared by train and optimize steps)."""
     return resolve_input_sql(config, step="train")
+
+
+def resolve_backtest_sql(config: dict[str, Any]) -> str:
+    """Resolve the complete historical feature input for rolling-origin evaluation."""
+    inputs = config.get("inputs", {})
+    query = inputs.get(BACKTEST_SQL_QUERY_KEY)
+    if query:
+        return str(query).strip()
+    return resolve_training_sql(config)
 
 
 def load_training_data_from_config(config: dict[str, Any]) -> pd.DataFrame:

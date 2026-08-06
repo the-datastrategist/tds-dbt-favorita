@@ -3,6 +3,7 @@ pandas>=2.0.0,<3.0.0
 numpy>=2.4.6,<3.0.0
 pyyaml>=6.0
 requests>=2.31.0
+h2>=4.4.1,<5.0.0  # Security floor for CVE-2026-71554 (transitive via httpx).
 scikit-learn>=1.3.0
 xgboost>=2.0.0
 joblib>=1.3.0

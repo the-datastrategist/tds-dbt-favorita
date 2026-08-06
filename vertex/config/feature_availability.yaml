@@ -38,6 +38,6 @@ patterns:
     availability: observed_lagged
     source_model: int_sales
     max_target_lag_days: 0
-  - pattern: "^sales_(company|store|store_product|store_family)_n\\d+d(_same_dow)?$"
+  - pattern: "^sales_(company|store|store_product|store_family)_n\\d+d(_cum)?$"
     availability: observed_after_period
     source_model: int_sales

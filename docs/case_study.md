@@ -133,6 +133,6 @@ Outcomes below reflect **architectural deliverables**. Numeric benchmarks are po
 - [Reference architecture](reference_architecture.md) — diagrams and flows
 - [Benchmarks](benchmarks.md) — metric comparison template
 - [Client rollout](client_rollout.md) — engagement timeline
-- [Consulting package](consulting_package.md) — full package overview
+- [Open-source forecasting platform on GCP](platform_guide.md) — platform overview
 
 {% enddocs %}

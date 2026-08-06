@@ -2,7 +2,8 @@
 
 # Model benchmarks
 
-Compare **BigQuery ML** and **Vertex AI** models on shared holdout metrics. Use this page in client conversations to justify algorithm and platform choices with data.
+Compare **BigQuery ML** and **Vertex AI** models on shared holdout metrics. Use this page to
+evaluate algorithm and platform choices with reproducible evidence.
 
 ---
 
@@ -117,7 +118,19 @@ Replace `{project}` and `{dataset}` with your `GOOGLE_PROJECT_ID` and `DBT_DATAS
 ### Full leaderboard (BQML + Vertex, normalized)
 
 ```sql
-SELECT platform, config_name, model_type, grain, mae, rmse, r2, wape, run_at
+SELECT
+  platform,
+  config_name,
+  model_type,
+  grain,
+  mae,
+  rmse,
+  r2,
+  wape,
+  mase,
+  rmsse,
+  prediction_completeness,
+  run_at
 FROM `{project}.{dataset}.ml_model_leaderboard`
 ORDER BY grain, run_at DESC;
 ```
@@ -146,6 +159,11 @@ SELECT
   model_type,
   primary_metric,
   primary_metric_value,
+  wape,
+  mae,
+  mase,
+  rmsse,
+  bias,
   prediction_completeness,
   is_champion,
   run_at
@@ -235,7 +253,7 @@ After `make mlflow-ui`, filter runs by tag `job_step=train` and compare `test_ma
 
 ## Cost context (order-of-magnitude)
 
-Use for proposals — **measure in client project** before committing.
+Treat these as reference estimates—**measure in the target project** before selecting a design.
 
 | Workload | Cost drivers | Typical dev-demo range |
 |----------|--------------|------------------------|
@@ -249,7 +267,7 @@ See [iac.md](iac.md) for production cost controls (reservations, labels, schedul
 
 ---
 
-## Recommended benchmark narrative for consulting
+## Recommended benchmark interpretation
 
 1. **Start with BQML** on company-day — establishes a SQL-native baseline in hours.
 2. **Move to Vertex XGBoost** on store-day — tests whether finer grain + tuning beats baseline.
@@ -262,7 +280,7 @@ See [iac.md](iac.md) for production cost controls (reservations, labels, schedul
 
 - [Case study](case_study.md)
 - [Delivery artifacts — dashboard blueprint](delivery_artifacts.md#dashboard-blueprint)
-- [Vertex experiment tracking](../../vertex/README.md) (repo)
+- [Vertex experiment tracking](../vertex/README.md) (repo)
 - [Model leaderboard mart spec](specs/model_leaderboard_mart.md) — design behind `ml_model_leaderboard` / `ml_model_champion`
 - [Prediction accuracy monitoring spec](specs/prediction_accuracy_monitoring.md) — design behind `ml_prediction_accuracy_rolling`
 

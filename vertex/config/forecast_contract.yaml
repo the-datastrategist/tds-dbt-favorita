@@ -6,7 +6,7 @@ forecast:
   frequency: day
   timezone: America/New_York
   issue_schedule: "0 6 * * *"
-  horizons: [1, 7, 14, 28]
+  horizons: [1, 2, 3, 4, 5, 6, 7]
   quantiles: [0.1, 0.5, 0.9]
   training_window_days: 180
   known_future_features: [promotion, holiday]
@@ -14,3 +14,17 @@ forecast:
   hierarchy: [company, store]
   reconciliation_policy: none
   demand_policy: observed_sales_only
+  routing:
+    allowed_strategies:
+      [entity_model, global_model, intermittent_rate_baseline, seasonal_baseline, business_default]
+    fallback_order:
+      cold_start: [global_model, business_default]
+      intermittent: [intermittent_rate_baseline, global_model, business_default]
+    business_default: 0.0
+    minimum_history: 28
+    minimum_nonzero_observations: 3
+    intermittent_adi_threshold: 1.32
+  calibration:
+    method: symmetric_split_conformal
+    lookback_origins: 12
+    minimum_residuals: 20

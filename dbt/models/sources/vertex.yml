@@ -7,6 +7,9 @@ sources:
     database: "{{ env_var('GOOGLE_PROJECT_ID') }}"
     schema: "{{ env_var('DBT_DATASET', 'favorita') }}"
     tables:
+      - name: source_ingestion_runs
+        description: Append-only source loader outcomes and mode-aware freshness policy evidence
+
       - name: ml_model_predictions
         description: Unified prediction rows across model_type (xgboost, random_forest, arima, sarima)
         columns:
@@ -55,6 +58,12 @@ sources:
       - name: forecast_status_history
         description: Forecast lifecycle transition history for approval, publication, supersession, and failure events
 
+      - name: forecast_pipeline_stage_runs
+        description: Ordered, retry-stable stage evidence for scheduled forecast publication runs
+
+      - name: forecast_validation_checks
+        description: Immutable publication-gate results evaluated before atomic draft visibility
+
       - name: forecast_exceptions
         description: Append-only forecast exceptions requiring operational review
 
@@ -78,6 +87,9 @@ sources:
 
       - name: backtest_metrics
         description: Append-only horizon and segment metrics produced by rolling-origin backtests
+
+      - name: forecast_series_classifications
+        description: Append-only series profiles and routing-policy lineage
 
       - name: model_candidates
         description: Immutable model candidate registrations and reproducibility evidence
