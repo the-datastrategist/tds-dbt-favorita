@@ -86,10 +86,7 @@ def test_draft_run_record_is_persisted_after_all_evidence(
     assert merge_row.call_args_list[0].kwargs["update_matched"] is False
     assert merge_row.call_args_list[-1].args[1] == "project.dataset.forecast_runs"
     assert merge_row.call_args_list[-1].args[0]["run_status"] == "draft"
-    assert (
-        merge_row.call_args_list[-1].args[0]["feature_availability_hash"]
-        == "availability-1"
-    )
+    assert merge_row.call_args_list[-1].args[0]["feature_availability_hash"] == "availability-1"
 
 
 @pytest.mark.unit

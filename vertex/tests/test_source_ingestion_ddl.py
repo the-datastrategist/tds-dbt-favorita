@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-
 DDL_PATH = Path(__file__).resolve().parents[1] / "ddl" / "vertex_bq_tables.sql"
 
 
