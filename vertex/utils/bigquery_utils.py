@@ -303,7 +303,7 @@ def insert_rows_idempotent(
     *,
     id_column: str,
     project_id: Optional[str] = None,
-) -> None:
+) -> int:
     """Batch-insert immutable rows once, using a stable logical ID.
 
     Rows are streamed to a short-lived staging table and merged in one BigQuery
@@ -317,7 +317,7 @@ def insert_rows_idempotent(
     if len(ids) != len(set(ids)):
         raise ValueError(f"Duplicate {id_column!r} values in persistence batch")
     if not records:
-        return
+        return 0
 
     project_id = project_id or os.getenv("GOOGLE_PROJECT_ID")
     if not project_id:
@@ -361,7 +361,9 @@ def insert_rows_idempotent(
             WHEN NOT MATCHED THEN
               INSERT ({insert_cols}) VALUES ({insert_vals})
         """
-        client.query(query).result()
+        merge_job = client.query(query)
+        merge_job.result()
+        return int(merge_job.num_dml_affected_rows or 0)
     finally:
         client.delete_table(staging, not_found_ok=True)
 

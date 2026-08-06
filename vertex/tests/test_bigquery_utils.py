@@ -177,11 +177,13 @@ class TestBigQueryUtils:
         destination.reference.table_id = "predictions"
         client.get_table.return_value = destination
         client.insert_rows_json.return_value = []
+        client.query.return_value.num_dml_affected_rows = 1
 
-        insert_rows_idempotent(
+        inserted = insert_rows_idempotent(
             rows, "proj.ds.predictions", id_column="prediction_id", project_id="proj"
         )
 
+        assert inserted == 1
         client.create_table.assert_called_once()
         client.insert_rows_json.assert_called_once()
         merge_sql = client.query.call_args.args[0]
