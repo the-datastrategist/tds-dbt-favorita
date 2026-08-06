@@ -10,11 +10,11 @@ import pandas as pd
 from prefect import flow
 
 from vertex.config.backtest_contract import DEFAULT_BACKTEST_CONTRACT_PATH, load_backtest_contract
-from vertex.config.forecast_contract import load_forecast_contract
 from vertex.config.feature_availability import (
     load_feature_availability_registry,
     registry_path_from_config,
 )
+from vertex.config.forecast_contract import load_forecast_contract
 from vertex.config.hierarchy import load_hierarchy_config
 from vertex.config.load_config import apply_job_step, load_model_config
 from vertex.evaluation.forecast_pipeline import (

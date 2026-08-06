@@ -1,7 +1,7 @@
 """Tests for point-in-time feature availability validation."""
 
-from datetime import datetime
 import re
+from datetime import datetime
 
 import pandas as pd
 import pytest
@@ -10,8 +10,8 @@ from vertex.config.feature_availability import (
     feature_cutoff_metadata_from_frame,
     load_feature_availability_registry,
     registry_path_from_config,
-    validate_feature_cutoffs_from_config,
     validate_feature_availability_registry,
+    validate_feature_cutoffs_from_config,
     validate_model_features_from_config,
 )
 

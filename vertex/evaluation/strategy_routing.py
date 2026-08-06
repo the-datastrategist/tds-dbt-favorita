@@ -9,8 +9,8 @@ from typing import Any, Sequence
 
 import pandas as pd
 
-from vertex.utils.data_utils import get_hash
 from vertex.utils.bigquery_utils import insert_rows_idempotent
+from vertex.utils.data_utils import get_hash
 
 
 @dataclass(frozen=True)
