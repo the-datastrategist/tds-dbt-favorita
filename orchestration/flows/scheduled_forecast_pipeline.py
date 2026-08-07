@@ -28,6 +28,7 @@ from vertex.evaluation.forecast_pipeline_persistence import (
     persist_forecast_pipeline_exception,
     persist_forecast_pipeline_result,
 )
+from vertex.evaluation.reconciliation import expand_leaf_predictions
 from vertex.evaluation.model_lifecycle_persistence import (
     resolve_champion_candidate_id,
     resolve_champion_config_name,
@@ -99,6 +100,27 @@ def run_scheduled_forecast_pipeline_cycle(
         backtest_prediction_table=f"{table_prefix}.backtest_predictions",
         project_id=project_id,
     )
+    hierarchy_config = None
+    hierarchy_nodes = None
+    hierarchy_edges = None
+    if contract.reconciliation_policy != "none":
+        if hierarchy_config_path is None:
+            raise ValueError("hierarchy_config_path is required for reconciled publication")
+        hierarchy_config = load_hierarchy_config(hierarchy_config_path)
+        hierarchy_nodes, hierarchy_edges = load_hierarchy_version(
+            hierarchy_config.name,
+            hierarchy_config.version,
+            node_table=f"{table_prefix}.forecast_hierarchy_nodes",
+            edge_table=f"{table_prefix}.forecast_hierarchy_edges",
+            project_id=project_id,
+        )
+        leaf_keys = tuple(hierarchy_config.levels[-1]["keys"])
+        predictions = expand_leaf_predictions(
+            predictions,
+            hierarchy_nodes,
+            hierarchy_edges,
+            leaf_keys=leaf_keys,
+        )
     cutoff = predictions["date"].max()
     code_sha = get_git_sha()
     if not code_sha:
@@ -114,20 +136,6 @@ def run_scheduled_forecast_pipeline_cycle(
         eligibility_snapshot_id=eligibility_snapshot_id(predictions, contract),
         code_sha=code_sha,
     )
-    hierarchy_config = None
-    hierarchy_nodes = None
-    hierarchy_edges = None
-    if contract.reconciliation_policy != "none":
-        if hierarchy_config_path is None:
-            raise ValueError("hierarchy_config_path is required for reconciled publication")
-        hierarchy_config = load_hierarchy_config(hierarchy_config_path)
-        hierarchy_nodes, hierarchy_edges = load_hierarchy_version(
-            hierarchy_config.name,
-            hierarchy_config.version,
-            node_table=f"{table_prefix}.forecast_hierarchy_nodes",
-            edge_table=f"{table_prefix}.forecast_hierarchy_edges",
-            project_id=project_id,
-        )
     planned_run_id = build_forecast_run_id(
         contract,
         forecast_origin=predictions["date"].iloc[0],

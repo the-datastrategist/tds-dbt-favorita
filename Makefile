@@ -33,7 +33,7 @@ endif
 	vertex-train-docker vertex-predict-docker vertex-optimize-docker \
 	vertex-submit-train vertex-submit-predict vertex-submit-optimize \
 	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
-	dbt-vertex dbt-backtest vertex-bq-ddl vertex-forecast-contract-accept vertex-validate-config vertex-validate-configs \
+	dbt-vertex dbt-backtest vertex-bq-ddl vertex-forecast-contract-accept vertex-validate-config vertex-validate-configs vertex-hierarchy-materialize \
 	vertex-backfill vertex-backtest-plan vertex-backtest vertex-backtest-persist prefect-flow-vertex-backfill \
 	vertex-lifecycle-plan vertex-lifecycle-evaluate vertex-lifecycle-promote vertex-lifecycle-rollback \
 	docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
@@ -570,7 +570,10 @@ prefect-flow-model-lifecycle: ## Run governed model lifecycle flow once in Docke
 	$(DOCKER_RUN) python -c "from orchestration.flows.model_lifecycle import prefect_model_lifecycle_flow; prefect_model_lifecycle_flow()"
 
 prefect-flow-scheduled-forecast: ## Score champion and create a validated draft in Docker
-	$(DOCKER_RUN) python -c "from orchestration.flows.scheduled_forecast_pipeline import prefect_scheduled_forecast_pipeline_flow; prefect_scheduled_forecast_pipeline_flow()"
+	$(DOCKER_RUN) python -c "from orchestration.flows.scheduled_forecast_pipeline import prefect_scheduled_forecast_pipeline_flow; prefect_scheduled_forecast_pipeline_flow($(if $(CONTRACT_PATH),contract_path='$(CONTRACT_PATH)',) $(if $(HIERARCHY_CONFIG_PATH),hierarchy_config_path='$(HIERARCHY_CONFIG_PATH)',))"
+
+vertex-hierarchy-materialize: ## Materialize the pinned Favorita company-to-store hierarchy in BigQuery
+	$(DOCKER_RUN) python scripts/materialize_favorita_hierarchy.py $(ARGS)
 
 # --- CLEANUP COMMANDS ---
 

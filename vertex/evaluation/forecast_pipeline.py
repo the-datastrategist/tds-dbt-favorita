@@ -295,6 +295,7 @@ def execute_forecast_pipeline(
             hierarchy_nodes,
             hierarchy_edges,
             method=hierarchy_config.method,
+            group_columns=("date", "forecast_date", "forecast_horizon"),
             middle_level=hierarchy_config.middle_level,
         )
         for quantile_column in ("prediction_p10", "prediction_p50", "prediction_p90"):
@@ -303,10 +304,14 @@ def execute_forecast_pipeline(
                 hierarchy_nodes,
                 hierarchy_edges,
                 value_column=quantile_column,
+                group_columns=("date", "forecast_date", "forecast_horizon"),
                 tolerance_abs=hierarchy_config.tolerance_abs,
             )
             if not violations.empty:
                 raise ValueError(f"reconciliation coherence failed for {quantile_column}")
+        reconciled["prediction_lower"] = reconciled["prediction_p10"]
+        reconciled["prediction"] = reconciled["prediction_p50"]
+        reconciled["prediction_upper"] = reconciled["prediction_p90"]
         reconciled["hierarchy_version"] = hierarchy_config.version
         reconciled["reconciliation_run_id"] = reconciliation_run_id
     stages.append(

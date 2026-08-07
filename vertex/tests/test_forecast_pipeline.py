@@ -6,12 +6,14 @@ import pandas as pd
 import pytest
 
 from vertex.config.forecast_contract import load_forecast_contract
+from vertex.config.hierarchy import load_hierarchy_config
 from vertex.evaluation.forecast_pipeline import (
     ForecastRunPins,
     build_forecast_run_id,
     eligibility_snapshot_id,
     execute_forecast_pipeline,
 )
+from vertex.evaluation.reconciliation import expand_leaf_predictions
 
 ORIGIN = pd.Timestamp("2026-07-18")
 
@@ -151,3 +153,47 @@ def test_pipeline_blocks_data_cutoff_after_origin() -> None:
 
     with pytest.raises(ValueError, match="point_in_time_cutoff"):
         execute_forecast_pipeline(predictions, _calibration(), contract=contract, pins=pins)
+
+
+@pytest.mark.unit
+def test_pipeline_publishes_coherent_company_and_store_nodes() -> None:
+    contract = load_forecast_contract(
+        "vertex/config/forecast_contract_hierarchical_publication.yaml"
+    )
+    hierarchy = load_hierarchy_config("vertex/config/hierarchy.yaml")
+    nodes = pd.DataFrame(
+        [
+            {"node_id": "company:all", "level_name": "company", "node_key_json": "{}"},
+            {"node_id": "store:1", "level_name": "store", "node_key_json": '{"store_id":1}'},
+            {"node_id": "store:2", "level_name": "store", "node_key_json": '{"store_id":2}'},
+        ]
+    )
+    edges = pd.DataFrame(
+        [
+            {"parent_node_id": "company:all", "child_node_id": "store:1"},
+            {"parent_node_id": "company:all", "child_node_id": "store:2"},
+        ]
+    )
+    predictions = expand_leaf_predictions(_predictions(), nodes, edges, leaf_keys=("store_id",))
+    pins = ForecastRunPins(
+        **{
+            **_pins(_predictions()).__dict__,
+            "eligibility_snapshot_id": eligibility_snapshot_id(predictions, contract),
+        }
+    )
+
+    result = execute_forecast_pipeline(
+        predictions,
+        _calibration(),
+        contract=contract,
+        pins=pins,
+        hierarchy_config=hierarchy,
+        hierarchy_nodes=nodes,
+        hierarchy_edges=edges,
+    )
+
+    assert len(result.rows) == 3
+    assert result.rows["hierarchy_version"].eq("v1").all()
+    assert result.rows["reconciliation_method"].eq("bottom_up").all()
+    values = dict(zip(predictions["node_id"], result.rows["prediction_p50"]))
+    assert values["company:all"] == values["store:1"] + values["store:2"]

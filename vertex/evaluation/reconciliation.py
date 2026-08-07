@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Sequence
 
 import numpy as np
 import pandas as pd
+
+from vertex.utils.data_utils import get_hash
 
 
 @dataclass(frozen=True)
@@ -20,6 +23,78 @@ class HierarchyGraph:
     children_by_parent: dict[str, tuple[str, ...]]
     roots: tuple[str, ...]
     leaves: tuple[str, ...]
+
+
+def _node_key(value: object) -> dict[str, object]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        parsed = json.loads(value)
+        if isinstance(parsed, dict):
+            return parsed
+    raise ValueError("hierarchy node_key_json must be a JSON object")
+
+
+def expand_leaf_predictions(
+    predictions: pd.DataFrame,
+    nodes: pd.DataFrame,
+    edges: pd.DataFrame,
+    *,
+    leaf_keys: Sequence[str],
+    group_columns: Sequence[str] = ("date", "forecast_date", "forecast_horizon"),
+) -> pd.DataFrame:
+    """Map model leaf rows to nodes and synthesize auditable ancestor base forecasts."""
+    graph = build_hierarchy_graph(nodes, edges)
+    required = {"prediction", *leaf_keys, *group_columns}
+    if missing := sorted(required.difference(predictions.columns)):
+        raise ValueError(f"leaf predictions are missing required columns: {missing}")
+    node_keys = {
+        str(row.node_id): _node_key(row.node_key_json)
+        for row in nodes[["node_id", "node_key_json"]].itertuples(index=False)
+    }
+    leaf_by_key = {
+        tuple(node_keys[node].get(key) for key in leaf_keys): node for node in graph.leaves
+    }
+    work = predictions.copy()
+    work["node_id"] = [
+        leaf_by_key.get(tuple(row[key] for key in leaf_keys)) for _, row in work.iterrows()
+    ]
+    if work["node_id"].isna().any():
+        missing_keys = work.loc[work["node_id"].isna(), list(leaf_keys)].drop_duplicates()
+        raise ValueError(
+            "eligible predictions have no hierarchy leaf: "
+            f"{missing_keys.to_dict(orient='records')[:5]}"
+        )
+
+    descendants = {node: _descendant_leaves(graph, node) for node in graph.nodes}
+    output: list[pd.DataFrame] = []
+    for _, group in work.groupby(list(group_columns), dropna=False, sort=False):
+        if group["node_id"].duplicated().any():
+            raise ValueError("leaf prediction groups must contain one row per hierarchy node")
+        present = set(group["node_id"].astype(str))
+        missing_leaves = sorted(set(graph.leaves).difference(present))
+        if missing_leaves:
+            raise ValueError(
+                f"hierarchy leaves have no eligible prediction rows: {missing_leaves[:5]}"
+            )
+        rows = [group]
+        for node in graph.nodes:
+            if node in graph.leaves:
+                continue
+            child_rows = group[group["node_id"].isin(descendants[node])]
+            aggregate = child_rows.iloc[[0]].copy()
+            aggregate["node_id"] = node
+            aggregate["prediction"] = float(child_rows["prediction"].sum())
+            aggregate["prediction_id"] = get_hash(
+                {
+                    "node_id": node,
+                    **{column: str(aggregate.iloc[0][column]) for column in group_columns},
+                    "source_prediction_ids": sorted(child_rows["prediction_id"].astype(str)),
+                }
+            )
+            rows.append(aggregate)
+        output.append(pd.concat(rows, ignore_index=True))
+    return pd.concat(output, ignore_index=True)
 
 
 def build_hierarchy_graph(nodes: pd.DataFrame, edges: pd.DataFrame) -> HierarchyGraph:
