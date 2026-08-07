@@ -117,8 +117,10 @@ substitute unreconciled forecasts silently. Contracts with no hierarchy explicit
 Hierarchy validation, bottom-up, top-down, middle-out, and MinT reconciliation are implemented.
 The scheduled pipeline loads the pinned hierarchy version when the forecast contract declares a
 reconciliation policy, reconciles every configured quantile before validation, and prevents an
-incoherent result from becoming a visible draft. The default publication contract remains
-unreconciled; live acceptance with a configured hierarchy is still required.
+incoherent result from becoming a visible draft. The Favorita `company -> store` hierarchy has
+passed live champion-to-draft acceptance, including graph integrity, eligible-node membership,
+P10/P50/P90 coherence and ordering, reconciliation lineage, and fail-closed behavior. See the
+[2026-08-07 acceptance evidence](../acceptance/hierarchical_reconciliation_2026-08-07.md).
 
 ## Testing & validation
 

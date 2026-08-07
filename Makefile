@@ -33,7 +33,7 @@ endif
 	vertex-train-docker vertex-predict-docker vertex-optimize-docker \
 	vertex-submit-train vertex-submit-predict vertex-submit-optimize \
 	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
-	dbt-vertex dbt-backtest vertex-bq-ddl vertex-forecast-contract-accept vertex-validate-config vertex-validate-configs vertex-hierarchy-materialize \
+	dbt-vertex dbt-backtest vertex-bq-ddl vertex-forecast-contract-accept vertex-validate-config vertex-validate-configs vertex-hierarchy-materialize vertex-hierarchy-accept \
 	vertex-backfill vertex-backtest-plan vertex-backtest vertex-backtest-persist prefect-flow-vertex-backfill \
 	vertex-lifecycle-plan vertex-lifecycle-evaluate vertex-lifecycle-promote vertex-lifecycle-rollback \
 	docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
@@ -574,6 +574,10 @@ prefect-flow-scheduled-forecast: ## Score champion and create a validated draft 
 
 vertex-hierarchy-materialize: ## Materialize the pinned Favorita company-to-store hierarchy in BigQuery
 	$(DOCKER_RUN) python scripts/materialize_favorita_hierarchy.py $(ARGS)
+
+vertex-hierarchy-accept: ## Validate a live hierarchy-enabled draft (FORECAST_RUN_ID=...)
+	@test -n "$(FORECAST_RUN_ID)" || (echo "Set FORECAST_RUN_ID to the hierarchy-enabled draft" && exit 1)
+	$(DOCKER_RUN) python scripts/accept_hierarchical_reconciliation.py --forecast-run-id "$(FORECAST_RUN_ID)" $(ARGS)
 
 # --- CLEANUP COMMANDS ---
 
