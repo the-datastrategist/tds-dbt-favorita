@@ -47,3 +47,4 @@
   * [Terraform modules](specs/terraform_modules.md)
   * [Workload Identity Federation](specs/workload_identity_federation.md)
   * [Open-source product readiness](specs/open_source_product_readiness.md)
+  * [Platform generalization](specs/platform_generalization.md)

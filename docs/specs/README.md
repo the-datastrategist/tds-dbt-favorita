@@ -45,6 +45,7 @@ platform roadmap, the current implementation is approximately **81% complete**.
 | [Monitoring, alerts, and SLOs](monitoring_and_slos.md) | In progress | 65% | Platform roadmap → P1 monitoring | Accuracy plus live-accepted mode-aware source and scheduled-pipeline health are implemented; remaining work covers broader SLOs, alert delivery, drift, calibration, and cost |
 | [Integration contracts and forecast delivery](integration_contracts.md) | Proposed | 25% | Platform roadmap → P2 integrations | Provide stable warehouse, API, export, webhook, and publication contracts |
 | [Open-source product readiness](open_source_product_readiness.md) | Proposed | 40% | Platform roadmap → P3 open source | Add governance, first-run quickstart, roadmap, compatibility, extension, and modularization plans |
+| [General-purpose demand forecasting platform](platform_generalization.md) | Proposed | 0% | Separate platform-generalization workstream | Add canonical datasets, configurable periods, resource parameterization, and typed extension interfaces; multi-implementation validation is deferred |
 
 ---
 

@@ -163,6 +163,13 @@ Forecasting granularity is a core architecture decision. The platform expects ea
 
 This is the canonical adapter layer: a new project adapts raw demand, product, location, calendar, price, promotion, inventory, and other operational sources into the feature and contract shape used by the platform. A formal plugin/connector framework is out of scope for now.
 
+The proposed [platform-generalization workstream](specs/platform_generalization.md) makes this
+boundary explicit through domain-neutral dataset relations and typed in-process extension
+interfaces. It does not add universal source connectors or remove the GCP/BigQuery deployment
+boundary. Until that workstream and later multi-implementation validation are complete, adopters
+should expect to adapt some runtime identifiers and daily-period assumptions as well as dbt
+features.
+
 ---
 
 ## Security & environments (production pattern)

@@ -27,7 +27,9 @@ This spec adds `docs/open_source_governance.md`, `docs/product_roadmap.md`, comm
 
 - Completing the full modular refactor in one change.
 - Supporting non-GCP production deployment.
-- Building a formal third-party plugin / connector framework.
+- Building a plugin marketplace, remote connector service, or independent extension package
+  distribution system. Typed in-process extension interfaces are specified separately in
+  [platform generalization](platform_generalization.md).
 - Guaranteeing long-term API stability before the first public release policy is written.
 
 ## Design
@@ -140,5 +142,6 @@ Implementation should proceed gradually:
 - [Forecast contract and canonical output](forecast_contract_and_output.md)
 - [Backtesting and model lifecycle](backtesting_and_model_lifecycle.md)
 - [Integration contracts](integration_contracts.md)
+- [Platform generalization](platform_generalization.md)
 
 {% enddocs %}
