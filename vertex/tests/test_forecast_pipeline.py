@@ -174,7 +174,9 @@ def test_pipeline_publishes_coherent_company_and_store_nodes() -> None:
             {"parent_node_id": "company:all", "child_node_id": "store:2"},
         ]
     )
-    predictions = expand_leaf_predictions(_predictions(), nodes, edges, leaf_keys=("store_id",))
+    source_predictions = _predictions()
+    source_predictions["forecast_date"] = pd.NaT
+    predictions = expand_leaf_predictions(source_predictions, nodes, edges, leaf_keys=("store_id",))
     pins = ForecastRunPins(
         **{
             **_pins(_predictions()).__dict__,
@@ -199,6 +201,7 @@ def test_pipeline_publishes_coherent_company_and_store_nodes() -> None:
     assert result.reconciliation_run["output_row_count"] == 3
     assert result.reconciliation_outputs is not None
     assert result.reconciliation_outputs["forecast_output_id"].notna().all()
+    assert result.reconciliation_outputs["target_date"].notna().all()
     assert set(result.reconciliation_outputs["level_name"]) == {"company", "store"}
     values = dict(zip(predictions["node_id"], result.rows["prediction_p50"]))
     assert values["company:all"] == values["store:1"] + values["store:2"]

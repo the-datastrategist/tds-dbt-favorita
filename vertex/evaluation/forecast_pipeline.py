@@ -341,13 +341,10 @@ def execute_forecast_pipeline(
     reconciliation_run = None
     reconciliation_outputs = None
     if hierarchy_config is not None and hierarchy_nodes is not None:
-        reconciliation_work = reconciled.rename(
-            columns={
-                "date": "forecast_origin",
-                "forecast_date": "target_date",
-                "forecast_horizon": "horizon",
-            }
-        ).copy()
+        reconciliation_work = reconciled.copy()
+        reconciliation_work["forecast_origin"] = canonical["forecast_origin"].to_numpy()
+        reconciliation_work["target_date"] = canonical["target_date"].to_numpy()
+        reconciliation_work["horizon"] = canonical["horizon"].to_numpy()
         level_by_node = hierarchy_nodes.set_index("node_id")["level_name"].astype(str)
         reconciliation_work["level_name"] = (
             reconciliation_work["node_id"].astype(str).map(level_by_node)
