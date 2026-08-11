@@ -28,7 +28,7 @@ QUANTILE_COLUMNS = {0.1: "prediction_p10", 0.5: "prediction_p50", 0.9: "predicti
 
 def _load_live_rows(
     *, forecast_run_id: str, table_prefix: str, project_id: str
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, ...]:
     nodes = run_query(
         f"""
         SELECT * FROM `{table_prefix}.forecast_hierarchy_nodes`
@@ -57,7 +57,38 @@ def _load_live_rows(
         """,
         project_id=project_id,
     )
-    return nodes, edges, outputs, runs
+    reconciliation_runs = run_query(
+        f"""
+        SELECT * FROM `{table_prefix}.forecast_reconciliation_runs`
+        WHERE forecast_run_id = '{forecast_run_id}'
+        """,
+        project_id=project_id,
+    )
+    reconciliation_outputs = run_query(
+        f"""
+        SELECT * FROM `{table_prefix}.forecast_reconciled_outputs`
+        WHERE forecast_run_id = '{forecast_run_id}'
+        """,
+        project_id=project_id,
+    )
+    metrics = run_query(
+        f"""
+        SELECT * FROM `{table_prefix}.forecast_reconciliation_metrics`
+        WHERE hierarchy_name = 'favorita_demand'
+          AND hierarchy_version = 'v1'
+          AND model_config_name = 'favorita_store_h7_xgboost'
+        """,
+        project_id=project_id,
+    )
+    return (
+        nodes,
+        edges,
+        outputs,
+        runs,
+        reconciliation_runs,
+        reconciliation_outputs,
+        metrics,
+    )
 
 
 def run_acceptance(
@@ -81,13 +112,23 @@ def run_acceptance(
     if unknown_quantiles:
         raise RuntimeError(f"canonical output has no columns for quantiles {unknown_quantiles}")
 
-    nodes, edges, outputs, runs = _load_live_rows(
+    (
+        nodes,
+        edges,
+        outputs,
+        runs,
+        reconciliation_runs,
+        reconciliation_outputs,
+        metrics,
+    ) = _load_live_rows(
         forecast_run_id=forecast_run_id,
         table_prefix=table_prefix,
         project_id=project_id,
     )
     if outputs.empty or len(runs) != 1 or runs.iloc[0]["run_status"] != "draft":
         raise RuntimeError("accepted run must be one visible, non-empty draft")
+    if len(reconciliation_runs) != 1:
+        raise RuntimeError("accepted run must have exactly one reconciliation run record")
     graph = build_hierarchy_graph(nodes, edges)
     parent_counts = edges.groupby("child_node_id").size()
     if not parent_counts.eq(1).all():
@@ -141,6 +182,26 @@ def run_acceptance(
     if any(violations_by_quantile.values()):
         raise RuntimeError(f"hierarchical coherence failed: {violations_by_quantile}")
 
+    expected_output_ids = set(output["forecast_output_id"].astype(str))
+    linked_output_ids = set(reconciliation_outputs["forecast_output_id"].dropna().astype(str))
+    base_columns = [f"base_{column}" for column in quantile_columns]
+    separate_persistence_valid = (
+        len(reconciliation_outputs) == len(output)
+        and reconciliation_outputs["reconciliation_output_id"].nunique() == len(output)
+        and linked_output_ids == expected_output_ids
+        and not reconciliation_outputs[base_columns + quantile_columns].isna().any(axis=None)
+    )
+    if not separate_persistence_valid:
+        raise RuntimeError("base and reconciled output persistence is incomplete or duplicated")
+    required_metric_pairs = {
+        (level, metric) for level in ("company", "store") for metric in ("mae", "wape")
+    }
+    observed_metric_pairs = set(zip(metrics["level_name"], metrics["metric_name"]))
+    if not required_metric_pairs.issubset(observed_metric_pairs):
+        raise RuntimeError("level-wise base-versus-reconciled metrics are incomplete")
+    if metrics["reconciliation_metric_id"].nunique() != len(metrics):
+        raise RuntimeError("reconciliation metrics contain duplicate logical records")
+
     # Fail-closed probe: a duplicate parent assignment must stop reconciliation before rows exist
     # for persistence. This exercises the same graph validation called by the scheduled stage.
     invalid_edges = pd.concat([edges, edges.iloc[[0]]], ignore_index=True)
@@ -178,6 +239,16 @@ def run_acceptance(
         "coherence_violations_by_quantile": violations_by_quantile,
         "missing_reconciliation_lineage_count": missing_lineage,
         "invalid_reconciliation_lineage_count": invalid_lineage,
+        "reconciliation_run_record_count": len(reconciliation_runs),
+        "reconciliation_output_record_count": len(reconciliation_outputs),
+        "distinct_reconciliation_output_id_count": int(
+            reconciliation_outputs["reconciliation_output_id"].nunique()
+        ),
+        "linked_forecast_output_id_count": len(linked_output_ids),
+        "base_and_reconciled_values_separately_queryable": separate_persistence_valid,
+        "reconciliation_metric_record_count": len(metrics),
+        "reconciliation_metric_levels": sorted(metrics["level_name"].unique().tolist()),
+        "reconciliation_metric_names": sorted(metrics["metric_name"].unique().tolist()),
         "failure_probe_blocked": failure_probe_blocked,
         "failure_probe_error": failure_probe_error,
     }

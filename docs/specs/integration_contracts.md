@@ -2,7 +2,7 @@
 
 # SPEC: Integration contracts and forecast delivery
 
-**Status:** Proposed
+**Status:** In progress
 **Roadmap reference:** [Specs overview](README.md) — P2 "Publish through a standard integration contract"
 
 ---
@@ -116,6 +116,15 @@ Emit event rows and optional webhook payload:
 - API unit tests for idempotent publish and invalid transitions.
 - Export smoke test for CSV and Parquet.
 - Contract fixture tests for response payload shape.
+
+## Current implementation
+
+The stable warehouse boundary now includes current, explicit-run, publication-audit, and
+override-audit dbt views. A validated export command writes one explicit published run to GCS as
+CSV or Parquet without overwriting an existing delivery. The
+[integration contract guide](../integration_contracts.md) defines view usage, version pins,
+export behavior, and compatibility policy. A retrieval/service API, publication events/webhooks,
+and independent delivery-status confirmation remain open.
 
 ## Acceptance criteria
 

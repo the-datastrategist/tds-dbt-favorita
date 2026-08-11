@@ -36,6 +36,7 @@ endif
 	dbt-vertex dbt-backtest vertex-bq-ddl vertex-forecast-contract-accept vertex-validate-config vertex-validate-configs vertex-hierarchy-materialize vertex-hierarchy-accept vertex-hierarchy-backtest \
 	vertex-backfill vertex-backtest-plan vertex-backtest vertex-backtest-persist prefect-flow-vertex-backfill \
 	vertex-lifecycle-plan vertex-lifecycle-evaluate vertex-lifecycle-promote vertex-lifecycle-rollback \
+	forecast-override forecast-approve-publish forecast-revise forecast-rollback forecast-export \
 	docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
 
 help: ## Show this help message
@@ -582,6 +583,26 @@ vertex-hierarchy-accept: ## Validate a live hierarchy-enabled draft (FORECAST_RU
 vertex-hierarchy-backtest: ## Persist base-vs-reconciled metrics by level (BACKTEST_RUN_ID=...)
 	@test -n "$(BACKTEST_RUN_ID)" || (echo "Set BACKTEST_RUN_ID to an immutable backtest run" && exit 1)
 	$(DOCKER_RUN) python scripts/evaluate_hierarchical_backtest.py --backtest-run-id "$(BACKTEST_RUN_ID)" $(ARGS)
+
+forecast-override: ## Add an immutable planner override (FORECAST_RUN_ID, OUTPUT_ID, VALUE, ACTOR, IDEMPOTENCY_KEY)
+	@test -n "$(FORECAST_RUN_ID)$(OUTPUT_ID)$(VALUE)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set FORECAST_RUN_ID, OUTPUT_ID, VALUE, ACTOR, and IDEMPOTENCY_KEY" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_operations override --forecast-run-id "$(FORECAST_RUN_ID)" --forecast-output-id "$(OUTPUT_ID)" --value "$(VALUE)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" --reason-code "$(REASON_CODE)" --comment "$(COMMENT)" $(ARGS)
+
+forecast-approve-publish: ## Approve and publish a complete run (FORECAST_RUN_ID, VERSION, ACTOR, IDEMPOTENCY_KEY)
+	@test -n "$(FORECAST_RUN_ID)$(VERSION)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set FORECAST_RUN_ID, VERSION, ACTOR, and IDEMPOTENCY_KEY" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_operations approve-publish --forecast-run-id "$(FORECAST_RUN_ID)" --version "$(VERSION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" --reason-code "$(REASON_CODE)" --comment "$(COMMENT)" --destination "$(or $(DESTINATION),canonical_bigquery)" $(ARGS)
+
+forecast-revise: ## Supersede a prior version with reviewed current values (FORECAST_RUN_ID, PRIOR_VERSION, VERSION, ACTOR, IDEMPOTENCY_KEY)
+	@test -n "$(FORECAST_RUN_ID)$(PRIOR_VERSION)$(VERSION)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set FORECAST_RUN_ID, PRIOR_VERSION, VERSION, ACTOR, and IDEMPOTENCY_KEY" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_operations revise --forecast-run-id "$(FORECAST_RUN_ID)" --prior-version "$(PRIOR_VERSION)" --version "$(VERSION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" --reason-code "$(REASON_CODE)" --comment "$(COMMENT)" --destination "$(or $(DESTINATION),canonical_bigquery)" $(ARGS)
+
+forecast-rollback: ## Republish a prior complete version (FORECAST_RUN_ID, PRIOR_VERSION, VERSION, ACTOR, IDEMPOTENCY_KEY)
+	@test -n "$(FORECAST_RUN_ID)$(PRIOR_VERSION)$(VERSION)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set FORECAST_RUN_ID, PRIOR_VERSION, VERSION, ACTOR, and IDEMPOTENCY_KEY" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_operations rollback --forecast-run-id "$(FORECAST_RUN_ID)" --prior-version "$(PRIOR_VERSION)" --version "$(VERSION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" --reason-code "$(REASON_CODE)" --comment "$(COMMENT)" $(ARGS)
+
+forecast-export: ## Export an immutable published run to GCS (FORECAST_RUN_ID, DESTINATION, FORMAT)
+	@test -n "$(FORECAST_RUN_ID)$(DESTINATION)" || (echo "Set FORECAST_RUN_ID and a GCS DESTINATION containing *" && exit 1)
+	$(DOCKER_RUN) python scripts/export_forecast.py --forecast-run-id "$(FORECAST_RUN_ID)" --destination "$(DESTINATION)" --format "$(or $(FORMAT),parquet)" $(ARGS)
 
 # --- CLEANUP COMMANDS ---
 

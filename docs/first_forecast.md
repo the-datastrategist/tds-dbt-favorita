@@ -15,7 +15,8 @@ By the end, you will have:
 - dbt views over the forecast run and output contracts.
 
 This is the shortest supported path to a forecast. Model promotion, calibrated champion scoring,
-hierarchical reconciliation, approval, and publication are separate operational stages. Their
+approval and publication are separate operational stages. Scheduled hierarchical reconciliation
+is enabled by the hierarchy-aware contract. Their
 current implementation status is tracked in the [engineering specs](specs/README.md).
 
 ## 1. Prepare the environment
@@ -203,7 +204,7 @@ make prefect-flow-scheduled-forecast
 
 That flow creates a validated, atomically visible draft. A separate manual Prefect deployment can
 validate that draft or create an idempotent approval/publication after all gates pass. Planner
-review and override workflows, delivery integrations, hierarchy-enabled acceptance, and full
+planner UI and FVA workflows, automated delivery confirmation, service integrations, and full
 operational SLO coverage remain roadmap work; consult the
 [specification status table](specs/README.md) before treating those stages as production-complete.
 

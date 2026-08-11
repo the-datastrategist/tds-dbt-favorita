@@ -189,9 +189,11 @@ retraining, persists stage and validation evidence, and exposes a draft only aft
 calibration, reconciliation, and blocking gates pass. A separate manual flow validates a concrete
 run and can create retry-safe approval and publication records in `auto_publish` mode.
 
-Planner override services, explicit approve/publish/supersede/rollback commands, downstream
-delivery confirmation, and operational runbooks remain open. The automated scheduled deployment
-therefore stops at `draft`; publication remains an explicit gated action.
+Explicit planner override, approve/publish, and rollback commands now write deterministic,
+append-only records. Approval selects audited overrides without changing the statistical
+forecast; rollback republishes a complete prior version under a new version with revision
+lineage. The [operations runbook](../forecast_operations.md) documents retry, revision, backfill,
+and delivery recovery. A planner UI, FVA mart, delivery confirmation, and service API remain open.
 
 ## Testing & validation
 

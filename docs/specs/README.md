@@ -23,9 +23,9 @@ A completed spec should graduate into an accelerator entry in [accelerators.md](
 
 ## Specs
 
-Status reviewed **2026-08-05**. The completion figures are implementation estimates, while
+Status reviewed **2026-08-10**. The completion figures are implementation estimates, while
 the status column continues to use the acceptance-based definitions above. Across the full
-platform roadmap, the current implementation is approximately **81% complete**.
+platform roadmap, the current implementation is approximately **85% complete**.
 
 | Spec | Status | Completion | Roadmap reference | Summary |
 |------|--------|-----------:|--------------------|---------|
@@ -38,12 +38,12 @@ platform roadmap, the current implementation is approximately **81% complete**.
 | [Rolling-origin backtesting and model lifecycle](backtesting_and_model_lifecycle.md) | Shipped | 100% | Platform roadmap → P0 backtesting/champion semantics | Live-accepted rolling-origin evaluation, governed promotion gates, scheduled lifecycle orchestration, and current-state warehouse views |
 | [Point-in-time feature availability](point_in_time_feature_availability.md) | Shipped | 100% | Platform roadmap → P0 feature correctness | Live-accepted origin-specific cutoff enforcement, registry validation, persisted registry/source-cutoff evidence, and model-path integration |
 | [Forecasting methods, horizons, cold start, and intermittent demand](forecasting_methods.md) | Shipped | 100% | Platform roadmap → P0/P1 methods | Seven-horizon direct scoring, intermittent-demand baselines, calibrated quantiles, cold-start routing, and live-accepted scheduled-stage integration |
-| [Hierarchical reconciliation](hierarchical_reconciliation.md) | In progress | 95% | Platform roadmap → P1 reconciliation | Configurable methods and scheduled integration are implemented; the Favorita company-to-store path passed live coherence and fail-closed acceptance, while separate base/reconciled persistence verification and level-wise backtest comparison remain |
+| [Hierarchical reconciliation](hierarchical_reconciliation.md) | Shipped | 100% | Platform roadmap → P1 reconciliation | Configurable methods, scheduled integration, append-only base/reconciled evidence, level-wise backtest metrics, and live coherence/fail-closed acceptance are complete |
 | [Demand data model](demand_data_model.md) | Proposed | 20% | Platform roadmap → P1 demand data | Distinguish observed sales from demand and model inventory, eligibility, lifecycle, prices, and promotions |
-| [Forecast operations](forecast_operations.md) | In progress | 65% | Platform roadmap → P1/P2 operations | Append-only operation tables, staging contracts, atomic draft creation, and gated idempotent publication are implemented; planner overrides, revision/rollback commands, and delivery remain |
+| [Forecast operations](forecast_operations.md) | In progress | 85% | Platform roadmap → P1/P2 operations | Append-only tables, atomic drafts, audited planner overrides, explicit approval/publication, rollback lineage, and operator runbooks are implemented; UI, FVA, and delivery confirmation remain |
 | [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md) | Shipped | 100% | Cross-spec operational integration | Live-accepted deterministic champion scoring, routing, calibration, reconciliation gates, leases, failure evidence, Prefect deployment, idempotent retry, and atomic draft visibility |
 | [Monitoring, alerts, and SLOs](monitoring_and_slos.md) | In progress | 65% | Platform roadmap → P1 monitoring | Accuracy plus live-accepted mode-aware source and scheduled-pipeline health are implemented; remaining work covers broader SLOs, alert delivery, drift, calibration, and cost |
-| [Integration contracts and forecast delivery](integration_contracts.md) | Proposed | 25% | Platform roadmap → P2 integrations | Provide stable warehouse, API, export, webhook, and publication contracts |
+| [Integration contracts and forecast delivery](integration_contracts.md) | In progress | 55% | Platform roadmap → P2 integrations | Stable current/by-run and audit views plus validated GCS CSV/Parquet export are implemented; APIs, webhooks, and delivery confirmation remain |
 | [Open-source product readiness](open_source_product_readiness.md) | Proposed | 40% | Platform roadmap → P3 open source | Add governance, first-run quickstart, roadmap, compatibility, extension, and modularization plans |
 | [General-purpose demand forecasting platform](platform_generalization.md) | Proposed | 0% | Separate platform-generalization workstream | Add canonical datasets, configurable periods, resource parameterization, and typed extension interfaces; multi-implementation validation is deferred |
 

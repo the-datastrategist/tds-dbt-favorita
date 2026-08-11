@@ -125,9 +125,11 @@ At a high level:
 5. Build the dbt consumption views and verify `forecast_runs` and `forecast_outputs`.
 6. Backtest and promote before enabling scheduled champion-to-draft execution.
 
-The scheduled pipeline currently ends at a validated visible draft. A separate gated manual flow
-supports draft validation and idempotent auto-publication, but planner review and overrides,
-automatic delivery, hierarchy-enabled acceptance, and full operational SLO coverage should be
+The scheduled pipeline currently ends at a validated visible draft. It supports configured
+hierarchical reconciliation with separately persisted base/reconciled evidence and live
+acceptance. A separate gated manual flow supports draft validation and idempotent
+auto-publication. Audited override, revision, rollback, stable warehouse retrieval, and batch
+export commands are available; a planner UI, automatic delivery confirmation, and full operational SLO coverage should be
 evaluated against the [specification status table](specs/README.md) before production use.
 
 For a controlled reset or recovery that preserves the raw dataset and reconstructs the derived dataset, use the [Clean Rebuild Runbook](clean_rebuild.md). Do not use dataset deletion for routine deployments or maintenance.
