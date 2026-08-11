@@ -44,6 +44,9 @@ def test_draft_run_record_is_persisted_after_all_evidence(
             }
         ],
         [{"validation_check_id": "check-1"}],
+        eligibility_decisions=[
+            {"eligibility_decision_id": "decision-1", "is_eligible": True, "has_exception": False}
+        ],
     )
     pins = ForecastRunPins(
         champion_candidate_id="candidate-1",
@@ -64,7 +67,13 @@ def test_draft_run_record_is_persisted_after_all_evidence(
         actor="scheduler",
     )
 
-    assert insert_rows.call_args_list[:3] == [
+    assert insert_rows.call_args_list[:4] == [
+        call(
+            result.eligibility_decisions,
+            "project.dataset.forecast_eligibility_decisions",
+            id_column="eligibility_decision_id",
+            project_id=None,
+        ),
         call(
             result.stage_records,
             "project.dataset.forecast_pipeline_stage_runs",
@@ -89,6 +98,7 @@ def test_draft_run_record_is_persisted_after_all_evidence(
     assert merge_row.call_args_list[-1].args[1] == "project.dataset.forecast_runs"
     assert merge_row.call_args_list[-1].args[0]["run_status"] == "draft"
     assert merge_row.call_args_list[-1].args[0]["feature_availability_hash"] == "availability-1"
+    assert merge_row.call_args_list[-1].args[0]["candidate_count"] == 1
     persist_reconciliation.assert_not_called()
 
 

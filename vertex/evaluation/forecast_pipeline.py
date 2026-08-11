@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
@@ -43,6 +43,7 @@ class ForecastPipelineResult:
     validation_checks: list[dict[str, Any]]
     reconciliation_run: dict[str, Any] | None = None
     reconciliation_outputs: pd.DataFrame | None = None
+    eligibility_decisions: list[dict[str, Any]] = field(default_factory=list)
 
 
 def build_forecast_run_id(
@@ -94,6 +95,79 @@ def eligibility_snapshot_id(
         )
     ordered = sorted(keys, key=lambda value: json.dumps(value, sort_keys=True))
     return get_hash(json.dumps(ordered, sort_keys=True, separators=(",", ":")))
+
+
+def _eligibility_keys(rows: pd.DataFrame, contract: ForecastContract) -> list[str]:
+    """Return canonical keys used to join frozen eligibility to scored rows."""
+    required = {*contract.dimensions, "date", "forecast_horizon"}
+    if missing := sorted(required.difference(rows.columns)):
+        raise ValueError(f"eligibility rows are missing required columns: {missing}")
+    origins = pd.to_datetime(rows["date"], errors="raise")
+    targets = origins + pd.to_timedelta(rows["forecast_horizon"].astype(int), unit="D")
+    keys: list[str] = []
+    for index, row in rows.iterrows():
+        entity = {
+            dimension: row[dimension].item() if hasattr(row[dimension], "item") else row[dimension]
+            for dimension in contract.dimensions
+        }
+        keys.append(
+            json.dumps(
+                {
+                    "entity": entity,
+                    "target_date": str(targets.loc[index].date()),
+                    "horizon": int(row["forecast_horizon"]),
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+        )
+    return keys
+
+
+def build_eligibility_decisions(
+    eligibility_rows: pd.DataFrame,
+    *,
+    contract: ForecastContract,
+    forecast_run_id: str,
+    snapshot_id: str,
+    decided_at: datetime,
+) -> list[dict[str, Any]]:
+    """Build retry-stable append-only evidence for every candidate decision."""
+    work = eligibility_rows.copy()
+    if "is_eligible" not in work:
+        work["is_eligible"] = True
+    if work["is_eligible"].isna().any():
+        raise ValueError("every candidate requires an explicit eligibility decision")
+    keys = _eligibility_keys(work, contract)
+    if len(keys) != len(set(keys)):
+        raise ValueError("eligibility candidate keys must be unique")
+    decisions = []
+    for position, (_, row) in enumerate(work.iterrows()):
+        eligible = bool(row["is_eligible"])
+        reason = row.get("ineligibility_reason")
+        if not eligible and (pd.isna(reason) or not str(reason).strip()):
+            raise ValueError("excluded candidates require ineligibility_reason")
+        key = json.loads(keys[position])
+        identity = {"forecast_run_id": forecast_run_id, "candidate_key": key}
+        decisions.append(
+            {
+                "eligibility_decision_id": get_hash(identity),
+                "forecast_run_id": forecast_run_id,
+                "eligibility_snapshot_id": snapshot_id,
+                "forecast_contract_name": contract.name,
+                "forecast_contract_hash": contract.hash,
+                "forecast_origin": pd.Timestamp(row["date"]),
+                "entity_key_json": json.dumps(key["entity"], sort_keys=True, separators=(",", ":")),
+                "target_date": pd.Timestamp(key["target_date"]).date(),
+                "horizon": key["horizon"],
+                "is_eligible": eligible,
+                "ineligibility_reason": None if eligible else str(reason),
+                "has_exception": bool(row.get("has_exception", False)),
+                "decision_evidence_json": row.get("decision_evidence_json", {}),
+                "decided_at": decided_at,
+            }
+        )
+    return decisions
 
 
 def _stage_record(
@@ -191,6 +265,7 @@ def execute_forecast_pipeline(
     *,
     contract: ForecastContract,
     pins: ForecastRunPins,
+    eligibility_rows: pd.DataFrame | None = None,
     hierarchy_config: HierarchyConfig | None = None,
     hierarchy_nodes: pd.DataFrame | None = None,
     hierarchy_edges: pd.DataFrame | None = None,
@@ -203,7 +278,19 @@ def execute_forecast_pipeline(
     origins = pd.to_datetime(prediction_rows["date"], errors="raise")
     if origins.nunique() != 1:
         raise ValueError("one publication run must contain exactly one forecast origin")
-    eligibility_id = eligibility_snapshot_id(prediction_rows, contract)
+    frozen = prediction_rows.copy() if eligibility_rows is None else eligibility_rows.copy()
+    if "is_eligible" not in frozen:
+        frozen["is_eligible"] = True
+    eligible = frozen.loc[frozen["is_eligible"].eq(True)].copy()
+    if eligible.empty:
+        raise ValueError("frozen eligibility contains no eligible candidates")
+    eligible_keys = _eligibility_keys(eligible, contract)
+    prediction_keys = _eligibility_keys(prediction_rows, contract)
+    if len(prediction_keys) != len(set(prediction_keys)):
+        raise ValueError("prediction keys must be unique")
+    if set(prediction_keys) != set(eligible_keys):
+        raise ValueError("scored rows must exactly match the frozen eligible population")
+    eligibility_id = eligibility_snapshot_id(eligible, contract)
     if eligibility_id != pins.eligibility_snapshot_id:
         raise ValueError("prediction rows do not match the pinned eligibility snapshot")
     forecast_run_id = build_forecast_run_id(
@@ -212,6 +299,13 @@ def execute_forecast_pipeline(
         pins=pins,
     )
     now = completed_at or datetime.now(timezone.utc)
+    eligibility_decisions = build_eligibility_decisions(
+        frozen,
+        contract=contract,
+        forecast_run_id=forecast_run_id,
+        snapshot_id=eligibility_id,
+        decided_at=now,
+    )
     score_fingerprint = get_hash(
         prediction_rows.to_json(orient="records", date_format="iso", date_unit="us")
     )
@@ -358,7 +452,31 @@ def execute_forecast_pipeline(
             started_at=now,
         )
     expected = len(prediction_rows)
+    candidate_count = len(eligibility_decisions)
+    eligible_count = sum(decision["is_eligible"] for decision in eligibility_decisions)
+    excluded_count = candidate_count - eligible_count
+    exception_count = sum(decision["has_exception"] for decision in eligibility_decisions)
     checks = [
+        _check(
+            forecast_run_id,
+            "eligibility_snapshot_match",
+            eligibility_id == pins.eligibility_snapshot_id,
+            details={"computed_snapshot_id": eligibility_id, "pinned_snapshot_id": pins.eligibility_snapshot_id},
+        ),
+        _check(
+            forecast_run_id,
+            "eligibility_population_accounting",
+            candidate_count == eligible_count + excluded_count and expected == eligible_count,
+            observed=float(expected),
+            threshold=float(eligible_count),
+            details={
+                "candidate_count": candidate_count,
+                "eligible_count": eligible_count,
+                "predicted_count": expected,
+                "excluded_count": excluded_count,
+                "exception_count": exception_count,
+            },
+        ),
         _check(
             forecast_run_id,
             "prediction_completeness",
@@ -398,10 +516,11 @@ def execute_forecast_pipeline(
         )
     )
     return ForecastPipelineResult(
-        forecast_run_id,
-        canonical,
-        stages,
-        checks,
-        reconciliation_run,
-        reconciliation_outputs,
+        forecast_run_id=forecast_run_id,
+        rows=canonical,
+        stage_records=stages,
+        validation_checks=checks,
+        reconciliation_run=reconciliation_run,
+        reconciliation_outputs=reconciliation_outputs,
+        eligibility_decisions=eligibility_decisions,
     )

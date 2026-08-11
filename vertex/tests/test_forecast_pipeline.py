@@ -141,6 +141,57 @@ def test_pipeline_rejects_changed_eligibility_after_pinning() -> None:
 
 
 @pytest.mark.unit
+def test_pipeline_freezes_exclusion_and_scores_only_eligible_population() -> None:
+    contract = load_forecast_contract("vertex/config/forecast_contract_publication.yaml")
+    predictions = _predictions().iloc[:1].copy()
+    candidates = _predictions()[["store_id", "date", "forecast_horizon"]].copy()
+    candidates["is_eligible"] = [True, False]
+    candidates["ineligibility_reason"] = [None, "insufficient_history"]
+    pins = _pins(predictions)
+
+    result = execute_forecast_pipeline(
+        predictions,
+        _calibration(),
+        contract=contract,
+        pins=pins,
+        eligibility_rows=candidates,
+    )
+
+    assert len(result.rows) == 1
+    assert len(result.eligibility_decisions) == 2
+    assert sum(row["is_eligible"] for row in result.eligibility_decisions) == 1
+    accounting = next(
+        check for check in result.validation_checks
+        if check["check_name"] == "eligibility_population_accounting"
+    )
+    assert accounting["passed"] is True
+    assert accounting["details_json"] == {
+        "candidate_count": 2,
+        "eligible_count": 1,
+        "predicted_count": 1,
+        "excluded_count": 1,
+        "exception_count": 0,
+    }
+
+
+@pytest.mark.unit
+def test_pipeline_rejects_unexplained_exclusion() -> None:
+    contract = load_forecast_contract("vertex/config/forecast_contract_publication.yaml")
+    predictions = _predictions().iloc[:1].copy()
+    candidates = _predictions()[["store_id", "date", "forecast_horizon"]].copy()
+    candidates["is_eligible"] = [True, False]
+
+    with pytest.raises(ValueError, match="ineligibility_reason"):
+        execute_forecast_pipeline(
+            predictions,
+            _calibration(),
+            contract=contract,
+            pins=_pins(predictions),
+            eligibility_rows=candidates,
+        )
+
+
+@pytest.mark.unit
 def test_pipeline_blocks_data_cutoff_after_origin() -> None:
     contract = load_forecast_contract("vertex/config/forecast_contract_publication.yaml")
     predictions = _predictions()

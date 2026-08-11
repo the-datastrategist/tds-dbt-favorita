@@ -119,6 +119,11 @@ models:
                   - healthy
                   - failed
                   - gates_failed
+                  - missing_eligibility_evidence
+                  - eligibility_snapshot_mismatch
+                  - unexplained_exclusions
+                  - eligibility_accounting_mismatch
+                  - eligible_prediction_mismatch
                   - missing_outputs
                   - duplicate_outputs
                   - cardinality_mismatch
@@ -646,7 +651,7 @@ unit_tests:
     given:
       - input: ref('stg_forecast_runs')
         rows:
-          - {forecast_run_id: draft_run, forecast_contract_name: draft_contract, started_at: '2026-08-05 00:00:00+00', run_status: draft, row_count: 1}
+          - {forecast_run_id: draft_run, forecast_contract_name: draft_contract, started_at: '2026-08-05 00:00:00+00', run_status: draft, eligibility_snapshot_id: snapshot_1, row_count: 1, candidate_count: 2, eligible_count: 1, excluded_count: 1, exception_count: 0}
           - {forecast_run_id: failed_run, forecast_contract_name: failed_contract, started_at: '2026-08-05 00:00:00+00', run_status: failed, row_count: 0}
       - input: ref('stg_forecast_pipeline_stage_runs')
         rows:
@@ -657,6 +662,10 @@ unit_tests:
       - input: ref('stg_forecast_outputs')
         rows:
           - {forecast_run_id: draft_run, forecast_output_id: output_1, horizon: 7, prediction_p10: 1, prediction_p50: 2, prediction_p90: 3}
+      - input: ref('stg_forecast_eligibility_decisions')
+        rows:
+          - {eligibility_decision_id: eligible_1, forecast_run_id: draft_run, eligibility_snapshot_id: snapshot_1, is_eligible: true, has_exception: false}
+          - {eligibility_decision_id: excluded_1, forecast_run_id: draft_run, eligibility_snapshot_id: snapshot_1, is_eligible: false, ineligibility_reason: insufficient_history, has_exception: false}
     expect:
       rows:
         - {forecast_run_id: draft_run, run_status: draft, health_status: healthy}

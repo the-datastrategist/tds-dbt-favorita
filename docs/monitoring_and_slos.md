@@ -54,6 +54,9 @@ make selector-forecast-monitoring
   freshness semantics.
 - `forecast_pipeline_health` exposes the latest forecast run per contract and checks run/stage
   success, blocking gates, output cardinality, duplicate output IDs, and required quantiles.
+  It also reconciles the immutable eligibility ledger to the run and outputs, alerting on missing
+  evidence, snapshot mismatch, unexplained exclusions, count drift, or eligible candidates omitted
+  from predictions.
 - `forecast_prediction_coverage` compares the latest run's distinct output count with its frozen
   expected cardinality and alerts on missing predictions or coverage below the configured ratio.
 - `forecast_feature_completeness` checks configured required columns on the latest in-scope

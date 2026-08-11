@@ -447,6 +447,10 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_runs` (
   champion_candidate_id STRING,
   eligibility_snapshot_id STRING,
   row_count INT64,
+  candidate_count INT64,
+  eligible_count INT64,
+  excluded_count INT64,
+  exception_count INT64,
   error_message STRING
 )
 PARTITION BY DATE(started_at)
@@ -457,6 +461,31 @@ ADD COLUMN IF NOT EXISTS champion_candidate_id STRING;
 
 ALTER TABLE `tds-favorita.favorita.forecast_runs`
 ADD COLUMN IF NOT EXISTS eligibility_snapshot_id STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_runs` ADD COLUMN IF NOT EXISTS candidate_count INT64;
+ALTER TABLE `tds-favorita.favorita.forecast_runs` ADD COLUMN IF NOT EXISTS eligible_count INT64;
+ALTER TABLE `tds-favorita.favorita.forecast_runs` ADD COLUMN IF NOT EXISTS excluded_count INT64;
+ALTER TABLE `tds-favorita.favorita.forecast_runs` ADD COLUMN IF NOT EXISTS exception_count INT64;
+
+-- Frozen candidate population and immutable eligibility/exclusion evidence.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_eligibility_decisions` (
+  eligibility_decision_id STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  eligibility_snapshot_id STRING NOT NULL,
+  forecast_contract_name STRING NOT NULL,
+  forecast_contract_hash STRING NOT NULL,
+  forecast_origin TIMESTAMP NOT NULL,
+  entity_key_json STRING NOT NULL,
+  target_date DATE NOT NULL,
+  horizon INT64 NOT NULL,
+  is_eligible BOOL NOT NULL,
+  ineligibility_reason STRING,
+  has_exception BOOL NOT NULL,
+  decision_evidence_json JSON,
+  decided_at TIMESTAMP NOT NULL
+)
+PARTITION BY DATE(decided_at)
+CLUSTER BY forecast_run_id, is_eligible, forecast_contract_name;
 
 -- Ordered component evidence. Stable stage_run_id values make identical retries no-ops.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_pipeline_stage_runs` (
