@@ -24,6 +24,7 @@ from environment validation through canonical forecast output in BigQuery.
 - **CI/CD**: GitHub Actions on every push and PR (Python lint/tests, `dbt parse` / `dbt compile` / `dbt docs generate`)
 - **Hosted documentation**: Docsify portal and dbt Docs deploy together to GitHub Pages on pushes to `main` / `master` (see [Hosted documentation](#hosted-documentation))
 - **dbt Docs & lineage**: Project overview ([`docs/overview.md`](docs/overview.md)), exposures for ML and operational consumers (`dbt/models/exposures.yml`)
+- **Forecast delivery**: Stable warehouse views, immutable batch export, and a private live-accepted Cloud Run retrieval API
 - **Code Quality**: Black, flake8, and mypy for code quality
 - **Open-source GCP platform guide**: Architecture diagrams, accelerators inventory, case study, benchmarks, rollout playbook, and IaC guidance ([docs/platform_guide.md](docs/platform_guide.md))
 

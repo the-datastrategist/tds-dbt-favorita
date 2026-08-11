@@ -29,6 +29,7 @@ flowchart TB
     APIs[Enabled APIs: BQ, GCS, Vertex, Artifact Registry]
     AR[Artifact Registry: tds-favorita image]
     BQ[(BigQuery datasets)]
+    ForecastAPI[Private Forecast Retrieval API]
     GCSRaw[(GCS raw)]
     GCSStage[(GCS vertex-staging)]
     GCSModels[(GCS models)]
@@ -39,6 +40,7 @@ flowchart TB
     GHA[GitHub Actions CI]
     Sched[Cloud Scheduler]
     CR[Cloud Run trigger optional]
+    Consumer[Authorized forecast consumer]
   end
 
   SA --> BQ
@@ -49,6 +51,7 @@ flowchart TB
   Sched --> CR
   CR --> VertexJobs
   GHA -.->|build push| AR
+  BQ --> ForecastAPI --> Consumer
 ```
 
 ---

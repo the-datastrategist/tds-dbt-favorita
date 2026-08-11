@@ -82,7 +82,7 @@ Guidance for evaluating, adopting, operating, and extending the platform:
 | Forecast monitoring | [monitoring_and_slos.md](monitoring_and_slos.md) | Live-accepted source, pipeline, publication-freshness, prediction-coverage, feature-completeness, realized-calibration, and target/feature-drift signals; configurable routing and opt-in Cloud Monitoring policy available |
 | Forecast operations | [forecast_operations.md](forecast_operations.md) | Override, approval, revision, and rollback commands available |
 | Forecast Value Added | [forecast_value_added.md](forecast_value_added.md) | Benchmark, planner-adjustment, and publication accuracy attribution |
-| Integration contracts | [integration_contracts.md](integration_contracts.md) | Stable warehouse views and GCS batch export available |
+| Integration contracts | [integration_contracts.md](integration_contracts.md) | Stable warehouse views, GCS batch export, delivery events, and a private live-accepted retrieval API |
 | Hierarchical reconciliation | [hierarchical_reconciliation.md](hierarchical_reconciliation.md) | Configuration, validation, metrics, and fail-closed runbook available |
 
 → Index: [delivery_artifacts.md](delivery_artifacts.md)
