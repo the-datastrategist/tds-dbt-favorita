@@ -43,6 +43,32 @@ models:
       - name: is_alerting
         data_tests: [not_null]
 
+  - name: forecast_data_drift
+    description: Window-over-window standardized mean drift for configured target and feature metrics.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [source_model, metric_name]
+    columns:
+      - name: source_model
+        data_tests: [not_null]
+      - name: metric_name
+        data_tests: [not_null]
+      - name: metric_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [feature, target]
+      - name: drift_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [healthy, insufficient_observations, drifted]
+      - name: is_alerting
+        data_tests: [not_null]
+
   - name: forecast_feature_completeness
     description: Latest feature-date null and entity coverage for configured production feature relations.
     columns:
@@ -626,6 +652,31 @@ unit_tests:
     expect:
       rows:
         - {feature_model: int_sales_store_daily, feature_date: '2026-08-10', row_count: 1, entity_count: 1, previous_entity_count: 2, missing_required_value_count: 1, completeness_ratio: 0.75, entity_coverage_ratio: 0.5, feature_completeness_status: missing_required_values, is_alerting: true}
+
+  - name: test_forecast_data_drift_detects_shift_and_sample_readiness
+    model: forecast_data_drift
+    overrides:
+      vars:
+        drift_window_days: 2
+        drift_minimum_observations: 2
+        drift_maximum_standardized_mean_difference: 0.5
+    given:
+      - input: ref('int_demand_store_daily')
+        rows:
+          - {date: '2026-08-08', store_nbr: 1, data_split_source: train, observed_sales_units: 10}
+          - {date: '2026-08-09', store_nbr: 1, data_split_source: train, observed_sales_units: 10}
+          - {date: '2026-08-10', store_nbr: 1, data_split_source: train, observed_sales_units: 30}
+          - {date: '2026-08-11', store_nbr: 1, data_split_source: train, observed_sales_units: 30}
+      - input: ref('int_sales_store_daily')
+        rows:
+          - {date: '2026-08-08', store_nbr: 1, data_split_source: train, avg_sales_store_l7d: 5}
+          - {date: '2026-08-09', store_nbr: 1, data_split_source: train, avg_sales_store_l7d: 15}
+          - {date: '2026-08-10', store_nbr: 1, data_split_source: train, avg_sales_store_l7d: 9}
+          - {date: '2026-08-11', store_nbr: 1, data_split_source: train, avg_sales_store_l7d: 11}
+    expect:
+      rows:
+        - {source_model: int_demand_store_daily, metric_name: observed_sales_units, metric_type: target, recent_observation_count: 2, reference_observation_count: 2, drift_status: drifted, is_alerting: true}
+        - {source_model: int_sales_store_daily, metric_name: avg_sales_store_l7d, metric_type: feature, recent_observation_count: 2, reference_observation_count: 2, drift_status: healthy, is_alerting: false}
 
   - name: test_forecast_publication_freshness_detects_stale_and_missing_contracts
     model: forecast_publication_freshness

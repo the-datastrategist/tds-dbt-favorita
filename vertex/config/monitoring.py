@@ -16,6 +16,7 @@ VALID_SEVERITIES = ("info", "ticket", "page")
 VALID_SIGNALS = frozenset(
     {
         "delivery_health",
+        "data_drift",
         "feature_completeness",
         "publication_freshness",
         "prediction_coverage",

@@ -18,6 +18,7 @@ def test_repository_monitoring_config_is_valid():
     assert config.slos["prediction_coverage"].minimum_ratio == 0.98
     assert config.slos["feature_completeness"].minimum_ratio == 0.99
     assert config.slos["realized_calibration"].minimum_ratio == 0.80
+    assert config.slos["data_drift"].window_days == 28
     assert config.hash
 
 
@@ -63,6 +64,11 @@ def test_invalid_monitoring_config_is_rejected(mutation, match):
 def test_evaluate_alerts_emits_only_unhealthy_signals():
     config = load_monitoring_config()
     rows = {
+        "data_drift": [
+            {"source_model": "stable", "drift_status": "healthy"},
+            {"source_model": "new", "drift_status": "insufficient_observations"},
+            {"source_model": "shifted", "metric_name": "demand", "drift_status": "drifted"},
+        ],
         "delivery_health": [
             {
                 "forecast_contract_name": "delivery",
@@ -98,8 +104,9 @@ def test_evaluate_alerts_emits_only_unhealthy_signals():
         ("forecast_features_incomplete", "broken_features"),
         ("forecast_delivery_unhealthy", "delivery"),
         ("forecast_calibration_unreliable", "biased"),
+        ("forecast_data_drift_detected", "shifted:demand"),
     ]
-    assert route_alerts(config, events) == 5
+    assert route_alerts(config, events) == 6
 
 
 @pytest.mark.unit
@@ -157,6 +164,7 @@ def test_bigquery_signal_loader_queries_only_validated_monitoring_views(client_c
     rows = load_bigquery_rows(project_id="tds-favorita", table_prefix="tds-favorita.favorita")
 
     assert set(rows) == {
+        "data_drift",
         "delivery_health",
         "feature_completeness",
         "publication_freshness",
@@ -166,6 +174,7 @@ def test_bigquery_signal_loader_queries_only_validated_monitoring_views(client_c
     }
     queries = [call.args[0] for call in client.query.call_args_list]
     assert queries == [
+        "SELECT * FROM `tds-favorita.favorita.forecast_data_drift`",
         "SELECT * FROM `tds-favorita.favorita.forecast_delivery_health`",
         "SELECT * FROM `tds-favorita.favorita.forecast_feature_completeness`",
         "SELECT * FROM `tds-favorita.favorita.forecast_publication_freshness`",

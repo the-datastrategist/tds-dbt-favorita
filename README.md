@@ -322,6 +322,10 @@ It reports realized P10-P90 coverage, median bias, interval width, and actual av
 contracts remain non-alerting until `realized_calibration_minimum_actuals` outcomes have landed;
 after that threshold, under-coverage or material normalized median bias routes a ticket.
 
+`forecast_data_drift` compares the latest target and feature windows with their immediately
+preceding windows. It reports scale-independent standardized mean difference per configured metric;
+new or sparse metrics remain non-alerting until both windows meet the minimum sample size.
+
 Publication paging is explicitly scoped by `publication_monitored_contracts` in
 `dbt/dbt_project.yml`; add only contracts that are expected to publish continuously.
 Scheduled forecast runs also persist immutable `forecast_eligibility_decisions`. Pipeline health

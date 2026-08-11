@@ -11,15 +11,15 @@
 
 The repo now has accuracy monitoring, mode-aware source ingestion health, scheduled pipeline
 health, publication freshness, prediction coverage, feature completeness, realized calibration,
-and an opt-in hosted alert evaluator. A complete platform still needs production alert-channel
-activation plus end-to-end target/feature drift and cost signals.
+target and feature drift, and an opt-in hosted alert evaluator. A complete platform still needs
+production alert-channel
+activation plus end-to-end cost signals.
 
 The source and scheduled-pipeline health slice passed live GCP acceptance on 2026-08-06. The
-publication-freshness, prediction-coverage, feature-completeness, and realized-calibration slices
-passed live BigQuery acceptance on 2026-08-11. Together, the evidence covers static-demo freshness
-semantics, policy lineage, stage order,
-blocking gates, output cardinality, horizon coverage, publication age, quantiles, and forecast
-provenance.
+publication-freshness, prediction-coverage, feature-completeness, realized-calibration, and drift
+slices passed live BigQuery acceptance on 2026-08-11. Together, the evidence covers static-demo
+freshness semantics, policy lineage, stage order, blocking gates, output cardinality, horizon
+coverage, publication age, quantiles, and forecast provenance.
 
 This spec adds `docs/monitoring_and_slos.md`, metric marts, alert policies, and configurable notification routing.
 
@@ -64,7 +64,7 @@ Add or extend dbt marts:
 | `forecast_publication_freshness` | stale or missing published forecasts |
 | `forecast_accuracy_by_horizon` | error, bias, WAPE by horizon/segment |
 | `forecast_realized_calibration` | realized P10-P90 coverage, interval width, and median bias by contract/horizon |
-| `forecast_drift` | target and feature drift |
+| `forecast_data_drift` | window-over-window target and feature drift |
 | `forecast_pipeline_health` | success, duration, retries, cost labels |
 
 Implemented source policies declare `static_demo` or `continuous`. Static snapshots do not fail
@@ -112,8 +112,8 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 1. **Complete:** add `docs/monitoring_and_slos.md` and source-mode policy.
 2. **Complete:** add source and scheduled-pipeline health marts with schema tests.
 3. **Complete:** add versioned SLO/alert policy YAML, validation, and deterministic policy hash.
-4. **Partial:** prediction coverage, publication freshness, feature completeness, and realized
-   calibration are implemented; target/feature drift and cost remain.
+4. **Partial:** prediction coverage, publication freshness, feature completeness, realized
+   calibration, and target/feature drift are implemented; cost remains.
 5. **Complete:** add an opt-in Terraform log metric and Cloud Monitoring failure policy.
 6. **Partial:** direct warehouse evaluation, structured-log routing, environment-indirected
    webhook routing, and an opt-in Cloud Scheduler → Cloud Run Job are implemented; applying the
@@ -138,12 +138,12 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 ## Current implementation status
 
 The implementation now satisfies the documented SLO, stale/missing publication, prediction
-coverage, feature-completeness, and configurable alert-path criteria. Python validation, dbt
-tests, and disabled
-Terraform validation pass, and the freshness, coverage, direct-query, and structured-log paths
-passed live BigQuery acceptance on 2026-08-11. An enabled Terraform plan/apply with real channel
-IDs and a witnessed external notification remain required before this spec can be marked shipped.
-Broader drift and cost signals also remain in scope.
+coverage, feature-completeness, realized-calibration, target/feature-drift, and configurable
+alert-path criteria. Python validation, dbt tests, and disabled Terraform validation pass. The
+warehouse signal, direct-query, and structured-log paths passed live BigQuery acceptance on
+2026-08-11. An enabled Terraform plan/apply with real channel IDs and a witnessed external
+notification remain required before this spec can be marked shipped. Cost monitoring also remains
+in scope.
 
 ## Related documents
 
@@ -155,5 +155,6 @@ Broader drift and cost signals also remain in scope.
 - [Live forecast monitoring acceptance](../acceptance/forecast_monitoring_2026-08-06.md)
 - [Live monitoring and SLO acceptance](../acceptance/monitoring_slos_2026-08-11.md)
 - [Realized calibration acceptance](../acceptance/forecast_realized_calibration_2026-08-11.md)
+- [Target and feature drift acceptance](../acceptance/forecast_data_drift_2026-08-11.md)
 
 {% enddocs %}

@@ -93,4 +93,6 @@ but remain opt-in. Production paging still requires an enabled Terraform plan/ap
 image digest and notification channel IDs, followed by a witnessed external notification.
 Realized calibration was subsequently accepted the same day; see
 [Realized forecast calibration acceptance](forecast_realized_calibration_2026-08-11.md).
-Target/feature drift and cost monitoring remain separate increments in the broader monitoring spec.
+Target/feature drift was subsequently accepted the same day; see
+[Forecast data drift acceptance](forecast_data_drift_2026-08-11.md). Cost monitoring remains a
+separate increment in the broader monitoring spec.

@@ -43,6 +43,9 @@ def _is_alerting(signal: str, row: dict[str, Any]) -> tuple[bool, str]:
     if signal == "realized_calibration":
         status = str(row.get("calibration_status", "missing"))
         return status not in {"healthy", "insufficient_actuals"}, status
+    if signal == "data_drift":
+        status = str(row.get("drift_status", "missing"))
+        return status not in {"healthy", "insufficient_observations"}, status
     status = str(row.get("health_status", "missing"))
     return status not in {"healthy", "healthy_static"}, status
 
@@ -61,13 +64,19 @@ def evaluate_alerts(
             alerting, reason = _is_alerting(policy.signal, row)
             if not alerting:
                 continue
-            resource_key = str(
-                row.get("forecast_contract_name")
-                or row.get("source_name")
-                or row.get("feature_model")
-                or row.get("forecast_run_id")
-                or "platform"
-            )
+            if policy.signal == "data_drift":
+                resource_key = (
+                    f"{row.get('source_model', 'unknown')}:"
+                    f"{row.get('metric_name', 'unknown')}"
+                )
+            else:
+                resource_key = str(
+                    row.get("forecast_contract_name")
+                    or row.get("source_name")
+                    or row.get("feature_model")
+                    or row.get("forecast_run_id")
+                    or "platform"
+                )
             events.append(
                 AlertEvent(
                     policy_name=policy.name,

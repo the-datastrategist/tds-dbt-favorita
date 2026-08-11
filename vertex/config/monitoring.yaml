@@ -29,6 +29,10 @@ slos:
     target: 0.99
     window_days: 28
     minimum_ratio: 0.80
+  data_drift:
+    owner: forecasting_science
+    target: 0.99
+    window_days: 28
 
 policies:
   - name: stale_forecast_publication
@@ -53,5 +57,9 @@ policies:
     destination: operator_log
   - name: forecast_calibration_unreliable
     signal: realized_calibration
+    severity: ticket
+    destination: operator_log
+  - name: forecast_data_drift_detected
+    signal: data_drift
     severity: ticket
     destination: operator_log

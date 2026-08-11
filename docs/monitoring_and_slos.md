@@ -73,6 +73,9 @@ make selector-forecast-monitoring
   observed demand and reports P10-P90 coverage, median bias, normalized median bias, and mean
   interval width by contract and horizon. `insufficient_actuals` is non-alerting; once the minimum
   sample is met, `under_coverage` and `material_bias` route tickets.
+- `forecast_data_drift` compares the latest configured target and feature windows with the
+  immediately preceding windows. It emits `drifted` when standardized mean difference exceeds
+  policy and treats `insufficient_observations` as non-alerting.
 
 For deterministic validation, pass a timestamp to dbt with
 `--vars '{monitoring_evaluated_at: "2026-08-05 12:00:00+00"}'`.
@@ -95,6 +98,7 @@ for the reference deployment and must be reviewed per client.
 | Prediction coverage | 99% over 30 days | At least 98% of frozen expected outputs | Forecasting operations |
 | Pipeline availability | 99% over 30 days | Terminal within 120 minutes | ML platform |
 | Realized calibration | 99% over 28 days | At least 80% P10-P90 coverage after 30 actuals | Forecasting science |
+| Data drift | 99% over 28 days | Standardized mean difference no greater than 0.50 after 30 observations per window | Forecasting science |
 
 `page` means immediate operator attention; `ticket` means remediation within the next business
 cycle; `info` is diagnostic. Destination minimum severity prevents lower-priority events from
@@ -123,6 +127,7 @@ and run:
 python scripts/evaluate_monitoring_alerts.py \
   --source json \
   --feature-completeness-json /tmp/feature-completeness.json \
+  --data-drift-json /tmp/data-drift.json \
   --publication-freshness-json /tmp/publication-freshness.json \
   --prediction-coverage-json /tmp/prediction-coverage.json \
   --pipeline-health-json /tmp/pipeline-health.json \
@@ -173,7 +178,11 @@ monitoring_runner_image = "us-central1-docker.pkg.dev/my-project/vertex/ml-pipel
   `under_coverage`, review interval calibration residuals and recent demand regimes. For
   `material_bias`, compare median errors with actual demand and retraining/backtest evidence before
   promoting or recalibrating a model. Do not page on `insufficient_actuals`.
+- **Data drift:** inspect `forecast_data_drift` by source model and metric. Confirm both comparison
+  windows represent equivalent operational populations, then investigate upstream policy changes,
+  promotions, assortment changes, or source defects. Backtest before retraining or promotion; do
+  not alert on `insufficient_observations`.
 
-The next monitoring increment adds feature/target drift and cost marts.
+The next monitoring increment adds cost monitoring.
 Production activation requires applying the opt-in runner and alert resources with real channel
 IDs, then recording a witnessed notification delivery.
