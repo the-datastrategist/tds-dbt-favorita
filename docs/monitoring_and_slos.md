@@ -94,7 +94,7 @@ Destinations and policies are configured without code changes. `log` destination
 JSON to the process logger. `webhook` destinations resolve their URL from the configured environment
 variable; URLs and tokens never belong in YAML.
 
-The normal hosted/operator path queries the three warehouse marts directly:
+The operator path queries the three warehouse marts directly:
 
 ```bash
 make forecast-alerts-evaluate DRY_RUN=true
@@ -116,7 +116,8 @@ python scripts/evaluate_monitoring_alerts.py \
   --dry-run
 ```
 
-For hosted routing, replace `operator_log` or add a webhook destination in
+For hosted routing, schedule the evaluator after the monitoring dbt selector, replace
+`operator_log` or add a webhook destination in
 `vertex/config/monitoring.yaml`, set its `url_env_var`, and omit `--dry-run`.
 
 ## Cloud-managed failure alert
@@ -143,4 +144,6 @@ monitoring_notification_channel_ids = [
 - **Source alert:** validate the latest immutable ingestion record and source policy before rerunning
   downstream features.
 
-The next monitoring increment adds realized calibration, feature/target drift, and cost marts.
+The next monitoring increment adds feature completeness, realized calibration, feature/target
+drift, and cost marts. Production activation also requires a hosted evaluator schedule, enabled
+notification channels, and a witnessed notification delivery.

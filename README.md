@@ -309,6 +309,17 @@ and does not generate a wall-clock freshness alert. Production adapters should u
 when new data is expected on a cadence. See [Forecast monitoring and source
 freshness](docs/monitoring_and_slos.md).
 
+Build the monitoring marts and evaluate their configured alert policies with:
+
+```bash
+make selector-forecast-monitoring
+make forecast-alerts-evaluate DRY_RUN=true  # inspect live alert events without routing
+make forecast-alerts-evaluate               # route through configured destinations
+```
+
+Publication paging is explicitly scoped by `publication_monitored_contracts` in
+`dbt/dbt_project.yml`; add only contracts that are expected to publish continuously.
+
 ### dbt commands (Docker)
 
 ```bash

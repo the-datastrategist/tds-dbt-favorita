@@ -203,7 +203,7 @@ See [iac.md](iac.md) and `vertex/ops/README.md` for IAM roles, chargeback labels
 flowchart LR
   PR[Pull request] --> GHA[GitHub Actions]
   GHA --> Lint[black / flake8 / mypy]
-  GHA --> Test[pytest unit ≥65% cov]
+  GHA --> Test[pytest unit ≥75% cov]
   GHA --> Config[validate model_config.yaml]
   GHA --> KFP[compile KFP pipeline JSON]
   GHA --> dbt[dbt parse / compile / docs]

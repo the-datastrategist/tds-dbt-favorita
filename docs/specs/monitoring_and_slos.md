@@ -9,13 +9,15 @@
 
 ## Summary
 
-The repo now has accuracy monitoring, mode-aware source ingestion health, and scheduled pipeline
-health. A complete platform still needs alert delivery and end-to-end SLOs across publication
-freshness, feature completeness, data drift, calibration, and cost.
+The repo now has accuracy monitoring, mode-aware source ingestion health, scheduled pipeline
+health, publication freshness, and prediction coverage. A complete platform still needs hosted
+alert delivery and end-to-end signals for feature completeness, data drift, calibration, and cost.
 
 The source and scheduled-pipeline health slice passed live GCP acceptance on 2026-08-06. The
-accepted evidence covers static-demo freshness semantics, policy lineage, stage order, blocking
-gates, output cardinality, horizon coverage, quantiles, and forecast provenance.
+publication-freshness and prediction-coverage slice passed live BigQuery acceptance on 2026-08-11.
+Together, the evidence covers static-demo freshness semantics, policy lineage, stage order,
+blocking gates, output cardinality, horizon coverage, publication age, quantiles, and forecast
+provenance.
 
 This spec adds `docs/monitoring_and_slos.md`, metric marts, alert policies, and configurable notification routing.
 
@@ -111,8 +113,8 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 4. **Partial:** prediction coverage and publication freshness are implemented; feature
    completeness, realized calibration, target/feature drift, and cost remain.
 5. **Complete:** add an opt-in Terraform log metric and Cloud Monitoring failure policy.
-6. **Partial:** structured log and environment-indirected webhook routing are implemented;
-   scheduled invocation in hosted paths remains.
+6. **Partial:** direct warehouse evaluation, structured-log routing, and environment-indirected
+   webhook routing are implemented; scheduled invocation in hosted paths remains.
 7. **Complete:** update operator runbooks from each implemented alert to remediation.
 
 ## Testing & validation
@@ -133,9 +135,10 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 
 The implementation now satisfies the documented SLO, stale/missing publication, prediction
 coverage, and configurable alert-path criteria. Python validation, dbt tests, and disabled
-Terraform validation pass, and the freshness and coverage marts passed live BigQuery acceptance on
-2026-08-11. An enabled Terraform plan/apply with real channel IDs, hosted signal evaluation, and a
-witnessed notification delivery remain required before this spec can be marked shipped. Broader
+Terraform validation pass, and the freshness, coverage, direct-query, and structured-log paths
+passed live BigQuery acceptance on 2026-08-11. An enabled Terraform plan/apply with real channel
+IDs, hosted scheduling, and a witnessed external notification remain required before this spec can
+be marked shipped. Broader
 feature-completeness, calibration, drift, and cost signals also remain in scope.
 
 ## Related documents

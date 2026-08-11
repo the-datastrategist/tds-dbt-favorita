@@ -17,7 +17,7 @@ The latest monitored publication returned:
 |---|---|
 | Forecast contract | `favorita_store_daily_demand_h7_hierarchical_publication` |
 | Freshness status | `fresh` |
-| Publication age | `16 minutes` |
+| Publication age | `20 minutes` |
 | Alerting | `false` |
 
 Prediction coverage returned healthy results for both available publication runs:
@@ -35,6 +35,9 @@ IDs remain in the warehouse views.
 - The versioned YAML alert/SLO contract passed validation and deterministic hashing tests.
 - Synthetic stale, low-coverage, and unhealthy-pipeline signals produced the expected severities.
 - Structured-log routing and environment-indirected webhook routing passed unit tests.
+- The executable runner queried all three live warehouse views directly and returned zero active
+  alerts. Controlled stale-publication, low-coverage, and failed-pipeline fixtures emitted exactly
+  three structured alerts with the configured `page`, `ticket`, and `page` severities.
 - Terraform formatting and validation passed for both development and production environments
   with alert resources disabled by default.
 - The opt-in infrastructure defines a log-based failure metric and a Cloud Monitoring alert policy;
@@ -45,8 +48,8 @@ IDs remain in the warehouse views.
 The full Python suite passed:
 
 ```text
-361 passed, 7 warnings
-TOTAL coverage: 77.12% (required: 75%)
+362 passed, 7 warnings
+Unit-suite coverage: 76.77% (required: 75%)
 ```
 
 dbt parsing, monitoring compilation, schema tests, data tests, and the new coverage/freshness unit
@@ -62,8 +65,9 @@ hierarchical delivery contract and reports it as fresh.
 
 ## Remaining production activation
 
-This acceptance proves the repository implementation and live warehouse signals. Production alert
-delivery still requires an enabled Terraform plan/apply with real notification channel IDs, a
-hosted schedule for signal evaluation, and a witnessed notification delivery. Feature
+This acceptance proves the repository implementation, direct warehouse evaluation, and structured
+log delivery. Production paging still requires an enabled Terraform plan/apply with real
+notification channel IDs, a hosted schedule for the runner, and a witnessed external notification.
+Feature
 completeness, realized calibration, target/feature drift, and cost monitoring remain separate
 increments in the broader monitoring spec.
