@@ -28,11 +28,11 @@ from vertex.evaluation.forecast_pipeline_persistence import (
     persist_forecast_pipeline_exception,
     persist_forecast_pipeline_result,
 )
-from vertex.evaluation.reconciliation import expand_leaf_predictions
 from vertex.evaluation.model_lifecycle_persistence import (
     resolve_champion_candidate_id,
     resolve_champion_config_name,
 )
+from vertex.evaluation.reconciliation import expand_leaf_predictions
 from vertex.jobs.run import run_job_config
 from vertex.utils.forecast_outputs import _feature_version
 from vertex.utils.forecast_publication import (
