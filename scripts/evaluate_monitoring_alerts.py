@@ -15,6 +15,7 @@ from vertex.monitoring.alerts import evaluate_alerts, route_alerts
 from vertex.utils.bigquery_utils import validate_bq_table_id
 
 SIGNAL_TABLES = {
+    "feature_completeness": "forecast_feature_completeness",
     "publication_freshness": "forecast_publication_freshness",
     "prediction_coverage": "forecast_prediction_coverage",
     "pipeline_health": "forecast_pipeline_health",
@@ -49,6 +50,7 @@ def main() -> None:
     parser.add_argument("--project-id", default="tds-favorita")
     parser.add_argument("--table-prefix", default="tds-favorita.favorita")
     parser.add_argument("--publication-freshness-json")
+    parser.add_argument("--feature-completeness-json")
     parser.add_argument("--prediction-coverage-json")
     parser.add_argument("--pipeline-health-json")
     parser.add_argument("--dry-run", action="store_true")
@@ -57,6 +59,7 @@ def main() -> None:
     config = load_monitoring_config(args.config)
     if args.source == "json":
         signal_rows = {
+            "feature_completeness": _load_rows(args.feature_completeness_json),
             "publication_freshness": _load_rows(args.publication_freshness_json),
             "prediction_coverage": _load_rows(args.prediction_coverage_json),
             "pipeline_health": _load_rows(args.pipeline_health_json),
@@ -65,6 +68,7 @@ def main() -> None:
         if any(
             (
                 args.publication_freshness_json,
+                args.feature_completeness_json,
                 args.prediction_coverage_json,
                 args.pipeline_health_json,
             )

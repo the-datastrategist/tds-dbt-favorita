@@ -34,6 +34,9 @@ def _is_alerting(signal: str, row: dict[str, Any]) -> tuple[bool, str]:
     if signal == "prediction_coverage":
         status = str(row.get("coverage_status", "missing"))
         return status != "healthy", status
+    if signal == "feature_completeness":
+        status = str(row.get("feature_completeness_status", "missing"))
+        return status != "healthy", status
     status = str(row.get("health_status", "missing"))
     return status not in {"healthy", "healthy_static"}, status
 
@@ -55,6 +58,7 @@ def evaluate_alerts(
             resource_key = str(
                 row.get("forecast_contract_name")
                 or row.get("source_name")
+                or row.get("feature_model")
                 or row.get("forecast_run_id")
                 or "platform"
             )

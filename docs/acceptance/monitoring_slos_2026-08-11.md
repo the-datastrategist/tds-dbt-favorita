@@ -30,26 +30,42 @@ Prediction coverage returned healthy results for both available publication runs
 The abbreviated run IDs are sufficient to distinguish the accepted runs; the authoritative full
 IDs remain in the warehouse views.
 
+Feature completeness passed live acceptance after scoping the reference feature relation to
+observed rows:
+
+| Signal | Result |
+|---|---|
+| Feature model | `int_sales_store_daily` |
+| Feature date | `2017-08-15` |
+| Required columns | `4` |
+| Completeness status | `healthy` |
+| Alerting | `false` |
+
+The focused dbt build completed with `PASS=9 WARN=0 ERROR=0`, including its unit test and five
+data tests. The four-view live evaluator subsequently returned zero active alerts.
+
 ## Alert and infrastructure validation
 
 - The versioned YAML alert/SLO contract passed validation and deterministic hashing tests.
 - Synthetic stale, low-coverage, and unhealthy-pipeline signals produced the expected severities.
 - Structured-log routing and environment-indirected webhook routing passed unit tests.
-- The executable runner queried all three live warehouse views directly and returned zero active
+- The executable runner queried all four live warehouse views directly and returned zero active
   alerts. Controlled stale-publication, low-coverage, and failed-pipeline fixtures emitted exactly
   three structured alerts with the configured `page`, `ticket`, and `page` severities.
 - Terraform formatting and validation passed for both development and production environments
   with alert resources disabled by default.
 - The opt-in infrastructure defines a log-based failure metric and a Cloud Monitoring alert policy;
   notification channel IDs remain environment inputs rather than repository secrets.
+- Terraform validation passed for the opt-in Cloud Run Job, authenticated Cloud Scheduler trigger,
+  structured SLO log metric, and notification policy in both dev and prod.
 
 ## Regression validation
 
 The full Python suite passed:
 
 ```text
-362 passed, 7 warnings
-Unit-suite coverage: 76.77% (required: 75%)
+367 passed, 7 warnings
+Total coverage: 76% (required: 75%)
 ```
 
 dbt parsing, monitoring compilation, schema tests, data tests, and the new coverage/freshness unit
@@ -63,11 +79,16 @@ explicitly opt-in through `publication_monitored_contracts`; prediction coverage
 evaluate every run with declared expected output. The final freshness result contains only the
 hierarchical delivery contract and reports it as fresh.
 
+The first feature-completeness query evaluated future date-spine rows whose targets are
+intentionally null, producing a false page. Monitored feature relations now support an explicit
+`scope_column`/`scope_value`; the reference contract evaluates `data_split_source = 'train'` and
+returns healthy while a unit fixture still proves null degradation and entity loss alert.
+
 ## Remaining production activation
 
 This acceptance proves the repository implementation, direct warehouse evaluation, and structured
-log delivery. Production paging still requires an enabled Terraform plan/apply with real
-notification channel IDs, a hosted schedule for the runner, and a witnessed external notification.
-Feature
-completeness, realized calibration, target/feature drift, and cost monitoring remain separate
-increments in the broader monitoring spec.
+log delivery. The hosted schedule and channel-routing resources are now implemented and validated
+but remain opt-in. Production paging still requires an enabled Terraform plan/apply with a real
+image digest and notification channel IDs, followed by a witnessed external notification.
+Realized calibration, target/feature drift, and cost monitoring remain separate increments in the
+broader monitoring spec.

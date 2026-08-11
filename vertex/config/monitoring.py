@@ -13,7 +13,14 @@ from vertex.utils.data_utils import get_hash
 DEFAULT_MONITORING_PATH = Path(__file__).resolve().parent / "monitoring.yaml"
 VALID_DESTINATION_TYPES = frozenset({"log", "webhook"})
 VALID_SEVERITIES = ("info", "ticket", "page")
-VALID_SIGNALS = frozenset({"publication_freshness", "prediction_coverage", "pipeline_health"})
+VALID_SIGNALS = frozenset(
+    {
+        "feature_completeness",
+        "publication_freshness",
+        "prediction_coverage",
+        "pipeline_health",
+    }
+)
 
 
 @dataclass(frozen=True)

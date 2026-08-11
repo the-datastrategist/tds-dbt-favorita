@@ -80,6 +80,22 @@ vars:
   publication_monitored_contracts:
     - favorita_store_daily_demand_h7_hierarchical_publication
 
+  # Compile-time column references fail closed on schema removal. Runtime checks cover nulls and
+  # latest-date entity loss. Add one entry per production feature relation.
+  feature_completeness_minimum_ratio: 0.99
+  feature_completeness_minimum_entity_ratio: 0.95
+  feature_completeness_monitored_models:
+    - model: int_sales_store_daily
+      date_column: date
+      entity_column: store_nbr
+      scope_column: data_split_source
+      scope_value: train
+      required_columns:
+        - date
+        - store_nbr
+        - sales_store
+        - avg_sales_store_l7d
+
   # Reusable column groups for get_bqml_feature_columns / get_bqml_prediction_features.
   feature_sets:
     datetime:

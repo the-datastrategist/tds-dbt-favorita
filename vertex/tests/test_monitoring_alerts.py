@@ -16,6 +16,7 @@ def test_repository_monitoring_config_is_valid():
 
     assert config.slos["publication_freshness"].threshold_minutes == 1440
     assert config.slos["prediction_coverage"].minimum_ratio == 0.98
+    assert config.slos["feature_completeness"].minimum_ratio == 0.99
     assert config.hash
 
 
@@ -61,6 +62,13 @@ def test_invalid_monitoring_config_is_rejected(mutation, match):
 def test_evaluate_alerts_emits_only_unhealthy_signals():
     config = load_monitoring_config()
     rows = {
+        "feature_completeness": [
+            {"feature_model": "healthy_features", "feature_completeness_status": "healthy"},
+            {
+                "feature_model": "broken_features",
+                "feature_completeness_status": "missing_required_values",
+            },
+        ],
         "publication_freshness": [
             {"forecast_contract_name": "fresh", "freshness_status": "fresh"},
             {"forecast_contract_name": "stale", "freshness_status": "stale"},
@@ -76,8 +84,9 @@ def test_evaluate_alerts_emits_only_unhealthy_signals():
     assert [(event.policy_name, event.resource_key) for event in events] == [
         ("stale_forecast_publication", "stale"),
         ("prediction_coverage_low", "low"),
+        ("forecast_features_incomplete", "broken_features"),
     ]
-    assert route_alerts(config, events) == 2
+    assert route_alerts(config, events) == 3
 
 
 @pytest.mark.unit
@@ -135,12 +144,14 @@ def test_bigquery_signal_loader_queries_only_validated_monitoring_views(client_c
     rows = load_bigquery_rows(project_id="tds-favorita", table_prefix="tds-favorita.favorita")
 
     assert set(rows) == {
+        "feature_completeness",
         "publication_freshness",
         "prediction_coverage",
         "pipeline_health",
     }
     queries = [call.args[0] for call in client.query.call_args_list]
     assert queries == [
+        "SELECT * FROM `tds-favorita.favorita.forecast_feature_completeness`",
         "SELECT * FROM `tds-favorita.favorita.forecast_publication_freshness`",
         "SELECT * FROM `tds-favorita.favorita.forecast_prediction_coverage`",
         "SELECT * FROM `tds-favorita.favorita.forecast_pipeline_health`",

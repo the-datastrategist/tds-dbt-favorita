@@ -9,3 +9,8 @@ caller_member = "user:you@example.com"
 # Opt in only after creating notification channels outside this module.
 enable_monitoring_alerts            = false
 monitoring_notification_channel_ids = []
+
+# Use an immutable digest, not a mutable tag. Enable the runner and alert policies together.
+enable_monitoring_runner   = false
+monitoring_runner_image    = "us-central1-docker.pkg.dev/my-client-prod/vertex/ml-pipeline@sha256:replace-me"
+monitoring_runner_schedule = "15 * * * *"

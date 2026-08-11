@@ -97,3 +97,21 @@ variable "monitoring_notification_channel_ids" {
   type        = list(string)
   default     = []
 }
+
+variable "enable_monitoring_runner" {
+  description = "Create the scheduled Cloud Run monitoring evaluator."
+  type        = bool
+  default     = false
+}
+
+variable "monitoring_runner_image" {
+  description = "Immutable production image URI for the monitoring Cloud Run Job."
+  type        = string
+  default     = ""
+}
+
+variable "monitoring_runner_schedule" {
+  description = "UTC cron schedule for monitoring evaluation."
+  type        = string
+  default     = "15 * * * *"
+}

@@ -56,6 +56,10 @@ make selector-forecast-monitoring
   success, blocking gates, output cardinality, duplicate output IDs, and required quantiles.
 - `forecast_prediction_coverage` compares the latest run's distinct output count with its frozen
   expected cardinality and alerts on missing predictions or coverage below the configured ratio.
+- `forecast_feature_completeness` checks configured required columns on the latest in-scope
+  feature date and compares entity coverage with the prior date. Removed columns fail at dbt
+  compilation; null degradation and entity loss emit runtime alerts. Configure relations, columns,
+  and optional row scope through `feature_completeness_monitored_models`.
 - `forecast_publication_freshness` detects contracts with no publication and publications older
   than the configured maximum age. Delivery confirmation is exposed separately and does not
   weaken the freshness result. Contracts opt in through `publication_monitored_contracts`; this
@@ -94,7 +98,7 @@ Destinations and policies are configured without code changes. `log` destination
 JSON to the process logger. `webhook` destinations resolve their URL from the configured environment
 variable; URLs and tokens never belong in YAML.
 
-The operator path queries the three warehouse marts directly:
+The operator path queries the four warehouse marts directly:
 
 ```bash
 make forecast-alerts-evaluate DRY_RUN=true
@@ -110,6 +114,7 @@ and run:
 ```bash
 python scripts/evaluate_monitoring_alerts.py \
   --source json \
+  --feature-completeness-json /tmp/feature-completeness.json \
   --publication-freshness-json /tmp/publication-freshness.json \
   --prediction-coverage-json /tmp/prediction-coverage.json \
   --pipeline-health-json /tmp/pipeline-health.json \
@@ -123,14 +128,19 @@ For hosted routing, schedule the evaluator after the monitoring dbt selector, re
 ## Cloud-managed failure alert
 
 Terraform includes an opt-in `monitoring-alerts` module. It creates an error-log metric and a Cloud
-Monitoring policy covering Vertex custom jobs, Cloud Run jobs, and Cloud Scheduler jobs. It is
-disabled by default. Enable it only after supplying existing notification-channel resource IDs:
+Monitoring policy covering Vertex custom jobs, Cloud Run jobs, and Cloud Scheduler jobs. It also
+promotes structured SLO events from the hosted evaluator into the configured channels. The
+`monitoring-runner` module creates an authenticated, hourly Cloud Scheduler → Cloud Run Job path
+that rebuilds the marts and evaluates alerts. Both are disabled by default. Enable them only after
+supplying channel IDs and an immutable production image digest:
 
 ```hcl
 enable_monitoring_alerts = true
 monitoring_notification_channel_ids = [
   "projects/my-project/notificationChannels/1234567890",
 ]
+enable_monitoring_runner = true
+monitoring_runner_image = "us-central1-docker.pkg.dev/my-project/vertex/ml-pipeline@sha256:..."
 ```
 
 ## Runbooks
@@ -143,7 +153,10 @@ monitoring_notification_channel_ids = [
   remediate the failed stage before retrying.
 - **Source alert:** validate the latest immutable ingestion record and source policy before rerunning
   downstream features.
+- **Feature completeness:** inspect the named feature relation at `feature_date`, distinguish
+  expected out-of-scope rows from genuine null/entity loss, and stop scoring until the feature
+  contract is restored. Use `scope_column`/`scope_value` for intentional partitions.
 
-The next monitoring increment adds feature completeness, realized calibration, feature/target
-drift, and cost marts. Production activation also requires a hosted evaluator schedule, enabled
-notification channels, and a witnessed notification delivery.
+The next monitoring increment adds realized calibration, feature/target drift, and cost marts.
+Production activation requires applying the opt-in runner and alert resources with real channel
+IDs, then recording a witnessed notification delivery.

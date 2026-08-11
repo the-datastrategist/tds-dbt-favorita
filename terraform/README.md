@@ -13,6 +13,8 @@ terraform/
     bigquery-datasets/   # raw + analytics datasets (not table schemas — see Non-goals below)
     gcs-buckets/          # raw, staging, models, mlflow
     cloud-scheduler/     # Optional HTTP jobs, disabled by default
+    monitoring-alerts/   # Log metrics + Cloud Monitoring notification policies
+    monitoring-runner/   # Scheduled Cloud Run Job that rebuilds/evaluates monitoring marts
   environments/
     dev/
     prod/

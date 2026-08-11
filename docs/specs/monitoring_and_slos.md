@@ -110,11 +110,12 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 1. **Complete:** add `docs/monitoring_and_slos.md` and source-mode policy.
 2. **Complete:** add source and scheduled-pipeline health marts with schema tests.
 3. **Complete:** add versioned SLO/alert policy YAML, validation, and deterministic policy hash.
-4. **Partial:** prediction coverage and publication freshness are implemented; feature
-   completeness, realized calibration, target/feature drift, and cost remain.
+4. **Partial:** prediction coverage, publication freshness, and feature completeness are
+   implemented; realized calibration, target/feature drift, and cost remain.
 5. **Complete:** add an opt-in Terraform log metric and Cloud Monitoring failure policy.
-6. **Partial:** direct warehouse evaluation, structured-log routing, and environment-indirected
-   webhook routing are implemented; scheduled invocation in hosted paths remains.
+6. **Partial:** direct warehouse evaluation, structured-log routing, environment-indirected
+   webhook routing, and an opt-in Cloud Scheduler → Cloud Run Job are implemented; applying the
+   hosted path with real notification channels remains.
 7. **Complete:** update operator runbooks from each implemented alert to remediation.
 
 ## Testing & validation
@@ -134,12 +135,12 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 ## Current implementation status
 
 The implementation now satisfies the documented SLO, stale/missing publication, prediction
-coverage, and configurable alert-path criteria. Python validation, dbt tests, and disabled
+coverage, feature-completeness, and configurable alert-path criteria. Python validation, dbt
+tests, and disabled
 Terraform validation pass, and the freshness, coverage, direct-query, and structured-log paths
 passed live BigQuery acceptance on 2026-08-11. An enabled Terraform plan/apply with real channel
-IDs, hosted scheduling, and a witnessed external notification remain required before this spec can
-be marked shipped. Broader
-feature-completeness, calibration, drift, and cost signals also remain in scope.
+IDs and a witnessed external notification remain required before this spec can be marked shipped.
+Broader calibration, drift, and cost signals also remain in scope.
 
 ## Related documents
 

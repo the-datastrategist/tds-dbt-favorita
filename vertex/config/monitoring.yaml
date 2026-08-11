@@ -14,6 +14,11 @@ slos:
     target: 0.99
     window_days: 30
     minimum_ratio: 0.98
+  feature_completeness:
+    owner: data_platform
+    target: 0.99
+    window_days: 30
+    minimum_ratio: 0.99
   pipeline_availability:
     owner: ml_platform
     target: 0.99
@@ -28,6 +33,10 @@ policies:
   - name: prediction_coverage_low
     signal: prediction_coverage
     severity: ticket
+    destination: operator_log
+  - name: forecast_features_incomplete
+    signal: feature_completeness
+    severity: page
     destination: operator_log
   - name: forecast_pipeline_unhealthy
     signal: pipeline_health
