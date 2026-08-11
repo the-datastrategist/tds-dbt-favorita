@@ -67,6 +67,16 @@ module "cloud_scheduler" {
   enabled    = false
 }
 
+module "monitoring_alerts" {
+  source = "../../modules/monitoring-alerts"
+
+  project_id               = var.project_id
+  enabled                  = var.enable_monitoring_alerts
+  notification_channel_ids = var.monitoring_notification_channel_ids
+
+  depends_on = [module.gcp_apis]
+}
+
 # Opt-in because creating a WIF pool requires a real project and the state bucket must already
 # exist. Bootstrap once with a trusted human identity, then CI can run keyless plans.
 module "github_wif" {

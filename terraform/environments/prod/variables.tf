@@ -57,3 +57,15 @@ variable "caller_member" {
   description = "Identity allowed to act as the Vertex service account, e.g. \"user:you@example.com\". See modules/iam-vertex-sa."
   type        = string
 }
+
+variable "enable_monitoring_alerts" {
+  description = "Create opt-in Cloud Monitoring policies for failed forecast jobs."
+  type        = bool
+  default     = false
+}
+
+variable "monitoring_notification_channel_ids" {
+  description = "Existing Cloud Monitoring notification channel resource IDs."
+  type        = list(string)
+  default     = []
+}

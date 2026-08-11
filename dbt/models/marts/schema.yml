@@ -1,6 +1,36 @@
 version: 2
 
 models:
+  - name: forecast_publication_freshness
+    description: Latest publication age per forecast contract with configurable stale and missing detection.
+    columns:
+      - name: forecast_contract_name
+        data_tests: [unique, not_null]
+      - name: freshness_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [fresh, stale, missing]
+      - name: is_alerting
+        data_tests: [not_null]
+
+  - name: forecast_prediction_coverage
+    description: Latest run coverage against its frozen expected output cardinality.
+    columns:
+      - name: forecast_run_id
+        data_tests: [unique, not_null]
+      - name: forecast_contract_name
+        data_tests: [unique, not_null]
+      - name: coverage_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [healthy, invalid_scope, missing_predictions, below_threshold]
+      - name: is_alerting
+        data_tests: [not_null]
+
   - name: forecast_source_health
     description: Latest source ingestion outcome with mode-aware wall-clock freshness evaluation.
     columns:
@@ -468,6 +498,42 @@ models:
         description: WAPE recorded on the held-out test set at training time for this model_run_id.
 
 unit_tests:
+  - name: test_forecast_publication_freshness_detects_stale_and_missing_contracts
+    model: forecast_publication_freshness
+    overrides:
+      vars:
+        monitoring_evaluated_at: '2026-08-05 12:00:00+00'
+        publication_freshness_threshold_minutes: 120
+        publication_monitored_contracts: [fresh_contract, missing_contract]
+    given:
+      - input: ref('stg_forecast_runs')
+        rows:
+          - {forecast_run_id: fresh_run, forecast_contract_name: fresh_contract, forecast_origin: '2026-08-05', started_at: '2026-08-05 10:00:00+00'}
+          - {forecast_run_id: missing_run, forecast_contract_name: missing_contract, forecast_origin: '2026-08-05', started_at: '2026-08-05 10:00:00+00'}
+      - input: ref('published_forecasts_by_run')
+        rows:
+          - {publication_id: pub_1, forecast_contract_name: fresh_contract, published_at: '2026-08-05 11:00:00+00', delivery_status: delivered}
+    expect:
+      rows:
+        - {forecast_contract_name: fresh_contract, freshness_status: fresh, is_alerting: false}
+        - {forecast_contract_name: missing_contract, freshness_status: missing, is_alerting: true}
+
+  - name: test_forecast_prediction_coverage_detects_incomplete_latest_run
+    model: forecast_prediction_coverage
+    overrides:
+      vars:
+        prediction_coverage_minimum_ratio: 0.98
+    given:
+      - input: ref('stg_forecast_runs')
+        rows:
+          - {forecast_run_id: run_1, forecast_contract_name: contract_1, forecast_origin: '2026-08-05', started_at: '2026-08-05 10:00:00+00', row_count: 2}
+      - input: ref('stg_forecast_outputs')
+        rows:
+          - {forecast_run_id: run_1, forecast_output_id: output_1, horizon: 1, prediction_p50: 10}
+    expect:
+      rows:
+        - {forecast_run_id: run_1, expected_output_count: 2, predicted_output_count: 1, coverage_ratio: 0.5, coverage_status: below_threshold, is_alerting: true}
+
   - name: test_forecast_pipeline_health_accepts_validated_draft_and_rejects_failed_run
     description: >
       A scheduled publication finishes in draft after its stages and blocking gates pass. That

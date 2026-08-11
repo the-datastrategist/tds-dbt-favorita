@@ -85,3 +85,15 @@ variable "terraform_state_bucket" {
     error_message = "Set terraform_state_bucket when enable_github_wif is true."
   }
 }
+
+variable "enable_monitoring_alerts" {
+  description = "Create opt-in Cloud Monitoring policies for failed forecast jobs."
+  type        = bool
+  default     = false
+}
+
+variable "monitoring_notification_channel_ids" {
+  description = "Existing Cloud Monitoring notification channel resource IDs."
+  type        = list(string)
+  default     = []
+}

@@ -107,11 +107,13 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 
 1. **Complete:** add `docs/monitoring_and_slos.md` and source-mode policy.
 2. **Complete:** add source and scheduled-pipeline health marts with schema tests.
-3. Add alert policy YAML and loader.
-4. Add remaining coverage, publication freshness, calibration, drift, and cost marts.
-5. Add Terraform alert module or extend existing modules.
-6. Add Prefect/GCP notification wiring for local and hosted paths.
-7. Update ops runbooks to point from alert to remediation.
+3. **Complete:** add versioned SLO/alert policy YAML, validation, and deterministic policy hash.
+4. **Partial:** prediction coverage and publication freshness are implemented; feature
+   completeness, realized calibration, target/feature drift, and cost remain.
+5. **Complete:** add an opt-in Terraform log metric and Cloud Monitoring failure policy.
+6. **Partial:** structured log and environment-indirected webhook routing are implemented;
+   scheduled invocation in hosted paths remains.
+7. **Complete:** update operator runbooks from each implemented alert to remediation.
 
 ## Testing & validation
 
@@ -127,6 +129,15 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 - Coverage and accuracy are monitored by horizon/segment.
 - At least one alert path is configurable without code changes.
 
+## Current implementation status
+
+The implementation now satisfies the documented SLO, stale/missing publication, prediction
+coverage, and configurable alert-path criteria. Python validation, dbt tests, and disabled
+Terraform validation pass, and the freshness and coverage marts passed live BigQuery acceptance on
+2026-08-11. An enabled Terraform plan/apply with real channel IDs, hosted signal evaluation, and a
+witnessed notification delivery remain required before this spec can be marked shipped. Broader
+feature-completeness, calibration, drift, and cost signals also remain in scope.
+
 ## Related documents
 
 - [Prediction accuracy monitoring](prediction_accuracy_monitoring.md)
@@ -135,5 +146,6 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 - [IaC and GCP operations](../iac.md)
 - [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md)
 - [Live forecast monitoring acceptance](../acceptance/forecast_monitoring_2026-08-06.md)
+- [Live monitoring and SLO acceptance](../acceptance/monitoring_slos_2026-08-11.md)
 
 {% enddocs %}

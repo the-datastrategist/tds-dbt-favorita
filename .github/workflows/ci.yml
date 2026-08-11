@@ -54,6 +54,9 @@ jobs:
       - name: Validate model configs
         run: python -m vertex.config.validate_all
 
+      - name: Validate monitoring contract
+        run: python -c "from vertex.config.monitoring import load_monitoring_config; print(load_monitoring_config().hash)"
+
       - name: Validate rolling-origin backtest plan
         run: python -m vertex.jobs.backtest --dry-run
 

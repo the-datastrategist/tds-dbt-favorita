@@ -67,3 +67,13 @@ module "cloud_scheduler" {
   region     = var.region
   enabled    = false
 }
+
+module "monitoring_alerts" {
+  source = "../../modules/monitoring-alerts"
+
+  project_id               = var.project_id
+  enabled                  = var.enable_monitoring_alerts
+  notification_channel_ids = var.monitoring_notification_channel_ids
+
+  depends_on = [module.gcp_apis]
+}

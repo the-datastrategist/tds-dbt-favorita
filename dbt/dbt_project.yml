@@ -76,6 +76,10 @@ vars:
   # assert_no_material_accuracy_drift flags it. Conservative default; tune per client.
   accuracy_drift_tolerance_pct: 0.25
 
+  # Publication freshness is opt-in by contract so draft-only or retired contracts do not page.
+  publication_monitored_contracts:
+    - favorita_store_daily_demand_h7_hierarchical_publication
+
   # Reusable column groups for get_bqml_feature_columns / get_bqml_prediction_features.
   feature_sets:
     datetime:

@@ -5,3 +5,7 @@ bucket_location = "us-central1"
 environment   = "prod"
 client_label  = "acme-corp"
 caller_member = "user:you@example.com"
+
+# Opt in only after creating notification channels outside this module.
+enable_monitoring_alerts            = false
+monitoring_notification_channel_ids = []

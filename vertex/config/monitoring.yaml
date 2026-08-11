@@ -1,0 +1,35 @@
+destinations:
+  operator_log:
+    type: log
+    minimum_severity: ticket
+
+slos:
+  publication_freshness:
+    owner: forecasting_ops
+    target: 0.99
+    window_days: 30
+    threshold_minutes: 1440
+  prediction_coverage:
+    owner: forecasting_ops
+    target: 0.99
+    window_days: 30
+    minimum_ratio: 0.98
+  pipeline_availability:
+    owner: ml_platform
+    target: 0.99
+    window_days: 30
+    maximum_duration_minutes: 120
+
+policies:
+  - name: stale_forecast_publication
+    signal: publication_freshness
+    severity: page
+    destination: operator_log
+  - name: prediction_coverage_low
+    signal: prediction_coverage
+    severity: ticket
+    destination: operator_log
+  - name: forecast_pipeline_unhealthy
+    signal: pipeline_health
+    severity: page
+    destination: operator_log

@@ -11,3 +11,7 @@ caller_member = "user:you@example.com"
 enable_github_wif      = true
 github_repository      = "your-org/tds-dbt-favorita"
 terraform_state_bucket = "acme-corp-terraform-state"
+
+# Opt in only after creating notification channels outside this module.
+enable_monitoring_alerts          = false
+monitoring_notification_channel_ids = []
