@@ -17,6 +17,7 @@ def test_repository_monitoring_config_is_valid():
     assert config.slos["publication_freshness"].threshold_minutes == 1440
     assert config.slos["prediction_coverage"].minimum_ratio == 0.98
     assert config.slos["feature_completeness"].minimum_ratio == 0.99
+    assert config.slos["realized_calibration"].minimum_ratio == 0.80
     assert config.hash
 
 
@@ -83,6 +84,10 @@ def test_evaluate_alerts_emits_only_unhealthy_signals():
             {"forecast_contract_name": "low", "coverage_status": "below_threshold"}
         ],
         "pipeline_health": [{"forecast_contract_name": "healthy", "health_status": "healthy"}],
+        "realized_calibration": [
+            {"forecast_contract_name": "new", "calibration_status": "insufficient_actuals"},
+            {"forecast_contract_name": "biased", "calibration_status": "material_bias"},
+        ],
     }
 
     events = evaluate_alerts(config, rows, observed_at=datetime(2026, 8, 10, tzinfo=timezone.utc))
@@ -92,8 +97,9 @@ def test_evaluate_alerts_emits_only_unhealthy_signals():
         ("prediction_coverage_low", "low"),
         ("forecast_features_incomplete", "broken_features"),
         ("forecast_delivery_unhealthy", "delivery"),
+        ("forecast_calibration_unreliable", "biased"),
     ]
-    assert route_alerts(config, events) == 4
+    assert route_alerts(config, events) == 5
 
 
 @pytest.mark.unit
@@ -156,6 +162,7 @@ def test_bigquery_signal_loader_queries_only_validated_monitoring_views(client_c
         "publication_freshness",
         "prediction_coverage",
         "pipeline_health",
+        "realized_calibration",
     }
     queries = [call.args[0] for call in client.query.call_args_list]
     assert queries == [
@@ -164,4 +171,5 @@ def test_bigquery_signal_loader_queries_only_validated_monitoring_views(client_c
         "SELECT * FROM `tds-favorita.favorita.forecast_publication_freshness`",
         "SELECT * FROM `tds-favorita.favorita.forecast_prediction_coverage`",
         "SELECT * FROM `tds-favorita.favorita.forecast_pipeline_health`",
+        "SELECT * FROM `tds-favorita.favorita.forecast_realized_calibration`",
     ]

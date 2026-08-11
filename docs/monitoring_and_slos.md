@@ -69,6 +69,10 @@ make selector-forecast-monitoring
   prevents draft-only and retired contracts from generating false stale-publication alerts.
 - `ml_prediction_accuracy_rolling` remains the existing model-accuracy and drift signal and is run
   with `make selector-accuracy-monitoring`.
+- `forecast_realized_calibration` joins matured store-level forecast intervals to canonical
+  observed demand and reports P10-P90 coverage, median bias, normalized median bias, and mean
+  interval width by contract and horizon. `insufficient_actuals` is non-alerting; once the minimum
+  sample is met, `under_coverage` and `material_bias` route tickets.
 
 For deterministic validation, pass a timestamp to dbt with
 `--vars '{monitoring_evaluated_at: "2026-08-05 12:00:00+00"}'`.
@@ -163,7 +167,11 @@ monitoring_runner_image = "us-central1-docker.pkg.dev/my-project/vertex/ml-pipel
 - **Feature completeness:** inspect the named feature relation at `feature_date`, distinguish
   expected out-of-scope rows from genuine null/entity loss, and stop scoring until the feature
   contract is restored. Use `scope_column`/`scope_value` for intentional partitions.
+- **Realized calibration:** inspect `forecast_realized_calibration` by contract and horizon. For
+  `under_coverage`, review interval calibration residuals and recent demand regimes. For
+  `material_bias`, compare median errors with actual demand and retraining/backtest evidence before
+  promoting or recalibrating a model. Do not page on `insufficient_actuals`.
 
-The next monitoring increment adds realized calibration, feature/target drift, and cost marts.
+The next monitoring increment adds feature/target drift and cost marts.
 Production activation requires applying the opt-in runner and alert resources with real channel
 IDs, then recording a witnessed notification delivery.

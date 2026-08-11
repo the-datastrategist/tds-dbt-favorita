@@ -100,6 +100,13 @@ vars:
   demand_policy: observed_sales_only
   demand_minimum_history_days: 28
 
+  # Realized P10-P90 reliability and median-bias guardrails. A new series remains non-alerting
+  # until enough target-date actuals have landed for a meaningful comparison.
+  realized_calibration_window_days: 28
+  realized_calibration_minimum_actuals: 30
+  realized_calibration_minimum_coverage: 0.80
+  realized_calibration_maximum_absolute_bias_ratio: 0.10
+
   # FVA compares every backtest candidate with this simple, reproducible benchmark.
   # Override by engagement when a different benchmark is the operational default.
   fva_benchmark_by_grain:

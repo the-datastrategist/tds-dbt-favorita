@@ -129,6 +129,26 @@ models:
                   - cardinality_mismatch
                   - missing_quantiles
 
+  - name: forecast_realized_calibration
+    description: Realized P10-P90 coverage, median bias, and interval width by contract and horizon.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [forecast_contract_name, horizon]
+    columns:
+      - name: forecast_contract_name
+        data_tests: [not_null]
+      - name: horizon
+        data_tests: [not_null]
+      - name: calibration_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [healthy, insufficient_actuals, under_coverage, material_bias]
+      - name: is_alerting
+        data_tests: [not_null]
+
   - name: forecast_visible_drafts
     description: Canonical forecasts exposed only after the scheduled run crosses its atomic draft boundary.
     data_tests:
@@ -670,6 +690,36 @@ unit_tests:
       rows:
         - {forecast_run_id: draft_run, run_status: draft, health_status: healthy}
         - {forecast_run_id: failed_run, run_status: failed, health_status: failed}
+
+  - name: test_forecast_realized_calibration_classifies_coverage_bias_and_sample_readiness
+    model: forecast_realized_calibration
+    overrides:
+      vars:
+        monitoring_evaluated_at: '2026-08-10 12:00:00+00'
+        realized_calibration_window_days: 28
+        realized_calibration_minimum_actuals: 2
+        realized_calibration_minimum_coverage: 0.8
+        realized_calibration_maximum_absolute_bias_ratio: 0.1
+    given:
+      - input: ref('stg_forecast_outputs')
+        rows:
+          - {forecast_output_id: h1, forecast_run_id: r1, forecast_contract_name: healthy, target_date: '2026-08-09', horizon: 7, entity_key_json: '{"store_id":1}', prediction_p10: 8, prediction_p50: 10, prediction_p90: 12}
+          - {forecast_output_id: h2, forecast_run_id: r1, forecast_contract_name: healthy, target_date: '2026-08-09', horizon: 7, entity_key_json: '{"store_id":2}', prediction_p10: 18, prediction_p50: 20, prediction_p90: 22}
+          - {forecast_output_id: u1, forecast_run_id: r2, forecast_contract_name: uncovered, target_date: '2026-08-09', horizon: 7, entity_key_json: '{"store_id":1}', prediction_p10: 1, prediction_p50: 2, prediction_p90: 3}
+          - {forecast_output_id: u2, forecast_run_id: r2, forecast_contract_name: uncovered, target_date: '2026-08-09', horizon: 7, entity_key_json: '{"store_id":2}', prediction_p10: 1, prediction_p50: 2, prediction_p90: 3}
+          - {forecast_output_id: b1, forecast_run_id: r3, forecast_contract_name: biased, target_date: '2026-08-09', horizon: 7, entity_key_json: '{"store_id":1}', prediction_p10: 0, prediction_p50: 20, prediction_p90: 30}
+          - {forecast_output_id: b2, forecast_run_id: r3, forecast_contract_name: biased, target_date: '2026-08-09', horizon: 7, entity_key_json: '{"store_id":2}', prediction_p10: 0, prediction_p50: 40, prediction_p90: 50}
+          - {forecast_output_id: i1, forecast_run_id: r4, forecast_contract_name: new_contract, target_date: '2026-08-09', horizon: 7, entity_key_json: '{"store_id":1}', prediction_p10: 8, prediction_p50: 10, prediction_p90: 12}
+      - input: ref('int_demand_store_daily')
+        rows:
+          - {date: '2026-08-09', store_nbr: 1, observed_sales_units: 10}
+          - {date: '2026-08-09', store_nbr: 2, observed_sales_units: 20}
+    expect:
+      rows:
+        - {forecast_contract_name: healthy, horizon: 7, realized_actual_count: 2, calibration_status: healthy, is_alerting: false}
+        - {forecast_contract_name: uncovered, horizon: 7, realized_actual_count: 2, calibration_status: under_coverage, is_alerting: true}
+        - {forecast_contract_name: biased, horizon: 7, realized_actual_count: 2, calibration_status: material_bias, is_alerting: true}
+        - {forecast_contract_name: new_contract, horizon: 7, realized_actual_count: 1, calibration_status: insufficient_actuals, is_alerting: false}
 
   - name: test_champion_selection_keeps_company_and_store_grains_separate
     description: >

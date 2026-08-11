@@ -20,6 +20,7 @@ VALID_SIGNALS = frozenset(
         "publication_freshness",
         "prediction_coverage",
         "pipeline_health",
+        "realized_calibration",
     }
 )
 

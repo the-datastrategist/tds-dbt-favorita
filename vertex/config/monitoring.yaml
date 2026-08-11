@@ -24,6 +24,11 @@ slos:
     target: 0.99
     window_days: 30
     maximum_duration_minutes: 120
+  realized_calibration:
+    owner: forecasting_science
+    target: 0.99
+    window_days: 28
+    minimum_ratio: 0.80
 
 policies:
   - name: stale_forecast_publication
@@ -45,4 +50,8 @@ policies:
   - name: forecast_delivery_unhealthy
     signal: delivery_health
     severity: page
+    destination: operator_log
+  - name: forecast_calibration_unreliable
+    signal: realized_calibration
+    severity: ticket
     destination: operator_log

@@ -317,6 +317,11 @@ make forecast-alerts-evaluate DRY_RUN=true  # inspect live alert events without 
 make forecast-alerts-evaluate               # route through configured destinations
 ```
 
+`forecast_realized_calibration` evaluates matured store-level forecasts by contract and horizon.
+It reports realized P10-P90 coverage, median bias, interval width, and actual availability. New
+contracts remain non-alerting until `realized_calibration_minimum_actuals` outcomes have landed;
+after that threshold, under-coverage or material normalized median bias routes a ticket.
+
 Publication paging is explicitly scoped by `publication_monitored_contracts` in
 `dbt/dbt_project.yml`; add only contracts that are expected to publish continuously.
 Scheduled forecast runs also persist immutable `forecast_eligibility_decisions`. Pipeline health

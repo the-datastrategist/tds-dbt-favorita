@@ -20,6 +20,7 @@ SIGNAL_TABLES = {
     "publication_freshness": "forecast_publication_freshness",
     "prediction_coverage": "forecast_prediction_coverage",
     "pipeline_health": "forecast_pipeline_health",
+    "realized_calibration": "forecast_realized_calibration",
 }
 
 
@@ -55,6 +56,7 @@ def main() -> None:
     parser.add_argument("--feature-completeness-json")
     parser.add_argument("--prediction-coverage-json")
     parser.add_argument("--pipeline-health-json")
+    parser.add_argument("--realized-calibration-json")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -66,6 +68,7 @@ def main() -> None:
             "publication_freshness": _load_rows(args.publication_freshness_json),
             "prediction_coverage": _load_rows(args.prediction_coverage_json),
             "pipeline_health": _load_rows(args.pipeline_health_json),
+            "realized_calibration": _load_rows(args.realized_calibration_json),
         }
     else:
         if any(
@@ -75,6 +78,7 @@ def main() -> None:
                 args.feature_completeness_json,
                 args.prediction_coverage_json,
                 args.pipeline_health_json,
+                args.realized_calibration_json,
             )
         ):
             parser.error("JSON paths require --source json")
