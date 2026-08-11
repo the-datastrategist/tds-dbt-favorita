@@ -96,6 +96,10 @@ vars:
         - sales_store
         - avg_sales_store_l7d
 
+  # Reference deployment has no inventory feed, so sales remain an explicit demand proxy.
+  demand_policy: observed_sales_only
+  demand_minimum_history_days: 28
+
   # Reusable column groups for get_bqml_feature_columns / get_bqml_prediction_features.
   feature_sets:
     datetime:

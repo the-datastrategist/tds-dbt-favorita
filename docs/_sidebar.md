@@ -34,6 +34,7 @@
 * Engineering specs
   * [Specs overview](specs/README.md)
   * [Demand data model](specs/demand_data_model.md)
+  * [Demand data operations](demand_data_model.md)
   * [Forecast contract and output](specs/forecast_contract_and_output.md)
   * [Point-in-time feature availability](specs/point_in_time_feature_availability.md)
   * [Forecasting methods](specs/forecasting_methods.md)

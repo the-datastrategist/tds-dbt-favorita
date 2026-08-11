@@ -65,3 +65,9 @@ selectors:
     definition:
       method: tag
       value: monitoring
+
+  - name: demand_data
+    description: Canonical demand, eligibility decisions, summaries, and their tests.
+    definition:
+      method: tag
+      value: demand

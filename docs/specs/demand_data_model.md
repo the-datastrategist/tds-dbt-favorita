@@ -2,7 +2,7 @@
 
 # SPEC: Demand data model
 
-**Status:** Proposed
+**Status:** In progress
 **Roadmap reference:** [Specs overview](README.md) — P1 "Handle demand-specific data conditions"
 
 ---
@@ -86,12 +86,15 @@ The feature availability registry should mark inventory and actual sales as obse
 
 ## Implementation plan
 
-1. Add `docs/demand_data_model.md`.
-2. Add source interface YAML examples.
-3. Add eligibility dbt model and schema tests.
-4. Add exclusion reason persistence to forecast runs/output.
-5. Add docs stating observed sales are used as demand proxy when stockout-adjusted demand is unavailable.
-6. Update forecast contract validation to include demand policy.
+1. **Complete:** add `docs/demand_data_model.md` and canonical interface definitions.
+2. **Partial:** add the reference store-day canonical adapter; client-specific optional inventory,
+   assortment, lifecycle, price, and closure adapters remain.
+3. **Complete:** add eligibility and summary dbt models with schema and fixture tests.
+4. **Partial:** eligibility snapshot IDs are pinned on forecast runs, enforced by the scheduled
+   pipeline, and joined to origin-date count/reason summaries; a persisted row-level exclusion
+   evidence table remains.
+5. **Complete:** document the observed-sales proxy and unknown-availability limitations.
+6. **Complete:** validate demand policy as part of the hashed forecast contract.
 
 ## Testing & validation
 
@@ -106,10 +109,19 @@ The feature availability registry should mark inventory and actual sales as obse
 - Docs clearly state when stockout-adjusted unconstrained demand is not available.
 - Demand policy is explicit in the forecast contract.
 
+## Current implementation status
+
+The reference adapter explicitly models observed sales, promotion status, missing inventory,
+unknown censoring, and demand-policy semantics. Eligibility decisions and daily reason summaries
+are implemented. Remaining scope is row-level exclusion persistence tied to a run and live adapters
+for inventory, assortment, lifecycle, price, and closure sources.
+
 ## Related documents
 
 - [Forecast contract and canonical output](forecast_contract_and_output.md)
 - [Point-in-time feature availability](point_in_time_feature_availability.md)
 - [Forecasting methods](forecasting_methods.md)
+- [Demand data model operations](../demand_data_model.md)
+- [Live demand data acceptance](../acceptance/demand_data_model_2026-08-11.md)
 
 {% enddocs %}
