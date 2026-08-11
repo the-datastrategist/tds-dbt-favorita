@@ -13,6 +13,7 @@ from vertex.config.forecast_contract import ForecastContract
 from vertex.config.hierarchy import HierarchyConfig
 from vertex.evaluation.calibration import fit_horizon_calibrator
 from vertex.evaluation.reconciliation import coherence_violations, reconcile_forecasts
+from vertex.evaluation.reconciliation_persistence import build_reconciliation_records
 from vertex.utils.data_utils import get_hash
 from vertex.utils.forecast_outputs import build_forecast_output_rows
 from vertex.utils.forecast_publication import validate_publication_batch
@@ -40,6 +41,8 @@ class ForecastPipelineResult:
     rows: pd.DataFrame
     stage_records: list[dict[str, Any]]
     validation_checks: list[dict[str, Any]]
+    reconciliation_run: dict[str, Any] | None = None
+    reconciliation_outputs: pd.DataFrame | None = None
 
 
 def build_forecast_run_id(
@@ -335,6 +338,28 @@ def execute_forecast_pipeline(
         forecast_status="draft",
     )
     validate_publication_batch(canonical, contract)
+    reconciliation_run = None
+    reconciliation_outputs = None
+    if hierarchy_config is not None and hierarchy_nodes is not None:
+        reconciliation_work = reconciled.rename(
+            columns={
+                "date": "forecast_origin",
+                "forecast_date": "target_date",
+                "forecast_horizon": "horizon",
+            }
+        ).copy()
+        level_by_node = hierarchy_nodes.set_index("node_id")["level_name"].astype(str)
+        reconciliation_work["level_name"] = (
+            reconciliation_work["node_id"].astype(str).map(level_by_node)
+        )
+        reconciliation_work["forecast_output_id"] = canonical["forecast_output_id"].to_numpy()
+        reconciliation_run, reconciliation_outputs = build_reconciliation_records(
+            reconciliation_work,
+            config=hierarchy_config,
+            forecast_run_id=forecast_run_id,
+            reconciliation_run_id=reconciliation_run_id,
+            started_at=now,
+        )
     expected = len(prediction_rows)
     checks = [
         _check(
@@ -375,4 +400,11 @@ def execute_forecast_pipeline(
             completed_at=now,
         )
     )
-    return ForecastPipelineResult(forecast_run_id, canonical, stages, checks)
+    return ForecastPipelineResult(
+        forecast_run_id,
+        canonical,
+        stages,
+        checks,
+        reconciliation_run,
+        reconciliation_outputs,
+    )

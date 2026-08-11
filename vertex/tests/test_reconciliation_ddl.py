@@ -14,6 +14,7 @@ def test_reconciliation_tables_are_append_only_and_separate_from_base_outputs():
         "forecast_hierarchy_edges",
         "forecast_reconciliation_runs",
         "forecast_reconciled_outputs",
+        "forecast_reconciliation_metrics",
     ):
         assert f"CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.{table}`" in ddl
     assert "base_prediction_p50 FLOAT64" in ddl

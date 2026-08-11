@@ -195,5 +195,10 @@ def test_pipeline_publishes_coherent_company_and_store_nodes() -> None:
     assert len(result.rows) == 3
     assert result.rows["hierarchy_version"].eq("v1").all()
     assert result.rows["reconciliation_method"].eq("bottom_up").all()
+    assert result.reconciliation_run is not None
+    assert result.reconciliation_run["output_row_count"] == 3
+    assert result.reconciliation_outputs is not None
+    assert result.reconciliation_outputs["forecast_output_id"].notna().all()
+    assert set(result.reconciliation_outputs["level_name"]) == {"company", "store"}
     values = dict(zip(predictions["node_id"], result.rows["prediction_p50"]))
     assert values["company:all"] == values["store:1"] + values["store:2"]
