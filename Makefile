@@ -600,9 +600,9 @@ forecast-rollback: ## Republish a prior complete version (FORECAST_RUN_ID, PRIOR
 	@test -n "$(FORECAST_RUN_ID)$(PRIOR_VERSION)$(VERSION)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set FORECAST_RUN_ID, PRIOR_VERSION, VERSION, ACTOR, and IDEMPOTENCY_KEY" && exit 1)
 	$(DOCKER_RUN) python -m vertex.jobs.forecast_operations rollback --forecast-run-id "$(FORECAST_RUN_ID)" --prior-version "$(PRIOR_VERSION)" --version "$(VERSION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" --reason-code "$(REASON_CODE)" --comment "$(COMMENT)" $(ARGS)
 
-forecast-export: ## Export an immutable published run to GCS (FORECAST_RUN_ID, DESTINATION, FORMAT)
-	@test -n "$(FORECAST_RUN_ID)$(DESTINATION)" || (echo "Set FORECAST_RUN_ID and a GCS DESTINATION containing *" && exit 1)
-	$(DOCKER_RUN) python scripts/export_forecast.py --forecast-run-id "$(FORECAST_RUN_ID)" --destination "$(DESTINATION)" --format "$(or $(FORMAT),parquet)" $(ARGS)
+forecast-export: ## Export an immutable published version to GCS (FORECAST_RUN_ID, VERSION, DESTINATION, FORMAT)
+	@test -n "$(FORECAST_RUN_ID)$(VERSION)$(DESTINATION)" || (echo "Set FORECAST_RUN_ID, VERSION, and a GCS DESTINATION containing *" && exit 1)
+	$(DOCKER_RUN) python scripts/export_forecast.py --forecast-run-id "$(FORECAST_RUN_ID)" --publication-version "$(VERSION)" --destination "$(DESTINATION)" --format "$(or $(FORMAT),parquet)" $(ARGS)
 
 # --- CLEANUP COMMANDS ---
 

@@ -79,7 +79,7 @@ API behavior:
 Provide a generic export command:
 
 ```bash
-make forecast-export FORECAST_RUN_ID=... DESTINATION=gs://...
+make forecast-export FORECAST_RUN_ID=... VERSION=... DESTINATION=gs://...
 ```
 
 Initial formats:
@@ -122,8 +122,9 @@ Emit event rows and optional webhook payload:
 ## Current implementation
 
 The stable warehouse boundary now includes current, explicit-run, publication-audit, and
-override-audit dbt views. A validated export command writes one explicit published run to GCS as
-CSV or Parquet without overwriting an existing delivery. The
+override-audit dbt views. A live-accepted export command writes one explicit published run version to GCS as
+CSV or Parquet without overwriting an existing delivery. See the
+[live acceptance evidence](../acceptance/forecast_operations_delivery_2026-08-11.md). The
 [integration contract guide](../integration_contracts.md) defines view usage, version pins,
 export behavior, and compatibility policy. A retrieval/service API, publication events/webhooks,
 and independent delivery-status confirmation remain open.

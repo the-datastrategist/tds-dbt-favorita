@@ -26,18 +26,19 @@ make dbt-test ARGS="--select published_forecasts_current published_forecasts_by_
 
 ## Batch export
 
-Export one published run to Cloud Storage as Parquet or CSV. The destination must contain exactly
+Export one published run version to Cloud Storage as Parquet or CSV. The destination must contain exactly
 one BigQuery shard wildcard.
 
 ```bash
 make forecast-export \
   FORECAST_RUN_ID=<run-id> \
+  VERSION=<publication-version> \
   DESTINATION='gs://favorita-exports/forecasts/<run-id>/*.parquet' \
   FORMAT=parquet
 ```
 
-The command validates the run ID, view identifier, URI, and format; it parameterizes the run
-filter and sets `overwrite=false`. A retry therefore cannot silently replace delivered files.
+The command validates the run ID, publication version, view identifier, URI, and format; it
+parameterizes both immutable identifiers and sets `overwrite=false`. A retry therefore cannot silently replace delivered files.
 Use a new destination for an intentional re-export.
 
 ## Versioning policy

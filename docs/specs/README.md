@@ -23,7 +23,7 @@ A completed spec should graduate into an accelerator entry in [accelerators.md](
 
 ## Specs
 
-Status reviewed **2026-08-10**. The completion figures are implementation estimates, while
+Status reviewed **2026-08-11**. The completion figures are implementation estimates, while
 the status column continues to use the acceptance-based definitions above. Across the full
 platform roadmap, the current implementation is approximately **85% complete**.
 
@@ -40,10 +40,10 @@ platform roadmap, the current implementation is approximately **85% complete**.
 | [Forecasting methods, horizons, cold start, and intermittent demand](forecasting_methods.md) | Shipped | 100% | Platform roadmap → P0/P1 methods | Seven-horizon direct scoring, intermittent-demand baselines, calibrated quantiles, cold-start routing, and live-accepted scheduled-stage integration |
 | [Hierarchical reconciliation](hierarchical_reconciliation.md) | Shipped | 100% | Platform roadmap → P1 reconciliation | Configurable methods, scheduled integration, append-only base/reconciled evidence, level-wise backtest metrics, and live coherence/fail-closed acceptance are complete |
 | [Demand data model](demand_data_model.md) | Proposed | 20% | Platform roadmap → P1 demand data | Distinguish observed sales from demand and model inventory, eligibility, lifecycle, prices, and promotions |
-| [Forecast operations](forecast_operations.md) | In progress | 85% | Platform roadmap → P1/P2 operations | Append-only tables, atomic drafts, audited planner overrides, explicit approval/publication, rollback lineage, and operator runbooks are implemented; UI, FVA, and delivery confirmation remain |
+| [Forecast operations](forecast_operations.md) | In progress | 90% | Platform roadmap → P1/P2 operations | Append-only tables, atomic drafts, audited planner overrides, explicit approval/publication, rollback lineage, operator runbooks, and live operations acceptance are implemented; UI, FVA, and delivery confirmation remain |
 | [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md) | Shipped | 100% | Cross-spec operational integration | Live-accepted deterministic champion scoring, routing, calibration, reconciliation gates, leases, failure evidence, Prefect deployment, idempotent retry, and atomic draft visibility |
 | [Monitoring, alerts, and SLOs](monitoring_and_slos.md) | In progress | 65% | Platform roadmap → P1 monitoring | Accuracy plus live-accepted mode-aware source and scheduled-pipeline health are implemented; remaining work covers broader SLOs, alert delivery, drift, calibration, and cost |
-| [Integration contracts and forecast delivery](integration_contracts.md) | In progress | 55% | Platform roadmap → P2 integrations | Stable current/by-run and audit views plus validated GCS CSV/Parquet export are implemented; APIs, webhooks, and delivery confirmation remain |
+| [Integration contracts and forecast delivery](integration_contracts.md) | In progress | 65% | Platform roadmap → P2 integrations | Stable current/by-run and audit views plus live-accepted, version-pinned GCS Parquet export are implemented; APIs, webhooks, and delivery confirmation remain |
 | [Open-source product readiness](open_source_product_readiness.md) | Proposed | 40% | Platform roadmap → P3 open source | Add governance, first-run quickstart, roadmap, compatibility, extension, and modularization plans |
 | [General-purpose demand forecasting platform](platform_generalization.md) | Proposed | 0% | Separate platform-generalization workstream | Add canonical datasets, configurable periods, resource parameterization, and typed extension interfaces; multi-implementation validation is deferred |
 
