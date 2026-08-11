@@ -15,6 +15,7 @@
 
 * Delivery and operations
   * [Forecast operations](forecast_operations.md)
+  * [Forecast Value Added](forecast_value_added.md)
   * [Integration contracts](integration_contracts.md)
   * [Hierarchical reconciliation](hierarchical_reconciliation.md)
   * [Delivery artifacts](delivery_artifacts.md)

@@ -87,11 +87,14 @@ Override rows must never overwrite statistical forecasts. They produce an adjust
 
 FVA mart compares:
 
+- every backtest candidate vs the configured simple benchmark on an identical evaluation population
 - statistical forecast vs actual
 - planner-adjusted forecast vs actual
 - approved/published forecast vs actual
 
-Metrics should be computed by planner/team, reason code, horizon, segment, and hierarchy level where available.
+Metrics are computed by planner/team, reason code, horizon, segment, grain, and hierarchy level where
+available. A comparison is not valid unless evaluation populations match and actual coverage is
+complete; invalid comparisons expose a reason and null FVA.
 
 ### 6. End-to-end scheduled publication path
 
@@ -197,7 +200,9 @@ append-only records. Approval selects audited overrides without changing the sta
 forecast; rollback republishes a complete prior version under a new version with revision
 lineage. The [operations runbook](../forecast_operations.md) documents retry, revision, backfill,
 and delivery recovery. Append-only delivery confirmation, retry, abandonment, and monitoring are
-live accepted. A planner UI, FVA mart, and service API remain open.
+live accepted. Backtest and operations FVA marts now implement configured-benchmark comparison,
+planner/published accuracy attribution, and fail-closed coverage semantics. A planner UI and service
+API remain open. See the [FVA acceptance evidence](../acceptance/forecast_value_added_2026-08-11.md).
 
 ## Testing & validation
 

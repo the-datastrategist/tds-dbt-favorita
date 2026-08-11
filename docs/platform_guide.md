@@ -81,6 +81,7 @@ Guidance for evaluating, adopting, operating, and extending the platform:
 | Demand and eligibility | [demand_data_model.md](demand_data_model.md) | Live-accepted observed-sales proxy, explicit eligibility decisions, exclusion reasons, and run-level counts |
 | Forecast monitoring | [monitoring_and_slos.md](monitoring_and_slos.md) | Live-accepted source, pipeline, publication-freshness, and prediction-coverage signals; configurable routing and opt-in Cloud Monitoring policy available |
 | Forecast operations | [forecast_operations.md](forecast_operations.md) | Override, approval, revision, and rollback commands available |
+| Forecast Value Added | [forecast_value_added.md](forecast_value_added.md) | Benchmark, planner-adjustment, and publication accuracy attribution |
 | Integration contracts | [integration_contracts.md](integration_contracts.md) | Stable warehouse views and GCS batch export available |
 | Hierarchical reconciliation | [hierarchical_reconciliation.md](hierarchical_reconciliation.md) | Configuration, validation, metrics, and fail-closed runbook available |
 

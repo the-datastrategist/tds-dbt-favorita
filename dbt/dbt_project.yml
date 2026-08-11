@@ -100,6 +100,12 @@ vars:
   demand_policy: observed_sales_only
   demand_minimum_history_days: 28
 
+  # FVA compares every backtest candidate with this simple, reproducible benchmark.
+  # Override by engagement when a different benchmark is the operational default.
+  fva_benchmark_by_grain:
+    store-day: seasonal_naive_7d
+    company-day: seasonal_naive_7d
+
   # Reusable column groups for get_bqml_feature_columns / get_bqml_prediction_features.
   feature_sets:
     datetime:
