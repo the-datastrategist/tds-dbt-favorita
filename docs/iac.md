@@ -17,6 +17,7 @@ Guidance for provisioning and operating this forecasting stack in a **client GCP
 | **Docker image** | `Dockerfile`, `docker-compose.yml` | Reproducible runtime |
 | **CI pipeline** | `.github/workflows/ci.yml` | Validate without live GCP |
 | **Terraform modules** | `terraform/` | Versioned, reviewable GCP provisioning (see below) |
+| **Forecast Retrieval API** | `terraform/modules/forecast-api` | Private Cloud Run service and least-privilege BigQuery reader |
 
 ---
 
@@ -62,6 +63,10 @@ Create **`sa-vertex-ml@PROJECT.iam.gserviceaccount.com`** per environment.
 | `roles/bigquery.jobUser` | Project | Run training/scoring queries |
 | `roles/bigquery.dataEditor` | Dataset `favorita`, `raw_favorita` | Write ML output tables |
 | `roles/storage.objectAdmin` | Bucket-level on staging + models | Artifacts and pipeline root |
+
+The Forecast Retrieval API uses a separate service account with only project-level
+`roles/bigquery.jobUser` and dataset-level `roles/bigquery.dataViewer`. Invocation is restricted by
+Cloud Run IAM to the configured `forecast_api_invoker_members`; no public principal is granted.
 
 Prefer **bucket-level** GCS IAM over project-wide storage admin.
 

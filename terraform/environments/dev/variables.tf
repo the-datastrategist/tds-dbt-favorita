@@ -115,3 +115,27 @@ variable "monitoring_runner_schedule" {
   type        = string
   default     = "15 * * * *"
 }
+
+variable "enable_forecast_api" {
+  description = "Create the authenticated read-only Forecast Retrieval API."
+  type        = bool
+  default     = false
+}
+
+variable "forecast_api_image" {
+  description = "Immutable production image URI for the Forecast Retrieval API."
+  type        = string
+  default     = ""
+}
+
+variable "forecast_api_invoker_members" {
+  description = "IAM members allowed to invoke the Forecast Retrieval API."
+  type        = set(string)
+  default     = []
+}
+
+variable "forecast_api_max_instances" {
+  description = "Maximum Cloud Run instances for the Forecast Retrieval API."
+  type        = number
+  default     = 3
+}

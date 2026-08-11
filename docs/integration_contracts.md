@@ -46,6 +46,13 @@ The command validates the run ID, publication version, view identifier, URI, and
 parameterizes both immutable identifiers and sets `overwrite=false`. A retry therefore cannot silently replace delivered files.
 Use a new destination for an intentional re-export.
 
+## Retrieval API
+
+The Cloud Run-ready read-only service exposes one latest delivered version or one explicit
+run/version/destination. It validates publication cardinality before returning rows and uses opaque
+keyset pagination with parameterized BigQuery filters. See the
+[Forecast Retrieval API](forecast_api.md) for endpoints, authentication, errors, and deployment.
+
 ## Versioning policy
 
 - Published records and revision lineage are append-only.
@@ -53,8 +60,9 @@ Use a new destination for an intentional re-export.
 - Consumers must not combine rows from different run/version/destination tuples.
 - Additive nullable columns are backward-compatible. Renames, removals, semantic changes, or new
   required fields require a versioned view and a documented deprecation window.
-- Publication events and delivery confirmation are append-only and version-scoped. Retrieval and
-  mutation APIs and an outbound webhook adapter remain future interfaces over the same records.
+- Publication events and delivery confirmation are append-only and version-scoped. The read-only
+  retrieval API is implemented; mutation APIs and an outbound webhook adapter remain future
+  interfaces over the same records.
 
 See [forecast operations](forecast_operations.md) for override, approval, and rollback commands and
 [forecast delivery](forecast_delivery.md) for confirmation, failure, retry, and abandonment.

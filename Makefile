@@ -21,7 +21,7 @@ export GOOGLE_APPLICATION_CREDENTIALS_CONTAINER
 endif
 endif
 
-.PHONY: help install requirements-lock format lint test clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring selector-forecast-monitoring forecast-alerts-evaluate forecast-fva-build source-ingestion-record load-favorita-gcs load-favorita-bigquery \
+.PHONY: help install requirements-lock format lint test clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring selector-forecast-monitoring forecast-alerts-evaluate forecast-fva-build forecast-api-local forecast-api-test source-ingestion-record load-favorita-gcs load-favorita-bigquery \
 	dbt-deps dbt-debug dbt-seed dbt-run dbt-run-full-refresh dbt-run-model dbt-run-operation dbt-create-table \
 	dbt-train dbt-predict dbt-build dbt-test dbt-compile dbt-list dbt-snapshot dbt-source-freshness dbt-clean \
 	docs-serve dbt-ui dbt-docs dbt-docs-generate dbt-docs-serve \
@@ -167,6 +167,12 @@ forecast-alerts-evaluate: ## Query monitoring views and route configured alerts 
 
 forecast-fva-build: ## Build and test Forecast Value Added marts
 	$(DOCKER_RUN) dbt build --project-dir dbt --target $(DBT_TARGET) --select tag:fva $(ARGS)
+
+forecast-api-local: ## Run the read-only Forecast Retrieval API on port 8080
+	$(DOCKER_RUN) uvicorn vertex.api.app:app --host 0.0.0.0 --port 8080 $(ARGS)
+
+forecast-api-test: ## Run focused Forecast Retrieval API tests
+	$(DOCKER_RUN) pytest -q vertex/tests/test_forecast_api.py
 
 source-ingestion-record: ## Append ingestion evidence (set SOURCE, STATUS, WATERMARK, ROW_COUNT)
 	@test -n "$(SOURCE)" && test -n "$(STATUS)" || (echo "Set SOURCE and STATUS" && exit 1)

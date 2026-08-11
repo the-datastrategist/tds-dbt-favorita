@@ -10,8 +10,9 @@
 ## Summary
 
 The consumption layer now exposes stable current/by-run warehouse views, operations audit views,
-an explicit-run GCS batch export, version-level publication events, and append-only delivery
-confirmation. Retrieval and mutation APIs plus an outbound webhook adapter remain next.
+an explicit-run GCS batch export, version-level publication events, append-only delivery
+confirmation, and a Cloud Run-ready, IAM-authenticated read-only retrieval API. Mutation APIs and
+an outbound webhook adapter remain next.
 
 This spec adds `docs/integration_contracts.md`, versioned table/view contracts, export commands, API concepts, and idempotent publication semantics.
 
@@ -58,10 +59,16 @@ Views should be backward-compatible once documented.
 
 ### 3. API concepts
 
-Minimum endpoints:
+Implemented read-only endpoints:
 
 ```text
-GET  /v1/forecasts
+GET /v1/forecasts/current
+GET /v1/forecasts/runs/{run_id}?publication_version=...
+```
+
+Future mutation endpoints:
+
+```text
 POST /v1/overrides
 POST /v1/forecast-runs/{run_id}/approve
 POST /v1/forecast-runs/{run_id}/publish
@@ -69,7 +76,9 @@ POST /v1/forecast-runs/{run_id}/publish
 
 API behavior:
 
-- `GET /v1/forecasts` requires either `run_id` or `published=current`.
+- current retrieval resolves one delivered run/version/destination before returning rows;
+- explicit retrieval requires run ID, publication version, and destination;
+- every retrieval verifies complete publication cardinality and uses deterministic pagination;
 - publish endpoint is idempotent for the same `run_id`.
 - approval/publish endpoints reject invalid status transitions.
 - responses include contract name/hash and publication version.
@@ -108,14 +117,16 @@ Emit event rows and optional webhook payload:
 1. Add `docs/integration_contracts.md`.
 2. Add stable dbt views for published forecasts.
 3. Add export command and destination configuration.
-4. **Open:** add minimal FastAPI or Cloud Run-ready API skeleton.
+4. **Partial:** read-only FastAPI retrieval and Cloud Run Terraform are implemented; mutation
+   endpoints remain open.
 5. **Complete:** add idempotency keys, publication-event table, and delivery-event table.
-6. **Partial:** stable warehouse and batch examples are documented; API examples remain.
+6. **Complete:** stable warehouse, batch export, and read-only API examples are documented.
 
 ## Testing & validation
 
 - dbt tests for one current published forecast per comparable key/entity/horizon.
-- API unit tests for idempotent publish and invalid transitions.
+- API unit tests for current/explicit version resolution, filters, pagination, structured errors,
+  and incomplete-publication rejection.
 - Export smoke test for CSV and Parquet.
 - Contract fixture tests for response payload shape.
 
@@ -127,12 +138,16 @@ CSV or Parquet without overwriting an existing delivery. See the
 [live acceptance evidence](../acceptance/forecast_operations_delivery_2026-08-11.md). The
 [integration contract guide](../integration_contracts.md) defines view usage, version pins,
 export behavior, and compatibility policy. Version-level publication events and independent,
-append-only delivery confirmation are live accepted. A retrieval/service API and outbound webhook
-adapter remain open.
+append-only delivery confirmation are live accepted. A tested read-only retrieval API now resolves
+one complete delivered or explicitly pinned version with deterministic pagination and structured
+errors. Live Cloud Run deployment acceptance, mutation endpoints, and the outbound webhook adapter
+remain open. See the
+[retrieval API acceptance evidence](../acceptance/forecast_retrieval_api_2026-08-11.md).
 
 ## Acceptance criteria
 
 - A downstream consumer can retrieve an explicit published forecast version from a stable view.
+- A read-only API never returns incomplete or mixed publication versions.
 - Publication can be retried safely with the same run ID.
 - Exported files include contract, run, entity, origin, target date, horizon, and published forecast value.
 
