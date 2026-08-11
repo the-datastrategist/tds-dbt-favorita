@@ -37,6 +37,7 @@ endif
 	vertex-backfill vertex-backtest-plan vertex-backtest vertex-backtest-persist prefect-flow-vertex-backfill \
 	vertex-lifecycle-plan vertex-lifecycle-evaluate vertex-lifecycle-promote vertex-lifecycle-rollback \
 	forecast-override forecast-approve-publish forecast-revise forecast-rollback forecast-export \
+	forecast-delivery-start forecast-delivery-confirm forecast-delivery-fail forecast-delivery-retry forecast-delivery-abandon \
 	docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
 
 help: ## Show this help message
@@ -606,6 +607,26 @@ forecast-rollback: ## Republish a prior complete version (FORECAST_RUN_ID, PRIOR
 forecast-export: ## Export an immutable published version to GCS (FORECAST_RUN_ID, VERSION, DESTINATION, FORMAT)
 	@test -n "$(FORECAST_RUN_ID)$(VERSION)$(DESTINATION)" || (echo "Set FORECAST_RUN_ID, VERSION, and a GCS DESTINATION containing *" && exit 1)
 	$(DOCKER_RUN) python scripts/export_forecast.py --forecast-run-id "$(FORECAST_RUN_ID)" --publication-version "$(VERSION)" --destination "$(DESTINATION)" --format "$(or $(FORMAT),parquet)" $(ARGS)
+
+forecast-delivery-start: ## Start delivery tracking (FORECAST_RUN_ID, VERSION, DESTINATION, ACTOR, IDEMPOTENCY_KEY)
+	@test -n "$(FORECAST_RUN_ID)$(VERSION)$(DESTINATION)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set FORECAST_RUN_ID, VERSION, DESTINATION, ACTOR, and IDEMPOTENCY_KEY" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_delivery start --forecast-run-id "$(FORECAST_RUN_ID)" --version "$(VERSION)" --destination "$(DESTINATION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" $(ARGS)
+
+forecast-delivery-confirm: ## Confirm downstream delivery (also set DELIVERY_REFERENCE)
+	@test -n "$(FORECAST_RUN_ID)$(VERSION)$(DESTINATION)$(ACTOR)$(IDEMPOTENCY_KEY)$(DELIVERY_REFERENCE)" || (echo "Set delivery scope, actor, idempotency key, and DELIVERY_REFERENCE" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_delivery confirm --forecast-run-id "$(FORECAST_RUN_ID)" --version "$(VERSION)" --destination "$(DESTINATION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" --delivery-reference "$(DELIVERY_REFERENCE)" $(ARGS)
+
+forecast-delivery-fail: ## Record a retryable delivery failure (also set ERROR_MESSAGE)
+	@test -n "$(FORECAST_RUN_ID)$(VERSION)$(DESTINATION)$(ACTOR)$(IDEMPOTENCY_KEY)$(ERROR_MESSAGE)" || (echo "Set delivery scope, actor, idempotency key, and ERROR_MESSAGE" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_delivery fail --forecast-run-id "$(FORECAST_RUN_ID)" --version "$(VERSION)" --destination "$(DESTINATION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" --error-code "$(ERROR_CODE)" --error-message "$(ERROR_MESSAGE)" $(ARGS)
+
+forecast-delivery-retry: ## Start the next delivery attempt after failure
+	@test -n "$(FORECAST_RUN_ID)$(VERSION)$(DESTINATION)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set delivery scope, actor, and idempotency key" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_delivery retry --forecast-run-id "$(FORECAST_RUN_ID)" --version "$(VERSION)" --destination "$(DESTINATION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" $(ARGS)
+
+forecast-delivery-abandon: ## Abandon a pending or failed delivery with an audit event
+	@test -n "$(FORECAST_RUN_ID)$(VERSION)$(DESTINATION)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set delivery scope, actor, and idempotency key" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_delivery abandon --forecast-run-id "$(FORECAST_RUN_ID)" --version "$(VERSION)" --destination "$(DESTINATION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" $(ARGS)
 
 # --- CLEANUP COMMANDS ---
 

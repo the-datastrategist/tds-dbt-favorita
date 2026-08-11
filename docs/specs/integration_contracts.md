@@ -10,8 +10,8 @@
 ## Summary
 
 The consumption layer now exposes stable current/by-run warehouse views, operations audit views,
-and an explicit-run GCS batch export. Retrieval APIs, mutation APIs, publication events, and
-delivery confirmation remain the next integration adapters.
+an explicit-run GCS batch export, version-level publication events, and append-only delivery
+confirmation. Retrieval and mutation APIs plus an outbound webhook adapter remain next.
 
 This spec adds `docs/integration_contracts.md`, versioned table/view contracts, export commands, API concepts, and idempotent publication semantics.
 
@@ -108,9 +108,9 @@ Emit event rows and optional webhook payload:
 1. Add `docs/integration_contracts.md`.
 2. Add stable dbt views for published forecasts.
 3. Add export command and destination configuration.
-4. Add minimal FastAPI or Cloud Run-ready API skeleton.
-5. Add idempotency keys and publication event table.
-6. Add examples for BI and replenishment-style consumers.
+4. **Open:** add minimal FastAPI or Cloud Run-ready API skeleton.
+5. **Complete:** add idempotency keys, publication-event table, and delivery-event table.
+6. **Partial:** stable warehouse and batch examples are documented; API examples remain.
 
 ## Testing & validation
 
@@ -121,13 +121,14 @@ Emit event rows and optional webhook payload:
 
 ## Current implementation
 
-The stable warehouse boundary now includes current, explicit-run, publication-audit, and
-override-audit dbt views. A live-accepted export command writes one explicit published run version to GCS as
+The stable warehouse boundary now includes current, explicit-run, publication-audit,
+override-audit, publication-event, and delivery-state dbt views. A live-accepted export command writes one explicit published run version to GCS as
 CSV or Parquet without overwriting an existing delivery. See the
 [live acceptance evidence](../acceptance/forecast_operations_delivery_2026-08-11.md). The
 [integration contract guide](../integration_contracts.md) defines view usage, version pins,
-export behavior, and compatibility policy. A retrieval/service API, publication events/webhooks,
-and independent delivery-status confirmation remain open.
+export behavior, and compatibility policy. Version-level publication events and independent,
+append-only delivery confirmation are live accepted. A retrieval/service API and outbound webhook
+adapter remain open.
 
 ## Acceptance criteria
 

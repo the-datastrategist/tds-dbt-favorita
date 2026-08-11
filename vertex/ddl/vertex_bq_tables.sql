@@ -777,3 +777,43 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_revisions` (
 )
 PARTITION BY DATE(revised_at)
 CLUSTER BY forecast_run_id, revision_type, revised_by;
+
+-- Version-level publication events for integrations and webhook adapters.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_publication_events` (
+  publication_event_id STRING NOT NULL,
+  idempotency_key STRING NOT NULL,
+  event_type STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  forecast_contract_name STRING NOT NULL,
+  forecast_contract_hash STRING NOT NULL,
+  publication_version INT64 NOT NULL,
+  destination STRING NOT NULL,
+  row_count INT64 NOT NULL,
+  occurred_at TIMESTAMP NOT NULL,
+  occurred_by STRING NOT NULL,
+  payload_json JSON NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY DATE(occurred_at)
+CLUSTER BY forecast_run_id, publication_version, destination, event_type;
+
+-- Append-only delivery transitions. Current delivery state is derived from the
+-- latest event; immutable publication rows are never updated by delivery outcomes.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_delivery_events` (
+  delivery_event_id STRING NOT NULL,
+  idempotency_key STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  publication_version INT64 NOT NULL,
+  destination STRING NOT NULL,
+  delivery_status STRING NOT NULL,
+  delivery_attempt INT64 NOT NULL,
+  delivery_reference STRING,
+  error_code STRING,
+  error_message STRING,
+  occurred_at TIMESTAMP NOT NULL,
+  occurred_by STRING NOT NULL,
+  details_json JSON,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY DATE(occurred_at)
+CLUSTER BY forecast_run_id, publication_version, destination, delivery_status;

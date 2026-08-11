@@ -62,6 +62,12 @@ def test_invalid_monitoring_config_is_rejected(mutation, match):
 def test_evaluate_alerts_emits_only_unhealthy_signals():
     config = load_monitoring_config()
     rows = {
+        "delivery_health": [
+            {
+                "forecast_contract_name": "delivery",
+                "delivery_health_status": "failed",
+            }
+        ],
         "feature_completeness": [
             {"feature_model": "healthy_features", "feature_completeness_status": "healthy"},
             {
@@ -85,8 +91,9 @@ def test_evaluate_alerts_emits_only_unhealthy_signals():
         ("stale_forecast_publication", "stale"),
         ("prediction_coverage_low", "low"),
         ("forecast_features_incomplete", "broken_features"),
+        ("forecast_delivery_unhealthy", "delivery"),
     ]
-    assert route_alerts(config, events) == 3
+    assert route_alerts(config, events) == 4
 
 
 @pytest.mark.unit
@@ -144,6 +151,7 @@ def test_bigquery_signal_loader_queries_only_validated_monitoring_views(client_c
     rows = load_bigquery_rows(project_id="tds-favorita", table_prefix="tds-favorita.favorita")
 
     assert set(rows) == {
+        "delivery_health",
         "feature_completeness",
         "publication_freshness",
         "prediction_coverage",
@@ -151,6 +159,7 @@ def test_bigquery_signal_loader_queries_only_validated_monitoring_views(client_c
     }
     queries = [call.args[0] for call in client.query.call_args_list]
     assert queries == [
+        "SELECT * FROM `tds-favorita.favorita.forecast_delivery_health`",
         "SELECT * FROM `tds-favorita.favorita.forecast_feature_completeness`",
         "SELECT * FROM `tds-favorita.favorita.forecast_publication_freshness`",
         "SELECT * FROM `tds-favorita.favorita.forecast_prediction_coverage`",

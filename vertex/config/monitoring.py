@@ -15,6 +15,7 @@ VALID_DESTINATION_TYPES = frozenset({"log", "webhook"})
 VALID_SEVERITIES = ("info", "ticket", "page")
 VALID_SIGNALS = frozenset(
     {
+        "delivery_health",
         "feature_completeness",
         "publication_freshness",
         "prediction_coverage",

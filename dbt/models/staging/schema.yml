@@ -1075,6 +1075,42 @@ models:
         description: Planner or service responsible for the revision.
         data_tests: [not_null]
 
+  - name: stg_forecast_publication_events
+    description: Version-level integration events emitted after complete publication persistence.
+    columns:
+      - name: publication_event_id
+        data_tests: [unique, not_null]
+      - name: idempotency_key
+        data_tests: [unique, not_null]
+      - name: event_type
+        data_tests: [not_null]
+      - name: forecast_run_id
+        data_tests: [not_null]
+      - name: publication_version
+        data_tests: [not_null]
+      - name: row_count
+        data_tests: [not_null]
+
+  - name: stg_forecast_delivery_events
+    description: Append-only delivery state transitions for a publication version and destination.
+    columns:
+      - name: delivery_event_id
+        data_tests: [unique, not_null]
+      - name: idempotency_key
+        data_tests: [unique, not_null]
+      - name: forecast_run_id
+        data_tests: [not_null]
+      - name: publication_version
+        data_tests: [not_null]
+      - name: delivery_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [pending, delivered, failed, abandoned]
+      - name: delivery_attempt
+        data_tests: [not_null]
+
   - name: stg_vertex_model_explain
     description: >
       SHAP feature attributions for tree-based Vertex predictions (xgboost, random_forest)

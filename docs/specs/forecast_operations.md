@@ -11,7 +11,8 @@
 
 The platform now operates forecasts as append-only business artifacts through explicit override,
 approval, publication, revision, and rollback commands. Remaining work is the planner-facing UI,
-Forecast Value Added mart, service API, and downstream delivery confirmation.
+Forecast Value Added mart and service API. Downstream delivery confirmation is implemented through
+its append-only integration contract.
 
 This spec adds `docs/forecast_operations.md`, operating cadences, lifecycle tables, workflow APIs, and runbooks for retries, partial failures, backfills, revisions, and champion rollback.
 
@@ -195,7 +196,8 @@ Explicit planner override, approve/publish, revision, and rollback commands now 
 append-only records. Approval selects audited overrides without changing the statistical
 forecast; rollback republishes a complete prior version under a new version with revision
 lineage. The [operations runbook](../forecast_operations.md) documents retry, revision, backfill,
-and delivery recovery. A planner UI, FVA mart, delivery confirmation, and service API remain open.
+and delivery recovery. Append-only delivery confirmation, retry, abandonment, and monitoring are
+live accepted. A planner UI, FVA mart, and service API remain open.
 
 ## Testing & validation
 

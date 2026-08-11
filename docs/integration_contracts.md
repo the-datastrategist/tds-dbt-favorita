@@ -12,6 +12,9 @@ target date, horizon, publication version, and frozen published value.
 | `published_forecasts_by_run` | Reproducible retrieval of an explicit immutable run and version |
 | `forecast_publication_audit` | Approval, delivery, and revision lineage |
 | `forecast_overrides_audit` | Statistical values, planner adjustments, and approval decisions |
+| `forecast_publication_events_audit` | Version-level publish, revise, and rollback events |
+| `forecast_delivery_current` | Latest downstream delivery state without mutating publications |
+| `forecast_delivery_health` | Delivery failure and overdue-pending monitoring boundary |
 
 `published_forecasts_current` is convenient operational state. Reproducible applications should
 pin `forecast_run_id`, `publication_version`, and `destination` against
@@ -48,9 +51,10 @@ Use a new destination for an intentional re-export.
 - Consumers must not combine rows from different run/version/destination tuples.
 - Additive nullable columns are backward-compatible. Renames, removals, semantic changes, or new
   required fields require a versioned view and a documented deprecation window.
-- The warehouse and export contracts are shipped first. Retrieval and mutation APIs and
-  publication webhooks remain future adapters over the same records.
+- Publication events and delivery confirmation are append-only and version-scoped. Retrieval and
+  mutation APIs and an outbound webhook adapter remain future interfaces over the same records.
 
-See [forecast operations](forecast_operations.md) for override, approval, and rollback commands.
+See [forecast operations](forecast_operations.md) for override, approval, and rollback commands and
+[forecast delivery](forecast_delivery.md) for confirmation, failure, retry, and abandonment.
 The Make targets are operator interfaces rather than a public API; callers must have BigQuery/GCS
 IAM appropriate to the selected project and destination.

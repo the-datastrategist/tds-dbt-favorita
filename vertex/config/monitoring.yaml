@@ -42,3 +42,7 @@ policies:
     signal: pipeline_health
     severity: page
     destination: operator_log
+  - name: forecast_delivery_unhealthy
+    signal: delivery_health
+    severity: page
+    destination: operator_log

@@ -37,6 +37,9 @@ def _is_alerting(signal: str, row: dict[str, Any]) -> tuple[bool, str]:
     if signal == "feature_completeness":
         status = str(row.get("feature_completeness_status", "missing"))
         return status != "healthy", status
+    if signal == "delivery_health":
+        status = str(row.get("delivery_health_status", "missing"))
+        return status != "healthy", status
     status = str(row.get("health_status", "missing"))
     return status not in {"healthy", "healthy_static"}, status
 

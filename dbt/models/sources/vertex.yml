@@ -79,6 +79,12 @@ sources:
       - name: forecast_revisions
         description: Append-only supersession and rollback lineage between publication versions
 
+      - name: forecast_publication_events
+        description: Version-level integration events for publish, revise, and rollback actions
+
+      - name: forecast_delivery_events
+        description: Append-only downstream delivery transitions for immutable publication versions
+
       - name: backtest_runs
         description: Immutable rolling-origin backtest executions and their comparison semantics
 
