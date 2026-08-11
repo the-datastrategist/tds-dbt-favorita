@@ -94,3 +94,7 @@ forecast_api_invoker_members = ["group:forecast-consumers@example.com"]
 Apply the selected environment and use its `forecast_api_url` output. Roll back by deploying the
 prior immutable digest. Disabling the module removes the service, service account, and grants; it
 does not modify forecast data.
+
+The reference development environment passed live private Cloud Run, IAM, BigQuery retrieval,
+filter, pagination, provenance, and structured-error acceptance on 2026-08-11. See
+[Forecast Retrieval API acceptance](acceptance/forecast_retrieval_api_2026-08-11.md).

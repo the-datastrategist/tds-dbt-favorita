@@ -67,6 +67,9 @@ Create **`sa-vertex-ml@PROJECT.iam.gserviceaccount.com`** per environment.
 The Forecast Retrieval API uses a separate service account with only project-level
 `roles/bigquery.jobUser` and dataset-level `roles/bigquery.dataViewer`. Invocation is restricted by
 Cloud Run IAM to the configured `forecast_api_invoker_members`; no public principal is granted.
+The reference development deployment passed live private-service and zero-drift Terraform
+acceptance on 2026-08-11; see the
+[Forecast Retrieval API acceptance evidence](acceptance/forecast_retrieval_api_2026-08-11.md).
 
 Prefer **bucket-level** GCS IAM over project-wide storage admin.
 

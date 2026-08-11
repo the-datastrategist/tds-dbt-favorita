@@ -48,10 +48,12 @@ Use a new destination for an intentional re-export.
 
 ## Retrieval API
 
-The Cloud Run-ready read-only service exposes one latest delivered version or one explicit
+The live-accepted private Cloud Run service exposes one latest delivered version or one explicit
 run/version/destination. It validates publication cardinality before returning rows and uses opaque
 keyset pagination with parameterized BigQuery filters. See the
-[Forecast Retrieval API](forecast_api.md) for endpoints, authentication, errors, and deployment.
+[Forecast Retrieval API](forecast_api.md) for endpoints, authentication, errors, and deployment,
+and the [live acceptance evidence](acceptance/forecast_retrieval_api_2026-08-11.md) for the reference
+development deployment.
 
 ## Versioning policy
 

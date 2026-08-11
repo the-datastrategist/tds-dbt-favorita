@@ -11,7 +11,7 @@
 
 The consumption layer now exposes stable current/by-run warehouse views, operations audit views,
 an explicit-run GCS batch export, version-level publication events, append-only delivery
-confirmation, and a Cloud Run-ready, IAM-authenticated read-only retrieval API. Mutation APIs and
+confirmation, and a live-accepted, IAM-authenticated read-only retrieval API. Mutation APIs and
 an outbound webhook adapter remain next.
 
 This spec adds `docs/integration_contracts.md`, versioned table/view contracts, export commands, API concepts, and idempotent publication semantics.
@@ -138,10 +138,9 @@ CSV or Parquet without overwriting an existing delivery. See the
 [live acceptance evidence](../acceptance/forecast_operations_delivery_2026-08-11.md). The
 [integration contract guide](../integration_contracts.md) defines view usage, version pins,
 export behavior, and compatibility policy. Version-level publication events and independent,
-append-only delivery confirmation are live accepted. A tested read-only retrieval API now resolves
-one complete delivered or explicitly pinned version with deterministic pagination and structured
-errors. Live Cloud Run deployment acceptance, mutation endpoints, and the outbound webhook adapter
-remain open. See the
+append-only delivery confirmation are live accepted. The private, live-accepted read-only retrieval
+API resolves one complete delivered or explicitly pinned version with deterministic pagination and
+structured errors. Mutation endpoints and the outbound webhook adapter remain open. See the
 [retrieval API acceptance evidence](../acceptance/forecast_retrieval_api_2026-08-11.md).
 
 ## Acceptance criteria
