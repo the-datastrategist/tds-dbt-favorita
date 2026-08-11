@@ -69,6 +69,11 @@ has_required_history
 
 Forecast scoring should not silently omit entities; it should record excluded entities and reasons.
 
+Scheduled runs persist this population in append-only `forecast_eligibility_decisions`, keyed by
+run, entity, target date, and horizon. The eligible subset determines the run's
+`eligibility_snapshot_id`; scored rows must match that subset exactly. `forecast_runs` records
+candidate, eligible, excluded, and exception counts for reconciliation.
+
 ### 4. Censored demand policy
 
 Support policy values:
@@ -90,9 +95,9 @@ The feature availability registry should mark inventory and actual sales as obse
 2. **Partial:** add the reference store-day canonical adapter; client-specific optional inventory,
    assortment, lifecycle, price, and closure adapters remain.
 3. **Complete:** add eligibility and summary dbt models with schema and fixture tests.
-4. **Partial:** eligibility snapshot IDs are pinned on forecast runs, enforced by the scheduled
-   pipeline, and joined to origin-date count/reason summaries; a persisted row-level exclusion
-   evidence table remains.
+4. **Complete:** eligibility snapshot IDs are pinned on forecast runs; append-only row-level
+   decisions, exclusion reasons, count gates, and monitoring reconciliation are implemented and
+   live accepted.
 5. **Complete:** document the observed-sales proxy and unknown-availability limitations.
 6. **Complete:** validate demand policy as part of the hashed forecast contract.
 
@@ -101,13 +106,20 @@ The feature availability registry should mark inventory and actual sales as obse
 - Unit/fixture tests for eligibility rules.
 - dbt tests for unique entity/date eligibility rows.
 - Fixture with store closure and product retirement exclusion.
-- Smoke test showing excluded entity counts in forecast run metadata.
+- Controlled exclusion test showing candidate, eligible, predicted, excluded, and exception counts
+  reconcile in forecast run metadata and pipeline health.
 
 ## Acceptance criteria
 
 - Forecast runs can report eligible, forecasted, and excluded entity counts.
+- Every excluded entity has immutable row-level evidence and a non-empty reason.
+- Missing evidence, snapshot mismatch, unexplained exclusions, and omitted eligible predictions
+  produce distinct unhealthy monitoring states.
 - Docs clearly state when stockout-adjusted unconstrained demand is not available.
 - Demand policy is explicit in the forecast contract.
+
+See [forecast eligibility evidence acceptance](../acceptance/forecast_eligibility_evidence_2026-08-11.md)
+for the local and live validation record.
 
 ## Current implementation status
 

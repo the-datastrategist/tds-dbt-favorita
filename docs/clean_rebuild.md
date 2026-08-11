@@ -241,7 +241,9 @@ Compare the rebuilt environment with the pre-rebuild inventory. At minimum, veri
 - `forecast_source_health` reports `healthy_static` for an intentional snapshot or `healthy` for a
   continuous source inside its configured ingestion window;
 - `forecast_pipeline_health` agrees with the latest scheduled run's stages, gates, cardinality,
-  and quantile coverage;
+  quantile coverage, pinned eligibility snapshot, and candidate/eligible/excluded/exception counts;
+- `forecast_eligibility_decisions` contains one immutable decision per candidate key, every
+  exclusion has a reason, and its eligible count equals the persisted forecast output count;
 - the derived dataset has the intended location, labels, IAM, and lifecycle settings;
 - expected dbt relations and BQML models exist;
 - dbt tests pass;

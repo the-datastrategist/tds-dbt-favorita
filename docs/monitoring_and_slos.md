@@ -152,6 +152,10 @@ monitoring_runner_image = "us-central1-docker.pkg.dev/my-project/vertex/ml-pipel
   crossed all gates, then follow `docs/forecast_operations.md`. Never publish around a failed gate.
 - **Low coverage:** compare expected and distinct output counts, inspect eligibility snapshot and
   excluded series, then retry the failed scoring stage with the same run identity.
+- **Eligibility evidence:** for `missing_eligibility_evidence`, confirm the run predates the ledger
+  or rerun the scheduled pipeline. For snapshot, accounting, exclusion, or eligible-prediction
+  mismatches, do not publish; compare `forecast_runs`, `forecast_eligibility_decisions`, and
+  `forecast_outputs` by `forecast_run_id` and correct the producing stage.
 - **Pipeline failure:** use the contract and run IDs in the alert to inspect Prefect and GCP logs;
   remediate the failed stage before retrying.
 - **Source alert:** validate the latest immutable ingestion record and source policy before rerunning

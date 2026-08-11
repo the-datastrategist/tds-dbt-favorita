@@ -319,6 +319,10 @@ make forecast-alerts-evaluate               # route through configured destinati
 
 Publication paging is explicitly scoped by `publication_monitored_contracts` in
 `dbt/dbt_project.yml`; add only contracts that are expected to publish continuously.
+Scheduled forecast runs also persist immutable `forecast_eligibility_decisions`. Pipeline health
+alerts when that evidence is missing or disagrees with the run snapshot, population counts, or
+persisted predictions; historical runs created before the ledger are intentionally reported as
+`missing_eligibility_evidence` until a new scheduled run completes.
 
 ### dbt commands (Docker)
 

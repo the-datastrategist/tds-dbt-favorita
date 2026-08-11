@@ -78,7 +78,7 @@ Guidance for evaluating, adopting, operating, and extending the platform:
 | Dashboard blueprint | [delivery_artifacts.md](delivery_artifacts.md#dashboard-blueprint) | Blueprint (BI layer planned) |
 | Adoption playbook | [client_rollout.md](client_rollout.md) | Available |
 | IaC / GCP ops | [iac.md](iac.md) + `vertex/ops/README.md` | Runbook + Terraform modules available |
-| Demand and eligibility | [demand_data_model.md](demand_data_model.md) | Live-accepted observed-sales proxy, explicit eligibility decisions, exclusion reasons, and run-level counts |
+| Demand and eligibility | [demand_data_model.md](demand_data_model.md) | Live-accepted observed-sales proxy, immutable candidate decisions, exclusion reasons, pinned snapshots, population gates, and monitoring |
 | Forecast monitoring | [monitoring_and_slos.md](monitoring_and_slos.md) | Live-accepted source, pipeline, publication-freshness, and prediction-coverage signals; configurable routing and opt-in Cloud Monitoring policy available |
 | Forecast operations | [forecast_operations.md](forecast_operations.md) | Override, approval, revision, and rollback commands available |
 | Forecast Value Added | [forecast_value_added.md](forecast_value_added.md) | Benchmark, planner-adjustment, and publication accuracy attribution |
