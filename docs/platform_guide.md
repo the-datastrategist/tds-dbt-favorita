@@ -79,6 +79,9 @@ Guidance for evaluating, adopting, operating, and extending the platform:
 | Adoption playbook | [client_rollout.md](client_rollout.md) | Available |
 | IaC / GCP ops | [iac.md](iac.md) + `vertex/ops/README.md` | Runbook + Terraform modules available |
 | Forecast monitoring | [monitoring_and_slos.md](monitoring_and_slos.md) | Source-mode and pipeline-health operations available |
+| Forecast operations | [forecast_operations.md](forecast_operations.md) | Override, approval, revision, and rollback commands available |
+| Integration contracts | [integration_contracts.md](integration_contracts.md) | Stable warehouse views and GCS batch export available |
+| Hierarchical reconciliation | [hierarchical_reconciliation.md](hierarchical_reconciliation.md) | Configuration, validation, metrics, and fail-closed runbook available |
 
 → Index: [delivery_artifacts.md](delivery_artifacts.md)
 

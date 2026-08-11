@@ -90,3 +90,6 @@ selected source. `forecast_revisions` preserves prior and replacement publicatio
 
 Stable consumer views and batch export are documented in
 [integration contracts](integration_contracts.md).
+
+These commands are the supported operator boundary today. They are not a public multi-tenant API;
+the executing identity must have append access to the forecast-operation tables.

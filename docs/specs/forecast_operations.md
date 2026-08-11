@@ -9,7 +9,9 @@
 
 ## Summary
 
-The current platform can run dbt, train models, predict, track experiments, and monitor accuracy. It does not yet operate forecasts as business artifacts with review, override, approval, publication, revision, rollback, and downstream confirmation.
+The platform now operates forecasts as append-only business artifacts through explicit override,
+approval, publication, revision, and rollback commands. Remaining work is the planner-facing UI,
+Forecast Value Added mart, service API, and downstream delivery confirmation.
 
 This spec adds `docs/forecast_operations.md`, operating cadences, lifecycle tables, workflow APIs, and runbooks for retries, partial failures, backfills, revisions, and champion rollback.
 
@@ -189,7 +191,7 @@ retraining, persists stage and validation evidence, and exposes a draft only aft
 calibration, reconciliation, and blocking gates pass. A separate manual flow validates a concrete
 run and can create retry-safe approval and publication records in `auto_publish` mode.
 
-Explicit planner override, approve/publish, and rollback commands now write deterministic,
+Explicit planner override, approve/publish, revision, and rollback commands now write deterministic,
 append-only records. Approval selects audited overrides without changing the statistical
 forecast; rollback republishes a complete prior version under a new version with revision
 lineage. The [operations runbook](../forecast_operations.md) documents retry, revision, backfill,

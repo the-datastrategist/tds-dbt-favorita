@@ -51,3 +51,5 @@ Use a new destination for an intentional re-export.
   publication webhooks remain future adapters over the same records.
 
 See [forecast operations](forecast_operations.md) for override, approval, and rollback commands.
+The Make targets are operator interfaces rather than a public API; callers must have BigQuery/GCS
+IAM appropriate to the selected project and destination.
