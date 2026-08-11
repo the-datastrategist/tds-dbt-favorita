@@ -94,6 +94,7 @@ for the reference deployment and must be reviewed per client.
 | Publication freshness | 99% over 30 days | Latest publication no older than 1,440 minutes | Forecasting operations |
 | Prediction coverage | 99% over 30 days | At least 98% of frozen expected outputs | Forecasting operations |
 | Pipeline availability | 99% over 30 days | Terminal within 120 minutes | ML platform |
+| Realized calibration | 99% over 28 days | At least 80% P10-P90 coverage after 30 actuals | Forecasting science |
 
 `page` means immediate operator attention; `ticket` means remediation within the next business
 cycle; `info` is diagnostic. Destination minimum severity prevents lower-priority events from
@@ -105,7 +106,7 @@ Destinations and policies are configured without code changes. `log` destination
 JSON to the process logger. `webhook` destinations resolve their URL from the configured environment
 variable; URLs and tokens never belong in YAML.
 
-The operator path queries the four warehouse marts directly:
+The operator path queries the configured warehouse signal marts directly:
 
 ```bash
 make forecast-alerts-evaluate DRY_RUN=true
@@ -115,7 +116,7 @@ make forecast-alerts-evaluate
 `DRY_RUN=true` evaluates live signals and prints the alert events without routing them. The second
 command routes events according to `vertex/config/monitoring.yaml`.
 
-For deterministic incident replay without BigQuery access, export the three marts as JSON arrays
+For deterministic incident replay without BigQuery access, export the relevant marts as JSON arrays
 and run:
 
 ```bash
@@ -125,6 +126,7 @@ python scripts/evaluate_monitoring_alerts.py \
   --publication-freshness-json /tmp/publication-freshness.json \
   --prediction-coverage-json /tmp/prediction-coverage.json \
   --pipeline-health-json /tmp/pipeline-health.json \
+  --realized-calibration-json /tmp/realized-calibration.json \
   --dry-run
 ```
 

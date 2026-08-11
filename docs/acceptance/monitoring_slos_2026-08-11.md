@@ -42,16 +42,17 @@ observed rows:
 | Alerting | `false` |
 
 The focused dbt build completed with `PASS=9 WARN=0 ERROR=0`, including its unit test and five
-data tests. The four-view live evaluator subsequently returned zero active alerts.
+data tests. The then-current four-view live evaluator subsequently returned zero active alerts.
 
 ## Alert and infrastructure validation
 
 - The versioned YAML alert/SLO contract passed validation and deterministic hashing tests.
 - Synthetic stale, low-coverage, and unhealthy-pipeline signals produced the expected severities.
 - Structured-log routing and environment-indirected webhook routing passed unit tests.
-- The executable runner queried all four live warehouse views directly and returned zero active
-  alerts. Controlled stale-publication, low-coverage, and failed-pipeline fixtures emitted exactly
-  three structured alerts with the configured `page`, `ticket`, and `page` severities.
+- The executable runner queried all four then-configured live warehouse views directly and
+  returned zero active alerts. Controlled stale-publication, low-coverage, and failed-pipeline
+  fixtures emitted exactly three structured alerts with the configured `page`, `ticket`, and
+  `page` severities.
 - Terraform formatting and validation passed for both development and production environments
   with alert resources disabled by default.
 - The opt-in infrastructure defines a log-based failure metric and a Cloud Monitoring alert policy;
@@ -90,5 +91,6 @@ This acceptance proves the repository implementation, direct warehouse evaluatio
 log delivery. The hosted schedule and channel-routing resources are now implemented and validated
 but remain opt-in. Production paging still requires an enabled Terraform plan/apply with a real
 image digest and notification channel IDs, followed by a witnessed external notification.
-Realized calibration, target/feature drift, and cost monitoring remain separate increments in the
-broader monitoring spec.
+Realized calibration was subsequently accepted the same day; see
+[Realized forecast calibration acceptance](forecast_realized_calibration_2026-08-11.md).
+Target/feature drift and cost monitoring remain separate increments in the broader monitoring spec.

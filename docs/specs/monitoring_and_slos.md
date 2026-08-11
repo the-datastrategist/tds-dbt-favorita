@@ -10,12 +10,14 @@
 ## Summary
 
 The repo now has accuracy monitoring, mode-aware source ingestion health, scheduled pipeline
-health, publication freshness, and prediction coverage. A complete platform still needs hosted
-alert delivery and end-to-end signals for feature completeness, data drift, calibration, and cost.
+health, publication freshness, prediction coverage, feature completeness, realized calibration,
+and an opt-in hosted alert evaluator. A complete platform still needs production alert-channel
+activation plus end-to-end target/feature drift and cost signals.
 
 The source and scheduled-pipeline health slice passed live GCP acceptance on 2026-08-06. The
-publication-freshness and prediction-coverage slice passed live BigQuery acceptance on 2026-08-11.
-Together, the evidence covers static-demo freshness semantics, policy lineage, stage order,
+publication-freshness, prediction-coverage, feature-completeness, and realized-calibration slices
+passed live BigQuery acceptance on 2026-08-11. Together, the evidence covers static-demo freshness
+semantics, policy lineage, stage order,
 blocking gates, output cardinality, horizon coverage, publication age, quantiles, and forecast
 provenance.
 
@@ -61,7 +63,7 @@ Add or extend dbt marts:
 | `forecast_prediction_coverage` | eligible vs predicted entities/horizons |
 | `forecast_publication_freshness` | stale or missing published forecasts |
 | `forecast_accuracy_by_horizon` | error, bias, WAPE by horizon/segment |
-| `forecast_calibration` | coverage, interval width, pinball loss |
+| `forecast_realized_calibration` | realized P10-P90 coverage, interval width, and median bias by contract/horizon |
 | `forecast_drift` | target and feature drift |
 | `forecast_pipeline_health` | success, duration, retries, cost labels |
 
@@ -120,7 +122,8 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 
 ## Testing & validation
 
-- dbt unit tests for coverage/freshness calculations.
+- dbt unit tests for coverage, freshness, feature-completeness, and realized-calibration
+  calculations.
 - Terraform validate with alert resources disabled and enabled via fixture variables.
 - Synthetic failure rows that trigger alert queries.
 - End-to-end smoke test showing stale publication detection.
@@ -151,5 +154,6 @@ Broader drift and cost signals also remain in scope.
 - [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md)
 - [Live forecast monitoring acceptance](../acceptance/forecast_monitoring_2026-08-06.md)
 - [Live monitoring and SLO acceptance](../acceptance/monitoring_slos_2026-08-11.md)
+- [Realized calibration acceptance](../acceptance/forecast_realized_calibration_2026-08-11.md)
 
 {% enddocs %}
