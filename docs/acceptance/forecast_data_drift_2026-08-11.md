@@ -24,3 +24,5 @@ Focused Python monitoring tests passed (`7 passed`), including ticket routing an
 
 The complete live forecast-monitoring selector passed (`PASS=111`, `WARN=0`, `ERROR=0`,
 `SKIP=0`). The full unit suite passed (`370 passed`, `7 deselected`) with 76.37% coverage.
+The live evaluator loaded the drift view successfully and emitted no drift alerts. Its only dry-run
+events were existing pipeline-health alerts for forecast runs that predate eligibility evidence.
