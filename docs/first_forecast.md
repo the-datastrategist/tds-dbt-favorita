@@ -195,6 +195,14 @@ make dbt-backtest
 This compares the ML model with the configured naive and intermittent-demand baselines through the
 same append-only prediction and metric contracts. See [Backtesting and evaluation](backtesting_and_evaluation.md).
 
+Build the FVA marts to quantify improvement over the configured seasonal benchmark:
+
+```bash
+make forecast-fva-build
+```
+
+See [Forecast Value Added](forecast_value_added.md) for interpretation and coverage rules.
+
 The scheduled forecast flow is available for development after a governed champion and required
 calibration/reconciliation inputs exist:
 
@@ -204,8 +212,9 @@ make prefect-flow-scheduled-forecast
 
 That flow creates a validated, atomically visible draft. A separate manual Prefect deployment can
 validate that draft or create an idempotent approval/publication after all gates pass. Planner
-planner UI and FVA workflows, automated delivery confirmation, service integrations, and full
-operational SLO coverage remain roadmap work; consult the
+UI, service integrations, production monitoring activation, and full operational SLO coverage
+remain roadmap work; FVA and delivery confirmation are available through warehouse and operator
+contracts. Consult the
 [specification status table](specs/README.md) before treating those stages as production-complete.
 
 ## Where to go next

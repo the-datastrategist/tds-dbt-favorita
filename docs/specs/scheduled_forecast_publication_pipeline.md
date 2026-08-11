@@ -243,8 +243,9 @@ published version and instead creates a retryable delivery exception.
 - Contract-configurable warning thresholds and exception aggregation by hierarchy node.
 - A dry-run mode that resolves pins, eligibility counts, and planned writes without scoring.
 - Operator commands to retry delivery, abandon a stale run, or supersede a draft with reasons.
-- Forecast Value Added marts comparing base, calibrated/reconciled, overridden, and published
-  values after actuals arrive.
+- Extend the shipped FVA marts with optional component-level attribution between base,
+  calibrated, and reconciled values. Benchmark, overridden, and published comparisons are already
+  implemented in the [Forecast Operations spec](forecast_operations.md).
 
 ## P2 considerations
 

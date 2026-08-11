@@ -11,8 +11,8 @@
 
 The platform now operates forecasts as append-only business artifacts through explicit override,
 approval, publication, revision, and rollback commands. Remaining work is the planner-facing UI,
-Forecast Value Added mart and service API. Downstream delivery confirmation is implemented through
-its append-only integration contract.
+and service API. Forecast Value Added and downstream delivery confirmation are implemented through
+tested warehouse and append-only integration contracts.
 
 This spec adds `docs/forecast_operations.md`, operating cadences, lifecycle tables, workflow APIs, and runbooks for retries, partial failures, backfills, revisions, and champion rollback.
 
@@ -184,7 +184,7 @@ calibration, reconciliation, model, features, and source cutoff.
 3. Add status transition validation utilities.
 4. Split Prefect daily scoring from retrain/tune flows.
 5. Add CLI commands for approve/publish/supersede operations.
-6. Add FVA dbt mart.
+6. **Complete:** add backtest and operations FVA dbt marts.
 7. Add runbooks for retries, partial failures, backfills, revisions, and champion rollback.
 8. Add the scheduled publication flow using the stage ordering and gates defined above.
 
@@ -221,7 +221,8 @@ API remain open. See the [FVA acceptance evidence](../acceptance/forecast_value_
 - A forecast can be scored, overridden, approved, published, and superseded without losing the original statistical forecast.
 - Publication is idempotent by run/version ID.
 - Daily scoring can run independently from retraining and tuning.
-- FVA is queryable once actuals arrive.
+- Backtest FVA is queryable from persisted rolling-origin metrics; operations FVA becomes
+  comparable once complete target-date actuals arrive.
 - A scheduled run executes routing, forecasting, calibration, reconciliation, validation, and
   publication in the documented order.
 - Every published row is calibrated, coherent where a hierarchy is configured, versioned,
