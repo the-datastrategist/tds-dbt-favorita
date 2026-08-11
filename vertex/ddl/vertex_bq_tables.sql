@@ -467,6 +467,48 @@ ALTER TABLE `tds-favorita.favorita.forecast_runs` ADD COLUMN IF NOT EXISTS eligi
 ALTER TABLE `tds-favorita.favorita.forecast_runs` ADD COLUMN IF NOT EXISTS excluded_count INT64;
 ALTER TABLE `tds-favorita.favorita.forecast_runs` ADD COLUMN IF NOT EXISTS exception_count INT64;
 
+-- Normalized append-only cloud and pipeline cost evidence. Billing-export adapters and jobs write
+-- the same contract so monitoring remains independent of provider-specific billing schemas.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_cost_events` (
+  cost_event_id STRING NOT NULL,
+  service_name STRING NOT NULL,
+  cost_type STRING NOT NULL,
+  usage_start_at TIMESTAMP NOT NULL,
+  usage_end_at TIMESTAMP NOT NULL,
+  amount_usd NUMERIC NOT NULL,
+  currency STRING NOT NULL,
+  forecast_contract_name STRING,
+  forecast_run_id STRING,
+  model_run_id STRING,
+  stage_name STRING,
+  environment STRING,
+  usage_amount NUMERIC,
+  usage_unit STRING,
+  bytes_processed INT64,
+  slot_ms INT64,
+  source_system STRING NOT NULL,
+  source_event_id STRING NOT NULL,
+  labels_json JSON,
+  recorded_at TIMESTAMP NOT NULL
+)
+PARTITION BY DATE(usage_start_at)
+CLUSTER BY service_name, forecast_contract_name, cost_type;
+
+ALTER TABLE `tds-favorita.favorita.forecast_cost_events`
+  ADD COLUMN IF NOT EXISTS model_run_id STRING;
+ALTER TABLE `tds-favorita.favorita.forecast_cost_events`
+  ADD COLUMN IF NOT EXISTS stage_name STRING;
+ALTER TABLE `tds-favorita.favorita.forecast_cost_events`
+  ADD COLUMN IF NOT EXISTS environment STRING;
+ALTER TABLE `tds-favorita.favorita.forecast_cost_events`
+  ADD COLUMN IF NOT EXISTS usage_amount NUMERIC;
+ALTER TABLE `tds-favorita.favorita.forecast_cost_events`
+  ADD COLUMN IF NOT EXISTS usage_unit STRING;
+ALTER TABLE `tds-favorita.favorita.forecast_cost_events`
+  ADD COLUMN IF NOT EXISTS bytes_processed INT64;
+ALTER TABLE `tds-favorita.favorita.forecast_cost_events`
+  ADD COLUMN IF NOT EXISTS slot_ms INT64;
+
 -- Frozen candidate population and immutable eligibility/exclusion evidence.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_eligibility_decisions` (
   eligibility_decision_id STRING NOT NULL,

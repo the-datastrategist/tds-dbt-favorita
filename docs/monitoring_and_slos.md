@@ -76,9 +76,30 @@ make selector-forecast-monitoring
 - `forecast_data_drift` compares the latest configured target and feature windows with the
   immediately preceding windows. It emits `drifted` when standardized mean difference exceeds
   policy and treats `insufficient_observations` as non-alerting.
+- `forecast_pipeline_cost` aggregates normalized cost events by forecast run, reports BigQuery and
+  Vertex spend, cost per thousand outputs, allocation-label completeness, and historical anomalies.
+  `cost_data_unavailable` and `insufficient_history` are non-alerting readiness states.
 
 For deterministic validation, pass a timestamp to dbt with
 `--vars '{monitoring_evaluated_at: "2026-08-05 12:00:00+00"}'`.
+
+## Recording cost evidence
+
+Billing-export adapters and forecast jobs should append one normalized event per source charge.
+The source identity makes an identical retry a no-op:
+
+```bash
+make forecast-cost-record ARGS='\
+  --service-name bigquery --cost-type query \
+  --usage-start-at 2026-08-11T08:00:00Z --usage-end-at 2026-08-11T08:01:00Z \
+  --amount-usd 0.42 --source-system billing_export --source-event-id invoice-line-123 \
+  --forecast-contract-name store_daily --forecast-run-id run-123 \
+  --stage-name score --environment prod --bytes-processed 1073741824'
+```
+
+Record credits as source-adjusted nonnegative net events; negative events are rejected so the mart
+cannot silently invert spend. Preserve the provider's raw identifiers in `source_event_id` and
+additional allocation metadata in `--labels-json`.
 
 ## Operating expectations
 
@@ -99,6 +120,7 @@ for the reference deployment and must be reviewed per client.
 | Pipeline availability | 99% over 30 days | Terminal within 120 minutes | ML platform |
 | Realized calibration | 99% over 28 days | At least 80% P10-P90 coverage after 30 actuals | Forecasting science |
 | Data drift | 99% over 28 days | Standardized mean difference no greater than 0.50 after 30 observations per window | Forecasting science |
+| Pipeline cost | 99% over 30 days | Run cost ≤ $25 and cost per thousand outputs ≤ $2 by default | ML platform |
 
 `page` means immediate operator attention; `ticket` means remediation within the next business
 cycle; `info` is diagnostic. Destination minimum severity prevents lower-priority events from
@@ -128,6 +150,7 @@ python scripts/evaluate_monitoring_alerts.py \
   --source json \
   --feature-completeness-json /tmp/feature-completeness.json \
   --data-drift-json /tmp/data-drift.json \
+  --pipeline-cost-json /tmp/pipeline-cost.json \
   --publication-freshness-json /tmp/publication-freshness.json \
   --prediction-coverage-json /tmp/prediction-coverage.json \
   --pipeline-health-json /tmp/pipeline-health.json \
@@ -182,7 +205,11 @@ monitoring_runner_image = "us-central1-docker.pkg.dev/my-project/vertex/ml-pipel
   windows represent equivalent operational populations, then investigate upstream policy changes,
   promotions, assortment changes, or source defects. Backtest before retraining or promotion; do
   not alert on `insufficient_observations`.
+- **Pipeline cost:** inspect `forecast_pipeline_cost` and its `cost_scope_key`. Correct missing
+  contract, run, stage, or environment labels before cost analysis. For budget or anomaly tickets,
+  compare service-level events, bytes/slots, output cardinality, and historical runs before changing
+  schedules or compute. `cost_data_unavailable` means collection must be wired, not that spend is zero.
 
-The next monitoring increment adds cost monitoring.
-Production activation requires applying the opt-in runner and alert resources with real channel
+Repository monitoring signals are now complete. Production activation requires applying the
+opt-in runner and alert resources with real channel
 IDs, then recording a witnessed notification delivery.

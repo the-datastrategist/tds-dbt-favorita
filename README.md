@@ -327,6 +327,10 @@ after that threshold, under-coverage or material normalized median bias routes a
 preceding windows. It reports scale-independent standardized mean difference per configured metric;
 new or sparse metrics remain non-alerting until both windows meet the minimum sample size.
 
+Cost adapters and jobs append provider-independent evidence with `make forecast-cost-record
+ARGS='...'`. `forecast_pipeline_cost` attributes spend to runs and contracts, checks per-run and
+per-thousand-output budgets, detects historical anomalies, and tickets missing allocation labels.
+
 Publication paging is explicitly scoped by `publication_monitored_contracts` in
 `dbt/dbt_project.yml`; add only contracts that are expected to publish continuously.
 Scheduled forecast runs also persist immutable `forecast_eligibility_decisions`. Pipeline health

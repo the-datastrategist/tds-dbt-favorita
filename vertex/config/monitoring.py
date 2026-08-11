@@ -17,6 +17,7 @@ VALID_SIGNALS = frozenset(
     {
         "delivery_health",
         "data_drift",
+        "pipeline_cost",
         "feature_completeness",
         "publication_freshness",
         "prediction_coverage",

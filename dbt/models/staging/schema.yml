@@ -660,6 +660,34 @@ models:
       - name: exception_count
         description: Candidate decisions carrying an exception marker.
 
+  - name: stg_forecast_cost_events
+    description: Normalized append-only cost evidence used by forecast cost monitoring.
+    columns:
+      - name: cost_event_id
+        data_tests: [unique, not_null]
+      - name: service_name
+        data_tests: [not_null]
+      - name: cost_type
+        data_tests: [not_null]
+      - name: amount_usd
+        data_tests: [not_null]
+      - name: currency
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [USD]
+      - name: source_event_id
+        data_tests: [not_null]
+      - name: environment
+        description: Cost-allocation environment label; null values remain visible to the cost mart.
+      - name: stage_name
+        description: Forecast pipeline stage label; null values remain visible to the cost mart.
+      - name: bytes_processed
+        description: BigQuery bytes processed when supplied by the source adapter.
+      - name: slot_ms
+        description: BigQuery slot milliseconds when supplied by the source adapter.
+
   - name: stg_forecast_pipeline_stage_runs
     description: Ordered append-only component evidence for scheduled publication runs.
     columns:

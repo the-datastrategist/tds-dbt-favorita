@@ -21,7 +21,7 @@ export GOOGLE_APPLICATION_CREDENTIALS_CONTAINER
 endif
 endif
 
-.PHONY: help install requirements-lock format lint test clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring selector-forecast-monitoring forecast-alerts-evaluate forecast-fva-build forecast-api-local forecast-api-test source-ingestion-record load-favorita-gcs load-favorita-bigquery \
+.PHONY: help install requirements-lock format lint test clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring selector-forecast-monitoring forecast-alerts-evaluate forecast-cost-record forecast-fva-build forecast-api-local forecast-api-test source-ingestion-record load-favorita-gcs load-favorita-bigquery \
 	dbt-deps dbt-debug dbt-seed dbt-run dbt-run-full-refresh dbt-run-model dbt-run-operation dbt-create-table \
 	dbt-train dbt-predict dbt-build dbt-test dbt-compile dbt-list dbt-snapshot dbt-source-freshness dbt-clean \
 	docs-serve dbt-ui dbt-docs dbt-docs-generate dbt-docs-serve \
@@ -164,6 +164,9 @@ selector-forecast-monitoring: ## Build and test source + forecast pipeline healt
 
 forecast-alerts-evaluate: ## Query monitoring views and route configured alerts (DRY_RUN=true to print only)
 	$(DOCKER_RUN) python scripts/evaluate_monitoring_alerts.py $(if $(filter true,$(DRY_RUN)),--dry-run) $(ARGS)
+
+forecast-cost-record: ## Append normalized cost evidence; pass event fields through ARGS
+	$(DOCKER_RUN) python scripts/record_forecast_cost.py $(ARGS)
 
 forecast-fva-build: ## Build and test Forecast Value Added marts
 	$(DOCKER_RUN) dbt build --project-dir dbt --target $(DBT_TARGET) --select tag:fva $(ARGS)

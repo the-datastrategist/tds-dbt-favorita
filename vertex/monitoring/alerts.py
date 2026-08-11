@@ -46,6 +46,17 @@ def _is_alerting(signal: str, row: dict[str, Any]) -> tuple[bool, str]:
     if signal == "data_drift":
         status = str(row.get("drift_status", "missing"))
         return status not in {"healthy", "insufficient_observations"}, status
+    if signal == "pipeline_cost":
+        status = str(row.get("cost_status", "missing"))
+        return (
+            status
+            not in {
+                "healthy",
+                "insufficient_history",
+                "cost_data_unavailable",
+            },
+            status,
+        )
     status = str(row.get("health_status", "missing"))
     return status not in {"healthy", "healthy_static"}, status
 
@@ -66,9 +77,10 @@ def evaluate_alerts(
                 continue
             if policy.signal == "data_drift":
                 resource_key = (
-                    f"{row.get('source_model', 'unknown')}:"
-                    f"{row.get('metric_name', 'unknown')}"
+                    f"{row.get('source_model', 'unknown')}:" f"{row.get('metric_name', 'unknown')}"
                 )
+            elif policy.signal == "pipeline_cost":
+                resource_key = str(row.get("cost_scope_key") or "platform")
             else:
                 resource_key = str(
                     row.get("forecast_contract_name")

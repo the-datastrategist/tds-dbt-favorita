@@ -17,6 +17,8 @@ target date, horizon, publication version, and frozen published value.
 | `forecast_delivery_health` | Delivery failure and overdue-pending monitoring boundary |
 | `forecast_eligibility_decisions` | Immutable candidate eligibility/exclusion evidence pinned to a forecast-run snapshot |
 | `forecast_realized_calibration` | Matured interval coverage, median bias, interval width, and calibration alert state by contract/horizon |
+| `forecast_cost_events` | Append-only provider-independent USD cost evidence with run, model, stage, environment, and usage attribution |
+| `forecast_pipeline_cost` | Latest run cost, unit economics, allocation quality, and anomaly/budget alert state |
 
 `published_forecasts_current` is convenient operational state. Reproducible applications should
 pin `forecast_run_id`, `publication_version`, and `destination` against

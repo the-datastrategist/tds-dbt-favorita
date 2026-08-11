@@ -33,6 +33,10 @@ slos:
     owner: forecasting_science
     target: 0.99
     window_days: 28
+  pipeline_cost:
+    owner: ml_platform
+    target: 0.99
+    window_days: 30
 
 policies:
   - name: stale_forecast_publication
@@ -61,5 +65,9 @@ policies:
     destination: operator_log
   - name: forecast_data_drift_detected
     signal: data_drift
+    severity: ticket
+    destination: operator_log
+  - name: forecast_run_cost_unhealthy
+    signal: pipeline_cost
     severity: ticket
     destination: operator_log

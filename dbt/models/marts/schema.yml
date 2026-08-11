@@ -69,6 +69,27 @@ models:
       - name: is_alerting
         data_tests: [not_null]
 
+  - name: forecast_pipeline_cost
+    description: Latest per-contract forecast cost, allocation quality, and budget/anomaly status.
+    columns:
+      - name: cost_scope_key
+        data_tests: [unique, not_null]
+      - name: cost_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - healthy
+                  - insufficient_history
+                  - cost_data_unavailable
+                  - missing_required_labels
+                  - over_run_budget
+                  - over_unit_budget
+                  - cost_anomaly
+      - name: is_alerting
+        data_tests: [not_null]
+
   - name: forecast_feature_completeness
     description: Latest feature-date null and entity coverage for configured production feature relations.
     columns:
@@ -677,6 +698,50 @@ unit_tests:
       rows:
         - {source_model: int_demand_store_daily, metric_name: observed_sales_units, metric_type: target, recent_observation_count: 2, reference_observation_count: 2, drift_status: drifted, is_alerting: true}
         - {source_model: int_sales_store_daily, metric_name: avg_sales_store_l7d, metric_type: feature, recent_observation_count: 2, reference_observation_count: 2, drift_status: healthy, is_alerting: false}
+
+  - name: test_forecast_pipeline_cost_classifies_anomaly_unit_cost_and_labels
+    model: forecast_pipeline_cost
+    overrides:
+      vars:
+        cost_maximum_run_usd: 100
+        cost_maximum_per_thousand_rows_usd: 100
+        cost_anomaly_multiplier: 2
+        cost_minimum_historical_runs: 3
+    given:
+      - input: ref('stg_forecast_runs')
+        rows:
+          - {forecast_run_id: anomaly_1, forecast_contract_name: anomaly, started_at: '2026-08-01', row_count: 1000}
+          - {forecast_run_id: anomaly_2, forecast_contract_name: anomaly, started_at: '2026-08-02', row_count: 1000}
+          - {forecast_run_id: anomaly_3, forecast_contract_name: anomaly, started_at: '2026-08-03', row_count: 1000}
+          - {forecast_run_id: anomaly_4, forecast_contract_name: anomaly, started_at: '2026-08-04', row_count: 1000}
+          - {forecast_run_id: over_unit, forecast_contract_name: over_unit, started_at: '2026-08-04', row_count: 100}
+          - {forecast_run_id: new_run, forecast_contract_name: new_contract, started_at: '2026-08-04', row_count: 1000}
+      - input: ref('stg_forecast_cost_events')
+        rows:
+          - {cost_event_id: a1, forecast_run_id: anomaly_1, forecast_contract_name: anomaly, stage_name: score, environment: dev, service_name: vertex_ai, cost_type: compute, amount_usd: 1, usage_start_at: '2026-08-01'}
+          - {cost_event_id: a2, forecast_run_id: anomaly_2, forecast_contract_name: anomaly, stage_name: score, environment: dev, service_name: vertex_ai, cost_type: compute, amount_usd: 1, usage_start_at: '2026-08-02'}
+          - {cost_event_id: a3, forecast_run_id: anomaly_3, forecast_contract_name: anomaly, stage_name: score, environment: dev, service_name: vertex_ai, cost_type: compute, amount_usd: 1, usage_start_at: '2026-08-03'}
+          - {cost_event_id: a4, forecast_run_id: anomaly_4, forecast_contract_name: anomaly, stage_name: score, environment: dev, service_name: vertex_ai, cost_type: compute, amount_usd: 4, usage_start_at: '2026-08-04'}
+          - {cost_event_id: unit, forecast_run_id: over_unit, forecast_contract_name: over_unit, stage_name: score, environment: dev, service_name: bigquery, cost_type: query, amount_usd: 20, usage_start_at: '2026-08-04'}
+          - {cost_event_id: new, forecast_run_id: new_run, forecast_contract_name: new_contract, stage_name: score, environment: dev, service_name: bigquery, cost_type: query, amount_usd: 5, usage_start_at: '2026-08-04'}
+          - {cost_event_id: missing, service_name: bigquery, cost_type: query, amount_usd: 1, usage_start_at: '2026-08-04'}
+    expect:
+      rows:
+        - {cost_scope_key: anomaly_4, forecast_contract_name: anomaly, cost_status: cost_anomaly, is_alerting: true}
+        - {cost_scope_key: over_unit, forecast_contract_name: over_unit, cost_status: over_unit_budget, is_alerting: true}
+        - {cost_scope_key: new_run, forecast_contract_name: new_contract, cost_status: insufficient_history, is_alerting: false}
+        - {cost_scope_key: 'unattributed:missing', forecast_contract_name: null, cost_status: missing_required_labels, is_alerting: true}
+
+  - name: test_forecast_pipeline_cost_is_non_alerting_without_evidence
+    model: forecast_pipeline_cost
+    given:
+      - input: ref('stg_forecast_runs')
+        rows: []
+      - input: ref('stg_forecast_cost_events')
+        rows: []
+    expect:
+      rows:
+        - {cost_scope_key: platform, cost_event_count: 0, cost_status: cost_data_unavailable, is_alerting: false}
 
   - name: test_forecast_publication_freshness_detects_stale_and_missing_contracts
     model: forecast_publication_freshness

@@ -52,6 +52,9 @@ sources:
       - name: forecast_runs
         description: Forecast scoring / publication run audit records keyed by forecast_run_id
 
+      - name: forecast_cost_events
+        description: Append-only normalized cloud and forecast-pipeline cost evidence
+
       - name: forecast_eligibility_decisions
         description: Append-only frozen candidate eligibility and exclusion evidence per forecast run
 

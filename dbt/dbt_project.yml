@@ -126,6 +126,13 @@ vars:
       scope_column: data_split_source
       scope_value: train
 
+  # Normalized billing events remain non-alerting until evidence exists. Once populated, these
+  # thresholds control per-run, per-output, and historical anomaly tickets.
+  cost_maximum_run_usd: 25.0
+  cost_maximum_per_thousand_rows_usd: 2.0
+  cost_anomaly_multiplier: 2.0
+  cost_minimum_historical_runs: 3
+
   # FVA compares every backtest candidate with this simple, reproducible benchmark.
   # Override by engagement when a different benchmark is the operational default.
   fva_benchmark_by_grain:

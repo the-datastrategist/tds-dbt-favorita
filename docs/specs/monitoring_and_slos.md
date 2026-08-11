@@ -11,12 +11,11 @@
 
 The repo now has accuracy monitoring, mode-aware source ingestion health, scheduled pipeline
 health, publication freshness, prediction coverage, feature completeness, realized calibration,
-target and feature drift, and an opt-in hosted alert evaluator. A complete platform still needs
-production alert-channel
-activation plus end-to-end cost signals.
+target and feature drift, pipeline cost, and an opt-in hosted alert evaluator. Repository signals
+are complete; production alert-channel activation remains.
 
 The source and scheduled-pipeline health slice passed live GCP acceptance on 2026-08-06. The
-publication-freshness, prediction-coverage, feature-completeness, realized-calibration, and drift
+publication-freshness, prediction-coverage, feature-completeness, realized-calibration, drift, and cost
 slices passed live BigQuery acceptance on 2026-08-11. Together, the evidence covers static-demo
 freshness semantics, policy lineage, stage order, blocking gates, output cardinality, horizon
 coverage, publication age, quantiles, and forecast provenance.
@@ -65,7 +64,8 @@ Add or extend dbt marts:
 | `forecast_accuracy_by_horizon` | error, bias, WAPE by horizon/segment |
 | `forecast_realized_calibration` | realized P10-P90 coverage, interval width, and median bias by contract/horizon |
 | `forecast_data_drift` | window-over-window target and feature drift |
-| `forecast_pipeline_health` | success, duration, retries, cost labels |
+| `forecast_pipeline_health` | success, duration, and retries |
+| `forecast_pipeline_cost` | run cost, unit cost, allocation quality, and historical anomalies |
 
 Implemented source policies declare `static_demo` or `continuous`. Static snapshots do not fail
 wall-clock freshness merely because their event dates are historical. Continuous sources fail once
@@ -112,8 +112,8 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 1. **Complete:** add `docs/monitoring_and_slos.md` and source-mode policy.
 2. **Complete:** add source and scheduled-pipeline health marts with schema tests.
 3. **Complete:** add versioned SLO/alert policy YAML, validation, and deterministic policy hash.
-4. **Partial:** prediction coverage, publication freshness, feature completeness, realized
-   calibration, and target/feature drift are implemented; cost remains.
+4. **Complete:** prediction coverage, publication freshness, feature completeness, realized
+   calibration, target/feature drift, and cost monitoring are implemented.
 5. **Complete:** add an opt-in Terraform log metric and Cloud Monitoring failure policy.
 6. **Partial:** direct warehouse evaluation, structured-log routing, environment-indirected
    webhook routing, and an opt-in Cloud Scheduler → Cloud Run Job are implemented; applying the
@@ -142,8 +142,7 @@ coverage, feature-completeness, realized-calibration, target/feature-drift, and 
 alert-path criteria. Python validation, dbt tests, and disabled Terraform validation pass. The
 warehouse signal, direct-query, and structured-log paths passed live BigQuery acceptance on
 2026-08-11. An enabled Terraform plan/apply with real channel IDs and a witnessed external
-notification remain required before this spec can be marked shipped. Cost monitoring also remains
-in scope.
+notification remain required before this spec can be marked shipped.
 
 ## Related documents
 
@@ -156,5 +155,6 @@ in scope.
 - [Live monitoring and SLO acceptance](../acceptance/monitoring_slos_2026-08-11.md)
 - [Realized calibration acceptance](../acceptance/forecast_realized_calibration_2026-08-11.md)
 - [Target and feature drift acceptance](../acceptance/forecast_data_drift_2026-08-11.md)
+- [Pipeline cost acceptance](../acceptance/forecast_pipeline_cost_2026-08-11.md)
 
 {% enddocs %}
