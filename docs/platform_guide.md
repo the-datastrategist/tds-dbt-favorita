@@ -79,6 +79,9 @@ Guidance for evaluating, adopting, operating, and extending the platform:
 | Adoption playbook | [client_rollout.md](client_rollout.md) | Available |
 | IaC / GCP ops | [iac.md](iac.md) + `vertex/ops/README.md` | Runbook + Terraform modules available |
 | Forecast monitoring | [monitoring_and_slos.md](monitoring_and_slos.md) | Source-mode and pipeline-health operations available |
+| Forecast operations | [forecast_operations.md](forecast_operations.md) | Override, approval, revision, and rollback commands available |
+| Integration contracts | [integration_contracts.md](integration_contracts.md) | Stable warehouse views and GCS batch export available |
+| Hierarchical reconciliation | [hierarchical_reconciliation.md](hierarchical_reconciliation.md) | Configuration, validation, metrics, and fail-closed runbook available |
 
 → Index: [delivery_artifacts.md](delivery_artifacts.md)
 
@@ -97,6 +100,13 @@ delivery destinations, and enterprise controls such as VPC-SC, WIF, and CMEK.
 forecast-ready staging, feature, eligibility, hierarchy, and mart layers. This boundary is
 intentional because demand signals vary by domain, source-system maturity, inventory visibility,
 and planning process.
+
+**Generalization workstream:** the current implementation still contains daily-period,
+Favorita-resource, and fixed retail-identity assumptions. The proposed
+[platform-generalization specification](specs/platform_generalization.md) introduces canonical
+dataset contracts, configurable daily/weekly/monthly periods, centralized deployment resources,
+and typed extension interfaces. Cross-domain proof through multiple reference implementations is
+deferred to a later workstream.
 
 **Proof points in this repo:**
 
@@ -119,6 +129,7 @@ and planning process.
 | 4-week rollout | [client_rollout.md](client_rollout.md) |
 | GCP IAM, scheduling, IaC | [iac.md](iac.md) |
 | Roadmap / engineering specs | [specs/README.md](specs/README.md) |
+| Platform generalization workstream | [specs/platform_generalization.md](specs/platform_generalization.md) |
 | dbt-only view | [dbt/component_guide.md](dbt/component_guide.md) |
 | Vertex-only view | [vertex/component_guide.md](vertex/component_guide.md) |
 | MLflow-only view | [mlflow/component_guide.md](mlflow/component_guide.md) |

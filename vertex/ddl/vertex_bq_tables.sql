@@ -648,6 +648,25 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_reconciled_outputs` (
 PARTITION BY DATE(forecast_origin)
 CLUSTER BY hierarchy_name, level_name, reconciliation_method;
 
+-- Backtest comparison of base and reconciled accuracy by hierarchy level.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_reconciliation_metrics` (
+  reconciliation_metric_id STRING NOT NULL,
+  evaluation_run_id STRING NOT NULL,
+  hierarchy_name STRING NOT NULL,
+  hierarchy_version STRING NOT NULL,
+  model_config_name STRING NOT NULL,
+  level_name STRING NOT NULL,
+  horizon INT64 NOT NULL,
+  metric_name STRING NOT NULL,
+  base_metric_value FLOAT64,
+  reconciled_metric_value FLOAT64,
+  metric_delta FLOAT64,
+  observation_count INT64 NOT NULL,
+  computed_at TIMESTAMP NOT NULL
+)
+PARTITION BY DATE(computed_at)
+CLUSTER BY hierarchy_name, hierarchy_version, level_name, metric_name;
+
 -- Forecast status transition history.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_status_history` (
   status_event_id STRING NOT NULL,

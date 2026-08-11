@@ -2,7 +2,7 @@
 
 # SPEC: Hierarchical reconciliation
 
-**Status:** In progress
+**Status:** Shipped
 **Roadmap reference:** [Specs overview](README.md) — P1 "Add hierarchical reconciliation"
 
 ---
@@ -117,8 +117,13 @@ substitute unreconciled forecasts silently. Contracts with no hierarchy explicit
 Hierarchy validation, bottom-up, top-down, middle-out, and MinT reconciliation are implemented.
 The scheduled pipeline loads the pinned hierarchy version when the forecast contract declares a
 reconciliation policy, reconciles every configured quantile before validation, and prevents an
-incoherent result from becoming a visible draft. The default publication contract remains
-unreconciled; live acceptance with a configured hierarchy is still required.
+incoherent result from becoming a visible draft. The Favorita `company -> store` hierarchy has
+passed live champion-to-draft acceptance, including graph integrity, eligible-node membership,
+P10/P50/P90 coherence and ordering, reconciliation lineage, and fail-closed behavior. Base and
+reconciled values are stored as separate append-only records linked to the canonical output, and
+base-versus-reconciled MAE/WAPE are persisted by hierarchy level and horizon. An identical live
+retry reused the logical run and row identities without creating duplicates. See the
+[2026-08-10 acceptance evidence](../acceptance/hierarchical_reconciliation_2026-08-07.md).
 
 ## Testing & validation
 
@@ -132,6 +137,8 @@ unreconciled; live acceptance with a configured hierarchy is still required.
 - A hierarchy config can be validated for the current project implementation.
 - Published forecasts reconcile from lowest available level to company total.
 - Reconciled and unreconciled forecasts are separately queryable.
+
+All acceptance criteria are satisfied for the reference Favorita implementation.
 
 ## Related documents
 

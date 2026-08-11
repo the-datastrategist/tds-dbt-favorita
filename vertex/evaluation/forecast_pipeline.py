@@ -13,6 +13,7 @@ from vertex.config.forecast_contract import ForecastContract
 from vertex.config.hierarchy import HierarchyConfig
 from vertex.evaluation.calibration import fit_horizon_calibrator
 from vertex.evaluation.reconciliation import coherence_violations, reconcile_forecasts
+from vertex.evaluation.reconciliation_persistence import build_reconciliation_records
 from vertex.utils.data_utils import get_hash
 from vertex.utils.forecast_outputs import build_forecast_output_rows
 from vertex.utils.forecast_publication import validate_publication_batch
@@ -40,6 +41,8 @@ class ForecastPipelineResult:
     rows: pd.DataFrame
     stage_records: list[dict[str, Any]]
     validation_checks: list[dict[str, Any]]
+    reconciliation_run: dict[str, Any] | None = None
+    reconciliation_outputs: pd.DataFrame | None = None
 
 
 def build_forecast_run_id(
@@ -295,6 +298,7 @@ def execute_forecast_pipeline(
             hierarchy_nodes,
             hierarchy_edges,
             method=hierarchy_config.method,
+            group_columns=("date", "forecast_date", "forecast_horizon"),
             middle_level=hierarchy_config.middle_level,
         )
         for quantile_column in ("prediction_p10", "prediction_p50", "prediction_p90"):
@@ -303,10 +307,14 @@ def execute_forecast_pipeline(
                 hierarchy_nodes,
                 hierarchy_edges,
                 value_column=quantile_column,
+                group_columns=("date", "forecast_date", "forecast_horizon"),
                 tolerance_abs=hierarchy_config.tolerance_abs,
             )
             if not violations.empty:
                 raise ValueError(f"reconciliation coherence failed for {quantile_column}")
+        reconciled["prediction_lower"] = reconciled["prediction_p10"]
+        reconciled["prediction"] = reconciled["prediction_p50"]
+        reconciled["prediction_upper"] = reconciled["prediction_p90"]
         reconciled["hierarchy_version"] = hierarchy_config.version
         reconciled["reconciliation_run_id"] = reconciliation_run_id
     stages.append(
@@ -330,6 +338,25 @@ def execute_forecast_pipeline(
         forecast_status="draft",
     )
     validate_publication_batch(canonical, contract)
+    reconciliation_run = None
+    reconciliation_outputs = None
+    if hierarchy_config is not None and hierarchy_nodes is not None:
+        reconciliation_work = reconciled.copy()
+        reconciliation_work["forecast_origin"] = canonical["forecast_origin"].to_numpy()
+        reconciliation_work["target_date"] = canonical["target_date"].to_numpy()
+        reconciliation_work["horizon"] = canonical["horizon"].to_numpy()
+        level_by_node = hierarchy_nodes.set_index("node_id")["level_name"].astype(str)
+        reconciliation_work["level_name"] = (
+            reconciliation_work["node_id"].astype(str).map(level_by_node)
+        )
+        reconciliation_work["forecast_output_id"] = canonical["forecast_output_id"].to_numpy()
+        reconciliation_run, reconciliation_outputs = build_reconciliation_records(
+            reconciliation_work,
+            config=hierarchy_config,
+            forecast_run_id=forecast_run_id,
+            reconciliation_run_id=reconciliation_run_id,
+            started_at=now,
+        )
     expected = len(prediction_rows)
     checks = [
         _check(
@@ -370,4 +397,11 @@ def execute_forecast_pipeline(
             completed_at=now,
         )
     )
-    return ForecastPipelineResult(forecast_run_id, canonical, stages, checks)
+    return ForecastPipelineResult(
+        forecast_run_id,
+        canonical,
+        stages,
+        checks,
+        reconciliation_run,
+        reconciliation_outputs,
+    )

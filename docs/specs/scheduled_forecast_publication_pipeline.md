@@ -2,7 +2,7 @@
 
 # SPEC: Scheduled forecast publication pipeline
 
-**Status:** In progress (70%)
+**Status:** Shipped
 **Roadmap reference:** [Specs overview](README.md) — operationalize calibrated, reconciled, governed forecasts
 
 ---
@@ -333,8 +333,9 @@ Consumer views must join only a single successful `forecast_run_id` and `publica
   `forecast_runs.run_status = 'draft'` record. `forecast_visible_drafts` enforces that atomic
   boundary for consumers.
 - Failed logical runs persist retry-stable blocking exceptions without making partial output visible.
-- Live draft-only execution and an identical idempotent retry passed on 2026-08-05. Downstream
-  delivery and hierarchy-enabled acceptance remain owned by their dedicated specs.
+- Live draft-only execution and identical idempotent retries passed. The hierarchy-enabled path
+  also persists separately queryable base/reconciled evidence and passed coherence, lineage, and
+  fail-closed acceptance on 2026-08-10. Downstream delivery remains owned by its dedicated spec.
 
 ## Shipped evidence
 

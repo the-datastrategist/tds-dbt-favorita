@@ -126,7 +126,9 @@ make prefect-flow-scheduled-forecast
 The scheduled forecast flow pins the governed champion, scores without exposing intermediate
 drafts, routes, calibrates, reconciles when configured, validates, and writes the `draft` run
 record last. Consumers should read `forecast_visible_drafts`; the manual publication deployment
-owns the later gated approval/publication boundary.
+owns the later gated approval/publication boundary. Hierarchy-enabled runs additionally persist
+one reconciliation-run record and immutable base/reconciled output records before draft
+visibility; reconciliation or coherence failures fail closed.
 
 ### Flow parameters (Vertex)
 

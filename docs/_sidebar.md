@@ -14,6 +14,9 @@
   * [Model benchmarks](benchmarks.md)
 
 * Delivery and operations
+  * [Forecast operations](forecast_operations.md)
+  * [Integration contracts](integration_contracts.md)
+  * [Hierarchical reconciliation](hierarchical_reconciliation.md)
   * [Delivery artifacts](delivery_artifacts.md)
   * [Client rollout](client_rollout.md)
   * [Clean rebuild runbook](clean_rebuild.md)
@@ -47,3 +50,4 @@
   * [Terraform modules](specs/terraform_modules.md)
   * [Workload Identity Federation](specs/workload_identity_federation.md)
   * [Open-source product readiness](specs/open_source_product_readiness.md)
+  * [Platform generalization](specs/platform_generalization.md)

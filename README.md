@@ -52,7 +52,7 @@ Architecture, component, operations, evaluation, and adoption documentation. Sta
 |-------|-----------|
 | **Reference architecture** | [reference_architecture.md](docs/reference_architecture.md) — GCP layers, data flows, dual ML path |
 | **Accelerators** | [accelerators.md](docs/accelerators.md) — dbt, Vertex, MLflow, Prefect, platform assets |
-| **Operating guides** | [delivery_artifacts.md](docs/delivery_artifacts.md) — evaluation, rollout, dashboard, and operations guidance |
+| **Operating guides** | [forecast operations](docs/forecast_operations.md), [integration contracts](docs/integration_contracts.md), [hierarchical reconciliation](docs/hierarchical_reconciliation.md), and [delivery artifacts](docs/delivery_artifacts.md) |
 
 | Artifact | Document |
 |----------|----------|
@@ -590,7 +590,8 @@ The current platform is strongest as a production-style GCP demand forecasting f
 - point-in-time feature availability rules
 - multi-horizon and probabilistic forecast output
 - demand data model, eligibility, and hierarchy/reconciliation policies
-- forecast operations: override, approval, publish, rollback
+- forecast operations: append-only override, approval, publication, revision, and rollback commands
+- delivery contracts: current/by-run warehouse views, audit views, and GCS CSV/Parquet export
 - monitoring, SLOs, and integration contracts
 
 See [docs/specs/README.md](docs/specs/README.md) for the spec-driven roadmap.

@@ -33,9 +33,10 @@ endif
 	vertex-train-docker vertex-predict-docker vertex-optimize-docker \
 	vertex-submit-train vertex-submit-predict vertex-submit-optimize \
 	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
-	dbt-vertex dbt-backtest vertex-bq-ddl vertex-forecast-contract-accept vertex-validate-config vertex-validate-configs \
+	dbt-vertex dbt-backtest vertex-bq-ddl vertex-forecast-contract-accept vertex-validate-config vertex-validate-configs vertex-hierarchy-materialize vertex-hierarchy-accept vertex-hierarchy-backtest \
 	vertex-backfill vertex-backtest-plan vertex-backtest vertex-backtest-persist prefect-flow-vertex-backfill \
 	vertex-lifecycle-plan vertex-lifecycle-evaluate vertex-lifecycle-promote vertex-lifecycle-rollback \
+	forecast-override forecast-approve-publish forecast-revise forecast-rollback forecast-export \
 	docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
 
 help: ## Show this help message
@@ -570,7 +571,38 @@ prefect-flow-model-lifecycle: ## Run governed model lifecycle flow once in Docke
 	$(DOCKER_RUN) python -c "from orchestration.flows.model_lifecycle import prefect_model_lifecycle_flow; prefect_model_lifecycle_flow()"
 
 prefect-flow-scheduled-forecast: ## Score champion and create a validated draft in Docker
-	$(DOCKER_RUN) python -c "from orchestration.flows.scheduled_forecast_pipeline import prefect_scheduled_forecast_pipeline_flow; prefect_scheduled_forecast_pipeline_flow()"
+	$(DOCKER_RUN) python -c "from orchestration.flows.scheduled_forecast_pipeline import prefect_scheduled_forecast_pipeline_flow; prefect_scheduled_forecast_pipeline_flow($(if $(CONTRACT_PATH),contract_path='$(CONTRACT_PATH)',) $(if $(HIERARCHY_CONFIG_PATH),hierarchy_config_path='$(HIERARCHY_CONFIG_PATH)',))"
+
+vertex-hierarchy-materialize: ## Materialize the pinned Favorita company-to-store hierarchy in BigQuery
+	$(DOCKER_RUN) python scripts/materialize_favorita_hierarchy.py $(ARGS)
+
+vertex-hierarchy-accept: ## Validate a live hierarchy-enabled draft (FORECAST_RUN_ID=...)
+	@test -n "$(FORECAST_RUN_ID)" || (echo "Set FORECAST_RUN_ID to the hierarchy-enabled draft" && exit 1)
+	$(DOCKER_RUN) python scripts/accept_hierarchical_reconciliation.py --forecast-run-id "$(FORECAST_RUN_ID)" $(ARGS)
+
+vertex-hierarchy-backtest: ## Persist base-vs-reconciled metrics by level (BACKTEST_RUN_ID=...)
+	@test -n "$(BACKTEST_RUN_ID)" || (echo "Set BACKTEST_RUN_ID to an immutable backtest run" && exit 1)
+	$(DOCKER_RUN) python scripts/evaluate_hierarchical_backtest.py --backtest-run-id "$(BACKTEST_RUN_ID)" $(ARGS)
+
+forecast-override: ## Add an immutable planner override (FORECAST_RUN_ID, OUTPUT_ID, VALUE, ACTOR, IDEMPOTENCY_KEY)
+	@test -n "$(FORECAST_RUN_ID)$(OUTPUT_ID)$(VALUE)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set FORECAST_RUN_ID, OUTPUT_ID, VALUE, ACTOR, and IDEMPOTENCY_KEY" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_operations override --forecast-run-id "$(FORECAST_RUN_ID)" --forecast-output-id "$(OUTPUT_ID)" --value "$(VALUE)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" --reason-code "$(REASON_CODE)" --comment "$(COMMENT)" $(ARGS)
+
+forecast-approve-publish: ## Approve and publish a complete run (FORECAST_RUN_ID, VERSION, ACTOR, IDEMPOTENCY_KEY)
+	@test -n "$(FORECAST_RUN_ID)$(VERSION)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set FORECAST_RUN_ID, VERSION, ACTOR, and IDEMPOTENCY_KEY" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_operations approve-publish --forecast-run-id "$(FORECAST_RUN_ID)" --version "$(VERSION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" --reason-code "$(REASON_CODE)" --comment "$(COMMENT)" --destination "$(or $(DESTINATION),canonical_bigquery)" $(ARGS)
+
+forecast-revise: ## Supersede a prior version with reviewed current values (FORECAST_RUN_ID, PRIOR_VERSION, VERSION, ACTOR, IDEMPOTENCY_KEY)
+	@test -n "$(FORECAST_RUN_ID)$(PRIOR_VERSION)$(VERSION)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set FORECAST_RUN_ID, PRIOR_VERSION, VERSION, ACTOR, and IDEMPOTENCY_KEY" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_operations revise --forecast-run-id "$(FORECAST_RUN_ID)" --prior-version "$(PRIOR_VERSION)" --version "$(VERSION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" --reason-code "$(REASON_CODE)" --comment "$(COMMENT)" --destination "$(or $(DESTINATION),canonical_bigquery)" $(ARGS)
+
+forecast-rollback: ## Republish a prior complete version (FORECAST_RUN_ID, PRIOR_VERSION, VERSION, ACTOR, IDEMPOTENCY_KEY)
+	@test -n "$(FORECAST_RUN_ID)$(PRIOR_VERSION)$(VERSION)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set FORECAST_RUN_ID, PRIOR_VERSION, VERSION, ACTOR, and IDEMPOTENCY_KEY" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_operations rollback --forecast-run-id "$(FORECAST_RUN_ID)" --prior-version "$(PRIOR_VERSION)" --version "$(VERSION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" --reason-code "$(REASON_CODE)" --comment "$(COMMENT)" $(ARGS)
+
+forecast-export: ## Export an immutable published run to GCS (FORECAST_RUN_ID, DESTINATION, FORMAT)
+	@test -n "$(FORECAST_RUN_ID)$(DESTINATION)" || (echo "Set FORECAST_RUN_ID and a GCS DESTINATION containing *" && exit 1)
+	$(DOCKER_RUN) python scripts/export_forecast.py --forecast-run-id "$(FORECAST_RUN_ID)" --destination "$(DESTINATION)" --format "$(or $(FORMAT),parquet)" $(ARGS)
 
 # --- CLEANUP COMMANDS ---
 

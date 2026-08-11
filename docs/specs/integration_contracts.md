@@ -2,14 +2,16 @@
 
 # SPEC: Integration contracts and forecast delivery
 
-**Status:** Proposed
+**Status:** In progress
 **Roadmap reference:** [Specs overview](README.md) — P2 "Publish through a standard integration contract"
 
 ---
 
 ## Summary
 
-The current consumption layer is mostly BI/dashboard staging. A platform needs stable contracts for downstream systems: warehouse views, batch exports, retrieval APIs, override/approval/publication APIs, and publication events.
+The consumption layer now exposes stable current/by-run warehouse views, operations audit views,
+and an explicit-run GCS batch export. Retrieval APIs, mutation APIs, publication events, and
+delivery confirmation remain the next integration adapters.
 
 This spec adds `docs/integration_contracts.md`, versioned table/view contracts, export commands, API concepts, and idempotent publication semantics.
 
@@ -116,6 +118,15 @@ Emit event rows and optional webhook payload:
 - API unit tests for idempotent publish and invalid transitions.
 - Export smoke test for CSV and Parquet.
 - Contract fixture tests for response payload shape.
+
+## Current implementation
+
+The stable warehouse boundary now includes current, explicit-run, publication-audit, and
+override-audit dbt views. A validated export command writes one explicit published run to GCS as
+CSV or Parquet without overwriting an existing delivery. The
+[integration contract guide](../integration_contracts.md) defines view usage, version pins,
+export behavior, and compatibility policy. A retrieval/service API, publication events/webhooks,
+and independent delivery-status confirmation remain open.
 
 ## Acceptance criteria
 

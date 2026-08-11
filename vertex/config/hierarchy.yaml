@@ -6,8 +6,6 @@ hierarchy:
       keys: []
     - name: store
       keys: [store_id]
-    - name: product
-      keys: [store_id, product_id]
   reconciliation:
     method: bottom_up
     tolerance_abs: 0.01

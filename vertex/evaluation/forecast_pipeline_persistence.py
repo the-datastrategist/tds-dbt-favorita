@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from vertex.config.forecast_contract import ForecastContract
 from vertex.evaluation.forecast_pipeline import ForecastPipelineResult, ForecastRunPins
+from vertex.evaluation.reconciliation_persistence import persist_reconciliation_records
 from vertex.utils.bigquery_utils import insert_rows_idempotent, merge_row_to_bigquery
 from vertex.utils.data_utils import get_hash
 from vertex.utils.forecast_lifecycle import build_status_events
@@ -49,6 +50,14 @@ def persist_forecast_pipeline_result(
         id_column="forecast_output_id",
         project_id=project_id,
     )
+    if result.reconciliation_run is not None and result.reconciliation_outputs is not None:
+        persist_reconciliation_records(
+            result.reconciliation_run,
+            result.reconciliation_outputs,
+            run_table=f"{table_prefix}.forecast_reconciliation_runs",
+            output_table=f"{table_prefix}.forecast_reconciled_outputs",
+            project_id=project_id,
+        )
     now = datetime.now(timezone.utc)
     insert_rows_idempotent(
         build_status_events(result.rows, changed_at=now, changed_by=actor),

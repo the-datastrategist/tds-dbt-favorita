@@ -61,6 +61,49 @@ models:
               arguments:
                 values: [draft, approved, published]
 
+  - name: published_forecasts_by_run
+    description: Stable explicit-version retrieval contract for immutable published forecasts.
+    columns:
+      - name: publication_id
+        data_tests: [unique, not_null]
+      - name: forecast_run_id
+        data_tests: [not_null]
+      - name: publication_version
+        data_tests: [not_null]
+      - name: published_value
+        data_tests: [not_null]
+
+  - name: published_forecasts_current
+    description: Latest publication for each contract, entity, target, horizon, and destination.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - forecast_contract_name
+              - entity_key_json
+              - target_date
+              - horizon
+              - destination
+    columns:
+      - name: publication_id
+        data_tests: [unique, not_null]
+
+  - name: forecast_publication_audit
+    description: Publication, approval, delivery, and revision lineage for operations and consumers.
+    columns:
+      - name: publication_id
+        data_tests: [not_null]
+      - name: approval_id
+        data_tests: [not_null]
+
+  - name: forecast_overrides_audit
+    description: Immutable planner adjustments with statistical and approval context.
+    columns:
+      - name: override_id
+        data_tests: [not_null]
+      - name: statistical_forecast
+        data_tests: [not_null]
+
   - name: ml_model_lifecycle_current
     description: Latest derived lifecycle state and audit event for every registered candidate.
     columns:

@@ -14,11 +14,13 @@ from vertex.evaluation.forecast_pipeline_persistence import (
 
 
 @pytest.mark.unit
+@patch("vertex.evaluation.forecast_pipeline_persistence.persist_reconciliation_records")
 @patch("vertex.evaluation.forecast_pipeline_persistence.merge_row_to_bigquery")
 @patch("vertex.evaluation.forecast_pipeline_persistence.insert_rows_idempotent")
 def test_draft_run_record_is_persisted_after_all_evidence(
     insert_rows,
     merge_row,
+    persist_reconciliation,
 ) -> None:
     rows = pd.DataFrame(
         [
@@ -87,6 +89,66 @@ def test_draft_run_record_is_persisted_after_all_evidence(
     assert merge_row.call_args_list[-1].args[1] == "project.dataset.forecast_runs"
     assert merge_row.call_args_list[-1].args[0]["run_status"] == "draft"
     assert merge_row.call_args_list[-1].args[0]["feature_availability_hash"] == "availability-1"
+    persist_reconciliation.assert_not_called()
+
+
+@pytest.mark.unit
+@patch("vertex.evaluation.forecast_pipeline_persistence.merge_row_to_bigquery")
+@patch("vertex.evaluation.forecast_pipeline_persistence.insert_rows_idempotent")
+@patch("vertex.evaluation.forecast_pipeline_persistence.persist_reconciliation_records")
+def test_hierarchical_records_are_persisted_before_draft_visibility(
+    persist_reconciliation,
+    insert_rows,
+    merge_row,
+) -> None:
+    rows = pd.DataFrame(
+        [
+            {
+                "forecast_output_id": "output-1",
+                "forecast_run_id": "run-1",
+                "forecast_origin": pd.Timestamp("2026-07-18"),
+                "forecast_status": "draft",
+                "model_id": "model-1",
+                "config_name": "model-h7",
+            }
+        ]
+    )
+    reconciliation_outputs = pd.DataFrame([{"reconciliation_output_id": "recon-output-1"}])
+    result = ForecastPipelineResult(
+        "run-1",
+        rows,
+        [{"stage_run_id": "stage-1", "started_at": pd.Timestamp("2026-07-18")}],
+        [{"validation_check_id": "check-1"}],
+        {"reconciliation_run_id": "recon-1"},
+        reconciliation_outputs,
+    )
+    pins = ForecastRunPins(
+        champion_candidate_id="candidate-1",
+        model_run_id="model-run-1",
+        feature_version="features-1",
+        feature_availability_hash="availability-1",
+        data_cutoff=pd.Timestamp("2026-07-18"),
+        source_cutoff_json={"sales": "2026-07-18"},
+        eligibility_snapshot_id="eligibility-1",
+        code_sha="abc123",
+    )
+
+    persist_forecast_pipeline_result(
+        result,
+        contract=load_forecast_contract("vertex/config/forecast_contract_publication.yaml"),
+        pins=pins,
+        table_prefix="project.dataset",
+        actor="scheduler",
+    )
+
+    persist_reconciliation.assert_called_once_with(
+        result.reconciliation_run,
+        reconciliation_outputs,
+        run_table="project.dataset.forecast_reconciliation_runs",
+        output_table="project.dataset.forecast_reconciled_outputs",
+        project_id=None,
+    )
+    assert merge_row.call_args_list[-1].args[1] == "project.dataset.forecast_runs"
 
 
 @pytest.mark.unit

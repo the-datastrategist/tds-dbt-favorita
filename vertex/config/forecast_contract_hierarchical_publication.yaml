@@ -1,0 +1,16 @@
+forecast:
+  name: favorita_store_daily_demand_h7_hierarchical_publication
+  target: demand_units
+  target_unit: units
+  dimensions: [node_id]
+  frequency: day
+  timezone: America/New_York
+  issue_schedule: "0 9 * * *"
+  horizons: [7]
+  quantiles: [0.1, 0.5, 0.9]
+  training_window_days: 180
+  known_future_features: [promotion, holiday]
+  observed_features: [sales, transactions]
+  hierarchy: [company, store]
+  reconciliation_policy: bottom_up
+  demand_policy: observed_sales_only
