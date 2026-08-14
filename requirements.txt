@@ -231,7 +231,7 @@ google-cloud-aiplatform==1.163.0
     # via
     #   -r requirements.in
     #   dbt-bigquery
-google-cloud-bigquery==3.42.3
+google-cloud-bigquery==3.43.0
     # via
     #   -r requirements.in
     #   dbt-bigquery
@@ -547,7 +547,7 @@ platformdirs==4.10.0
     # via jupyter-core
 pluggy==1.6.0
     # via prefect
-prefect==3.8.1
+prefect==3.8.2
     # via -r requirements.in
 prettytable==3.18.0
     # via skops

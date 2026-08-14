@@ -240,7 +240,7 @@ google-cloud-aiplatform==1.163.0
     # via
     #   -r requirements.in
     #   dbt-bigquery
-google-cloud-bigquery==3.42.3
+google-cloud-bigquery==3.43.0
     # via
     #   -r requirements.in
     #   dbt-bigquery
@@ -579,7 +579,7 @@ pluggy==1.6.0
     #   prefect
     #   pytest
     #   pytest-cov
-prefect==3.8.1
+prefect==3.8.2
     # via -r requirements.in
 prettytable==3.18.0
     # via skops
