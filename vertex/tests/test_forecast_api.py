@@ -64,7 +64,7 @@ class FakeRepository:
             assert isinstance(scope, PublicationScope) or scope is None
             self.scope = scope
         self.failure = failure
-        self.calls = []
+        self.calls: list[tuple[object, ...]] = []
 
     def resolve_current(self, *, contract_name: str, destination: str):
         self.calls.append(("current", contract_name, destination))

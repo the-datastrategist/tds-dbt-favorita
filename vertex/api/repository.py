@@ -115,13 +115,40 @@ class ForecastRepository(Protocol):
     ) -> ForecastPageResult:
         """Fetch one deterministic page from a validated publication version."""
 
-    def create_override(self, **kwargs: Any) -> dict[str, Any]:
+    def create_override(
+        self,
+        *,
+        forecast_run_id: str,
+        forecast_output_id: str,
+        override_value: float,
+        reason_code: str,
+        comment: str,
+        actor: str,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
         """Append one idempotent planner override."""
 
-    def approve_run(self, **kwargs: Any) -> dict[str, Any]:
+    def approve_run(
+        self,
+        *,
+        forecast_run_id: str,
+        reason_code: str,
+        comment: str,
+        actor: str,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
         """Append one complete idempotent approval decision set."""
 
-    def publish_run(self, **kwargs: Any) -> dict[str, Any]:
+    def publish_run(
+        self,
+        *,
+        forecast_run_id: str,
+        approval_idempotency_key: str,
+        destination: str,
+        publication_version: int,
+        actor: str,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
         """Publish one complete explicit approval set idempotently."""
 
 
