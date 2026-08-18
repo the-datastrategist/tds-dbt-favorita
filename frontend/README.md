@@ -1,16 +1,52 @@
 # ForecastLab frontend
 
-ForecastLab is the React, TypeScript, and Vite workbench for the forecasting platform. Application
-scaffolding will be added here; the approved brand and font assets are already packaged so the
-first build can remain self-contained.
+ForecastLab is the React, TypeScript, and Vite workbench for the forecasting platform. Its first
+vertical slice is a responsive model leaderboard and model-evidence drilldown backed by a
+deterministic, synthetic fixture.
 
-Current foundation:
+## Run locally
+
+Node.js 22.12 or newer is required.
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Open `http://localhost:5173/models/leaderboard`. The default data source is local and makes no
+network requests.
+
+## Validate
+
+```bash
+npm run validate
+npx playwright install chromium
+npm run test:e2e
+```
+
+`validate` checks formatting, lint rules, TypeScript, unit/component tests, and the GitHub Pages
+production build. `test:e2e` checks the primary filter-to-drilldown journey and automated WCAG
+violations in Chromium.
+
+## Builds and data modes
+
+- `npm run build` creates a root-hosted production build.
+- `npm run build:pages` creates a build with the `/tds-dbt-favorita/app/` base path.
+- `VITE_DATA_MODE=fixture` is the default and reads `src/fixtures/forecastlab_demo_v1.json`.
+- `VITE_DATA_MODE=api VITE_API_BASE_URL=http://localhost:8000` opts into the typed FastAPI adapter.
+
+Only public values may use the `VITE_` prefix because Vite embeds them in browser assets. The demo
+fixture is synthetic and is covered by a regression test for URLs, email addresses, secrets, and
+customer identifiers.
+
+## Packaged assets
 
 - `public/brand/` - approved secondary-attribution logo and usage terms;
 - `src/assets/fonts/` - self-hosted Space Grotesk and Poppins WOFF2 files, CSS, checksums, and SIL
   Open Font License notices.
 
-Before implementation, read:
+## Design and architecture references
 
 - [ADR 0001](../docs/adr/0001-forecastlab-react-vite-fastapi.md)
 - [Frontend specification](../docs/specs/open_source_frontend_ui.md)

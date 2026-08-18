@@ -1,0 +1,120 @@
+{
+  "metadata": {
+    "datasetKind": "synthetic",
+    "fixtureVersion": "forecastlab_demo_v1",
+    "generatedAt": "2026-08-18T00:00:00Z",
+    "description": "Deterministic fictional model-performance evidence for the public ForecastLab demo."
+  },
+  "horizons": [1, 2, 3, 4, 5, 6, 7],
+  "segments": [
+    {
+      "id": "demo_all",
+      "name": "All regions",
+      "wapeMultiplier": 1,
+      "biasMultiplier": 1,
+      "coverageDelta": 0,
+      "improvementDelta": 0
+    },
+    {
+      "id": "demo_north",
+      "name": "North region",
+      "wapeMultiplier": 0.94,
+      "biasMultiplier": 0.9,
+      "coverageDelta": 0.02,
+      "improvementDelta": 2.4
+    },
+    {
+      "id": "demo_central",
+      "name": "Central region",
+      "wapeMultiplier": 1.03,
+      "biasMultiplier": 1.05,
+      "coverageDelta": 0,
+      "improvementDelta": -1.2
+    },
+    {
+      "id": "demo_coastal",
+      "name": "Coastal region",
+      "wapeMultiplier": 1.12,
+      "biasMultiplier": 1.18,
+      "coverageDelta": -0.04,
+      "improvementDelta": -3.8
+    }
+  ],
+  "models": [
+    {
+      "id": "demo_model_global_xgboost",
+      "name": "Global XGBoost",
+      "family": "Gradient boosted trees",
+      "lifecycleStatus": "champion",
+      "evidenceStatus": "sufficient",
+      "description": "Global direct multi-horizon model with calibrated prediction intervals and cold-start features.",
+      "lastEvaluatedAt": "2026-08-17T16:30:00Z",
+      "metrics": {
+        "wape": [10.8, 11.2, 11.7, 12.3, 13.1, 13.8, 14.6],
+        "bias": [-0.6, -0.7, -0.9, -1.1, -1.3, -1.6, -1.9],
+        "coverage": [0.82, 0.82, 0.81, 0.81, 0.8, 0.79, 0.78],
+        "baselineImprovement": [34.5, 33.3, 31.9, 30.1, 28.0, 26.5, 25.0]
+      }
+    },
+    {
+      "id": "demo_model_prophet",
+      "name": "Prophet",
+      "family": "Additive time series",
+      "lifecycleStatus": "candidate",
+      "evidenceStatus": "sufficient",
+      "description": "Additive trend and seasonality candidate with model-native intervals.",
+      "lastEvaluatedAt": "2026-08-17T16:30:00Z",
+      "metrics": {
+        "wape": [12.4, 12.8, 13.2, 13.7, 14.1, 14.7, 15.2],
+        "bias": [0.9, 1.0, 1.1, 1.3, 1.5, 1.7, 2.0],
+        "coverage": [0.84, 0.84, 0.83, 0.82, 0.82, 0.81, 0.8],
+        "baselineImprovement": [24.8, 23.8, 23.1, 22.1, 22.5, 21.6, 21.9]
+      }
+    },
+    {
+      "id": "demo_model_arima_plus",
+      "name": "ARIMA Plus",
+      "family": "Statistical time series",
+      "lifecycleStatus": "candidate",
+      "evidenceStatus": "sufficient",
+      "description": "Per-series statistical candidate optimized for stable, seasonal demand.",
+      "lastEvaluatedAt": "2026-08-17T16:30:00Z",
+      "metrics": {
+        "wape": [13.1, 13.3, 13.8, 14.2, 14.8, 15.5, 16.0],
+        "bias": [-1.4, -1.3, -1.2, -1.1, -1.0, -0.8, -0.6],
+        "coverage": [0.79, 0.8, 0.8, 0.79, 0.78, 0.77, 0.76],
+        "baselineImprovement": [20.6, 20.8, 19.6, 18.2, 16.8, 14.7, 13.1]
+      }
+    },
+    {
+      "id": "demo_model_seasonal_naive",
+      "name": "Seasonal naive",
+      "family": "Baseline",
+      "lifecycleStatus": "baseline",
+      "evidenceStatus": "sufficient",
+      "description": "Seven-day seasonal carry-forward benchmark used for comparable promotion gates.",
+      "lastEvaluatedAt": "2026-08-17T16:30:00Z",
+      "metrics": {
+        "wape": [16.5, 16.8, 17.2, 17.6, 18.2, 18.7, 19.2],
+        "bias": [-2.2, -2.1, -2.0, -1.9, -1.8, -1.7, -1.5],
+        "coverage": [0.72, 0.72, 0.71, 0.71, 0.7, 0.69, 0.68],
+        "baselineImprovement": [0, 0, 0, 0, 0, 0, 0]
+      }
+    },
+    {
+      "id": "demo_model_moving_average",
+      "name": "Moving average",
+      "family": "Baseline",
+      "lifecycleStatus": "baseline",
+      "evidenceStatus": "insufficient",
+      "description": "Short-history fallback retained for cold-start evidence; ranking is withheld until coverage is complete.",
+      "lastEvaluatedAt": "2026-08-17T16:30:00Z",
+      "metrics": {
+        "wape": [17.9, 18.2, 18.7, 19.3, 20.0, 20.8, 21.5],
+        "bias": [2.5, 2.7, 2.9, 3.1, 3.4, 3.7, 4.0],
+        "coverage": [0.68, 0.68, 0.67, 0.66, 0.65, 0.64, 0.62],
+        "baselineImprovement": [-8.5, -8.3, -8.7, -9.7, -9.9, -11.2, -12.0]
+      }
+    }
+  ]
+}
