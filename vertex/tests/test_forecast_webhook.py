@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 from datetime import datetime, timezone
+from typing import Any, cast
 from unittest.mock import patch
 
 import pandas as pd
@@ -94,7 +95,7 @@ def _repository(latest: pd.DataFrame, transport) -> BigQueryForecastRepository:
     repository.delivery_events_table = "project.dataset.forecast_delivery_events"
     repository.table_prefix = "project.dataset"
     repository.project_id = "project"
-    repository._dataframe = lambda *_: latest
+    cast(Any, repository)._dataframe = lambda *_: latest
     return repository
 
 
