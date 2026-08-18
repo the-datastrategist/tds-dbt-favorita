@@ -70,4 +70,8 @@ multiple immutable versions in one artifact.
 
 **Accepted.** The warehouse and Parquet delivery boundaries are reproducible, version-pinned,
 auditable, idempotent where records are persisted, and fail closed where artifacts are immutable.
-Delivery-status confirmation and service/webhook adapters remain owned by the integration roadmap.
+At the time of this acceptance, delivery-status confirmation and service/webhook adapters remained
+owned by the integration roadmap. Those capabilities were subsequently implemented; see
+[Forecast delivery event acceptance](forecast_delivery_events_2026-08-11.md),
+[Forecast Retrieval API acceptance](forecast_retrieval_api_2026-08-11.md), and
+[Forecast webhook delivery acceptance](forecast_webhook_delivery_2026-08-18.md).

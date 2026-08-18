@@ -17,7 +17,7 @@ Guidance for provisioning and operating this forecasting stack in a **client GCP
 | **Docker image** | `Dockerfile`, `docker-compose.yml` | Reproducible runtime |
 | **CI pipeline** | `.github/workflows/ci.yml` | Validate without live GCP |
 | **Terraform modules** | `terraform/` | Versioned, reviewable GCP provisioning (see below) |
-| **Forecast Operations API** | `terraform/modules/forecast-api` | Private Cloud Run service with read-only default and opt-in lifecycle writes |
+| **Forecast Operations API** | `terraform/modules/forecast-api` | Private Cloud Run service with read-only default, opt-in lifecycle writes, and Secret Manager-backed signed webhooks |
 
 ---
 

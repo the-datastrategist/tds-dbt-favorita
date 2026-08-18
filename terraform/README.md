@@ -15,6 +15,7 @@ terraform/
     cloud-scheduler/     # Optional HTTP jobs, disabled by default
     monitoring-alerts/   # Log metrics + Cloud Monitoring notification policies
     monitoring-runner/   # Scheduled Cloud Run Job that rebuilds/evaluates monitoring marts
+    forecast-api/        # Private Operations API with optional lifecycle writes + webhooks
   environments/
     dev/
     prod/
@@ -24,6 +25,13 @@ When enabling the monitoring runner, store the Slack incoming-webhook URL in Sec
 `monitoring_slack_webhook_secret_id` to the secret ID. The module injects the latest version at
 runtime and grants `secretAccessor` only to the runner service account; secret values never enter
 Terraform state.
+
+The Forecast Operations API is read-only by default. To enable lifecycle writes, set
+`enable_forecast_api_mutations = true` and restrict `forecast_api_invoker_members` to trusted
+operators. Signed publication webhooks additionally require
+`enable_forecast_publication_webhook = true` plus separate Secret Manager IDs for the HTTPS URL and
+HMAC signing secret. The API service account receives access only to those configured secrets. See
+the [Forecast Operations API guide](../docs/forecast_api.md#deploy) for activation and rollback.
 
 ## New environment
 
