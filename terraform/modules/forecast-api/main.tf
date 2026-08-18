@@ -14,12 +14,12 @@ resource "google_project_iam_member" "bigquery_job_user" {
   member  = "serviceAccount:${google_service_account.api[0].email}"
 }
 
-resource "google_bigquery_dataset_iam_member" "forecast_reader" {
+resource "google_bigquery_dataset_iam_member" "forecast_dataset_access" {
   count = var.enabled ? 1 : 0
 
   project    = var.project_id
   dataset_id = var.dbt_dataset
-  role       = "roles/bigquery.dataViewer"
+  role       = var.enable_lifecycle_mutations ? "roles/bigquery.dataEditor" : "roles/bigquery.dataViewer"
   member     = "serviceAccount:${google_service_account.api[0].email}"
 }
 
@@ -57,6 +57,10 @@ resource "google_cloud_run_v2_service" "api" {
         name  = "DBT_DATASET"
         value = var.dbt_dataset
       }
+      env {
+        name  = "FORECAST_API_MUTATIONS_ENABLED"
+        value = tostring(var.enable_lifecycle_mutations)
+      }
 
       resources {
         limits = {
@@ -69,7 +73,7 @@ resource "google_cloud_run_v2_service" "api" {
 
   depends_on = [
     google_project_iam_member.bigquery_job_user,
-    google_bigquery_dataset_iam_member.forecast_reader,
+    google_bigquery_dataset_iam_member.forecast_dataset_access,
   ]
 }
 

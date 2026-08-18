@@ -123,7 +123,13 @@ variable "monitoring_runner_schedule" {
 }
 
 variable "enable_forecast_api" {
-  description = "Create the authenticated read-only Forecast Retrieval API."
+  description = "Create the authenticated Forecast Operations API."
+  type        = bool
+  default     = false
+}
+
+variable "enable_forecast_api_mutations" {
+  description = "Enable lifecycle writes; use only with operator-only forecast_api_invoker_members."
   type        = bool
   default     = false
 }

@@ -6,8 +6,10 @@ import pandas as pd
 import pytest
 
 from vertex.utils.forecast_operations import (
+    build_approval_records,
     build_manual_publication_records,
     build_override_record,
+    build_publication_records,
     build_revision_records,
     build_rollback_records,
 )
@@ -83,6 +85,56 @@ def test_manual_publication_selects_override_and_is_idempotent():
     assert [row["published_value"] for row in publications] == [12, 20]
     assert approvals[0]["override_id"] == override["override_id"]
     assert approvals[1]["override_id"] is None
+
+
+@pytest.mark.unit
+def test_approval_and_publication_can_be_persisted_as_separate_transitions():
+    rows = _rows()
+    approvals = build_approval_records(
+        rows,
+        overrides=None,
+        actor="approver@example.com",
+        idempotency_key="approval-1",
+        reason_code="review_complete",
+        comment="Reviewed",
+    )
+
+    publications = build_publication_records(
+        rows,
+        approvals=pd.DataFrame(approvals),
+        actor="publisher@example.com",
+        destination="canonical_bigquery",
+        idempotency_key="publication-1",
+        publication_version=2,
+    )
+
+    assert len(approvals) == len(rows)
+    assert len(publications) == len(rows)
+    assert publications[0]["approval_id"] == approvals[0]["approval_id"]
+    assert publications[0]["published_value"] == approvals[0]["approved_value"]
+
+
+@pytest.mark.unit
+def test_publication_rejects_incomplete_approval_set():
+    rows = _rows()
+    approvals = build_approval_records(
+        rows.iloc[:1],
+        overrides=None,
+        actor="approver@example.com",
+        idempotency_key="approval-1",
+        reason_code="review_complete",
+        comment="Reviewed",
+    )
+
+    with pytest.raises(ValueError, match="complete forecast run"):
+        build_publication_records(
+            rows,
+            approvals=pd.DataFrame(approvals),
+            actor="publisher@example.com",
+            destination="canonical_bigquery",
+            idempotency_key="publication-1",
+            publication_version=2,
+        )
 
 
 @pytest.mark.unit

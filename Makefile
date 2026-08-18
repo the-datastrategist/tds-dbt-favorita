@@ -171,10 +171,10 @@ forecast-cost-record: ## Append normalized cost evidence; pass event fields thro
 forecast-fva-build: ## Build and test Forecast Value Added marts
 	$(DOCKER_RUN) dbt build --project-dir dbt --target $(DBT_TARGET) --select tag:fva $(ARGS)
 
-forecast-api-local: ## Run the read-only Forecast Retrieval API on port 8080
+forecast-api-local: ## Run the Forecast Operations API on port 8080 (mutations disabled by default)
 	$(DOCKER_RUN) uvicorn vertex.api.app:app --host 0.0.0.0 --port 8080 $(ARGS)
 
-forecast-api-test: ## Run focused Forecast Retrieval API tests
+forecast-api-test: ## Run focused Forecast Operations API tests
 	$(DOCKER_RUN) pytest -q vertex/tests/test_forecast_api.py
 
 source-ingestion-record: ## Append ingestion evidence (set SOURCE, STATUS, WATERMARK, ROW_COUNT)

@@ -10,8 +10,8 @@
 ## Summary
 
 The platform now operates forecasts as append-only business artifacts through explicit override,
-approval, publication, revision, and rollback commands. Remaining work is the planner-facing UI
-and mutation API; the read-only retrieval API is live accepted. Forecast Value Added and downstream
+approval, publication, revision, and rollback commands. The API now exposes separate, append-only
+override, approval, and publication mutations; remaining work is the planner-facing UI. Forecast Value Added and downstream
 delivery confirmation are implemented through tested warehouse and append-only integration
 contracts.
 
@@ -202,8 +202,8 @@ forecast; rollback republishes a complete prior version under a new version with
 lineage. The [operations runbook](../forecast_operations.md) documents retry, revision, backfill,
 and delivery recovery. Append-only delivery confirmation, retry, abandonment, and monitoring are
 live accepted. Backtest and operations FVA marts now implement configured-benchmark comparison,
-planner/published accuracy attribution, and fail-closed coverage semantics. A planner UI and
-mutation API remain open; read-only service retrieval is implemented and live accepted. See the
+planner/published accuracy attribution, and fail-closed coverage semantics. A planner UI remains
+open; read-only retrieval is live accepted and lifecycle mutation endpoints are locally validated. See the
 [FVA acceptance evidence](../acceptance/forecast_value_added_2026-08-11.md) and
 [retrieval API acceptance evidence](../acceptance/forecast_retrieval_api_2026-08-11.md).
 

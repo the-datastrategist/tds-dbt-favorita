@@ -16,6 +16,8 @@ from vertex.api.repository import (
     ForecastFilters,
     ForecastPageResult,
     ForecastRepository,
+    MutationConflictError,
+    MutationNotFoundError,
     PublicationScope,
     canonical_entity_key,
 )
@@ -45,6 +47,41 @@ class QueryFilters(BaseModel):
     horizon: list[int] = Field(default_factory=list)
     limit: int = 100
     page_token: str | None = None
+
+
+class MutationBase(BaseModel):
+    actor: str = Field(min_length=1, max_length=320)
+    idempotency_key: str = Field(min_length=1, max_length=256)
+
+
+class OverrideRequest(MutationBase):
+    forecast_run_id: str = Field(min_length=1, max_length=256)
+    forecast_output_id: str = Field(min_length=1, max_length=256)
+    override_value: float = Field(ge=0)
+    reason_code: str = Field(min_length=1, max_length=128)
+    comment: str = Field(min_length=1, max_length=2000)
+
+
+class ApprovalRequest(MutationBase):
+    reason_code: str = Field(min_length=1, max_length=128)
+    comment: str = Field(min_length=1, max_length=2000)
+
+
+class PublicationRequest(MutationBase):
+    approval_idempotency_key: str = Field(min_length=1, max_length=256)
+    destination: str = Field(default="canonical_bigquery", min_length=1, max_length=256)
+    publication_version: int = Field(ge=1)
+
+
+class MutationResult(BaseModel):
+    action: str
+    retry: bool
+    override_id: str | None = None
+    approval_count: int | None = None
+    override_count: int | None = None
+    publication_count: int | None = None
+    publication_version: int | None = None
+    publication_event_id: str | None = None
 
 
 def _repository() -> ForecastRepository:
@@ -140,14 +177,55 @@ def _fetch(
     return _response(result)
 
 
-def create_app(repository: ForecastRepository | None = None) -> FastAPI:
+def _mutation(call: Any) -> MutationResult:
+    try:
+        return MutationResult(**call())
+    except MutationNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "mutation_target_not_found", "message": str(exc)},
+        ) from exc
+    except MutationConflictError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "mutation_conflict", "message": str(exc)},
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "invalid_mutation", "message": str(exc)},
+        ) from exc
+
+
+def create_app(
+    repository: ForecastRepository | None = None,
+    *,
+    mutations_enabled: bool | None = None,
+) -> FastAPI:
+    mutations_enabled = (
+        os.getenv("FORECAST_API_MUTATIONS_ENABLED", "false").lower() == "true"
+        if mutations_enabled is None
+        else mutations_enabled
+    )
     app = FastAPI(
-        title="Forecast Retrieval API",
-        version="1.0.0",
-        description="Read-only access to complete, immutable forecast publication versions.",
+        title="Forecast Operations API",
+        version="1.1.0",
+        description=(
+            "Read complete immutable forecast versions and append governed lifecycle mutations."
+        ),
     )
     if repository is not None:
         app.dependency_overrides[_repository] = lambda: repository
+
+    def require_mutations() -> None:
+        if not mutations_enabled:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "mutations_disabled",
+                    "message": "lifecycle mutations are disabled for this deployment",
+                },
+            )
 
     @app.exception_handler(HTTPException)
     async def http_error(_: Request, exc: HTTPException) -> JSONResponse:
@@ -172,7 +250,7 @@ def create_app(repository: ForecastRepository | None = None) -> FastAPI:
     async def internal_error(_: Request, __: Exception) -> JSONResponse:
         return JSONResponse(
             status_code=500,
-            content={"code": "internal_error", "message": "forecast retrieval failed"},
+            content={"code": "internal_error", "message": "forecast API request failed"},
         )
 
     @app.get("/healthz", tags=["system"])
@@ -210,6 +288,71 @@ def create_app(repository: ForecastRepository | None = None) -> FastAPI:
             destination=destination,
         )
         return _fetch(repository, scope, filters)
+
+    @app.post(
+        "/v1/overrides",
+        response_model=MutationResult,
+        tags=["lifecycle"],
+        dependencies=[Depends(require_mutations)],
+    )
+    def create_override(
+        request: OverrideRequest,
+        repository: ForecastRepository = Depends(_repository),
+    ) -> MutationResult:
+        return _mutation(
+            lambda: repository.create_override(
+                forecast_run_id=request.forecast_run_id,
+                forecast_output_id=request.forecast_output_id,
+                override_value=request.override_value,
+                reason_code=request.reason_code,
+                comment=request.comment,
+                actor=request.actor,
+                idempotency_key=request.idempotency_key,
+            )
+        )
+
+    @app.post(
+        "/v1/forecast-runs/{forecast_run_id}/approve",
+        response_model=MutationResult,
+        tags=["lifecycle"],
+        dependencies=[Depends(require_mutations)],
+    )
+    def approve_run(
+        forecast_run_id: str,
+        request: ApprovalRequest,
+        repository: ForecastRepository = Depends(_repository),
+    ) -> MutationResult:
+        return _mutation(
+            lambda: repository.approve_run(
+                forecast_run_id=forecast_run_id,
+                reason_code=request.reason_code,
+                comment=request.comment,
+                actor=request.actor,
+                idempotency_key=request.idempotency_key,
+            )
+        )
+
+    @app.post(
+        "/v1/forecast-runs/{forecast_run_id}/publish",
+        response_model=MutationResult,
+        tags=["lifecycle"],
+        dependencies=[Depends(require_mutations)],
+    )
+    def publish_run(
+        forecast_run_id: str,
+        request: PublicationRequest,
+        repository: ForecastRepository = Depends(_repository),
+    ) -> MutationResult:
+        return _mutation(
+            lambda: repository.publish_run(
+                forecast_run_id=forecast_run_id,
+                approval_idempotency_key=request.approval_idempotency_key,
+                destination=request.destination,
+                publication_version=request.publication_version,
+                actor=request.actor,
+                idempotency_key=request.idempotency_key,
+            )
+        )
 
     return app
 

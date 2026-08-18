@@ -1,8 +1,8 @@
-# Forecast Retrieval API
+# Forecast Operations API
 
-The Forecast Retrieval API provides read-only access to complete immutable publication versions.
-It never reads partially visible pipeline state and never combines rows from different
-run/version/destination tuples.
+The Forecast Operations API provides read access to complete immutable publication versions and
+optional append-only lifecycle mutations. Retrieval never reads partially visible pipeline state
+or combines rows from different run/version/destination tuples. Mutations are disabled by default.
 
 ## Run locally
 
@@ -18,8 +18,10 @@ OpenAPI is available at `http://localhost:8080/docs` and
 ## Authentication
 
 The Terraform service is private by default. Cloud Run validates the caller's Google-signed OIDC
-token and grants invocation only to `forecast_api_invoker_members`. The runtime service account has
-only `roles/bigquery.jobUser` at project scope and `roles/bigquery.dataViewer` on the dbt dataset.
+token and grants invocation only to `forecast_api_invoker_members`. In read-only mode, the runtime
+service account has `roles/bigquery.jobUser` at project scope and `roles/bigquery.dataViewer` on the
+dbt dataset. Enabling lifecycle mutations changes the dataset role to
+`roles/bigquery.dataEditor`; configure only trusted operators as invokers in that mode.
 
 Invoke a deployed service with an identity token:
 
@@ -67,6 +69,48 @@ Rows use deterministic ordering by entity key, target date, horizon, and publica
 include contract name/hash, run ID, version, destination, delivery status, configured publication
 row count, quantiles, hierarchy/reconciliation lineage, and model/feature/code provenance.
 
+### Lifecycle mutations
+
+Lifecycle mutations are append-only and require a non-empty actor and caller-generated idempotency
+key. Retries must reuse the exact request. Reusing a key or publication version with different
+content returns `409`.
+
+```text
+POST /v1/overrides
+POST /v1/forecast-runs/{forecast_run_id}/approve
+POST /v1/forecast-runs/{forecast_run_id}/publish
+```
+
+Override request:
+
+```json
+{
+  "forecast_run_id": "run-2026-08-18",
+  "forecast_output_id": "output-id",
+  "override_value": 42.5,
+  "reason_code": "planner_context",
+  "comment": "Local promotion extended",
+  "actor": "planner@example.com",
+  "idempotency_key": "override-run-2026-08-18-output-id"
+}
+```
+
+Approval selects the latest persisted override for each output and freezes one complete decision
+set under its idempotency key. Publication must name that exact approval key:
+
+```json
+{
+  "approval_idempotency_key": "approval-run-2026-08-18",
+  "publication_version": 2,
+  "destination": "canonical_bigquery",
+  "actor": "publisher@example.com",
+  "idempotency_key": "publication-run-2026-08-18-v2"
+}
+```
+
+Publication rejects missing or incomplete approval sets and non-monotonic versions. Successful
+publication also appends a version-level `forecast.published` event.
+
 ## Errors
 
 Errors use a stable `code` and human-readable `message`:
@@ -76,10 +120,14 @@ Errors use a stable `code` and human-readable `message`:
 | 400 | `invalid_page_token` | Cursor is malformed or has an incompatible shape |
 | 404 | `publication_not_found` | No matching current or explicit publication scope exists |
 | 409 | `incomplete_publication` | Persisted rows do not match the publication contract |
+| 409 | `mutation_conflict` | Idempotency, approval-set, or publication-version state conflicts |
 | 422 | `validation_error` | Required parameters or types are invalid |
+| 422 | `invalid_mutation` | A lifecycle mutation violates its record contract |
 | 422 | `invalid_entity_key` | Entity key is not a non-empty JSON object |
 | 422 | `invalid_date_range` | Start date follows end date |
-| 500 | `internal_error` | Retrieval failed without exposing warehouse internals |
+| 403 | `mutations_disabled` | This deployment has not enabled lifecycle writes |
+| 404 | `mutation_target_not_found` | The requested run, output, or approval set does not exist |
+| 500 | `internal_error` | The request failed without exposing warehouse internals |
 
 ## Deploy
 
@@ -87,6 +135,7 @@ Set the opt-in Terraform variables with an immutable image digest:
 
 ```hcl
 enable_forecast_api          = true
+enable_forecast_api_mutations = false
 forecast_api_image           = "us-central1-docker.pkg.dev/PROJECT/vertex/ml-pipeline@sha256:..."
 forecast_api_invoker_members = ["group:forecast-consumers@example.com"]
 ```
@@ -94,6 +143,10 @@ forecast_api_invoker_members = ["group:forecast-consumers@example.com"]
 Apply the selected environment and use its `forecast_api_url` output. Roll back by deploying the
 prior immutable digest. Disabling the module removes the service, service account, and grants; it
 does not modify forecast data.
+
+To activate mutations, set `enable_forecast_api_mutations = true` and replace consumer-oriented
+invoker membership with an operator-only group before applying. Leaving the flag false preserves
+the previously accepted read-only service and least-privilege dataset reader role.
 
 The reference development environment passed live private Cloud Run, IAM, BigQuery retrieval,
 filter, pagination, provenance, and structured-error acceptance on 2026-08-11. See

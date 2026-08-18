@@ -11,8 +11,9 @@
 
 The consumption layer now exposes stable current/by-run warehouse views, operations audit views,
 an explicit-run GCS batch export, version-level publication events, append-only delivery
-confirmation, and a live-accepted, IAM-authenticated read-only retrieval API. Mutation APIs and
-an outbound webhook adapter remain next.
+confirmation, and an IAM-authenticated operations API. Read-only retrieval is live accepted;
+append-only lifecycle mutations are implemented locally and disabled by default. An outbound
+webhook adapter remains next.
 
 This spec adds `docs/integration_contracts.md`, versioned table/view contracts, export commands, API concepts, and idempotent publication semantics.
 
@@ -66,7 +67,7 @@ GET /v1/forecasts/current
 GET /v1/forecasts/runs/{run_id}?publication_version=...
 ```
 
-Future mutation endpoints:
+Implemented mutation endpoints:
 
 ```text
 POST /v1/overrides
@@ -117,8 +118,8 @@ Emit event rows and optional webhook payload:
 1. Add `docs/integration_contracts.md`.
 2. Add stable dbt views for published forecasts.
 3. Add export command and destination configuration.
-4. **Partial:** read-only FastAPI retrieval and Cloud Run Terraform are implemented; mutation
-   endpoints remain open.
+4. **Complete:** read-only retrieval, append-only lifecycle mutation endpoints, and opt-in Cloud
+   Run write permissions are implemented.
 5. **Complete:** add idempotency keys, publication-event table, and delivery-event table.
 6. **Complete:** stable warehouse, batch export, and read-only API examples are documented.
 
@@ -140,8 +141,9 @@ CSV or Parquet without overwriting an existing delivery. See the
 export behavior, and compatibility policy. Version-level publication events and independent,
 append-only delivery confirmation are live accepted. The private, live-accepted read-only retrieval
 API resolves one complete delivered or explicitly pinned version with deterministic pagination and
-structured errors. Mutation endpoints and the outbound webhook adapter remain open. See the
-[retrieval API acceptance evidence](../acceptance/forecast_retrieval_api_2026-08-11.md).
+structured errors. Override, approval, and publication endpoints use explicit idempotency keys and
+complete approval sets; production mutation activation and the outbound webhook adapter remain
+open. See the [retrieval API acceptance evidence](../acceptance/forecast_retrieval_api_2026-08-11.md).
 
 ## Acceptance criteria
 

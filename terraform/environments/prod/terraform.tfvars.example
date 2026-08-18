@@ -17,7 +17,8 @@ monitoring_slack_webhook_secret_id = "forecast-slack-webhook"
 monitoring_runner_schedule = "15 * * * *"
 
 # The service remains IAM-authenticated; grant only explicit callers.
-enable_forecast_api          = false
+enable_forecast_api           = false
+enable_forecast_api_mutations = false
 forecast_api_image           = "us-central1-docker.pkg.dev/my-client-prod/vertex/ml-pipeline@sha256:replace-me"
 forecast_api_invoker_members = ["group:forecast-consumers@example.com"]
 forecast_api_min_instances   = 0

@@ -48,14 +48,15 @@ The command validates the run ID, publication version, view identifier, URI, and
 parameterizes both immutable identifiers and sets `overwrite=false`. A retry therefore cannot silently replace delivered files.
 Use a new destination for an intentional re-export.
 
-## Retrieval API
+## Operations API
 
-The live-accepted private Cloud Run service exposes one latest delivered version or one explicit
+The private Cloud Run service exposes one latest delivered version or one explicit
 run/version/destination. It validates publication cardinality before returning rows and uses opaque
-keyset pagination with parameterized BigQuery filters. See the
-[Forecast Retrieval API](forecast_api.md) for endpoints, authentication, errors, and deployment,
-and the [live acceptance evidence](acceptance/forecast_retrieval_api_2026-08-11.md) for the reference
-development deployment.
+keyset pagination with parameterized BigQuery filters. Optional mutation routes append overrides,
+freeze complete approval sets, and publish explicitly approved versions. See the
+[Forecast Operations API](forecast_api.md) for endpoints, activation, authentication, errors, and
+deployment. The [live retrieval acceptance evidence](acceptance/forecast_retrieval_api_2026-08-11.md)
+covers the reference read-only deployment; mutation routes currently have local contract evidence.
 
 ## Versioning policy
 
@@ -64,9 +65,8 @@ development deployment.
 - Consumers must not combine rows from different run/version/destination tuples.
 - Additive nullable columns are backward-compatible. Renames, removals, semantic changes, or new
   required fields require a versioned view and a documented deprecation window.
-- Publication events and delivery confirmation are append-only and version-scoped. The read-only
-  retrieval API is implemented; mutation APIs and an outbound webhook adapter remain future
-  interfaces over the same records.
+- Publication events, lifecycle mutations, and delivery confirmation are append-only and
+  version-scoped. An outbound webhook adapter remains a future interface over the same records.
 
 See [forecast operations](forecast_operations.md) for override, approval, and rollback commands and
 [forecast delivery](forecast_delivery.md) for confirmation, failure, retry, and abandonment.

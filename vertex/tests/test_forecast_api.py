@@ -11,6 +11,8 @@ from vertex.api.repository import (
     BigQueryForecastRepository,
     ForecastFilters,
     ForecastPageResult,
+    MutationConflictError,
+    MutationNotFoundError,
     PublicationScope,
     canonical_entity_key,
     decode_page_token,
@@ -77,6 +79,35 @@ class FakeRepository:
         if self.failure:
             raise self.failure
         return ForecastPageResult(scope=scope, rows=[_row()], next_page_token="next")
+
+    def create_override(self, **kwargs):
+        self.calls.append(("override", kwargs))
+        if self.failure:
+            raise self.failure
+        return {"action": "override", "override_id": "override-1", "retry": False}
+
+    def approve_run(self, **kwargs):
+        self.calls.append(("approve", kwargs))
+        if self.failure:
+            raise self.failure
+        return {
+            "action": "approve",
+            "approval_count": 2,
+            "override_count": 1,
+            "retry": False,
+        }
+
+    def publish_run(self, **kwargs):
+        self.calls.append(("publish", kwargs))
+        if self.failure:
+            raise self.failure
+        return {
+            "action": "publish",
+            "publication_count": 2,
+            "publication_version": 4,
+            "publication_event_id": "event-1",
+            "retry": False,
+        }
 
 
 @pytest.mark.unit
@@ -167,9 +198,138 @@ def test_unexpected_repository_failures_do_not_leak_details():
     assert response.status_code == 500
     assert response.json() == {
         "code": "internal_error",
-        "message": "forecast retrieval failed",
+        "message": "forecast API request failed",
     }
     assert "sensitive" not in response.text
+
+
+@pytest.mark.unit
+def test_lifecycle_mutations_forward_explicit_idempotent_contracts():
+    repository = FakeRepository()
+    client = TestClient(create_app(repository, mutations_enabled=True))
+
+    override = client.post(
+        "/v1/overrides",
+        json={
+            "forecast_run_id": "run-1",
+            "forecast_output_id": "output-1",
+            "override_value": 45.0,
+            "reason_code": "planner_judgment",
+            "comment": "Local event expected",
+            "actor": "planner@example.com",
+            "idempotency_key": "override-request-1",
+        },
+    )
+    approval = client.post(
+        "/v1/forecast-runs/run-1/approve",
+        json={
+            "reason_code": "review_complete",
+            "comment": "Reviewed all exceptions",
+            "actor": "approver@example.com",
+            "idempotency_key": "approval-request-1",
+        },
+    )
+    publication = client.post(
+        "/v1/forecast-runs/run-1/publish",
+        json={
+            "approval_idempotency_key": "approval-request-1",
+            "publication_version": 4,
+            "destination": "canonical_bigquery",
+            "actor": "publisher@example.com",
+            "idempotency_key": "publication-request-1",
+        },
+    )
+
+    assert override.status_code == 200
+    assert override.json()["override_id"] == "override-1"
+    assert approval.status_code == 200
+    assert approval.json()["approval_count"] == 2
+    assert publication.status_code == 200
+    assert publication.json()["publication_event_id"] == "event-1"
+    assert repository.calls[-1] == (
+        "publish",
+        {
+            "forecast_run_id": "run-1",
+            "approval_idempotency_key": "approval-request-1",
+            "destination": "canonical_bigquery",
+            "publication_version": 4,
+            "actor": "publisher@example.com",
+            "idempotency_key": "publication-request-1",
+        },
+    )
+
+
+@pytest.mark.unit
+def test_lifecycle_mutations_return_structured_validation_not_found_and_conflict_errors():
+    normal = TestClient(create_app(FakeRepository(), mutations_enabled=True))
+    missing = TestClient(
+        create_app(
+            FakeRepository(failure=MutationNotFoundError("run missing")),
+            mutations_enabled=True,
+        )
+    )
+    conflict = TestClient(
+        create_app(
+            FakeRepository(failure=MutationConflictError("version already exists")),
+            mutations_enabled=True,
+        )
+    )
+
+    invalid = normal.post(
+        "/v1/overrides",
+        json={
+            "forecast_run_id": "run-1",
+            "forecast_output_id": "output-1",
+            "override_value": -1,
+            "reason_code": "reason",
+            "comment": "comment",
+            "actor": "planner@example.com",
+            "idempotency_key": "key-1",
+        },
+    )
+    not_found = missing.post(
+        "/v1/forecast-runs/run-1/approve",
+        json={
+            "reason_code": "reason",
+            "comment": "comment",
+            "actor": "approver@example.com",
+            "idempotency_key": "key-2",
+        },
+    )
+    collided = conflict.post(
+        "/v1/forecast-runs/run-1/publish",
+        json={
+            "approval_idempotency_key": "approval-1",
+            "publication_version": 2,
+            "actor": "publisher@example.com",
+            "idempotency_key": "key-3",
+        },
+    )
+
+    assert invalid.status_code == 422
+    assert invalid.json()["code"] == "validation_error"
+    assert not_found.status_code == 404
+    assert not_found.json()["code"] == "mutation_target_not_found"
+    assert collided.status_code == 409
+    assert collided.json()["code"] == "mutation_conflict"
+
+
+@pytest.mark.unit
+def test_lifecycle_mutations_are_disabled_by_default():
+    client = TestClient(create_app(FakeRepository(), mutations_enabled=False))
+
+    response = client.post(
+        "/v1/forecast-runs/run-1/approve",
+        json={
+            "reason_code": "review_complete",
+            "comment": "Reviewed",
+            "actor": "approver@example.com",
+            "idempotency_key": "approval-1",
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "mutations_disabled"
 
 
 @pytest.mark.unit

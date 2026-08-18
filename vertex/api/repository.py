@@ -9,9 +9,17 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any, Protocol
 
+import pandas as pd
 from google.cloud import bigquery
 
 from vertex.utils.bigquery_utils import validate_bq_table_id
+from vertex.utils.forecast_delivery import build_publication_event, persist_publication_event
+from vertex.utils.forecast_operations import (
+    build_approval_records,
+    build_override_record,
+    build_publication_records,
+    persist_operation_records,
+)
 
 FORECAST_COLUMNS = (
     "publication_id",
@@ -76,6 +84,14 @@ class ForecastPageResult:
     next_page_token: str | None
 
 
+class MutationNotFoundError(ValueError):
+    """The requested run or output does not exist."""
+
+
+class MutationConflictError(ValueError):
+    """A mutation conflicts with persisted immutable state."""
+
+
 class ForecastRepository(Protocol):
     def resolve_current(self, *, contract_name: str, destination: str) -> PublicationScope | None:
         """Resolve the latest completely delivered version for a contract/destination."""
@@ -98,6 +114,15 @@ class ForecastRepository(Protocol):
         page_token: str | None,
     ) -> ForecastPageResult:
         """Fetch one deterministic page from a validated publication version."""
+
+    def create_override(self, **kwargs: Any) -> dict[str, Any]:
+        """Append one idempotent planner override."""
+
+    def approve_run(self, **kwargs: Any) -> dict[str, Any]:
+        """Append one complete idempotent approval decision set."""
+
+    def publish_run(self, **kwargs: Any) -> dict[str, Any]:
+        """Publish one complete explicit approval set idempotently."""
 
 
 def canonical_entity_key(value: str | None) -> str | None:
@@ -153,8 +178,14 @@ def decode_page_token(value: str | None) -> dict[str, Any] | None:
 class BigQueryForecastRepository:
     def __init__(self, *, project_id: str, table_prefix: str) -> None:
         self.client = bigquery.Client(project=project_id)
+        self.project_id = project_id
+        self.table_prefix = table_prefix
         self.delivery_table = validate_bq_table_id(f"{table_prefix}.forecast_delivery_current")
         self.publication_table = validate_bq_table_id(f"{table_prefix}.published_forecasts_by_run")
+        self.outputs_table = validate_bq_table_id(f"{table_prefix}.forecast_outputs")
+        self.overrides_table = validate_bq_table_id(f"{table_prefix}.forecast_overrides")
+        self.approvals_table = validate_bq_table_id(f"{table_prefix}.forecast_approvals")
+        self.publications_table = validate_bq_table_id(f"{table_prefix}.forecast_publications")
 
     @staticmethod
     def _scope(row: Any) -> PublicationScope:
@@ -175,6 +206,242 @@ class BigQueryForecastRepository:
         config = bigquery.QueryJobConfig(query_parameters=parameters)
         rows = list(self.client.query(query, job_config=config).result())
         return self._scope(rows[0]) if rows else None
+
+    def _dataframe(
+        self, query: str, parameters: list[bigquery.ScalarQueryParameter]
+    ) -> pd.DataFrame:
+        config = bigquery.QueryJobConfig(query_parameters=parameters)
+        return self.client.query(query, job_config=config).to_dataframe()
+
+    def _run_rows(self, forecast_run_id: str) -> pd.DataFrame:
+        rows = self._dataframe(
+            f"SELECT * FROM `{self.outputs_table}` WHERE forecast_run_id = @forecast_run_id",
+            [bigquery.ScalarQueryParameter("forecast_run_id", "STRING", forecast_run_id)],
+        )
+        if rows.empty:
+            raise MutationNotFoundError("forecast run has no canonical output rows")
+        return rows
+
+    def create_override(
+        self,
+        *,
+        forecast_run_id: str,
+        forecast_output_id: str,
+        override_value: float,
+        reason_code: str,
+        comment: str,
+        actor: str,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        rows = self._run_rows(forecast_run_id)
+        selected = rows.loc[rows["forecast_output_id"] == forecast_output_id]
+        if len(selected) != 1:
+            raise MutationNotFoundError(
+                "forecast_output_id must identify exactly one row in the run"
+            )
+        record = build_override_record(
+            selected.iloc[0].to_dict(),
+            override_value=override_value,
+            reason_code=reason_code,
+            comment=comment,
+            actor=actor,
+            idempotency_key=idempotency_key,
+        )
+        existing = self._dataframe(
+            f"""
+            SELECT * FROM `{self.overrides_table}`
+            WHERE forecast_output_id = @forecast_output_id
+              AND idempotency_key = @idempotency_key
+            """,
+            [
+                bigquery.ScalarQueryParameter("forecast_output_id", "STRING", forecast_output_id),
+                bigquery.ScalarQueryParameter("idempotency_key", "STRING", idempotency_key),
+            ],
+        )
+        if not existing.empty:
+            persisted = existing.iloc[0]
+            matches = (
+                len(existing) == 1
+                and float(persisted["override_value"]) == float(record["override_value"])
+                and persisted["reason_code"] == reason_code
+                and persisted["comment"] == comment
+                and persisted["overridden_by"] == actor
+            )
+            if not matches:
+                raise MutationConflictError("idempotency key conflicts with a persisted override")
+            return {"action": "override", "override_id": persisted["override_id"], "retry": True}
+        persist_operation_records(
+            table_prefix=self.table_prefix,
+            project_id=self.project_id,
+            overrides=[record],
+        )
+        return {"action": "override", "override_id": record["override_id"], "retry": False}
+
+    def approve_run(
+        self,
+        *,
+        forecast_run_id: str,
+        reason_code: str,
+        comment: str,
+        actor: str,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        rows = self._run_rows(forecast_run_id)
+        parameters = [bigquery.ScalarQueryParameter("forecast_run_id", "STRING", forecast_run_id)]
+        overrides = self._dataframe(
+            f"""
+            SELECT * EXCEPT(row_number) FROM (
+              SELECT *, ROW_NUMBER() OVER (
+                PARTITION BY forecast_output_id ORDER BY overridden_at DESC, override_id DESC
+              ) AS row_number
+              FROM `{self.overrides_table}` WHERE forecast_run_id = @forecast_run_id
+            ) WHERE row_number = 1
+            """,
+            parameters,
+        )
+        existing = self._dataframe(
+            f"""
+            SELECT * FROM `{self.approvals_table}`
+            WHERE forecast_run_id = @forecast_run_id AND idempotency_key = @idempotency_key
+            """,
+            parameters
+            + [bigquery.ScalarQueryParameter("idempotency_key", "STRING", idempotency_key)],
+        )
+        if not existing.empty:
+            matches = (
+                len(existing) == len(rows)
+                and set(existing["forecast_output_id"]) == set(rows["forecast_output_id"])
+                and set(existing["reason_code"]) == {reason_code}
+                and set(existing["comment"]) == {comment}
+                and set(existing["decided_by"]) == {actor}
+            )
+            if not matches:
+                raise MutationConflictError(
+                    "idempotency key conflicts with a persisted approval set"
+                )
+            return {"action": "approve", "approval_count": len(existing), "retry": True}
+        approvals = build_approval_records(
+            rows,
+            overrides=overrides,
+            actor=actor,
+            idempotency_key=idempotency_key,
+            reason_code=reason_code,
+            comment=comment,
+        )
+        persist_operation_records(
+            table_prefix=self.table_prefix,
+            project_id=self.project_id,
+            approvals=approvals,
+        )
+        return {
+            "action": "approve",
+            "approval_count": len(approvals),
+            "override_count": len(overrides),
+            "retry": False,
+        }
+
+    def publish_run(
+        self,
+        *,
+        forecast_run_id: str,
+        approval_idempotency_key: str,
+        destination: str,
+        publication_version: int,
+        actor: str,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        rows = self._run_rows(forecast_run_id)
+        common = [bigquery.ScalarQueryParameter("forecast_run_id", "STRING", forecast_run_id)]
+        approvals = self._dataframe(
+            f"""
+            SELECT * FROM `{self.approvals_table}`
+            WHERE forecast_run_id = @forecast_run_id
+              AND idempotency_key = @approval_idempotency_key
+            """,
+            common
+            + [
+                bigquery.ScalarQueryParameter(
+                    "approval_idempotency_key", "STRING", approval_idempotency_key
+                )
+            ],
+        )
+        if approvals.empty:
+            raise MutationNotFoundError("approval decision set not found")
+        try:
+            publications = build_publication_records(
+                rows,
+                approvals=approvals,
+                actor=actor,
+                destination=destination,
+                idempotency_key=idempotency_key,
+                publication_version=publication_version,
+            )
+        except ValueError as exc:
+            raise MutationConflictError(str(exc)) from exc
+        contract_names = set(rows["forecast_contract_name"])
+        contract_hashes = set(rows["forecast_contract_hash"])
+        if len(contract_names) != 1 or len(contract_hashes) != 1:
+            raise MutationConflictError("publication requires one forecast contract and hash")
+        event = build_publication_event(
+            event_type="forecast.published",
+            forecast_run_id=forecast_run_id,
+            forecast_contract_name=str(next(iter(contract_names))),
+            forecast_contract_hash=str(next(iter(contract_hashes))),
+            publication_version=publication_version,
+            destination=destination,
+            row_count=len(publications),
+            actor=actor,
+            idempotency_key=idempotency_key,
+        )
+        existing = self._dataframe(
+            f"""
+            SELECT * FROM `{self.publications_table}`
+            WHERE forecast_run_id = @forecast_run_id AND destination = @destination
+            """,
+            common + [bigquery.ScalarQueryParameter("destination", "STRING", destination)],
+        )
+        same_version = existing.loc[existing["publication_version"] == publication_version]
+        if not same_version.empty:
+            expected_by_id = {row["publication_id"]: row for row in publications}
+            matches = (
+                len(same_version) == len(rows)
+                and set(same_version["idempotency_key"]) == {idempotency_key}
+                and set(same_version["published_by"]) == {actor}
+                and set(same_version["publication_id"]) == set(expected_by_id)
+                and all(
+                    row["approval_id"] == expected_by_id[str(row["publication_id"])]["approval_id"]
+                    for row in same_version.to_dict(orient="records")
+                )
+            )
+            if not matches:
+                raise MutationConflictError(
+                    "publication version conflicts with persisted immutable state"
+                )
+            persist_publication_event(
+                event, table_prefix=self.table_prefix, project_id=self.project_id
+            )
+            return {
+                "action": "publish",
+                "publication_count": len(same_version),
+                "publication_version": publication_version,
+                "publication_event_id": event["publication_event_id"],
+                "retry": True,
+            }
+        if not existing.empty and publication_version <= int(existing["publication_version"].max()):
+            raise MutationConflictError("publication_version must increase monotonically")
+        persist_operation_records(
+            table_prefix=self.table_prefix,
+            project_id=self.project_id,
+            publications=publications,
+        )
+        persist_publication_event(event, table_prefix=self.table_prefix, project_id=self.project_id)
+        return {
+            "action": "publish",
+            "publication_count": len(publications),
+            "publication_version": publication_version,
+            "publication_event_id": event["publication_event_id"],
+            "retry": False,
+        }
 
     def resolve_current(self, *, contract_name: str, destination: str) -> PublicationScope | None:
         query = f"""

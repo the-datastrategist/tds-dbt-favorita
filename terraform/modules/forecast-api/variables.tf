@@ -21,6 +21,11 @@ variable "container_image" {
   }
 }
 variable "dbt_dataset" { type = string }
+variable "enable_lifecycle_mutations" {
+  description = "Enable append-only lifecycle endpoints and grant dataset write access. Restrict invoker_members to trusted operators when true."
+  type        = bool
+  default     = false
+}
 variable "invoker_members" {
   description = "IAM members allowed to invoke the authenticated Cloud Run service."
   type        = set(string)
