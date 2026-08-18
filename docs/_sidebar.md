@@ -52,6 +52,8 @@
   * [Monitoring operations](monitoring_and_slos.md)
   * [Open-source frontend UI](specs/open_source_frontend_ui.md)
   * [ForecastLab UI/UX design](FORECASTING_WORKBENCH_UI_DESIGN.md)
+  * [ForecastLab architecture decision](adr/0001-forecastlab-react-vite-fastapi.md)
+  * [ForecastLab public demo data](frontend/public_demo_data.md)
   * [Terraform modules](specs/terraform_modules.md)
   * [Workload Identity Federation](specs/workload_identity_federation.md)
   * [Open-source product readiness](specs/open_source_product_readiness.md)

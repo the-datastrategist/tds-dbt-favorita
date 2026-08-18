@@ -2,7 +2,7 @@
 
 # SPEC: Open-source forecasting platform UI
 
-**Status:** Proposed
+**Status:** In progress
 **Roadmap reference:** [Specs overview](README.md) — P2 forecast operations and integration contracts; P3 open-source product readiness
 
 ---
@@ -253,6 +253,10 @@ The GitHub Pages build is public and read-only. It uses bundled, generated, or e
 sanitized fixtures. It must make no authenticated cloud requests and contain no confidential
 forecast, customer, employee, or infrastructure data.
 
+The approved fixture boundary is the deterministic synthetic `forecastlab_demo_v1` dataset
+defined in the [public demo data contract](../frontend/public_demo_data.md). It contains no raw
+Favorita or production warehouse rows.
+
 ### Production
 
 The production application uses Authorization Code Flow with PKCE through an OpenID Connect
@@ -373,12 +377,12 @@ Additional requirements:
 - Should production serve frontend assets from the API container or from a separate static host?
 - Which hierarchy sizes require server-side aggregation rather than browser rendering?
 - Which operational actions belong in the first UI release versus remaining CLI/API-only?
-- What sanitized dataset best demonstrates intermittent demand, cold start, probabilistic
-  intervals, and reconciliation without exposing client data?
 
 ## Related documents
 
 - [ForecastLab UI/UX design](../FORECASTING_WORKBENCH_UI_DESIGN.md)
+- [ADR 0001: React, Vite, and FastAPI](../adr/0001-forecastlab-react-vite-fastapi.md)
+- [Public demo data contract](../frontend/public_demo_data.md)
 - [Forecast contract and canonical output](forecast_contract_and_output.md)
 - [Forecast operations](forecast_operations.md)
 - [Integration contracts and forecast delivery](integration_contracts.md)

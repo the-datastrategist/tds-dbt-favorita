@@ -259,6 +259,10 @@ The tDS mark may be used sparingly in:
 - favicon / secondary attribution;
 - documentation link.
 
+The approved source asset is checked in at
+`frontend/public/brand/tds-logo-circle-white.jpg`. Follow its adjacent usage and licensing notes;
+do not reconstruct the mark from text or derive transparent/favicon variants from the JPEG.
+
 ---
 
 ## 5.2 Brand guide elements to retain
@@ -1872,6 +1876,8 @@ Add:
 ```
 
 The UI should be built against realistic fixture JSON before the full API is complete.
+The public fixture must conform to the
+[ForecastLab public demo data contract](frontend/public_demo_data.md).
 
 ---
 
