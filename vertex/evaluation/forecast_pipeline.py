@@ -461,7 +461,10 @@ def execute_forecast_pipeline(
             forecast_run_id,
             "eligibility_snapshot_match",
             eligibility_id == pins.eligibility_snapshot_id,
-            details={"computed_snapshot_id": eligibility_id, "pinned_snapshot_id": pins.eligibility_snapshot_id},
+            details={
+                "computed_snapshot_id": eligibility_id,
+                "pinned_snapshot_id": pins.eligibility_snapshot_id,
+            },
         ),
         _check(
             forecast_run_id,

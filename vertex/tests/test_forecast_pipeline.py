@@ -161,7 +161,8 @@ def test_pipeline_freezes_exclusion_and_scores_only_eligible_population() -> Non
     assert len(result.eligibility_decisions) == 2
     assert sum(row["is_eligible"] for row in result.eligibility_decisions) == 1
     accounting = next(
-        check for check in result.validation_checks
+        check
+        for check in result.validation_checks
         if check["check_name"] == "eligibility_population_accounting"
     )
     assert accounting["passed"] is True
