@@ -124,9 +124,9 @@ for the local and live validation record.
 ## Current implementation status
 
 The reference adapter explicitly models observed sales, promotion status, missing inventory,
-unknown censoring, and demand-policy semantics. Eligibility decisions and daily reason summaries
-are implemented. Remaining scope is row-level exclusion persistence tied to a run and live adapters
-for inventory, assortment, lifecycle, price, and closure sources.
+unknown censoring, and demand-policy semantics. Eligibility decisions, daily reason summaries,
+and immutable run-level exclusion evidence are implemented and live accepted. Remaining scope is
+client-specific live adapters for inventory, assortment, lifecycle, price, and closure sources.
 
 ## Related documents
 

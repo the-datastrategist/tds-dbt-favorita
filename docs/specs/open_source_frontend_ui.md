@@ -14,7 +14,7 @@ capabilities through warehouse tables, Python services, Prefect flows, and docum
 not yet provide a cohesive browser interface for analysts, planners, approvers, or platform
 operators.
 
-This spec defines an open-source frontend built with React, TypeScript, and Vite, backed by a
+This spec defines the ForecastLab open-source frontend built with Next.js and TypeScript, backed by a
 versioned FastAPI boundary. The same frontend supports two deployment modes:
 
 - a public, read-only demonstration on GitHub Pages using sanitized or bundled data; and
@@ -66,7 +66,7 @@ an authorization control.
 ```text
 GitHub Pages demo                   Production deployment
 -----------------                   ---------------------
-React/Vite static assets            React/Vite static assets
+Next.js static export               Next.js application assets
         |                                    |
 bundled sanitized fixtures          OIDC access token over HTTPS
                                              |
@@ -82,8 +82,8 @@ bundled sanitized fixtures          OIDC access token over HTTPS
 
 | Layer | Default | Purpose |
 |-------|---------|---------|
-| Frontend | React + TypeScript + Vite | Static application and build tooling |
-| Routing | React Router | URL-addressable application views |
+| Frontend | Next.js + TypeScript | Application framework and static-export tooling |
+| Routing | Next.js App Router | URL-addressable application views |
 | Server state | TanStack Query | Fetching, caching, retries, and invalidation |
 | Tables | TanStack Table | Accessible sorting, filtering, and pagination |
 | Charts | Apache ECharts | Forecast intervals, accuracy, and hierarchy visualizations |
@@ -261,7 +261,8 @@ Additional requirements:
 
 - Build static assets through GitHub Actions.
 - Publish beneath the existing repository site, preferably `/app/`.
-- Configure Vite's base path for `/tds-dbt-favorita/app/`.
+- Configure the Next.js static export, `basePath`, and asset prefix for
+  `/tds-dbt-favorita/app/`.
 - Preserve the existing documentation portal and dbt Docs routes.
 - Use hash routing or an equivalent static-host-compatible fallback.
 - Publish only sanitized fixtures committed or generated during the build.
@@ -297,7 +298,7 @@ Additional requirements:
 
 ### Phase 1 — read-only foundation
 
-1. Scaffold React, TypeScript, and Vite with linting, tests, and accessible primitives.
+1. Scaffold Next.js and TypeScript with linting, tests, and accessible primitives.
 2. Define API schemas and generate or validate the TypeScript client.
 3. Add application shell, navigation, error boundaries, and loading/empty/error states.
 4. Implement platform overview, forecast explorer, accuracy, and model lifecycle views.
@@ -356,6 +357,7 @@ Additional requirements:
 
 ## Related documents
 
+- [ForecastLab UI/UX design](../FORECASTING_WORKBENCH_UI_DESIGN.md)
 - [Forecast contract and canonical output](forecast_contract_and_output.md)
 - [Forecast operations](forecast_operations.md)
 - [Integration contracts and forecast delivery](integration_contracts.md)

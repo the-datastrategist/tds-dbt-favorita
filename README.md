@@ -622,6 +622,8 @@ The current platform is strongest as a production-style GCP demand forecasting f
 - forecast operations: append-only override, approval, publication, revision, and rollback commands
 - delivery contracts: current/by-run warehouse views, audit views, and GCS CSV/Parquet export
 - monitoring, SLOs, and integration contracts
+- ForecastLab browser workbench for forecast exploration, model comparison, operational
+  visibility, and governed planner actions
 
 See [docs/specs/README.md](docs/specs/README.md) for the spec-driven roadmap.
 

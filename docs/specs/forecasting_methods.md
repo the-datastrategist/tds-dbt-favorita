@@ -2,7 +2,7 @@
 
 # SPEC: Forecasting methods, horizons, cold start, and intermittent demand
 
-**Status:** In progress
+**Status:** Shipped
 **Roadmap reference:** [Specs overview](README.md) — P0 "Implement multi-horizon forecasting", P1 "Add probabilistic forecasts", and P1 "Add cold-start and intermittent-demand routing"
 
 ---

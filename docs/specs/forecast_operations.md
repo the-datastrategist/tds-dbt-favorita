@@ -10,9 +10,10 @@
 ## Summary
 
 The platform now operates forecasts as append-only business artifacts through explicit override,
-approval, publication, revision, and rollback commands. Remaining work is the planner-facing UI,
-and service API. Forecast Value Added and downstream delivery confirmation are implemented through
-tested warehouse and append-only integration contracts.
+approval, publication, revision, and rollback commands. Remaining work is the planner-facing UI
+and mutation API; the read-only retrieval API is live accepted. Forecast Value Added and downstream
+delivery confirmation are implemented through tested warehouse and append-only integration
+contracts.
 
 This spec adds `docs/forecast_operations.md`, operating cadences, lifecycle tables, workflow APIs, and runbooks for retries, partial failures, backfills, revisions, and champion rollback.
 
@@ -201,8 +202,10 @@ forecast; rollback republishes a complete prior version under a new version with
 lineage. The [operations runbook](../forecast_operations.md) documents retry, revision, backfill,
 and delivery recovery. Append-only delivery confirmation, retry, abandonment, and monitoring are
 live accepted. Backtest and operations FVA marts now implement configured-benchmark comparison,
-planner/published accuracy attribution, and fail-closed coverage semantics. A planner UI and service
-API remain open. See the [FVA acceptance evidence](../acceptance/forecast_value_added_2026-08-11.md).
+planner/published accuracy attribution, and fail-closed coverage semantics. A planner UI and
+mutation API remain open; read-only service retrieval is implemented and live accepted. See the
+[FVA acceptance evidence](../acceptance/forecast_value_added_2026-08-11.md) and
+[retrieval API acceptance evidence](../acceptance/forecast_retrieval_api_2026-08-11.md).
 
 ## Testing & validation
 

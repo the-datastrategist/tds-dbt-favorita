@@ -23,9 +23,12 @@ A completed spec should graduate into an accelerator entry in [accelerators.md](
 
 ## Specs
 
-Status reviewed **2026-08-11**. The completion figures are implementation estimates, while
+Status reviewed **2026-08-17**. The completion figures are implementation estimates, while
 the status column continues to use the acceptance-based definitions above. Across the full
-platform roadmap, the current implementation is approximately **85% complete**.
+platform roadmap, including the proposed frontend and separate generalization workstream, the
+current implementation is approximately **84% complete**. Excluding open-source productization,
+the proposed frontend, and generalization, the accepted core platform roadmap is approximately
+**98% complete**.
 
 | Spec | Status | Completion | Roadmap reference | Summary |
 |------|--------|-----------:|--------------------|---------|
@@ -44,6 +47,7 @@ platform roadmap, the current implementation is approximately **85% complete**.
 | [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md) | Shipped | 100% | Cross-spec operational integration | Live-accepted deterministic champion scoring, routing, calibration, reconciliation gates, leases, failure evidence, Prefect deployment, idempotent retry, and atomic draft visibility |
 | [Monitoring, alerts, and SLOs](monitoring_and_slos.md) | In progress | 99% | Platform roadmap → P1 monitoring | All repository signals, including realized calibration, target/feature drift, and pipeline cost, are live accepted; applying real notification channels and witnessing delivery remain |
 | [Integration contracts and forecast delivery](integration_contracts.md) | In progress | 95% | Platform roadmap → P2 integrations | Stable views, GCS export, events, delivery confirmation, and a private live-accepted read-only retrieval API are implemented; mutations and outbound webhooks remain |
+| [Open-source forecasting platform UI](open_source_frontend_ui.md) | Proposed | 0% | Platform roadmap → P2/P3 frontend | Build the ForecastLab browser workbench for forecast exploration, model comparison, operational visibility, and governed planner actions |
 | [Open-source product readiness](open_source_product_readiness.md) | Proposed | 40% | Platform roadmap → P3 open source | Add governance, first-run quickstart, roadmap, compatibility, extension, and modularization plans |
 | [General-purpose demand forecasting platform](platform_generalization.md) | Proposed | 0% | Separate platform-generalization workstream | Add canonical datasets, configurable periods, resource parameterization, and typed extension interfaces; multi-implementation validation is deferred |
 
