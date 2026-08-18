@@ -2,7 +2,7 @@
 
 **Project:** GCP Demand Forecasting Platform
 **Working product name:** ForecastLab
-**Frontend:** Next.js + TypeScript
+**Frontend:** React + TypeScript + Vite
 **Document type:** Product / UI / UX design specification
 **Primary audience:** Codex implementation, product/design review, portfolio presentation
 **Status:** Proposed
@@ -263,7 +263,9 @@ The tDS mark may be used sparingly in:
 
 ## 5.2 Brand guide elements to retain
 
-From theDataStrategist brand system:
+Source of truth: *TheDataStrategist Brand Guideline (2026)*. This document derives product UI
+rules from that guide; it does not replace the original logo artwork or grant additional asset
+rights.
 
 ### Primary typeface
 **Space Grotesk**
@@ -293,6 +295,9 @@ Code / identifiers: Geist Mono or system monospace
 
 Poppins should be optional rather than used throughout the application. A single UI type family creates a cleaner, more Ramp-like system.
 
+For the open-source build, self-host approved Space Grotesk and Poppins files with their font
+license notices. The public demo must not require a third-party font request.
+
 ---
 
 ## 5.3 Core brand colors
@@ -305,6 +310,15 @@ Brand guide source palette:
 | Accent | Lemony | `#E2F86C` |
 | Neutral | Sweet Grey | `#D8D8D8` |
 | Base | White | `#FFFFFF` |
+
+The guide also defines complete neutral and lemon ramps. ForecastLab should expose those values as
+primitive tokens, then consume semantic aliases in components:
+
+| Ramp | Values from light to dark |
+|---|---|
+| Neutral A | `#E5E5E5`, `#D5D5D5`, `#C5C5C5`, `#B5B5B5`, `#A5A5A5`, `#878787`, `#6A6A6A`, `#4C4C4C`, `#2E2E2E`, `#242424`, `#151515` |
+| Lemon | `#F9FEE9`, `#F2FCC7`, `#EAFA9D`, `#E2F86C`, `#D5E865`, `#C5D85E`, `#B6C857`, `#A4B44F`, `#8F9D45`, `#7A863A`, `#656F30` |
+| Neutral B | `#F8F8F8`, `#EDEDED`, `#E3E3E3`, `#D8D8D8`, `#CACACA`, `#BCBCBC`, `#AEAEAE`, `#9D9D9D`, `#898989`, `#757575`, `#616161` |
 
 ### Product interpretation
 
@@ -325,6 +339,10 @@ Avoid using it as:
 - every button;
 - every chart series;
 - large table backgrounds.
+
+Do not use lemon alone to mean success, healthy, approved, or champion. Those meanings require a
+text label or icon and a separate semantic token. Lemon text on white is not an approved body-text
+pairing.
 
 The application should remain approximately **85–90% neutral**.
 
@@ -350,7 +368,8 @@ The application should remain approximately **85–90% neutral**.
 
   --brand-graphite: #2E2E2E;
   --brand-lemon: #E2F86C;
-  --brand-lemon-soft: #F3FBCB;
+  --brand-lemon-soft: #F2FCC7;
+  --brand-sweet-grey: #D8D8D8;
 
   --success: #247A4A;
   --success-soft: #E8F5ED;
@@ -1453,62 +1472,58 @@ The lemon brand color should not be used as body text on white without verifying
 
 ---
 
-# 27. Next.js Technical Architecture
+# 27. React/Vite Technical Architecture
 
 ## Recommended stack
 
 ```text
-Next.js 15+
+React
 TypeScript
-App Router
-React Server Components where practical
+Vite
+React Router
 Tailwind CSS
 shadcn/ui primitives
 TanStack Table
-TanStack Query where client-side caching is useful
-Recharts for standard charts
-Visx/D3 only for specialized visualizations
+TanStack Query
+Apache ECharts for standard analytical charts
+D3 only for specialized visualizations
 Zod for API contracts / validation
+Vitest and React Testing Library
+Playwright and axe-core
 date-fns
 Lucide icons
 ```
 
 ### Why
 
-- Next.js provides a polished production application shell.
+- Vite provides a small, fast, static-first toolchain for both the GitHub Pages demo and the
+  production client.
+- React Router keeps URL-addressable filter and drill-down state in the browser application.
+- FastAPI remains the only server boundary, avoiding duplicated authorization and lifecycle logic.
 - shadcn/ui allows ownership of the component code rather than dependence on a heavy visual framework.
 - TanStack Table is appropriate for the dense, filter-heavy experience.
-- Recharts is sufficient for most portfolio and operational charts.
-- Specialized SHAP or calibration visuals can use Visx when required.
+- Apache ECharts supports the dense forecast, interval, calibration, and hierarchy views in this
+  workbench.
+- Specialized SHAP or calibration visuals can use D3 when required.
 
 ---
 
-# 28. Next.js Project Structure
+# 28. React/Vite Project Structure
 
 ```text
 src/
 ├── app/
-│   ├── (app)/
-│   │   ├── layout.tsx
-│   │   ├── overview/
-│   │   │   └── page.tsx
-│   │   ├── models/
-│   │   │   ├── leaderboard/
-│   │   │   ├── registry/
-│   │   │   └── [modelId]/
-│   │   ├── experiments/
-│   │   │   ├── runs/
-│   │   │   ├── compare/
-│   │   │   ├── ablations/
-│   │   │   └── [runId]/
-│   │   ├── forecasts/
-│   │   │   ├── explorer/
-│   │   │   ├── errors/
-│   │   │   └── [forecastId]/
-│   │   ├── explainability/
-│   │   └── monitoring/
-│   │
-│   └── api/
+│   ├── App.tsx
+│   ├── routes.tsx
+│   └── providers.tsx
+│
+├── pages/
+│   ├── overview/
+│   ├── models/
+│   ├── experiments/
+│   ├── forecasts/
+│   ├── explainability/
+│   └── monitoring/
 │
 ├── components/
 │   ├── app-shell/
@@ -1533,7 +1548,8 @@ src/
 │
 ├── schemas/
 ├── types/
-└── styles/
+├── styles/
+└── test/
 ```
 
 ---
@@ -1556,20 +1572,19 @@ BigQuery
 Forecast API
    │
    ▼
-Next.js
+React/Vite
 ```
 
-The Next.js application should **not** directly construct analytical SQL from browser input.
+The React application should **not** directly construct analytical SQL from browser input.
 
 Prefer:
 
 ```text
-Next.js → typed API → governed query/service layer → BigQuery
+React/Vite → typed API → governed query/service layer → BigQuery
 ```
 
-A simple FastAPI service is reasonable if the project already has Python services.
-
-For an MVP, Next.js server routes can also call BigQuery server-side.
+FastAPI is the authoritative service boundary. The browser never calls BigQuery directly, and the
+frontend does not add a second backend-for-frontend layer.
 
 ---
 
@@ -1715,7 +1730,7 @@ ForecastLab
 
 A production-style forecasting workbench
 built on dbt, BigQuery, Vertex AI, MLflow,
-Prefect, and Next.js.
+Prefect, React, and Vite.
 
 Built by theDataStrategist
 
@@ -1972,8 +1987,8 @@ Use the brand system for:
 Public reference:
 `https://www.thedatastrategist.com/`
 
-Brand guide:
-`TheDataStrategist - Brand Guideline.pdf`
+Brand guide source:
+*TheDataStrategist Brand Guideline (2026)*, supplied as the project brand reference.
 
 ---
 

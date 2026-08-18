@@ -14,8 +14,8 @@ capabilities through warehouse tables, Python services, Prefect flows, and docum
 not yet provide a cohesive browser interface for analysts, planners, approvers, or platform
 operators.
 
-This spec defines the ForecastLab open-source frontend built with Next.js and TypeScript, backed by a
-versioned FastAPI boundary. The same frontend supports two deployment modes:
+This spec defines the ForecastLab open-source frontend built with React, TypeScript, and Vite,
+backed by a versioned FastAPI boundary. The same frontend supports two deployment modes:
 
 - a public, read-only demonstration on GitHub Pages using sanitized or bundled data; and
 - an authenticated production application deployed with its API on Cloud Run or another
@@ -66,7 +66,7 @@ an authorization control.
 ```text
 GitHub Pages demo                   Production deployment
 -----------------                   ---------------------
-Next.js static export               Next.js application assets
+React/Vite static assets            React/Vite static assets
         |                                    |
 bundled sanitized fixtures          OIDC access token over HTTPS
                                              |
@@ -82,12 +82,12 @@ bundled sanitized fixtures          OIDC access token over HTTPS
 
 | Layer | Default | Purpose |
 |-------|---------|---------|
-| Frontend | Next.js + TypeScript | Application framework and static-export tooling |
-| Routing | Next.js App Router | URL-addressable application views |
+| Frontend | React + TypeScript + Vite | Static application and build tooling |
+| Routing | React Router | URL-addressable application views |
 | Server state | TanStack Query | Fetching, caching, retries, and invalidation |
 | Tables | TanStack Table | Accessible sorting, filtering, and pagination |
 | Charts | Apache ECharts | Forecast intervals, accuracy, and hierarchy visualizations |
-| Components | shadcn/ui or Material UI | Accessible, reusable interface primitives |
+| Components | shadcn/ui primitives | Accessible components owned and themed in the repository |
 | API | FastAPI + Pydantic | Versioned HTTP boundary over platform services |
 | Authentication | OpenID Connect | Portable identity integration |
 | Self-hosted identity option | Keycloak | Open-source OIDC provider for deployments that require it |
@@ -95,6 +95,20 @@ bundled sanitized fixtures          OIDC access token over HTTPS
 
 Dependencies must be pinned, license-reviewed, and replaceable at their architectural boundary.
 The project license remains authoritative for original application code.
+
+### Brand implementation contract
+
+The UI follows *TheDataStrategist Brand Guideline (2026)* through the derived tokens and usage
+rules in the [ForecastLab UI/UX design](../FORECASTING_WORKBENCH_UI_DESIGN.md). The application
+uses Space Grotesk as its primary interface typeface, Poppins only for limited branded supporting
+copy, and the official primary palette: Light Black `#2E2E2E`, Lemony `#E2F86C`, Sweet Grey
+`#D8D8D8`, and White `#FFFFFF`.
+
+Brand assets and fonts must be distributable with the open-source application before they are
+bundled. Self-host font files with their license notices so the public demo does not depend on a
+third-party font request. Use approved logo exports; do not reconstruct the tDS mark or wordmark
+from text. Brand colors are presentational tokens, not semantic health states, and every status
+must retain a text or icon label and meet WCAG 2.1 AA contrast requirements.
 
 ## Repository layout
 
@@ -261,8 +275,7 @@ Additional requirements:
 
 - Build static assets through GitHub Actions.
 - Publish beneath the existing repository site, preferably `/app/`.
-- Configure the Next.js static export, `basePath`, and asset prefix for
-  `/tds-dbt-favorita/app/`.
+- Configure Vite's `base` for `/tds-dbt-favorita/app/`.
 - Preserve the existing documentation portal and dbt Docs routes.
 - Use hash routing or an equivalent static-host-compatible fallback.
 - Publish only sanitized fixtures committed or generated during the build.
@@ -298,11 +311,12 @@ Additional requirements:
 
 ### Phase 1 — read-only foundation
 
-1. Scaffold Next.js and TypeScript with linting, tests, and accessible primitives.
-2. Define API schemas and generate or validate the TypeScript client.
-3. Add application shell, navigation, error boundaries, and loading/empty/error states.
-4. Implement platform overview, forecast explorer, accuracy, and model lifecycle views.
-5. Add sanitized demo fixtures and GitHub Pages deployment beneath `/app/`.
+1. Scaffold React, TypeScript, and Vite with linting, tests, and accessible primitives.
+2. Implement primitive and semantic design tokens derived from the approved brand guide.
+3. Define API schemas and generate or validate the TypeScript client.
+4. Add application shell, navigation, error boundaries, and loading/empty/error states.
+5. Implement platform overview, forecast explorer, accuracy, and model lifecycle views.
+6. Add sanitized demo fixtures and GitHub Pages deployment beneath `/app/`.
 
 ### Phase 2 — operational visibility
 
@@ -321,6 +335,11 @@ Additional requirements:
 
 - Unit tests for formatting, filtering, permission presentation, and error states.
 - Component accessibility checks and keyboard-navigation tests.
+- Automated contrast checks and visual regression coverage for the application shell, typography,
+  logo placement, focus treatment, and semantic states.
+- Static check rejecting raw brand hex values outside the design-token definitions.
+- Build check confirming self-hosted font files include their license notices and no third-party
+  font request is emitted.
 - Contract tests between OpenAPI schemas and the TypeScript client.
 - Browser tests for forecast exploration and lifecycle drill-down.
 - Mutation tests for override, approval, publication, supersession, idempotency, and stale-version
@@ -343,6 +362,8 @@ Additional requirements:
 - Once Phase 3 is delivered, authorized users can override, approve, publish, supersede, and roll
   back forecasts without overwriting append-only source records.
 - Core workflows pass automated accessibility checks and manual keyboard validation.
+- Approved brand assets, typography, and semantic tokens match the derived ForecastLab design
+  contract without using brand color alone to communicate state.
 - Frontend and API can be built and deployed using only documented open-source tooling.
 
 ## Open questions
