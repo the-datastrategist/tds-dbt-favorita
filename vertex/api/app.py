@@ -82,6 +82,8 @@ class MutationResult(BaseModel):
     publication_count: int | None = None
     publication_version: int | None = None
     publication_event_id: str | None = None
+    webhook_delivery_status: str | None = None
+    webhook_delivery_event_id: str | None = None
 
 
 def _repository() -> ForecastRepository:
@@ -90,6 +92,9 @@ def _repository() -> ForecastRepository:
     return BigQueryForecastRepository(
         project_id=project_id,
         table_prefix=f"{project_id}.{dataset}",
+        webhook_url=os.getenv("FORECAST_PUBLICATION_WEBHOOK_URL"),
+        webhook_signing_secret=os.getenv("FORECAST_PUBLICATION_WEBHOOK_SIGNING_SECRET"),
+        webhook_name=os.getenv("FORECAST_PUBLICATION_WEBHOOK_NAME", "default"),
     )
 
 

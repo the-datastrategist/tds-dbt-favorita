@@ -17,7 +17,7 @@
   * [Forecast operations](forecast_operations.md)
   * [Forecast Value Added](forecast_value_added.md)
   * [Integration contracts](integration_contracts.md)
-  * [Forecast Retrieval API](forecast_api.md)
+  * [Forecast Operations API](forecast_api.md)
   * [Hierarchical reconciliation](hierarchical_reconciliation.md)
   * [Delivery artifacts](delivery_artifacts.md)
   * [Client rollout](client_rollout.md)

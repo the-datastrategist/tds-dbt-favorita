@@ -65,8 +65,9 @@ covers the reference read-only deployment; mutation routes currently have local 
 - Consumers must not combine rows from different run/version/destination tuples.
 - Additive nullable columns are backward-compatible. Renames, removals, semantic changes, or new
   required fields require a versioned view and a documented deprecation window.
-- Publication events, lifecycle mutations, and delivery confirmation are append-only and
-  version-scoped. An outbound webhook adapter remains a future interface over the same records.
+- Publication events, lifecycle mutations, delivery confirmation, and outbound webhook attempts
+  are append-only and version-scoped. Webhook delivery uses the publication event ID for
+  idempotency and never mutates or rolls back a successful publication.
 
 See [forecast operations](forecast_operations.md) for override, approval, and rollback commands and
 [forecast delivery](forecast_delivery.md) for confirmation, failure, retry, and abandonment.

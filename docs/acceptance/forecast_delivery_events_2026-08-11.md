@@ -32,5 +32,7 @@ the required 75% gate. Formatting, import sorting, linting, typing, and diff hyg
 ## Result
 
 **Accepted.** Confirmation, failure, retry, and terminal-state behavior are version-scoped,
-idempotent, append-only, and independent of immutable publication rows. An outbound webhook adapter
-remains a separate integration increment.
+idempotent, append-only, and independent of immutable publication rows. At the time of this
+acceptance, an outbound webhook adapter remained a separate integration increment. It was
+subsequently implemented and locally accepted; see
+[Forecast webhook delivery acceptance](forecast_webhook_delivery_2026-08-18.md).

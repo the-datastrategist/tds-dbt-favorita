@@ -223,6 +223,14 @@ gha-creds-*.json
 *.json
 !package*.json
 !tsconfig*.json
+!frontend/src/fixtures/*.json
+
+# Node / ForecastLab frontend
+node_modules/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+frontend/.vite/
 
 # Environment files
 .env
@@ -241,6 +249,8 @@ gha-creds-*.json
 # Local test data
 test_data/
 data/
+!frontend/src/data/
+!frontend/src/data/**
 mlruns/
 *.csv
 *.parquet

@@ -134,6 +134,30 @@ variable "enable_forecast_api_mutations" {
   default     = false
 }
 
+variable "enable_forecast_publication_webhook" {
+  description = "Enable signed outbound publication webhooks."
+  type        = bool
+  default     = false
+}
+
+variable "forecast_publication_webhook_url_secret_id" {
+  description = "Secret Manager secret ID containing the publication webhook URL."
+  type        = string
+  default     = ""
+}
+
+variable "forecast_publication_webhook_signing_secret_id" {
+  description = "Secret Manager secret ID containing the publication webhook HMAC secret."
+  type        = string
+  default     = ""
+}
+
+variable "forecast_publication_webhook_name" {
+  description = "Non-secret webhook destination name used in delivery audit records."
+  type        = string
+  default     = "default"
+}
+
 variable "forecast_api_image" {
   description = "Immutable production image URI for the Forecast Retrieval API."
   type        = string

@@ -66,7 +66,7 @@ flowchart LR
   BQMeta --> StgVertex
   subgraph Consume["Consumption"]
     Published[Stable publication views]
-    API[Private Forecast Retrieval API]
+    API[Private Forecast Operations API]
     Export[GCS batch export]
     BI[Dashboard / planning client-specific]
     StgVertex --> Published

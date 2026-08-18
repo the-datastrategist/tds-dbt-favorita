@@ -61,6 +61,34 @@ resource "google_cloud_run_v2_service" "api" {
         name  = "FORECAST_API_MUTATIONS_ENABLED"
         value = tostring(var.enable_lifecycle_mutations)
       }
+      env {
+        name  = "FORECAST_PUBLICATION_WEBHOOK_NAME"
+        value = var.publication_webhook_name
+      }
+      dynamic "env" {
+        for_each = var.enable_publication_webhook ? [1] : []
+        content {
+          name = "FORECAST_PUBLICATION_WEBHOOK_URL"
+          value_source {
+            secret_key_ref {
+              secret  = var.publication_webhook_url_secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+      dynamic "env" {
+        for_each = var.enable_publication_webhook ? [1] : []
+        content {
+          name = "FORECAST_PUBLICATION_WEBHOOK_SIGNING_SECRET"
+          value_source {
+            secret_key_ref {
+              secret  = var.publication_webhook_signing_secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
 
       resources {
         limits = {
@@ -74,7 +102,27 @@ resource "google_cloud_run_v2_service" "api" {
   depends_on = [
     google_project_iam_member.bigquery_job_user,
     google_bigquery_dataset_iam_member.forecast_dataset_access,
+    google_secret_manager_secret_iam_member.webhook_url_accessor,
+    google_secret_manager_secret_iam_member.webhook_signing_accessor,
   ]
+}
+
+resource "google_secret_manager_secret_iam_member" "webhook_url_accessor" {
+  count = var.enabled && var.enable_publication_webhook ? 1 : 0
+
+  project   = var.project_id
+  secret_id = var.publication_webhook_url_secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.api[0].email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "webhook_signing_accessor" {
+  count = var.enabled && var.enable_publication_webhook ? 1 : 0
+
+  project   = var.project_id
+  secret_id = var.publication_webhook_signing_secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.api[0].email}"
 }
 
 resource "google_cloud_run_v2_service_iam_member" "invoker" {

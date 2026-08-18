@@ -13,12 +13,22 @@ import pandas as pd
 from google.cloud import bigquery
 
 from vertex.utils.bigquery_utils import validate_bq_table_id
-from vertex.utils.forecast_delivery import build_publication_event, persist_publication_event
+from vertex.utils.forecast_delivery import (
+    build_delivery_event,
+    build_publication_event,
+    persist_delivery_event,
+    persist_publication_event,
+)
 from vertex.utils.forecast_operations import (
     build_approval_records,
     build_override_record,
     build_publication_records,
     persist_operation_records,
+)
+from vertex.utils.forecast_webhook import (
+    WebhookDeliveryError,
+    WebhookTransport,
+    deliver_publication_webhook,
 )
 
 FORECAST_COLUMNS = (
@@ -203,7 +213,20 @@ def decode_page_token(value: str | None) -> dict[str, Any] | None:
 
 
 class BigQueryForecastRepository:
-    def __init__(self, *, project_id: str, table_prefix: str) -> None:
+    def __init__(
+        self,
+        *,
+        project_id: str,
+        table_prefix: str,
+        webhook_url: str | None = None,
+        webhook_signing_secret: str | None = None,
+        webhook_name: str = "default",
+        webhook_transport: WebhookTransport | None = None,
+    ) -> None:
+        if bool(webhook_url) != bool(webhook_signing_secret):
+            raise ValueError("webhook URL and signing secret must be configured together")
+        if webhook_url and not webhook_name:
+            raise ValueError("webhook name is required when webhook delivery is configured")
         self.client = bigquery.Client(project=project_id)
         self.project_id = project_id
         self.table_prefix = table_prefix
@@ -213,6 +236,13 @@ class BigQueryForecastRepository:
         self.overrides_table = validate_bq_table_id(f"{table_prefix}.forecast_overrides")
         self.approvals_table = validate_bq_table_id(f"{table_prefix}.forecast_approvals")
         self.publications_table = validate_bq_table_id(f"{table_prefix}.forecast_publications")
+        self.delivery_events_table = validate_bq_table_id(
+            f"{table_prefix}.forecast_delivery_events"
+        )
+        self.webhook_url = webhook_url
+        self.webhook_signing_secret = webhook_signing_secret
+        self.webhook_name = webhook_name
+        self.webhook_transport = webhook_transport
 
     @staticmethod
     def _scope(row: Any) -> PublicationScope:
@@ -248,6 +278,118 @@ class BigQueryForecastRepository:
         if rows.empty:
             raise MutationNotFoundError("forecast run has no canonical output rows")
         return rows
+
+    def _deliver_webhook(self, event: dict[str, Any], *, actor: str) -> dict[str, Any]:
+        if not self.webhook_url or not self.webhook_signing_secret:
+            return {"webhook_delivery_status": "disabled"}
+        destination = f"webhook:{self.webhook_name}"
+        parameters = [
+            bigquery.ScalarQueryParameter("forecast_run_id", "STRING", event["forecast_run_id"]),
+            bigquery.ScalarQueryParameter(
+                "publication_version", "INT64", event["publication_version"]
+            ),
+            bigquery.ScalarQueryParameter("destination", "STRING", destination),
+        ]
+        latest = self._dataframe(
+            f"""
+            SELECT delivery_event_id, delivery_status, delivery_attempt
+            FROM `{self.delivery_events_table}`
+            WHERE forecast_run_id = @forecast_run_id
+              AND publication_version = @publication_version
+              AND destination = @destination
+            ORDER BY occurred_at DESC, delivery_event_id DESC
+            LIMIT 1
+            """,
+            parameters,
+        )
+        if not latest.empty and str(latest.iloc[0]["delivery_status"]) in {
+            "delivered",
+            "abandoned",
+        }:
+            return {
+                "webhook_delivery_status": str(latest.iloc[0]["delivery_status"]),
+                "webhook_delivery_event_id": str(latest.iloc[0]["delivery_event_id"]),
+            }
+        prior_status = None if latest.empty else str(latest.iloc[0]["delivery_status"])
+        attempt = 1 if latest.empty else int(latest.iloc[0]["delivery_attempt"])
+        if prior_status == "failed":
+            attempt += 1
+            pending = build_delivery_event(
+                forecast_run_id=event["forecast_run_id"],
+                publication_version=event["publication_version"],
+                destination=destination,
+                delivery_status="pending",
+                delivery_attempt=attempt,
+                actor=actor,
+                idempotency_key=(
+                    f"{event['publication_event_id']}:{destination}:{attempt}:pending"
+                ),
+                prior_status="failed",
+                details={"publication_event_id": event["publication_event_id"]},
+            )
+            persist_delivery_event(
+                pending, table_prefix=self.table_prefix, project_id=self.project_id
+            )
+        elif prior_status is None:
+            pending = build_delivery_event(
+                forecast_run_id=event["forecast_run_id"],
+                publication_version=event["publication_version"],
+                destination=destination,
+                delivery_status="pending",
+                delivery_attempt=attempt,
+                actor=actor,
+                idempotency_key=(
+                    f"{event['publication_event_id']}:{destination}:{attempt}:pending"
+                ),
+                prior_status=None,
+                details={"publication_event_id": event["publication_event_id"]},
+            )
+            persist_delivery_event(
+                pending, table_prefix=self.table_prefix, project_id=self.project_id
+            )
+        try:
+            response = deliver_publication_webhook(
+                event,
+                url=self.webhook_url,
+                signing_secret=self.webhook_signing_secret,
+                transport=self.webhook_transport,
+            )
+            terminal = build_delivery_event(
+                forecast_run_id=event["forecast_run_id"],
+                publication_version=event["publication_version"],
+                destination=destination,
+                delivery_status="delivered",
+                delivery_attempt=attempt,
+                actor=actor,
+                idempotency_key=(
+                    f"{event['publication_event_id']}:{destination}:{attempt}:delivered"
+                ),
+                prior_status="pending",
+                delivery_reference=f"{self.webhook_name}:http:{response.status_code}",
+                details={"publication_event_id": event["publication_event_id"]},
+            )
+        except (WebhookDeliveryError, ValueError) as exc:
+            error_code = (
+                exc.error_code if isinstance(exc, WebhookDeliveryError) else "configuration_error"
+            )
+            terminal = build_delivery_event(
+                forecast_run_id=event["forecast_run_id"],
+                publication_version=event["publication_version"],
+                destination=destination,
+                delivery_status="failed",
+                delivery_attempt=attempt,
+                actor=actor,
+                idempotency_key=(f"{event['publication_event_id']}:{destination}:{attempt}:failed"),
+                prior_status="pending",
+                error_code=error_code,
+                error_message=str(exc),
+                details={"publication_event_id": event["publication_event_id"]},
+            )
+        persist_delivery_event(terminal, table_prefix=self.table_prefix, project_id=self.project_id)
+        return {
+            "webhook_delivery_status": terminal["delivery_status"],
+            "webhook_delivery_event_id": terminal["delivery_event_id"],
+        }
 
     def create_override(
         self,
@@ -419,6 +561,7 @@ class BigQueryForecastRepository:
             row_count=len(publications),
             actor=actor,
             idempotency_key=idempotency_key,
+            occurred_at=publications[0]["published_at"],
         )
         existing = self._dataframe(
             f"""
@@ -444,6 +587,18 @@ class BigQueryForecastRepository:
                 raise MutationConflictError(
                     "publication version conflicts with persisted immutable state"
                 )
+            event = build_publication_event(
+                event_type="forecast.published",
+                forecast_run_id=forecast_run_id,
+                forecast_contract_name=str(next(iter(contract_names))),
+                forecast_contract_hash=str(next(iter(contract_hashes))),
+                publication_version=publication_version,
+                destination=destination,
+                row_count=len(same_version),
+                actor=actor,
+                idempotency_key=idempotency_key,
+                occurred_at=same_version.iloc[0]["published_at"],
+            )
             persist_publication_event(
                 event, table_prefix=self.table_prefix, project_id=self.project_id
             )
@@ -453,6 +608,7 @@ class BigQueryForecastRepository:
                 "publication_version": publication_version,
                 "publication_event_id": event["publication_event_id"],
                 "retry": True,
+                **self._deliver_webhook(event, actor=actor),
             }
         if not existing.empty and publication_version <= int(existing["publication_version"].max()):
             raise MutationConflictError("publication_version must increase monotonically")
@@ -468,6 +624,7 @@ class BigQueryForecastRepository:
             "publication_version": publication_version,
             "publication_event_id": event["publication_event_id"],
             "retry": False,
+            **self._deliver_webhook(event, actor=actor),
         }
 
     def resolve_current(self, *, contract_name: str, destination: str) -> PublicationScope | None:

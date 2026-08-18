@@ -12,8 +12,8 @@
 The consumption layer now exposes stable current/by-run warehouse views, operations audit views,
 an explicit-run GCS batch export, version-level publication events, append-only delivery
 confirmation, and an IAM-authenticated operations API. Read-only retrieval is live accepted;
-append-only lifecycle mutations are implemented locally and disabled by default. An outbound
-webhook adapter remains next.
+append-only lifecycle mutations and signed outbound webhook delivery are implemented locally and
+disabled by default.
 
 This spec adds `docs/integration_contracts.md`, versioned table/view contracts, export commands, API concepts, and idempotent publication semantics.
 
@@ -122,6 +122,8 @@ Emit event rows and optional webhook payload:
    Run write permissions are implemented.
 5. **Complete:** add idempotency keys, publication-event table, and delivery-event table.
 6. **Complete:** stable warehouse, batch export, and read-only API examples are documented.
+7. **Complete:** add opt-in HMAC-signed outbound publication webhooks with append-only attempt
+   state and fail-independent publication semantics.
 
 ## Testing & validation
 
@@ -142,8 +144,14 @@ export behavior, and compatibility policy. Version-level publication events and 
 append-only delivery confirmation are live accepted. The private, live-accepted read-only retrieval
 API resolves one complete delivered or explicitly pinned version with deterministic pagination and
 structured errors. Override, approval, and publication endpoints use explicit idempotency keys and
-complete approval sets; production mutation activation and the outbound webhook adapter remain
-open. See the [retrieval API acceptance evidence](../acceptance/forecast_retrieval_api_2026-08-11.md).
+complete approval sets. Publication can immediately send an HMAC-signed event to one configured
+HTTPS destination while recording pending, delivered, and failed attempts independently of the
+immutable publication. Production mutation and webhook activation remain open. See the
+[retrieval API acceptance evidence](../acceptance/forecast_retrieval_api_2026-08-11.md).
+Local mutation evidence is recorded in
+[forecast lifecycle mutation API acceptance](../acceptance/forecast_lifecycle_mutation_api_2026-08-18.md).
+Local webhook evidence is recorded in
+[forecast webhook delivery acceptance](../acceptance/forecast_webhook_delivery_2026-08-18.md).
 
 ## Acceptance criteria
 
