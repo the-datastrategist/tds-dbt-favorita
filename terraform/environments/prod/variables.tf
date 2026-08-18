@@ -82,6 +82,12 @@ variable "monitoring_runner_image" {
   default     = ""
 }
 
+variable "monitoring_slack_webhook_secret_id" {
+  description = "Secret Manager secret ID containing the Slack incoming-webhook URL."
+  type        = string
+  default     = ""
+}
+
 variable "monitoring_runner_schedule" {
   description = "UTC cron schedule for monitoring evaluation."
   type        = string

@@ -156,5 +156,6 @@ notification remain required before this spec can be marked shipped.
 - [Realized calibration acceptance](../acceptance/forecast_realized_calibration_2026-08-11.md)
 - [Target and feature drift acceptance](../acceptance/forecast_data_drift_2026-08-11.md)
 - [Pipeline cost acceptance](../acceptance/forecast_pipeline_cost_2026-08-11.md)
+- [Slack activation progress](../acceptance/monitoring_slack_activation_2026-08-17.md)
 
 {% enddocs %}

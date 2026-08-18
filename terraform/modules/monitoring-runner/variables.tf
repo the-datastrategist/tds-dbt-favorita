@@ -17,6 +17,15 @@ variable "container_image" {
   }
 }
 variable "service_account_email" { type = string }
+variable "slack_webhook_secret_id" {
+  description = "Secret Manager secret ID containing the Slack incoming-webhook URL."
+  type        = string
+  default     = ""
+  validation {
+    condition     = !var.enabled || var.slack_webhook_secret_id != ""
+    error_message = "slack_webhook_secret_id is required when the monitoring runner is enabled."
+  }
+}
 variable "dbt_dataset" { type = string }
 variable "raw_dataset" { type = string }
 variable "schedule" {

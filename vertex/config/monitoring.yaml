@@ -2,6 +2,10 @@ destinations:
   operator_log:
     type: log
     minimum_severity: ticket
+  forecasting_ops_slack:
+    type: slack
+    minimum_severity: ticket
+    url_env_var: FORECAST_SLACK_WEBHOOK_URL
 
 slos:
   publication_freshness:
@@ -42,32 +46,32 @@ policies:
   - name: stale_forecast_publication
     signal: publication_freshness
     severity: page
-    destination: operator_log
+    destination: forecasting_ops_slack
   - name: prediction_coverage_low
     signal: prediction_coverage
     severity: ticket
-    destination: operator_log
+    destination: forecasting_ops_slack
   - name: forecast_features_incomplete
     signal: feature_completeness
     severity: page
-    destination: operator_log
+    destination: forecasting_ops_slack
   - name: forecast_pipeline_unhealthy
     signal: pipeline_health
     severity: page
-    destination: operator_log
+    destination: forecasting_ops_slack
   - name: forecast_delivery_unhealthy
     signal: delivery_health
     severity: page
-    destination: operator_log
+    destination: forecasting_ops_slack
   - name: forecast_calibration_unreliable
     signal: realized_calibration
     severity: ticket
-    destination: operator_log
+    destination: forecasting_ops_slack
   - name: forecast_data_drift_detected
     signal: data_drift
     severity: ticket
-    destination: operator_log
+    destination: forecasting_ops_slack
   - name: forecast_run_cost_unhealthy
     signal: pipeline_cost
     severity: ticket
-    destination: operator_log
+    destination: forecasting_ops_slack

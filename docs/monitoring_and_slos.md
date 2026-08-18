@@ -129,8 +129,9 @@ being sent to high-interruption channels.
 ## Alert routing
 
 Destinations and policies are configured without code changes. `log` destinations emit structured
-JSON to the process logger. `webhook` destinations resolve their URL from the configured environment
-variable; URLs and tokens never belong in YAML.
+JSON to the process logger. `webhook` destinations emit the normalized event body, while `slack`
+destinations produce a concise human-readable message. Both resolve their URL from the configured
+environment variable; URLs and tokens never belong in YAML.
 
 The operator path queries the configured warehouse signal marts directly:
 
@@ -158,9 +159,8 @@ python scripts/evaluate_monitoring_alerts.py \
   --dry-run
 ```
 
-For hosted routing, schedule the evaluator after the monitoring dbt selector, replace
-`operator_log` or add a webhook destination in
-`vertex/config/monitoring.yaml`, set its `url_env_var`, and omit `--dry-run`.
+The repository routes ticket/page policies to `forecasting_ops_slack`. Local non-dry-run evaluation
+requires `FORECAST_SLACK_WEBHOOK_URL`; hosted evaluation receives that variable from Secret Manager.
 
 ## Cloud-managed failure alert
 
@@ -169,7 +169,8 @@ Monitoring policy covering Vertex custom jobs, Cloud Run jobs, and Cloud Schedul
 promotes structured SLO events from the hosted evaluator into the configured channels. The
 `monitoring-runner` module creates an authenticated, hourly Cloud Scheduler → Cloud Run Job path
 that rebuilds the marts and evaluates alerts. Both are disabled by default. Enable them only after
-supplying channel IDs and an immutable production image digest:
+supplying channel IDs, an immutable production image digest, and the ID of an existing Secret
+Manager secret whose latest version contains the Slack incoming-webhook URL:
 
 ```hcl
 enable_monitoring_alerts = true
@@ -178,7 +179,20 @@ monitoring_notification_channel_ids = [
 ]
 enable_monitoring_runner = true
 monitoring_runner_image = "us-central1-docker.pkg.dev/my-project/vertex/ml-pipeline@sha256:..."
+monitoring_slack_webhook_secret_id = "forecast-slack-webhook"
 ```
+
+Create the secret container and add the webhook through stdin so it never appears in shell history:
+
+```bash
+gcloud secrets create forecast-slack-webhook \
+  --project=my-project --replication-policy=automatic
+gcloud secrets versions add forecast-slack-webhook \
+  --project=my-project --data-file=-
+```
+
+Paste the webhook URL, press Enter, then send EOF (`Ctrl-D`). Terraform grants only the monitoring
+job service account access to the secret. Do not put the URL in `.tfvars`, YAML, or GitHub variables.
 
 ## Runbooks
 
@@ -210,6 +224,5 @@ monitoring_runner_image = "us-central1-docker.pkg.dev/my-project/vertex/ml-pipel
   compare service-level events, bytes/slots, output cardinality, and historical runs before changing
   schedules or compute. `cost_data_unavailable` means collection must be wired, not that spend is zero.
 
-Repository monitoring signals are now complete. Production activation requires applying the
-opt-in runner and alert resources with real channel
-IDs, then recording a witnessed notification delivery.
+Repository monitoring signals are complete. Production activation is complete only after applying
+the opt-in runner and alert resources and recording a witnessed Slack notification and recovery.

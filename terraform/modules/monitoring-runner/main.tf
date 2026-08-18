@@ -36,6 +36,15 @@ resource "google_cloud_run_v2_job" "monitoring" {
           name  = "DBT_PROFILES_DIR"
           value = "/app/dbt/profiles"
         }
+        env {
+          name = "FORECAST_SLACK_WEBHOOK_URL"
+          value_source {
+            secret_key_ref {
+              secret  = var.slack_webhook_secret_id
+              version = "latest"
+            }
+          }
+        }
 
         resources {
           limits = {
@@ -46,6 +55,17 @@ resource "google_cloud_run_v2_job" "monitoring" {
       }
     }
   }
+
+  depends_on = [google_secret_manager_secret_iam_member.slack_webhook_accessor]
+}
+
+resource "google_secret_manager_secret_iam_member" "slack_webhook_accessor" {
+  count = var.enabled ? 1 : 0
+
+  project   = var.project_id
+  secret_id = var.slack_webhook_secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${var.service_account_email}"
 }
 
 resource "google_cloud_run_v2_job_iam_member" "scheduler_invoker" {
@@ -83,5 +103,8 @@ resource "google_cloud_scheduler_job" "monitoring" {
     }
   }
 
-  depends_on = [google_cloud_run_v2_job_iam_member.scheduler_invoker]
+  depends_on = [
+    google_cloud_run_v2_job_iam_member.scheduler_invoker,
+    google_secret_manager_secret_iam_member.slack_webhook_accessor,
+  ]
 }

@@ -19,6 +19,7 @@ monitoring_notification_channel_ids = []
 # Use an immutable digest, not a mutable tag. Enable the runner and alert policies together.
 enable_monitoring_runner   = false
 monitoring_runner_image    = "us-central1-docker.pkg.dev/my-client-dev/vertex/ml-pipeline@sha256:replace-me"
+monitoring_slack_webhook_secret_id = "forecast-slack-webhook"
 monitoring_runner_schedule = "15 * * * *"
 
 # The service remains IAM-authenticated; grant only explicit callers.

@@ -12,6 +12,7 @@ variable "apis" {
     "bigquery.googleapis.com",
     "cloudscheduler.googleapis.com",
     "run.googleapis.com",
+    "secretmanager.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
     "logging.googleapis.com",

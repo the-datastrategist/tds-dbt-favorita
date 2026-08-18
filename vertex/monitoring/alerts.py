@@ -122,15 +122,28 @@ def route_alerts(
         destination = config.destinations[event.destination]
         if not _severity_enabled(event, destination):
             continue
-        payload = json.dumps(asdict(event), sort_keys=True, default=str).encode("utf-8")
+        event_payload = json.dumps(asdict(event), sort_keys=True, default=str)
+        payload = event_payload.encode("utf-8")
         if destination.destination_type == "log":
-            LOGGER.warning("forecast_monitoring_alert %s", payload.decode("utf-8"))
+            LOGGER.warning("forecast_monitoring_alert %s", event_payload)
         else:
             url = os.getenv(destination.url_env_var or "")
             if not url:
                 raise ValueError(
                     f"destination {destination.name} requires {destination.url_env_var}"
                 )
+            if destination.destination_type == "slack":
+                payload = json.dumps(
+                    {
+                        "text": (
+                            f"Forecast alert [{event.severity.upper()}] "
+                            f"{event.policy_name}: {event.reason}\n"
+                            f"Resource: {event.resource_key}\n"
+                            f"Signal: {event.signal}\n"
+                            f"Observed: {event.observed_at}"
+                        )
+                    }
+                ).encode("utf-8")
             if webhook_sender:
                 webhook_sender(url, payload)
             else:

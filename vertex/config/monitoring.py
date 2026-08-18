@@ -11,7 +11,7 @@ import yaml
 from vertex.utils.data_utils import get_hash
 
 DEFAULT_MONITORING_PATH = Path(__file__).resolve().parent / "monitoring.yaml"
-VALID_DESTINATION_TYPES = frozenset({"log", "webhook"})
+VALID_DESTINATION_TYPES = frozenset({"log", "webhook", "slack"})
 VALID_SEVERITIES = ("info", "ticket", "page")
 VALID_SIGNALS = frozenset(
     {
@@ -116,8 +116,8 @@ def validate_monitoring_config(raw: dict[str, Any]) -> MonitoringConfig:
         if severity not in VALID_SEVERITIES:
             raise ValueError(f"destination {name} has invalid minimum_severity")
         url_env_var = payload.get("url_env_var")
-        if destination_type == "webhook" and not url_env_var:
-            raise ValueError(f"webhook destination {name} requires url_env_var")
+        if destination_type in {"webhook", "slack"} and not url_env_var:
+            raise ValueError(f"{destination_type} destination {name} requires url_env_var")
         destinations[str(name)] = NotificationDestination(
             name=str(name),
             destination_type=destination_type,

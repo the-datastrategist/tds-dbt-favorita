@@ -80,14 +80,15 @@ module "monitoring_alerts" {
 module "monitoring_runner" {
   source = "../../modules/monitoring-runner"
 
-  project_id            = var.project_id
-  region                = var.region
-  enabled               = var.enable_monitoring_runner
-  container_image       = var.monitoring_runner_image
-  service_account_email = module.iam_vertex_sa.email
-  dbt_dataset           = var.dbt_dataset
-  raw_dataset           = var.raw_dataset
-  schedule              = var.monitoring_runner_schedule
+  project_id              = var.project_id
+  region                  = var.region
+  enabled                 = var.enable_monitoring_runner
+  container_image         = var.monitoring_runner_image
+  service_account_email   = module.iam_vertex_sa.email
+  slack_webhook_secret_id = var.monitoring_slack_webhook_secret_id
+  dbt_dataset             = var.dbt_dataset
+  raw_dataset             = var.raw_dataset
+  schedule                = var.monitoring_runner_schedule
 
   depends_on = [module.gcp_apis, module.monitoring_alerts]
 }

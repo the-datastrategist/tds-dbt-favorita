@@ -20,6 +20,11 @@ terraform/
     prod/
 ```
 
+When enabling the monitoring runner, store the Slack incoming-webhook URL in Secret Manager and set
+`monitoring_slack_webhook_secret_id` to the secret ID. The module injects the latest version at
+runtime and grants `secretAccessor` only to the runner service account; secret values never enter
+Terraform state.
+
 ## New environment
 
 ```bash

@@ -33,6 +33,10 @@ def test_repository_monitoring_config_is_valid():
             {"destinations": {"hook": {"type": "webhook", "minimum_severity": "ticket"}}},
             "requires url_env_var",
         ),
+        (
+            {"destinations": {"slack": {"type": "slack", "minimum_severity": "ticket"}}},
+            "requires url_env_var",
+        ),
     ],
 )
 def test_invalid_monitoring_config_is_rejected(mutation, match):
@@ -62,7 +66,7 @@ def test_invalid_monitoring_config_is_rejected(mutation, match):
 
 
 @pytest.mark.unit
-def test_evaluate_alerts_emits_only_unhealthy_signals():
+def test_evaluate_alerts_emits_only_unhealthy_signals(monkeypatch):
     config = load_monitoring_config()
     rows = {
         "pipeline_cost": [
@@ -112,7 +116,14 @@ def test_evaluate_alerts_emits_only_unhealthy_signals():
         ("forecast_data_drift_detected", "shifted:demand"),
         ("forecast_run_cost_unhealthy", "shifted"),
     ]
-    assert route_alerts(config, events) == 7
+    sent = []
+    monkeypatch.setenv("FORECAST_SLACK_WEBHOOK_URL", "https://hooks.slack.test/services/test")
+    assert (
+        route_alerts(config, events, webhook_sender=lambda url, body: sent.append((url, body))) == 7
+    )
+    assert len(sent) == 7
+    assert all(url == "https://hooks.slack.test/services/test" for url, _ in sent)
+    assert b'"text": "Forecast alert [PAGE]' in sent[0][1]
 
 
 @pytest.mark.unit
@@ -158,6 +169,53 @@ def test_webhook_destination_uses_environment_indirection(monkeypatch):
     assert emitted == 1
     assert sent[0][0] == "https://alerts.example.test/hook"
     assert b'"policy_name": "stale"' in sent[0][1]
+
+
+@pytest.mark.unit
+def test_slack_destination_formats_human_readable_payload(monkeypatch):
+    config = validate_monitoring_config(
+        {
+            "destinations": {
+                "slack": {
+                    "type": "slack",
+                    "minimum_severity": "ticket",
+                    "url_env_var": "FORECAST_SLACK_WEBHOOK_URL",
+                }
+            },
+            "slos": {
+                "publication_freshness": {
+                    "owner": "ops",
+                    "target": 0.99,
+                    "window_days": 30,
+                    "threshold_minutes": 120,
+                }
+            },
+            "policies": [
+                {
+                    "name": "stale",
+                    "signal": "publication_freshness",
+                    "severity": "page",
+                    "destination": "slack",
+                }
+            ],
+        }
+    )
+    event = evaluate_alerts(
+        config,
+        {
+            "publication_freshness": [
+                {"forecast_contract_name": "store_daily", "freshness_status": "stale"}
+            ]
+        },
+    )[0]
+    sent = []
+    monkeypatch.setenv("FORECAST_SLACK_WEBHOOK_URL", "https://hooks.slack.test/services/test")
+
+    route_alerts(config, [event], webhook_sender=lambda url, body: sent.append((url, body)))
+
+    payload = sent[0][1].decode("utf-8")
+    assert "Forecast alert [PAGE] stale: stale" in payload
+    assert "Resource: store_daily" in payload
 
 
 @pytest.mark.unit
