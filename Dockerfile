@@ -7,7 +7,8 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
 # Build native Python dependencies outside the final image.
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y \
     --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
@@ -29,7 +30,8 @@ WORKDIR /app
 
 # XGBoost and other native wheels use the OpenMP runtime, but compilers and source-control
 # clients stay in the builder/development stages.
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y \
     --no-install-recommends \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*

@@ -1,3 +1,10 @@
 # MLflow 3.15.1 requires cryptography<50. Remove this exception as soon as
 # MLflow supports cryptography 50, which fixes this advisory.
 CVE-2026-69247
+
+# dbt-core 1.12.0 requires sqlparse<0.6. The application only parses trusted
+# repository SQL; remove these exceptions when dbt lifts its version cap.
+CVE-2026-54284
+CVE-2026-59893
+CVE-2026-59894
+CVE-2026-71491
