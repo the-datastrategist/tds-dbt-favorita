@@ -651,6 +651,42 @@ models:
         description: Champion candidate pinned once for the complete scheduled publication run.
       - name: eligibility_snapshot_id
         description: Stable fingerprint of the frozen entity, target-date, and horizon population.
+      - name: candidate_count
+        description: Frozen candidate population count.
+      - name: eligible_count
+        description: Candidates admitted to scoring.
+      - name: excluded_count
+        description: Candidates excluded with evidence.
+      - name: exception_count
+        description: Candidate decisions carrying an exception marker.
+
+  - name: stg_forecast_cost_events
+    description: Normalized append-only cost evidence used by forecast cost monitoring.
+    columns:
+      - name: cost_event_id
+        data_tests: [unique, not_null]
+      - name: service_name
+        data_tests: [not_null]
+      - name: cost_type
+        data_tests: [not_null]
+      - name: amount_usd
+        data_tests: [not_null]
+      - name: currency
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [USD]
+      - name: source_event_id
+        data_tests: [not_null]
+      - name: environment
+        description: Cost-allocation environment label; null values remain visible to the cost mart.
+      - name: stage_name
+        description: Forecast pipeline stage label; null values remain visible to the cost mart.
+      - name: bytes_processed
+        description: BigQuery bytes processed when supplied by the source adapter.
+      - name: slot_ms
+        description: BigQuery slot milliseconds when supplied by the source adapter.
 
   - name: stg_forecast_pipeline_stage_runs
     description: Ordered append-only component evidence for scheduled publication runs.
@@ -672,6 +708,20 @@ models:
           - accepted_values:
               arguments:
                 values: [completed, failed]
+
+  - name: stg_forecast_eligibility_decisions
+    description: Frozen append-only eligibility decision ledger for forecast candidates.
+    columns:
+      - name: eligibility_decision_id
+        data_tests: [unique, not_null]
+      - name: forecast_run_id
+        data_tests: [not_null]
+      - name: eligibility_snapshot_id
+        data_tests: [not_null]
+      - name: entity_key_json
+        data_tests: [not_null]
+      - name: is_eligible
+        data_tests: [not_null]
 
   - name: stg_forecast_validation_checks
     description: Immutable blocking and warning gate results evaluated before draft visibility.
@@ -1073,6 +1123,42 @@ models:
         data_tests: [not_null]
       - name: revised_by
         description: Planner or service responsible for the revision.
+        data_tests: [not_null]
+
+  - name: stg_forecast_publication_events
+    description: Version-level integration events emitted after complete publication persistence.
+    columns:
+      - name: publication_event_id
+        data_tests: [unique, not_null]
+      - name: idempotency_key
+        data_tests: [unique, not_null]
+      - name: event_type
+        data_tests: [not_null]
+      - name: forecast_run_id
+        data_tests: [not_null]
+      - name: publication_version
+        data_tests: [not_null]
+      - name: row_count
+        data_tests: [not_null]
+
+  - name: stg_forecast_delivery_events
+    description: Append-only delivery state transitions for a publication version and destination.
+    columns:
+      - name: delivery_event_id
+        data_tests: [unique, not_null]
+      - name: idempotency_key
+        data_tests: [unique, not_null]
+      - name: forecast_run_id
+        data_tests: [not_null]
+      - name: publication_version
+        data_tests: [not_null]
+      - name: delivery_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [pending, delivered, failed, abandoned]
+      - name: delivery_attempt
         data_tests: [not_null]
 
   - name: stg_vertex_model_explain

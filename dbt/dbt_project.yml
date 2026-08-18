@@ -76,6 +76,69 @@ vars:
   # assert_no_material_accuracy_drift flags it. Conservative default; tune per client.
   accuracy_drift_tolerance_pct: 0.25
 
+  # Publication freshness is opt-in by contract so draft-only or retired contracts do not page.
+  publication_monitored_contracts:
+    - favorita_store_daily_demand_h7_hierarchical_publication
+
+  # Compile-time column references fail closed on schema removal. Runtime checks cover nulls and
+  # latest-date entity loss. Add one entry per production feature relation.
+  feature_completeness_minimum_ratio: 0.99
+  feature_completeness_minimum_entity_ratio: 0.95
+  feature_completeness_monitored_models:
+    - model: int_sales_store_daily
+      date_column: date
+      entity_column: store_nbr
+      scope_column: data_split_source
+      scope_value: train
+      required_columns:
+        - date
+        - store_nbr
+        - sales_store
+        - avg_sales_store_l7d
+
+  # Reference deployment has no inventory feed, so sales remain an explicit demand proxy.
+  demand_policy: observed_sales_only
+  demand_minimum_history_days: 28
+
+  # Realized P10-P90 reliability and median-bias guardrails. A new series remains non-alerting
+  # until enough target-date actuals have landed for a meaningful comparison.
+  realized_calibration_window_days: 28
+  realized_calibration_minimum_actuals: 30
+  realized_calibration_minimum_coverage: 0.80
+  realized_calibration_maximum_absolute_bias_ratio: 0.10
+
+  # Compare the latest window with the immediately preceding window. Standardized mean difference
+  # is scale-independent; zero-variance metrics still alert when their means move.
+  drift_window_days: 28
+  drift_minimum_observations: 30
+  drift_maximum_standardized_mean_difference: 0.50
+  drift_monitored_metrics:
+    - model: int_demand_store_daily
+      date_column: date
+      metric: observed_sales_units
+      metric_type: target
+      scope_column: data_split_source
+      scope_value: train
+    - model: int_sales_store_daily
+      date_column: date
+      metric: avg_sales_store_l7d
+      metric_type: feature
+      scope_column: data_split_source
+      scope_value: train
+
+  # Normalized billing events remain non-alerting until evidence exists. Once populated, these
+  # thresholds control per-run, per-output, and historical anomaly tickets.
+  cost_maximum_run_usd: 25.0
+  cost_maximum_per_thousand_rows_usd: 2.0
+  cost_anomaly_multiplier: 2.0
+  cost_minimum_historical_runs: 3
+
+  # FVA compares every backtest candidate with this simple, reproducible benchmark.
+  # Override by engagement when a different benchmark is the operational default.
+  fva_benchmark_by_grain:
+    store-day: seasonal_naive_7d
+    company-day: seasonal_naive_7d
+
   # Reusable column groups for get_bqml_feature_columns / get_bqml_prediction_features.
   feature_sets:
     datetime:

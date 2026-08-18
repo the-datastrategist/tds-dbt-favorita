@@ -1,0 +1,10 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Documented non-secret idempotency example on the accepted main commit"
+condition = "AND"
+commits = ["4bd36d620de5d0cbe87efc1caccfff40f5ed3cd3"]
+paths = ['''docs/forecast_operations\.md''']
+regexTarget = "line"
+regexes = ['''IDEMPOTENCY_KEY=publish-2026-08-10-v1''']

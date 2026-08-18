@@ -15,7 +15,9 @@
 
 * Delivery and operations
   * [Forecast operations](forecast_operations.md)
+  * [Forecast Value Added](forecast_value_added.md)
   * [Integration contracts](integration_contracts.md)
+  * [Forecast Retrieval API](forecast_api.md)
   * [Hierarchical reconciliation](hierarchical_reconciliation.md)
   * [Delivery artifacts](delivery_artifacts.md)
   * [Client rollout](client_rollout.md)
@@ -34,6 +36,7 @@
 * Engineering specs
   * [Specs overview](specs/README.md)
   * [Demand data model](specs/demand_data_model.md)
+  * [Demand data operations](demand_data_model.md)
   * [Forecast contract and output](specs/forecast_contract_and_output.md)
   * [Point-in-time feature availability](specs/point_in_time_feature_availability.md)
   * [Forecasting methods](specs/forecasting_methods.md)
@@ -47,6 +50,10 @@
   * [Integration contracts](specs/integration_contracts.md)
   * [Monitoring and SLOs](specs/monitoring_and_slos.md)
   * [Monitoring operations](monitoring_and_slos.md)
+  * [Open-source frontend UI](specs/open_source_frontend_ui.md)
+  * [ForecastLab UI/UX design](FORECASTING_WORKBENCH_UI_DESIGN.md)
+  * [ForecastLab architecture decision](adr/0001-forecastlab-react-vite-fastapi.md)
+  * [ForecastLab public demo data](frontend/public_demo_data.md)
   * [Terraform modules](specs/terraform_modules.md)
   * [Workload Identity Federation](specs/workload_identity_federation.md)
   * [Open-source product readiness](specs/open_source_product_readiness.md)

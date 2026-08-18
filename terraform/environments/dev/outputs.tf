@@ -33,3 +33,8 @@ output "github_terraform_service_account" {
   description = "Set as the GCP_DEV_WIF_SERVICE_ACCOUNT GitHub environment variable."
   value       = try(module.github_wif[0].service_account_email, null)
 }
+
+output "forecast_api_url" {
+  description = "Authenticated Forecast Retrieval API URL when enabled."
+  value       = module.forecast_api.service_url
+}

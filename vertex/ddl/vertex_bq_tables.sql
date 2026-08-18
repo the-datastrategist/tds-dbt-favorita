@@ -447,6 +447,10 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_runs` (
   champion_candidate_id STRING,
   eligibility_snapshot_id STRING,
   row_count INT64,
+  candidate_count INT64,
+  eligible_count INT64,
+  excluded_count INT64,
+  exception_count INT64,
   error_message STRING
 )
 PARTITION BY DATE(started_at)
@@ -457,6 +461,73 @@ ADD COLUMN IF NOT EXISTS champion_candidate_id STRING;
 
 ALTER TABLE `tds-favorita.favorita.forecast_runs`
 ADD COLUMN IF NOT EXISTS eligibility_snapshot_id STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_runs` ADD COLUMN IF NOT EXISTS candidate_count INT64;
+ALTER TABLE `tds-favorita.favorita.forecast_runs` ADD COLUMN IF NOT EXISTS eligible_count INT64;
+ALTER TABLE `tds-favorita.favorita.forecast_runs` ADD COLUMN IF NOT EXISTS excluded_count INT64;
+ALTER TABLE `tds-favorita.favorita.forecast_runs` ADD COLUMN IF NOT EXISTS exception_count INT64;
+
+-- Normalized append-only cloud and pipeline cost evidence. Billing-export adapters and jobs write
+-- the same contract so monitoring remains independent of provider-specific billing schemas.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_cost_events` (
+  cost_event_id STRING NOT NULL,
+  service_name STRING NOT NULL,
+  cost_type STRING NOT NULL,
+  usage_start_at TIMESTAMP NOT NULL,
+  usage_end_at TIMESTAMP NOT NULL,
+  amount_usd NUMERIC NOT NULL,
+  currency STRING NOT NULL,
+  forecast_contract_name STRING,
+  forecast_run_id STRING,
+  model_run_id STRING,
+  stage_name STRING,
+  environment STRING,
+  usage_amount NUMERIC,
+  usage_unit STRING,
+  bytes_processed INT64,
+  slot_ms INT64,
+  source_system STRING NOT NULL,
+  source_event_id STRING NOT NULL,
+  labels_json JSON,
+  recorded_at TIMESTAMP NOT NULL
+)
+PARTITION BY DATE(usage_start_at)
+CLUSTER BY service_name, forecast_contract_name, cost_type;
+
+ALTER TABLE `tds-favorita.favorita.forecast_cost_events`
+  ADD COLUMN IF NOT EXISTS model_run_id STRING;
+ALTER TABLE `tds-favorita.favorita.forecast_cost_events`
+  ADD COLUMN IF NOT EXISTS stage_name STRING;
+ALTER TABLE `tds-favorita.favorita.forecast_cost_events`
+  ADD COLUMN IF NOT EXISTS environment STRING;
+ALTER TABLE `tds-favorita.favorita.forecast_cost_events`
+  ADD COLUMN IF NOT EXISTS usage_amount NUMERIC;
+ALTER TABLE `tds-favorita.favorita.forecast_cost_events`
+  ADD COLUMN IF NOT EXISTS usage_unit STRING;
+ALTER TABLE `tds-favorita.favorita.forecast_cost_events`
+  ADD COLUMN IF NOT EXISTS bytes_processed INT64;
+ALTER TABLE `tds-favorita.favorita.forecast_cost_events`
+  ADD COLUMN IF NOT EXISTS slot_ms INT64;
+
+-- Frozen candidate population and immutable eligibility/exclusion evidence.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_eligibility_decisions` (
+  eligibility_decision_id STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  eligibility_snapshot_id STRING NOT NULL,
+  forecast_contract_name STRING NOT NULL,
+  forecast_contract_hash STRING NOT NULL,
+  forecast_origin TIMESTAMP NOT NULL,
+  entity_key_json STRING NOT NULL,
+  target_date DATE NOT NULL,
+  horizon INT64 NOT NULL,
+  is_eligible BOOL NOT NULL,
+  ineligibility_reason STRING,
+  has_exception BOOL NOT NULL,
+  decision_evidence_json JSON,
+  decided_at TIMESTAMP NOT NULL
+)
+PARTITION BY DATE(decided_at)
+CLUSTER BY forecast_run_id, is_eligible, forecast_contract_name;
 
 -- Ordered component evidence. Stable stage_run_id values make identical retries no-ops.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_pipeline_stage_runs` (
@@ -777,3 +848,43 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_revisions` (
 )
 PARTITION BY DATE(revised_at)
 CLUSTER BY forecast_run_id, revision_type, revised_by;
+
+-- Version-level publication events for integrations and webhook adapters.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_publication_events` (
+  publication_event_id STRING NOT NULL,
+  idempotency_key STRING NOT NULL,
+  event_type STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  forecast_contract_name STRING NOT NULL,
+  forecast_contract_hash STRING NOT NULL,
+  publication_version INT64 NOT NULL,
+  destination STRING NOT NULL,
+  row_count INT64 NOT NULL,
+  occurred_at TIMESTAMP NOT NULL,
+  occurred_by STRING NOT NULL,
+  payload_json JSON NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY DATE(occurred_at)
+CLUSTER BY forecast_run_id, publication_version, destination, event_type;
+
+-- Append-only delivery transitions. Current delivery state is derived from the
+-- latest event; immutable publication rows are never updated by delivery outcomes.
+CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_delivery_events` (
+  delivery_event_id STRING NOT NULL,
+  idempotency_key STRING NOT NULL,
+  forecast_run_id STRING NOT NULL,
+  publication_version INT64 NOT NULL,
+  destination STRING NOT NULL,
+  delivery_status STRING NOT NULL,
+  delivery_attempt INT64 NOT NULL,
+  delivery_reference STRING,
+  error_code STRING,
+  error_message STRING,
+  occurred_at TIMESTAMP NOT NULL,
+  occurred_by STRING NOT NULL,
+  details_json JSON,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
+)
+PARTITION BY DATE(occurred_at)
+CLUSTER BY forecast_run_id, publication_version, destination, delivery_status;

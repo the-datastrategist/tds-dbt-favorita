@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: forecast_eligibility_summary
+    description: Daily eligible/excluded entity counts and reason distribution for run planning.
+    columns:
+      - name: eligibility_date
+        data_tests: [unique, not_null]
+      - name: demand_policy
+        data_tests: [not_null]
+      - name: candidate_entity_count
+        data_tests: [not_null]
+      - name: eligible_entity_count
+        data_tests: [not_null]
+      - name: excluded_entity_count
+        data_tests: [not_null]
+
+  - name: forecast_run_eligibility_summary
+    description: Eligibility counts and evidence status joined to every persisted forecast run.
+    columns:
+      - name: forecast_run_id
+        data_tests: [unique, not_null]
+      - name: forecast_contract_name
+        data_tests: [not_null]
+      - name: eligibility_evidence_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [complete, missing_snapshot_id, missing_eligibility_summary]

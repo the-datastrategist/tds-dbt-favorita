@@ -60,14 +60,43 @@ def build_manual_publication_records(
     occurred_at: datetime | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Approve and publish a complete run, selecting at most one override per output."""
+    timestamp = occurred_at or datetime.now(timezone.utc)
+    approvals = build_approval_records(
+        forecast_rows,
+        overrides=overrides,
+        actor=actor,
+        idempotency_key=idempotency_key,
+        reason_code=reason_code,
+        comment=comment,
+        occurred_at=timestamp,
+    )
+    publications = build_publication_records(
+        forecast_rows,
+        approvals=pd.DataFrame(approvals),
+        actor=actor,
+        destination=destination,
+        idempotency_key=idempotency_key,
+        publication_version=publication_version,
+        occurred_at=timestamp,
+    )
+    return approvals, publications
+
+
+def build_approval_records(
+    forecast_rows: pd.DataFrame,
+    *,
+    overrides: pd.DataFrame | None,
+    actor: str,
+    idempotency_key: str,
+    reason_code: str,
+    comment: str,
+    occurred_at: datetime | None = None,
+) -> list[dict[str, Any]]:
+    """Approve every output in one run, selecting at most one override per output."""
     if forecast_rows.empty:
         raise ValueError("forecast_rows cannot be empty")
-    if publication_version < 1:
-        raise ValueError("publication_version must be positive")
-    if not all((actor, destination, idempotency_key, reason_code, comment)):
-        raise ValueError(
-            "actor, destination, idempotency_key, reason_code, and comment are required"
-        )
+    if not all((actor, idempotency_key, reason_code, comment)):
+        raise ValueError("actor, idempotency_key, reason_code, and comment are required")
     override_by_output: dict[str, dict[str, Any]] = {}
     if overrides is not None and not overrides.empty:
         if overrides["forecast_output_id"].duplicated().any():
@@ -77,7 +106,6 @@ def build_manual_publication_records(
         }
     timestamp = occurred_at or datetime.now(timezone.utc)
     approvals: list[dict[str, Any]] = []
-    publications: list[dict[str, Any]] = []
     for row in forecast_rows.to_dict(orient="records"):
         selected = override_by_output.get(str(row["forecast_output_id"]))
         value = float(selected["override_value"] if selected else row["prediction_p50"])
@@ -86,14 +114,6 @@ def build_manual_publication_records(
                 "idempotency_key": idempotency_key,
                 "forecast_output_id": row["forecast_output_id"],
                 "override_id": selected["override_id"] if selected else None,
-            }
-        )
-        publication_id = get_hash(
-            {
-                "idempotency_key": idempotency_key,
-                "forecast_output_id": row["forecast_output_id"],
-                "publication_version": publication_version,
-                "destination": destination,
             }
         )
         approvals.append(
@@ -111,15 +131,56 @@ def build_manual_publication_records(
                 "decided_by": actor,
             }
         )
+    return approvals
+
+
+def build_publication_records(
+    forecast_rows: pd.DataFrame,
+    *,
+    approvals: pd.DataFrame,
+    actor: str,
+    destination: str,
+    idempotency_key: str,
+    publication_version: int,
+    occurred_at: datetime | None = None,
+) -> list[dict[str, Any]]:
+    """Publish one complete, explicit approval set without re-resolving mutable state."""
+    if forecast_rows.empty:
+        raise ValueError("forecast_rows cannot be empty")
+    if publication_version < 1:
+        raise ValueError("publication_version must be positive")
+    if not all((actor, destination, idempotency_key)):
+        raise ValueError("actor, destination, and idempotency_key are required")
+    if approvals.empty or approvals["forecast_output_id"].duplicated().any():
+        raise ValueError("publication requires one approval per forecast output")
+    approval_by_output = {
+        str(row["forecast_output_id"]): row for row in approvals.to_dict(orient="records")
+    }
+    if set(forecast_rows["forecast_output_id"].astype(str)) != set(approval_by_output):
+        raise ValueError("publication approval set must match the complete forecast run")
+    timestamp = occurred_at or datetime.now(timezone.utc)
+    publications: list[dict[str, Any]] = []
+    for row in forecast_rows.to_dict(orient="records"):
+        approval = approval_by_output[str(row["forecast_output_id"])]
+        if approval.get("decision") != "approved" or approval.get("approved_value") is None:
+            raise ValueError("publication requires approved decisions with values")
+        publication_id = get_hash(
+            {
+                "idempotency_key": idempotency_key,
+                "forecast_output_id": row["forecast_output_id"],
+                "publication_version": publication_version,
+                "destination": destination,
+            }
+        )
         publications.append(
             {
                 "publication_id": publication_id,
                 "idempotency_key": idempotency_key,
                 "forecast_output_id": row["forecast_output_id"],
                 "forecast_run_id": row["forecast_run_id"],
-                "approval_id": approval_id,
+                "approval_id": approval["approval_id"],
                 "publication_version": publication_version,
-                "published_value": value,
+                "published_value": float(approval["approved_value"]),
                 "destination": destination,
                 "delivery_status": "pending",
                 "delivery_reference": None,
@@ -127,7 +188,7 @@ def build_manual_publication_records(
                 "published_by": actor,
             }
         )
-    return approvals, publications
+    return publications
 
 
 def build_rollback_records(

@@ -11,3 +11,20 @@ caller_member = "user:you@example.com"
 enable_github_wif      = true
 github_repository      = "your-org/tds-dbt-favorita"
 terraform_state_bucket = "acme-corp-terraform-state"
+
+# Opt in only after creating notification channels outside this module.
+enable_monitoring_alerts          = false
+monitoring_notification_channel_ids = []
+
+# Use an immutable digest, not a mutable tag. Enable the runner and alert policies together.
+enable_monitoring_runner   = false
+monitoring_runner_image    = "us-central1-docker.pkg.dev/my-client-dev/vertex/ml-pipeline@sha256:replace-me"
+monitoring_slack_webhook_secret_id = "forecast-slack-webhook"
+monitoring_runner_schedule = "15 * * * *"
+
+# The service remains IAM-authenticated; grant only explicit callers.
+enable_forecast_api           = false
+enable_forecast_api_mutations = false
+forecast_api_image           = "us-central1-docker.pkg.dev/my-client-dev/vertex/ml-pipeline@sha256:replace-me"
+forecast_api_invoker_members = ["user:analyst@example.com"]
+forecast_api_max_instances   = 3

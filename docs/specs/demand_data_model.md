@@ -2,7 +2,7 @@
 
 # SPEC: Demand data model
 
-**Status:** Proposed
+**Status:** In progress
 **Roadmap reference:** [Specs overview](README.md) — P1 "Handle demand-specific data conditions"
 
 ---
@@ -69,6 +69,11 @@ has_required_history
 
 Forecast scoring should not silently omit entities; it should record excluded entities and reasons.
 
+Scheduled runs persist this population in append-only `forecast_eligibility_decisions`, keyed by
+run, entity, target date, and horizon. The eligible subset determines the run's
+`eligibility_snapshot_id`; scored rows must match that subset exactly. `forecast_runs` records
+candidate, eligible, excluded, and exception counts for reconciliation.
+
 ### 4. Censored demand policy
 
 Support policy values:
@@ -86,30 +91,49 @@ The feature availability registry should mark inventory and actual sales as obse
 
 ## Implementation plan
 
-1. Add `docs/demand_data_model.md`.
-2. Add source interface YAML examples.
-3. Add eligibility dbt model and schema tests.
-4. Add exclusion reason persistence to forecast runs/output.
-5. Add docs stating observed sales are used as demand proxy when stockout-adjusted demand is unavailable.
-6. Update forecast contract validation to include demand policy.
+1. **Complete:** add `docs/demand_data_model.md` and canonical interface definitions.
+2. **Partial:** add the reference store-day canonical adapter; client-specific optional inventory,
+   assortment, lifecycle, price, and closure adapters remain.
+3. **Complete:** add eligibility and summary dbt models with schema and fixture tests.
+4. **Complete:** eligibility snapshot IDs are pinned on forecast runs; append-only row-level
+   decisions, exclusion reasons, count gates, and monitoring reconciliation are implemented and
+   live accepted.
+5. **Complete:** document the observed-sales proxy and unknown-availability limitations.
+6. **Complete:** validate demand policy as part of the hashed forecast contract.
 
 ## Testing & validation
 
 - Unit/fixture tests for eligibility rules.
 - dbt tests for unique entity/date eligibility rows.
 - Fixture with store closure and product retirement exclusion.
-- Smoke test showing excluded entity counts in forecast run metadata.
+- Controlled exclusion test showing candidate, eligible, predicted, excluded, and exception counts
+  reconcile in forecast run metadata and pipeline health.
 
 ## Acceptance criteria
 
 - Forecast runs can report eligible, forecasted, and excluded entity counts.
+- Every excluded entity has immutable row-level evidence and a non-empty reason.
+- Missing evidence, snapshot mismatch, unexplained exclusions, and omitted eligible predictions
+  produce distinct unhealthy monitoring states.
 - Docs clearly state when stockout-adjusted unconstrained demand is not available.
 - Demand policy is explicit in the forecast contract.
+
+See [forecast eligibility evidence acceptance](../acceptance/forecast_eligibility_evidence_2026-08-11.md)
+for the local and live validation record.
+
+## Current implementation status
+
+The reference adapter explicitly models observed sales, promotion status, missing inventory,
+unknown censoring, and demand-policy semantics. Eligibility decisions, daily reason summaries,
+and immutable run-level exclusion evidence are implemented and live accepted. Remaining scope is
+client-specific live adapters for inventory, assortment, lifecycle, price, and closure sources.
 
 ## Related documents
 
 - [Forecast contract and canonical output](forecast_contract_and_output.md)
 - [Point-in-time feature availability](point_in_time_feature_availability.md)
 - [Forecasting methods](forecasting_methods.md)
+- [Demand data model operations](../demand_data_model.md)
+- [Live demand data acceptance](../acceptance/demand_data_model_2026-08-11.md)
 
 {% enddocs %}

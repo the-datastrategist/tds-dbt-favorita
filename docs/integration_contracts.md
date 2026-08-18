@@ -12,6 +12,13 @@ target date, horizon, publication version, and frozen published value.
 | `published_forecasts_by_run` | Reproducible retrieval of an explicit immutable run and version |
 | `forecast_publication_audit` | Approval, delivery, and revision lineage |
 | `forecast_overrides_audit` | Statistical values, planner adjustments, and approval decisions |
+| `forecast_publication_events_audit` | Version-level publish, revise, and rollback events |
+| `forecast_delivery_current` | Latest downstream delivery state without mutating publications |
+| `forecast_delivery_health` | Delivery failure and overdue-pending monitoring boundary |
+| `forecast_eligibility_decisions` | Immutable candidate eligibility/exclusion evidence pinned to a forecast-run snapshot |
+| `forecast_realized_calibration` | Matured interval coverage, median bias, interval width, and calibration alert state by contract/horizon |
+| `forecast_cost_events` | Append-only provider-independent USD cost evidence with run, model, stage, environment, and usage attribution |
+| `forecast_pipeline_cost` | Latest run cost, unit economics, allocation quality, and anomaly/budget alert state |
 
 `published_forecasts_current` is convenient operational state. Reproducible applications should
 pin `forecast_run_id`, `publication_version`, and `destination` against
@@ -26,19 +33,30 @@ make dbt-test ARGS="--select published_forecasts_current published_forecasts_by_
 
 ## Batch export
 
-Export one published run to Cloud Storage as Parquet or CSV. The destination must contain exactly
+Export one published run version to Cloud Storage as Parquet or CSV. The destination must contain exactly
 one BigQuery shard wildcard.
 
 ```bash
 make forecast-export \
   FORECAST_RUN_ID=<run-id> \
+  VERSION=<publication-version> \
   DESTINATION='gs://favorita-exports/forecasts/<run-id>/*.parquet' \
   FORMAT=parquet
 ```
 
-The command validates the run ID, view identifier, URI, and format; it parameterizes the run
-filter and sets `overwrite=false`. A retry therefore cannot silently replace delivered files.
+The command validates the run ID, publication version, view identifier, URI, and format; it
+parameterizes both immutable identifiers and sets `overwrite=false`. A retry therefore cannot silently replace delivered files.
 Use a new destination for an intentional re-export.
+
+## Operations API
+
+The private Cloud Run service exposes one latest delivered version or one explicit
+run/version/destination. It validates publication cardinality before returning rows and uses opaque
+keyset pagination with parameterized BigQuery filters. Optional mutation routes append overrides,
+freeze complete approval sets, and publish explicitly approved versions. See the
+[Forecast Operations API](forecast_api.md) for endpoints, activation, authentication, errors, and
+deployment. The [live retrieval acceptance evidence](acceptance/forecast_retrieval_api_2026-08-11.md)
+covers the reference read-only deployment; mutation routes currently have local contract evidence.
 
 ## Versioning policy
 
@@ -47,9 +65,10 @@ Use a new destination for an intentional re-export.
 - Consumers must not combine rows from different run/version/destination tuples.
 - Additive nullable columns are backward-compatible. Renames, removals, semantic changes, or new
   required fields require a versioned view and a documented deprecation window.
-- The warehouse and export contracts are shipped first. Retrieval and mutation APIs and
-  publication webhooks remain future adapters over the same records.
+- Publication events, lifecycle mutations, and delivery confirmation are append-only and
+  version-scoped. An outbound webhook adapter remains a future interface over the same records.
 
-See [forecast operations](forecast_operations.md) for override, approval, and rollback commands.
+See [forecast operations](forecast_operations.md) for override, approval, and rollback commands and
+[forecast delivery](forecast_delivery.md) for confirmation, failure, retry, and abandonment.
 The Make targets are operator interfaces rather than a public API; callers must have BigQuery/GCS
 IAM appropriate to the selected project and destination.

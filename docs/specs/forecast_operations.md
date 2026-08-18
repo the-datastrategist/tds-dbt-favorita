@@ -10,8 +10,10 @@
 ## Summary
 
 The platform now operates forecasts as append-only business artifacts through explicit override,
-approval, publication, revision, and rollback commands. Remaining work is the planner-facing UI,
-Forecast Value Added mart, service API, and downstream delivery confirmation.
+approval, publication, revision, and rollback commands. The API now exposes separate, append-only
+override, approval, and publication mutations; remaining work is the planner-facing UI. Forecast Value Added and downstream
+delivery confirmation are implemented through tested warehouse and append-only integration
+contracts.
 
 This spec adds `docs/forecast_operations.md`, operating cadences, lifecycle tables, workflow APIs, and runbooks for retries, partial failures, backfills, revisions, and champion rollback.
 
@@ -86,11 +88,14 @@ Override rows must never overwrite statistical forecasts. They produce an adjust
 
 FVA mart compares:
 
+- every backtest candidate vs the configured simple benchmark on an identical evaluation population
 - statistical forecast vs actual
 - planner-adjusted forecast vs actual
 - approved/published forecast vs actual
 
-Metrics should be computed by planner/team, reason code, horizon, segment, and hierarchy level where available.
+Metrics are computed by planner/team, reason code, horizon, segment, grain, and hierarchy level where
+available. A comparison is not valid unless evaluation populations match and actual coverage is
+complete; invalid comparisons expose a reason and null FVA.
 
 ### 6. End-to-end scheduled publication path
 
@@ -180,7 +185,7 @@ calibration, reconciliation, model, features, and source cutoff.
 3. Add status transition validation utilities.
 4. Split Prefect daily scoring from retrain/tune flows.
 5. Add CLI commands for approve/publish/supersede operations.
-6. Add FVA dbt mart.
+6. **Complete:** add backtest and operations FVA dbt marts.
 7. Add runbooks for retries, partial failures, backfills, revisions, and champion rollback.
 8. Add the scheduled publication flow using the stage ordering and gates defined above.
 
@@ -195,7 +200,12 @@ Explicit planner override, approve/publish, revision, and rollback commands now 
 append-only records. Approval selects audited overrides without changing the statistical
 forecast; rollback republishes a complete prior version under a new version with revision
 lineage. The [operations runbook](../forecast_operations.md) documents retry, revision, backfill,
-and delivery recovery. A planner UI, FVA mart, delivery confirmation, and service API remain open.
+and delivery recovery. Append-only delivery confirmation, retry, abandonment, and monitoring are
+live accepted. Backtest and operations FVA marts now implement configured-benchmark comparison,
+planner/published accuracy attribution, and fail-closed coverage semantics. A planner UI remains
+open; read-only retrieval is live accepted and lifecycle mutation endpoints are locally validated. See the
+[FVA acceptance evidence](../acceptance/forecast_value_added_2026-08-11.md) and
+[retrieval API acceptance evidence](../acceptance/forecast_retrieval_api_2026-08-11.md).
 
 ## Testing & validation
 
@@ -214,7 +224,8 @@ and delivery recovery. A planner UI, FVA mart, delivery confirmation, and servic
 - A forecast can be scored, overridden, approved, published, and superseded without losing the original statistical forecast.
 - Publication is idempotent by run/version ID.
 - Daily scoring can run independently from retraining and tuning.
-- FVA is queryable once actuals arrive.
+- Backtest FVA is queryable from persisted rolling-origin metrics; operations FVA becomes
+  comparable once complete target-date actuals arrive.
 - A scheduled run executes routing, forecasting, calibration, reconciliation, validation, and
   publication in the documented order.
 - Every published row is calibrated, coherent where a hierarchy is configured, versioned,

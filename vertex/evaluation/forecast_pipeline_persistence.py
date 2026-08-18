@@ -33,6 +33,12 @@ def persist_forecast_pipeline_result(
         update_matched=False,
     )
     insert_rows_idempotent(
+        result.eligibility_decisions,
+        f"{table_prefix}.forecast_eligibility_decisions",
+        id_column="eligibility_decision_id",
+        project_id=project_id,
+    )
+    insert_rows_idempotent(
         result.stage_records,
         f"{table_prefix}.forecast_pipeline_stage_runs",
         id_column="stage_run_id",
@@ -66,6 +72,9 @@ def persist_forecast_pipeline_result(
         project_id=project_id,
     )
     first = result.rows.iloc[0]
+    candidate_count = len(result.eligibility_decisions)
+    eligible_count = sum(row["is_eligible"] for row in result.eligibility_decisions)
+    exception_count = sum(row["has_exception"] for row in result.eligibility_decisions)
     merge_row_to_bigquery(
         {
             "forecast_run_id": result.forecast_run_id,
@@ -88,6 +97,10 @@ def persist_forecast_pipeline_result(
             "champion_candidate_id": pins.champion_candidate_id,
             "eligibility_snapshot_id": pins.eligibility_snapshot_id,
             "row_count": len(result.rows),
+            "candidate_count": candidate_count,
+            "eligible_count": eligible_count,
+            "excluded_count": candidate_count - eligible_count,
+            "exception_count": exception_count,
             "error_message": None,
         },
         f"{table_prefix}.forecast_runs",

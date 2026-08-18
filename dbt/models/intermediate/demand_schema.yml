@@ -1,0 +1,62 @@
+version: 2
+
+models:
+  - name: int_demand_store_daily
+    description: >
+      Canonical store-day demand interface. The reference data has no inventory feed, so observed
+      sales are explicitly used as the demand proxy and availability remains unknown.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [date, store_nbr]
+    columns:
+      - name: date
+        data_tests: [not_null]
+      - name: store_nbr
+        data_tests: [not_null]
+      - name: demand_policy
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [observed_sales_only]
+      - name: availability_status
+        data_tests: [not_null]
+
+  - name: forecast_eligibility
+    description: One explicit eligibility decision and exclusion reason per store and forecast date.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [entity_key_json, date]
+    columns:
+      - name: entity_key_json
+        data_tests: [not_null]
+      - name: date
+        data_tests: [not_null]
+      - name: is_eligible
+        data_tests: [not_null]
+      - name: demand_policy
+        data_tests: [not_null]
+
+unit_tests:
+  - name: test_forecast_eligibility_records_exclusion_reasons
+    model: forecast_eligibility
+    overrides:
+      vars:
+        demand_minimum_history_days: 2
+        demand_policy: exclude_stockout_days
+    given:
+      - input: ref('int_demand_store_daily')
+        rows:
+          - {date: '2026-01-01', store_nbr: 1, observed_sales_units: 5, unconstrained_demand_units: 5, assortment_active: true, store_open: true, product_active: true, has_inventory_data: true, is_stockout: false, promotion_planned: false, unit_price: 1, data_split_source: train}
+          - {date: '2026-01-02', store_nbr: 1, observed_sales_units: 6, unconstrained_demand_units: 6, assortment_active: true, store_open: true, product_active: true, has_inventory_data: true, is_stockout: false, promotion_planned: false, unit_price: 1, data_split_source: train}
+          - {date: '2026-01-03', store_nbr: 1, observed_sales_units: 0, unconstrained_demand_units: 0, assortment_active: true, store_open: true, product_active: true, has_inventory_data: true, is_stockout: true, promotion_planned: false, unit_price: 1, data_split_source: train}
+          - {date: '2026-01-01', store_nbr: 2, observed_sales_units: 3, unconstrained_demand_units: 3, assortment_active: true, store_open: false, product_active: true, has_inventory_data: false, is_stockout: false, promotion_planned: false, unit_price: 0, data_split_source: train}
+          - {date: '2026-01-01', store_nbr: 3, observed_sales_units: 4, unconstrained_demand_units: 4, assortment_active: true, store_open: true, product_active: false, has_inventory_data: false, is_stockout: false, promotion_planned: false, unit_price: 0, data_split_source: train}
+    expect:
+      rows:
+        - {store_nbr: 1, date: '2026-01-01', is_eligible: false, ineligibility_reason: insufficient_history, observed_history_days: 1}
+        - {store_nbr: 1, date: '2026-01-02', is_eligible: true, ineligibility_reason: null, observed_history_days: 2}
+        - {store_nbr: 1, date: '2026-01-03', is_eligible: false, ineligibility_reason: stockout, observed_history_days: 3}
+        - {store_nbr: 2, date: '2026-01-01', is_eligible: false, ineligibility_reason: store_closed, observed_history_days: 1}
+        - {store_nbr: 3, date: '2026-01-01', is_eligible: false, ineligibility_reason: product_inactive, observed_history_days: 1}

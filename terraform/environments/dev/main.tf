@@ -67,6 +67,47 @@ module "cloud_scheduler" {
   enabled    = false
 }
 
+module "monitoring_alerts" {
+  source = "../../modules/monitoring-alerts"
+
+  project_id               = var.project_id
+  enabled                  = var.enable_monitoring_alerts
+  notification_channel_ids = var.monitoring_notification_channel_ids
+
+  depends_on = [module.gcp_apis]
+}
+
+module "monitoring_runner" {
+  source = "../../modules/monitoring-runner"
+
+  project_id              = var.project_id
+  region                  = var.region
+  enabled                 = var.enable_monitoring_runner
+  container_image         = var.monitoring_runner_image
+  service_account_email   = module.iam_vertex_sa.email
+  slack_webhook_secret_id = var.monitoring_slack_webhook_secret_id
+  dbt_dataset             = var.dbt_dataset
+  raw_dataset             = var.raw_dataset
+  schedule                = var.monitoring_runner_schedule
+
+  depends_on = [module.gcp_apis, module.monitoring_alerts]
+}
+
+module "forecast_api" {
+  source = "../../modules/forecast-api"
+
+  project_id                 = var.project_id
+  region                     = var.region
+  enabled                    = var.enable_forecast_api
+  enable_lifecycle_mutations = var.enable_forecast_api_mutations
+  container_image            = var.forecast_api_image
+  dbt_dataset                = var.dbt_dataset
+  invoker_members            = var.forecast_api_invoker_members
+  max_instance_count         = var.forecast_api_max_instances
+
+  depends_on = [module.gcp_apis, module.bigquery_datasets]
+}
+
 # Opt-in because creating a WIF pool requires a real project and the state bucket must already
 # exist. Bootstrap once with a trusted human identity, then CI can run keyless plans.
 module "github_wif" {

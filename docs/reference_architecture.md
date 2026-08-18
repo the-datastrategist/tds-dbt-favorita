@@ -19,7 +19,7 @@ The architecture is intentionally GCP-specific. Portability across clouds is out
 | **Orchestration** | Prefect OSS (local) → Cloud Scheduler / Workflows (prod) | `orchestration/`, `prefect.yaml` |
 | **Experiment tracking** | MLflow, Vertex AI Experiments | `vertex/utils/experiment_tracking.py` |
 | **Metadata & predictions** | BigQuery tables | `vertex/ddl/vertex_bq_tables.sql` |
-| **Consumption** | Looker, Looker Studio, Sheets, APIs | dbt exposures + `stg_vertex_*` (BI layer blueprint) |
+| **Consumption** | BigQuery, Cloud Run, GCS, BI tools | Stable publication views, private retrieval API, batch export, and BI blueprint |
 
 ---
 
@@ -64,10 +64,16 @@ flowchart LR
   end
 
   BQMeta --> StgVertex
-  subgraph Consume["Consumption (planned / client-specific)"]
-    BI[Dashboard / planning]
-    StgVertex --> BI
-    BQML --> BI
+  subgraph Consume["Consumption"]
+    Published[Stable publication views]
+    API[Private Forecast Retrieval API]
+    Export[GCS batch export]
+    BI[Dashboard / planning client-specific]
+    StgVertex --> Published
+    BQML --> Published
+    Published --> API
+    Published --> Export
+    Published --> BI
   end
 ```
 
@@ -203,7 +209,7 @@ See [iac.md](iac.md) and `vertex/ops/README.md` for IAM roles, chargeback labels
 flowchart LR
   PR[Pull request] --> GHA[GitHub Actions]
   GHA --> Lint[black / flake8 / mypy]
-  GHA --> Test[pytest unit ≥65% cov]
+  GHA --> Test[pytest unit ≥75% cov]
   GHA --> Config[validate model_config.yaml]
   GHA --> KFP[compile KFP pipeline JSON]
   GHA --> dbt[dbt parse / compile / docs]

@@ -13,10 +13,17 @@ terraform/
     bigquery-datasets/   # raw + analytics datasets (not table schemas — see Non-goals below)
     gcs-buckets/          # raw, staging, models, mlflow
     cloud-scheduler/     # Optional HTTP jobs, disabled by default
+    monitoring-alerts/   # Log metrics + Cloud Monitoring notification policies
+    monitoring-runner/   # Scheduled Cloud Run Job that rebuilds/evaluates monitoring marts
   environments/
     dev/
     prod/
 ```
+
+When enabling the monitoring runner, store the Slack incoming-webhook URL in Secret Manager and set
+`monitoring_slack_webhook_secret_id` to the secret ID. The module injects the latest version at
+runtime and grants `secretAccessor` only to the runner service account; secret values never enter
+Terraform state.
 
 ## New environment
 

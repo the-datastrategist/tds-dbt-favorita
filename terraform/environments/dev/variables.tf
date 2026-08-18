@@ -85,3 +85,69 @@ variable "terraform_state_bucket" {
     error_message = "Set terraform_state_bucket when enable_github_wif is true."
   }
 }
+
+variable "enable_monitoring_alerts" {
+  description = "Create opt-in Cloud Monitoring policies for failed forecast jobs."
+  type        = bool
+  default     = false
+}
+
+variable "monitoring_notification_channel_ids" {
+  description = "Existing Cloud Monitoring notification channel resource IDs."
+  type        = list(string)
+  default     = []
+}
+
+variable "enable_monitoring_runner" {
+  description = "Create the scheduled Cloud Run monitoring evaluator."
+  type        = bool
+  default     = false
+}
+
+variable "monitoring_runner_image" {
+  description = "Immutable production image URI for the monitoring Cloud Run Job."
+  type        = string
+  default     = ""
+}
+
+variable "monitoring_slack_webhook_secret_id" {
+  description = "Secret Manager secret ID containing the Slack incoming-webhook URL."
+  type        = string
+  default     = ""
+}
+
+variable "monitoring_runner_schedule" {
+  description = "UTC cron schedule for monitoring evaluation."
+  type        = string
+  default     = "15 * * * *"
+}
+
+variable "enable_forecast_api" {
+  description = "Create the authenticated Forecast Operations API."
+  type        = bool
+  default     = false
+}
+
+variable "enable_forecast_api_mutations" {
+  description = "Enable lifecycle writes; use only with operator-only forecast_api_invoker_members."
+  type        = bool
+  default     = false
+}
+
+variable "forecast_api_image" {
+  description = "Immutable production image URI for the Forecast Retrieval API."
+  type        = string
+  default     = ""
+}
+
+variable "forecast_api_invoker_members" {
+  description = "IAM members allowed to invoke the Forecast Retrieval API."
+  type        = set(string)
+  default     = []
+}
+
+variable "forecast_api_max_instances" {
+  description = "Maximum Cloud Run instances for the Forecast Retrieval API."
+  type        = number
+  default     = 3
+}

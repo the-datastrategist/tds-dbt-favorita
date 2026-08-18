@@ -34,6 +34,8 @@ terraform/
     artifact-registry/  # Docker repository
     iam-vertex-sa/       # SA + custom bucket/dataset bindings
     cloud-scheduler/     # Optional HTTP jobs
+    monitoring-alerts/   # Forecast failure/SLO log metrics and notification policies
+    monitoring-runner/   # Authenticated Scheduler → Cloud Run monitoring evaluator
   environments/
     dev/
     prod/
@@ -68,6 +70,9 @@ added the `github-wif` module and authenticated CI planning:
   default in both environments) exactly as the Design section calls for — no Cloud Run trigger
   service exists yet, so there's nothing real to point it at. This isn't a deviation, just
   confirming the "leave disabled" instruction was followed rather than skipped.
+- **`monitoring-runner` is a concrete hosted target** for the monitoring use case. It creates an
+  authenticated Cloud Scheduler job and Cloud Run Job, but remains opt-in until an immutable image
+  digest and real notification channels are supplied.
 - **`bigquery-datasets`, `gcs-buckets`, `iam-vertex-sa`, `artifact-registry`, `gcp-apis` are wired
   into both `environments/dev` and `environments/prod`** with `depends_on = [module.gcp_apis]` on
   every module that needs an enabled API first — not called out explicitly in the original

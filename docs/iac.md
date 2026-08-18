@@ -17,6 +17,7 @@ Guidance for provisioning and operating this forecasting stack in a **client GCP
 | **Docker image** | `Dockerfile`, `docker-compose.yml` | Reproducible runtime |
 | **CI pipeline** | `.github/workflows/ci.yml` | Validate without live GCP |
 | **Terraform modules** | `terraform/` | Versioned, reviewable GCP provisioning (see below) |
+| **Forecast Operations API** | `terraform/modules/forecast-api` | Private Cloud Run service with read-only default and opt-in lifecycle writes |
 
 ---
 
@@ -28,6 +29,7 @@ flowchart TB
     APIs[Enabled APIs: BQ, GCS, Vertex, Artifact Registry]
     AR[Artifact Registry: tds-favorita image]
     BQ[(BigQuery datasets)]
+    ForecastAPI[Private Forecast Retrieval API]
     GCSRaw[(GCS raw)]
     GCSStage[(GCS vertex-staging)]
     GCSModels[(GCS models)]
@@ -38,6 +40,7 @@ flowchart TB
     GHA[GitHub Actions CI]
     Sched[Cloud Scheduler]
     CR[Cloud Run trigger optional]
+    Consumer[Authorized forecast consumer]
   end
 
   SA --> BQ
@@ -48,6 +51,7 @@ flowchart TB
   Sched --> CR
   CR --> VertexJobs
   GHA -.->|build push| AR
+  BQ --> ForecastAPI --> Consumer
 ```
 
 ---
@@ -62,6 +66,15 @@ Create **`sa-vertex-ml@PROJECT.iam.gserviceaccount.com`** per environment.
 | `roles/bigquery.jobUser` | Project | Run training/scoring queries |
 | `roles/bigquery.dataEditor` | Dataset `favorita`, `raw_favorita` | Write ML output tables |
 | `roles/storage.objectAdmin` | Bucket-level on staging + models | Artifacts and pipeline root |
+
+The Forecast Operations API uses a separate service account with project-level
+`roles/bigquery.jobUser` and, by default, dataset-level `roles/bigquery.dataViewer`. Enabling
+lifecycle mutations changes the dataset grant to `roles/bigquery.dataEditor`; in that mode,
+invocation must be restricted to trusted operators. Invocation is restricted by
+Cloud Run IAM to the configured `forecast_api_invoker_members`; no public principal is granted.
+The reference development deployment passed live private-service and zero-drift Terraform
+acceptance on 2026-08-11; see the
+[Forecast Retrieval API acceptance evidence](acceptance/forecast_retrieval_api_2026-08-11.md).
 
 Prefer **bucket-level** GCS IAM over project-wide storage admin.
 

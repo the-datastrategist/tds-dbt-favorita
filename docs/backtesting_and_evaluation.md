@@ -91,6 +91,16 @@ models cannot displace store-day models. Backtest runs written before these sema
 were introduced remain immutable and are excluded from the comparison marts; rerun those
 contracts to produce eligible leaderboard records.
 
+After persistence, build the FVA marts with:
+
+```bash
+make forecast-fva-build
+```
+
+`forecast_value_added_backtest` compares candidates with the configured benchmark only when run,
+origin, horizon, segment, and population counts match. See
+[Forecast Value Added](forecast_value_added.md) for query examples and interpretation.
+
 ## Metric Policy
 
 Backtest selection should use comparable keys:

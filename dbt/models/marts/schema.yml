@@ -1,6 +1,139 @@
 version: 2
 
 models:
+  - name: forecast_publication_events_audit
+    description: Version-level publish, revise, and rollback integration events.
+    columns:
+      - name: publication_event_id
+        data_tests: [unique, not_null]
+      - name: event_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [forecast.published, forecast.revised, forecast.rolled_back]
+
+  - name: forecast_delivery_current
+    description: Latest append-only delivery state for each immutable run/version/destination.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [forecast_run_id, publication_version, destination]
+    columns:
+      - name: forecast_run_id
+        data_tests: [not_null]
+      - name: delivery_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [pending, delivered, failed, abandoned]
+
+  - name: forecast_delivery_health
+    description: Latest delivery status with overdue/failure alert semantics.
+    columns:
+      - name: forecast_contract_name
+        data_tests: [not_null]
+      - name: delivery_health_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [healthy, pending, overdue, failed, abandoned]
+      - name: is_alerting
+        data_tests: [not_null]
+
+  - name: forecast_data_drift
+    description: Window-over-window standardized mean drift for configured target and feature metrics.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [source_model, metric_name]
+    columns:
+      - name: source_model
+        data_tests: [not_null]
+      - name: metric_name
+        data_tests: [not_null]
+      - name: metric_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [feature, target]
+      - name: drift_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [healthy, insufficient_observations, drifted]
+      - name: is_alerting
+        data_tests: [not_null]
+
+  - name: forecast_pipeline_cost
+    description: Latest per-contract forecast cost, allocation quality, and budget/anomaly status.
+    columns:
+      - name: cost_scope_key
+        data_tests: [unique, not_null]
+      - name: cost_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - healthy
+                  - insufficient_history
+                  - cost_data_unavailable
+                  - missing_required_labels
+                  - over_run_budget
+                  - over_unit_budget
+                  - cost_anomaly
+      - name: is_alerting
+        data_tests: [not_null]
+
+  - name: forecast_feature_completeness
+    description: Latest feature-date null and entity coverage for configured production feature relations.
+    columns:
+      - name: feature_model
+        data_tests: [unique, not_null]
+      - name: feature_completeness_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [healthy, missing_rows, missing_required_values, entity_coverage_low]
+      - name: is_alerting
+        data_tests: [not_null]
+
+  - name: forecast_publication_freshness
+    description: Latest publication age per forecast contract with configurable stale and missing detection.
+    columns:
+      - name: forecast_contract_name
+        data_tests: [unique, not_null]
+      - name: freshness_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [fresh, stale, missing]
+      - name: is_alerting
+        data_tests: [not_null]
+
+  - name: forecast_prediction_coverage
+    description: Latest run coverage against its frozen expected output cardinality.
+    columns:
+      - name: forecast_run_id
+        data_tests: [unique, not_null]
+      - name: forecast_contract_name
+        data_tests: [unique, not_null]
+      - name: coverage_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [healthy, invalid_scope, missing_predictions, below_threshold]
+      - name: is_alerting
+        data_tests: [not_null]
+
   - name: forecast_source_health
     description: Latest source ingestion outcome with mode-aware wall-clock freshness evaluation.
     columns:
@@ -33,10 +166,35 @@ models:
                   - healthy
                   - failed
                   - gates_failed
+                  - missing_eligibility_evidence
+                  - eligibility_snapshot_mismatch
+                  - unexplained_exclusions
+                  - eligibility_accounting_mismatch
+                  - eligible_prediction_mismatch
                   - missing_outputs
                   - duplicate_outputs
                   - cardinality_mismatch
                   - missing_quantiles
+
+  - name: forecast_realized_calibration
+    description: Realized P10-P90 coverage, median bias, and interval width by contract and horizon.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [forecast_contract_name, horizon]
+    columns:
+      - name: forecast_contract_name
+        data_tests: [not_null]
+      - name: horizon
+        data_tests: [not_null]
+      - name: calibration_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [healthy, insufficient_actuals, under_coverage, material_bias]
+      - name: is_alerting
+        data_tests: [not_null]
 
   - name: forecast_visible_drafts
     description: Canonical forecasts exposed only after the scheduled run crosses its atomic draft boundary.
@@ -468,6 +626,159 @@ models:
         description: WAPE recorded on the held-out test set at training time for this model_run_id.
 
 unit_tests:
+  - name: test_forecast_delivery_current_uses_latest_append_only_event
+    model: forecast_delivery_current
+    given:
+      - input: ref('published_forecasts_by_run')
+        rows:
+          - {publication_id: p1, forecast_run_id: r1, forecast_contract_name: c1, forecast_contract_hash: h1, publication_version: 1, destination: d1, published_at: '2026-08-11 00:00:00+00'}
+          - {publication_id: p2, forecast_run_id: r1, forecast_contract_name: c1, forecast_contract_hash: h1, publication_version: 1, destination: d1, published_at: '2026-08-11 00:00:00+00'}
+      - input: ref('stg_forecast_delivery_events')
+        rows:
+          - {delivery_event_id: e1, forecast_run_id: r1, publication_version: 1, destination: d1, delivery_status: failed, delivery_attempt: 1, occurred_at: '2026-08-11 00:05:00+00'}
+          - {delivery_event_id: e2, forecast_run_id: r1, publication_version: 1, destination: d1, delivery_status: delivered, delivery_attempt: 2, delivery_reference: ref1, occurred_at: '2026-08-11 00:10:00+00'}
+    expect:
+      rows:
+        - {forecast_run_id: r1, publication_version: 1, destination: d1, publication_row_count: 2, delivery_event_id: e2, delivery_status: delivered, delivery_attempt: 2, delivery_reference: ref1, status_source: delivery_event}
+
+  - name: test_forecast_delivery_health_alerts_failure_and_clears_on_delivery
+    model: forecast_delivery_health
+    overrides:
+      vars:
+        monitoring_evaluated_at: '2026-08-11 01:00:00+00'
+        delivery_maximum_pending_minutes: 30
+    given:
+      - input: ref('forecast_delivery_current')
+        rows:
+          - {forecast_run_id: failed, forecast_contract_name: c1, publication_version: 1, destination: d1, published_at: '2026-08-11 00:00:00+00', delivery_status: failed, delivery_status_at: '2026-08-11 00:10:00+00'}
+          - {forecast_run_id: delivered, forecast_contract_name: c2, publication_version: 1, destination: d1, published_at: '2026-08-11 00:00:00+00', delivery_status: delivered, delivery_status_at: '2026-08-11 00:10:00+00'}
+    expect:
+      rows:
+        - {forecast_run_id: failed, delivery_health_status: failed, is_alerting: true}
+        - {forecast_run_id: delivered, delivery_health_status: healthy, is_alerting: false}
+
+  - name: test_forecast_feature_completeness_detects_nulls_and_entity_loss
+    model: forecast_feature_completeness
+    overrides:
+      vars:
+        feature_completeness_minimum_ratio: 0.99
+        feature_completeness_minimum_entity_ratio: 0.95
+    given:
+      - input: ref('int_sales_store_daily')
+        rows:
+          - {date: '2026-08-09', store_nbr: 1, data_split_source: train, sales_store: 10, avg_sales_store_l7d: 9}
+          - {date: '2026-08-09', store_nbr: 2, data_split_source: train, sales_store: 20, avg_sales_store_l7d: 18}
+          - {date: '2026-08-10', store_nbr: 1, data_split_source: train, sales_store: null, avg_sales_store_l7d: 10}
+          - {date: '2026-08-11', store_nbr: 1, data_split_source: test, sales_store: null, avg_sales_store_l7d: null}
+    expect:
+      rows:
+        - {feature_model: int_sales_store_daily, feature_date: '2026-08-10', row_count: 1, entity_count: 1, previous_entity_count: 2, missing_required_value_count: 1, completeness_ratio: 0.75, entity_coverage_ratio: 0.5, feature_completeness_status: missing_required_values, is_alerting: true}
+
+  - name: test_forecast_data_drift_detects_shift_and_sample_readiness
+    model: forecast_data_drift
+    overrides:
+      vars:
+        drift_window_days: 2
+        drift_minimum_observations: 2
+        drift_maximum_standardized_mean_difference: 0.5
+    given:
+      - input: ref('int_demand_store_daily')
+        rows:
+          - {date: '2026-08-08', store_nbr: 1, data_split_source: train, observed_sales_units: 10}
+          - {date: '2026-08-09', store_nbr: 1, data_split_source: train, observed_sales_units: 10}
+          - {date: '2026-08-10', store_nbr: 1, data_split_source: train, observed_sales_units: 30}
+          - {date: '2026-08-11', store_nbr: 1, data_split_source: train, observed_sales_units: 30}
+      - input: ref('int_sales_store_daily')
+        rows:
+          - {date: '2026-08-08', store_nbr: 1, data_split_source: train, avg_sales_store_l7d: 5}
+          - {date: '2026-08-09', store_nbr: 1, data_split_source: train, avg_sales_store_l7d: 15}
+          - {date: '2026-08-10', store_nbr: 1, data_split_source: train, avg_sales_store_l7d: 9}
+          - {date: '2026-08-11', store_nbr: 1, data_split_source: train, avg_sales_store_l7d: 11}
+    expect:
+      rows:
+        - {source_model: int_demand_store_daily, metric_name: observed_sales_units, metric_type: target, recent_observation_count: 2, reference_observation_count: 2, drift_status: drifted, is_alerting: true}
+        - {source_model: int_sales_store_daily, metric_name: avg_sales_store_l7d, metric_type: feature, recent_observation_count: 2, reference_observation_count: 2, drift_status: healthy, is_alerting: false}
+
+  - name: test_forecast_pipeline_cost_classifies_anomaly_unit_cost_and_labels
+    model: forecast_pipeline_cost
+    overrides:
+      vars:
+        cost_maximum_run_usd: 100
+        cost_maximum_per_thousand_rows_usd: 100
+        cost_anomaly_multiplier: 2
+        cost_minimum_historical_runs: 3
+    given:
+      - input: ref('stg_forecast_runs')
+        rows:
+          - {forecast_run_id: anomaly_1, forecast_contract_name: anomaly, started_at: '2026-08-01', row_count: 1000}
+          - {forecast_run_id: anomaly_2, forecast_contract_name: anomaly, started_at: '2026-08-02', row_count: 1000}
+          - {forecast_run_id: anomaly_3, forecast_contract_name: anomaly, started_at: '2026-08-03', row_count: 1000}
+          - {forecast_run_id: anomaly_4, forecast_contract_name: anomaly, started_at: '2026-08-04', row_count: 1000}
+          - {forecast_run_id: over_unit, forecast_contract_name: over_unit, started_at: '2026-08-04', row_count: 100}
+          - {forecast_run_id: new_run, forecast_contract_name: new_contract, started_at: '2026-08-04', row_count: 1000}
+      - input: ref('stg_forecast_cost_events')
+        rows:
+          - {cost_event_id: a1, forecast_run_id: anomaly_1, forecast_contract_name: anomaly, stage_name: score, environment: dev, service_name: vertex_ai, cost_type: compute, amount_usd: 1, usage_start_at: '2026-08-01'}
+          - {cost_event_id: a2, forecast_run_id: anomaly_2, forecast_contract_name: anomaly, stage_name: score, environment: dev, service_name: vertex_ai, cost_type: compute, amount_usd: 1, usage_start_at: '2026-08-02'}
+          - {cost_event_id: a3, forecast_run_id: anomaly_3, forecast_contract_name: anomaly, stage_name: score, environment: dev, service_name: vertex_ai, cost_type: compute, amount_usd: 1, usage_start_at: '2026-08-03'}
+          - {cost_event_id: a4, forecast_run_id: anomaly_4, forecast_contract_name: anomaly, stage_name: score, environment: dev, service_name: vertex_ai, cost_type: compute, amount_usd: 4, usage_start_at: '2026-08-04'}
+          - {cost_event_id: unit, forecast_run_id: over_unit, forecast_contract_name: over_unit, stage_name: score, environment: dev, service_name: bigquery, cost_type: query, amount_usd: 20, usage_start_at: '2026-08-04'}
+          - {cost_event_id: new, forecast_run_id: new_run, forecast_contract_name: new_contract, stage_name: score, environment: dev, service_name: bigquery, cost_type: query, amount_usd: 5, usage_start_at: '2026-08-04'}
+          - {cost_event_id: missing, service_name: bigquery, cost_type: query, amount_usd: 1, usage_start_at: '2026-08-04'}
+    expect:
+      rows:
+        - {cost_scope_key: anomaly_4, forecast_contract_name: anomaly, cost_status: cost_anomaly, is_alerting: true}
+        - {cost_scope_key: over_unit, forecast_contract_name: over_unit, cost_status: over_unit_budget, is_alerting: true}
+        - {cost_scope_key: new_run, forecast_contract_name: new_contract, cost_status: insufficient_history, is_alerting: false}
+        - {cost_scope_key: 'unattributed:missing', forecast_contract_name: null, cost_status: missing_required_labels, is_alerting: true}
+
+  - name: test_forecast_pipeline_cost_is_non_alerting_without_evidence
+    model: forecast_pipeline_cost
+    given:
+      - input: ref('stg_forecast_runs')
+        rows: []
+      - input: ref('stg_forecast_cost_events')
+        rows: []
+    expect:
+      rows:
+        - {cost_scope_key: platform, cost_event_count: 0, cost_status: cost_data_unavailable, is_alerting: false}
+
+  - name: test_forecast_publication_freshness_detects_stale_and_missing_contracts
+    model: forecast_publication_freshness
+    overrides:
+      vars:
+        monitoring_evaluated_at: '2026-08-05 12:00:00+00'
+        publication_freshness_threshold_minutes: 120
+        publication_monitored_contracts: [fresh_contract, missing_contract]
+    given:
+      - input: ref('stg_forecast_runs')
+        rows:
+          - {forecast_run_id: fresh_run, forecast_contract_name: fresh_contract, forecast_origin: '2026-08-05', started_at: '2026-08-05 10:00:00+00'}
+          - {forecast_run_id: missing_run, forecast_contract_name: missing_contract, forecast_origin: '2026-08-05', started_at: '2026-08-05 10:00:00+00'}
+      - input: ref('published_forecasts_by_run')
+        rows:
+          - {publication_id: pub_1, forecast_contract_name: fresh_contract, published_at: '2026-08-05 11:00:00+00', delivery_status: delivered}
+    expect:
+      rows:
+        - {forecast_contract_name: fresh_contract, freshness_status: fresh, is_alerting: false}
+        - {forecast_contract_name: missing_contract, freshness_status: missing, is_alerting: true}
+
+  - name: test_forecast_prediction_coverage_detects_incomplete_latest_run
+    model: forecast_prediction_coverage
+    overrides:
+      vars:
+        prediction_coverage_minimum_ratio: 0.98
+    given:
+      - input: ref('stg_forecast_runs')
+        rows:
+          - {forecast_run_id: run_1, forecast_contract_name: contract_1, forecast_origin: '2026-08-05', started_at: '2026-08-05 10:00:00+00', row_count: 2}
+      - input: ref('stg_forecast_outputs')
+        rows:
+          - {forecast_run_id: run_1, forecast_output_id: output_1, horizon: 1, prediction_p50: 10}
+    expect:
+      rows:
+        - {forecast_run_id: run_1, expected_output_count: 2, predicted_output_count: 1, coverage_ratio: 0.5, coverage_status: below_threshold, is_alerting: true}
+
   - name: test_forecast_pipeline_health_accepts_validated_draft_and_rejects_failed_run
     description: >
       A scheduled publication finishes in draft after its stages and blocking gates pass. That
@@ -476,7 +787,7 @@ unit_tests:
     given:
       - input: ref('stg_forecast_runs')
         rows:
-          - {forecast_run_id: draft_run, forecast_contract_name: draft_contract, started_at: '2026-08-05 00:00:00+00', run_status: draft, row_count: 1}
+          - {forecast_run_id: draft_run, forecast_contract_name: draft_contract, started_at: '2026-08-05 00:00:00+00', run_status: draft, eligibility_snapshot_id: snapshot_1, row_count: 1, candidate_count: 2, eligible_count: 1, excluded_count: 1, exception_count: 0}
           - {forecast_run_id: failed_run, forecast_contract_name: failed_contract, started_at: '2026-08-05 00:00:00+00', run_status: failed, row_count: 0}
       - input: ref('stg_forecast_pipeline_stage_runs')
         rows:
@@ -487,10 +798,44 @@ unit_tests:
       - input: ref('stg_forecast_outputs')
         rows:
           - {forecast_run_id: draft_run, forecast_output_id: output_1, horizon: 7, prediction_p10: 1, prediction_p50: 2, prediction_p90: 3}
+      - input: ref('stg_forecast_eligibility_decisions')
+        rows:
+          - {eligibility_decision_id: eligible_1, forecast_run_id: draft_run, eligibility_snapshot_id: snapshot_1, is_eligible: true, has_exception: false}
+          - {eligibility_decision_id: excluded_1, forecast_run_id: draft_run, eligibility_snapshot_id: snapshot_1, is_eligible: false, ineligibility_reason: insufficient_history, has_exception: false}
     expect:
       rows:
         - {forecast_run_id: draft_run, run_status: draft, health_status: healthy}
         - {forecast_run_id: failed_run, run_status: failed, health_status: failed}
+
+  - name: test_forecast_realized_calibration_classifies_coverage_bias_and_sample_readiness
+    model: forecast_realized_calibration
+    overrides:
+      vars:
+        monitoring_evaluated_at: '2026-08-10 12:00:00+00'
+        realized_calibration_window_days: 28
+        realized_calibration_minimum_actuals: 2
+        realized_calibration_minimum_coverage: 0.8
+        realized_calibration_maximum_absolute_bias_ratio: 0.1
+    given:
+      - input: ref('stg_forecast_outputs')
+        rows:
+          - {forecast_output_id: h1, forecast_run_id: r1, forecast_contract_name: healthy, target_date: '2026-08-09', horizon: 7, entity_key_json: '{"store_id":1}', prediction_p10: 8, prediction_p50: 10, prediction_p90: 12}
+          - {forecast_output_id: h2, forecast_run_id: r1, forecast_contract_name: healthy, target_date: '2026-08-09', horizon: 7, entity_key_json: '{"store_id":2}', prediction_p10: 18, prediction_p50: 20, prediction_p90: 22}
+          - {forecast_output_id: u1, forecast_run_id: r2, forecast_contract_name: uncovered, target_date: '2026-08-09', horizon: 7, entity_key_json: '{"store_id":1}', prediction_p10: 1, prediction_p50: 2, prediction_p90: 3}
+          - {forecast_output_id: u2, forecast_run_id: r2, forecast_contract_name: uncovered, target_date: '2026-08-09', horizon: 7, entity_key_json: '{"store_id":2}', prediction_p10: 1, prediction_p50: 2, prediction_p90: 3}
+          - {forecast_output_id: b1, forecast_run_id: r3, forecast_contract_name: biased, target_date: '2026-08-09', horizon: 7, entity_key_json: '{"store_id":1}', prediction_p10: 0, prediction_p50: 20, prediction_p90: 30}
+          - {forecast_output_id: b2, forecast_run_id: r3, forecast_contract_name: biased, target_date: '2026-08-09', horizon: 7, entity_key_json: '{"store_id":2}', prediction_p10: 0, prediction_p50: 40, prediction_p90: 50}
+          - {forecast_output_id: i1, forecast_run_id: r4, forecast_contract_name: new_contract, target_date: '2026-08-09', horizon: 7, entity_key_json: '{"store_id":1}', prediction_p10: 8, prediction_p50: 10, prediction_p90: 12}
+      - input: ref('int_demand_store_daily')
+        rows:
+          - {date: '2026-08-09', store_nbr: 1, observed_sales_units: 10}
+          - {date: '2026-08-09', store_nbr: 2, observed_sales_units: 20}
+    expect:
+      rows:
+        - {forecast_contract_name: healthy, horizon: 7, realized_actual_count: 2, calibration_status: healthy, is_alerting: false}
+        - {forecast_contract_name: uncovered, horizon: 7, realized_actual_count: 2, calibration_status: under_coverage, is_alerting: true}
+        - {forecast_contract_name: biased, horizon: 7, realized_actual_count: 2, calibration_status: material_bias, is_alerting: true}
+        - {forecast_contract_name: new_contract, horizon: 7, realized_actual_count: 1, calibration_status: insufficient_actuals, is_alerting: false}
 
   - name: test_champion_selection_keeps_company_and_store_grains_separate
     description: >

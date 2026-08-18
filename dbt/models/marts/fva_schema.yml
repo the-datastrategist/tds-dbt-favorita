@@ -1,0 +1,86 @@
+version: 2
+
+models:
+  - name: forecast_value_added_backtest
+    description: Candidate accuracy improvement relative to the configured reproducible benchmark.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - backtest_run_id
+              - forecast_origin
+              - horizon
+              - segment_key_json
+              - candidate_name
+    columns:
+      - name: comparison_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [comparable, missing_benchmark, population_mismatch, missing_metrics]
+      - name: fva_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [value_added, value_destroyed, neutral]
+
+  - name: forecast_value_added_operations
+    description: Statistical, planner-adjusted, and published WAPE after actual demand arrives.
+    columns:
+      - name: comparison_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [comparable, awaiting_actuals, incomplete_actuals, undefined_metric]
+      - name: actual_coverage
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+
+unit_tests:
+  - name: test_backtest_fva_direction_and_population_guard
+    model: forecast_value_added_backtest
+    overrides:
+      vars:
+        fva_benchmark_by_grain: {store-day: seasonal_naive_7d}
+    given:
+      - input: ref('stg_backtest_metrics')
+        rows:
+          - {metric_id: b1, backtest_run_id: r1, backtest_contract_name: c1, backtest_contract_hash: h1, model_config_name: ml, model_family: xgboost, model_type: XGBOOST, target: demand, grain: store-day, forecast_origin: '2026-01-01', horizon: 7, segment_key_json: '{}', baseline_name: seasonal_naive_7d, eligible_count: 10, prediction_count: 10, wape: 0.2, mae: 2.0, bias: 0.0, prediction_completeness: 1.0}
+          - {metric_id: m1, backtest_run_id: r1, backtest_contract_name: c1, backtest_contract_hash: h1, model_config_name: ml, model_family: xgboost, model_type: XGBOOST, target: demand, grain: store-day, forecast_origin: '2026-01-01', horizon: 7, segment_key_json: '{}', baseline_name: ml, eligible_count: 10, prediction_count: 10, wape: 0.15, mae: 1.5, bias: 0.0, prediction_completeness: 1.0}
+          - {metric_id: x1, backtest_run_id: r1, backtest_contract_name: c1, backtest_contract_hash: h1, model_config_name: ml, model_family: xgboost, model_type: XGBOOST, target: demand, grain: store-day, forecast_origin: '2026-01-01', horizon: 7, segment_key_json: '{}', baseline_name: moving_average, eligible_count: 9, prediction_count: 9, wape: 0.25, mae: 2.5, bias: 0.0, prediction_completeness: 1.0}
+    expect:
+      rows:
+        - {candidate_name: ml, comparison_status: comparable, wape_fva_points: 0.05, wape_fva_ratio: 0.25, mae_fva: 0.5, fva_status: value_added}
+        - {candidate_name: moving_average, comparison_status: population_mismatch, wape_fva_points: null, wape_fva_ratio: null, mae_fva: null, fva_status: null}
+
+  - name: test_operations_fva_and_incomplete_actuals_guard
+    model: forecast_value_added_operations
+    given:
+      - input: ref('stg_forecast_publications')
+        rows:
+          - {publication_id: p1, forecast_output_id: o1, forecast_run_id: r1, approval_id: a1, publication_version: 1, destination: d1, published_value: 11}
+          - {publication_id: p2, forecast_output_id: o2, forecast_run_id: r1, approval_id: a2, publication_version: 1, destination: d1, published_value: 19}
+      - input: ref('stg_forecast_outputs')
+        rows:
+          - {forecast_output_id: o1, forecast_run_id: r1, forecast_contract_name: c1, forecast_contract_hash: h1, grain: store-day, horizon: 7, target_date: '2026-01-08', entity_key_json: '{"store_nbr":1}', prediction_p50: 12}
+          - {forecast_output_id: o2, forecast_run_id: r1, forecast_contract_name: c1, forecast_contract_hash: h1, grain: store-day, horizon: 7, target_date: '2026-01-08', entity_key_json: '{"store_nbr":2}', prediction_p50: 18}
+      - input: ref('stg_forecast_approvals')
+        rows:
+          - {approval_id: a1, forecast_output_id: o1, forecast_run_id: r1, override_id: v1, decided_by: planner}
+          - {approval_id: a2, forecast_output_id: o2, forecast_run_id: r1, override_id: null, decided_by: planner}
+      - input: ref('stg_forecast_overrides')
+        rows:
+          - {override_id: v1, forecast_output_id: o1, forecast_run_id: r1, override_value: 11, reason_code: promotion}
+      - input: ref('int_demand_store_daily')
+        rows:
+          - {date: '2026-01-08', store_nbr: 1, unconstrained_demand_units: 10}
+    expect:
+      rows:
+        - {reason_code: promotion, forecast_count: 1, actual_count: 1, comparison_status: comparable, planner_wape_fva_points: 0.1, total_wape_fva_points: 0.1}
+        - {reason_code: no_override, forecast_count: 1, actual_count: 0, comparison_status: awaiting_actuals, planner_wape_fva_points: null, total_wape_fva_points: null}

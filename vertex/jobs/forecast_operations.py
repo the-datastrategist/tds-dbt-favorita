@@ -8,6 +8,7 @@ import json
 from google.cloud import bigquery
 
 from vertex.utils.bigquery_utils import validate_bq_table_id
+from vertex.utils.forecast_delivery import build_publication_event, persist_publication_event
 from vertex.utils.forecast_operations import (
     build_manual_publication_records,
     build_override_record,
@@ -26,6 +27,33 @@ def _query(project_id: str, sql: str, parameters: list[bigquery.ScalarQueryParam
 
 def _table(prefix: str, name: str) -> str:
     return validate_bq_table_id(f"{prefix}.{name}")
+
+
+def _emit_publication_event(
+    args: argparse.Namespace,
+    rows,
+    *,
+    event_type: str,
+    prior_version: int | None = None,
+) -> str:
+    contract_names = set(rows["forecast_contract_name"])
+    contract_hashes = set(rows["forecast_contract_hash"])
+    if len(contract_names) != 1 or len(contract_hashes) != 1:
+        raise ValueError("publication event requires one forecast contract and hash")
+    event = build_publication_event(
+        event_type=event_type,
+        forecast_run_id=args.forecast_run_id,
+        forecast_contract_name=str(next(iter(contract_names))),
+        forecast_contract_hash=str(next(iter(contract_hashes))),
+        publication_version=args.version,
+        destination=args.destination,
+        row_count=len(rows),
+        actor=args.actor,
+        idempotency_key=args.idempotency_key,
+        prior_version=prior_version,
+    )
+    persist_publication_event(event, table_prefix=args.table_prefix, project_id=args.project_id)
+    return str(event["publication_event_id"])
 
 
 def run(args: argparse.Namespace) -> dict[str, object]:
@@ -106,10 +134,19 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         if not same_version.empty:
             if len(same_version) != len(rows):
                 raise ValueError("persisted publication retry is incomplete")
+            publication_event_id = _emit_publication_event(
+                args,
+                rows,
+                event_type=(
+                    "forecast.revised" if args.action == "revise" else "forecast.published"
+                ),
+                prior_version=args.prior_version if args.action == "revise" else None,
+            )
             return {
                 "action": args.action,
                 "publication_count": len(same_version),
                 "publication_version": args.version,
+                "publication_event_id": publication_event_id,
                 "retry": True,
             }
         if (
@@ -159,12 +196,19 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             publications=publications,
             revisions=revisions,
         )
+        publication_event_id = _emit_publication_event(
+            args,
+            rows,
+            event_type=("forecast.revised" if args.action == "revise" else "forecast.published"),
+            prior_version=args.prior_version if args.action == "revise" else None,
+        )
         return {
             "action": args.action,
             "approval_count": len(approvals),
             "publication_count": len(publications),
             "override_count": len(overrides),
             "publication_version": args.version,
+            "publication_event_id": publication_event_id,
             "revision_count": len(revisions or []),
         }
 
@@ -187,10 +231,17 @@ def run(args: argparse.Namespace) -> dict[str, object]:
     if not existing_rollback.empty:
         if len(existing_rollback) != len(rows):
             raise ValueError("persisted rollback retry is incomplete")
+        publication_event_id = _emit_publication_event(
+            args,
+            rows,
+            event_type="forecast.rolled_back",
+            prior_version=args.prior_version,
+        )
         return {
             "action": "rollback",
             "publication_count": len(existing_rollback),
             "publication_version": args.version,
+            "publication_event_id": publication_event_id,
             "retry": True,
         }
     if (
@@ -228,10 +279,17 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         publications=publications,
         revisions=revisions,
     )
+    publication_event_id = _emit_publication_event(
+        args,
+        rows,
+        event_type="forecast.rolled_back",
+        prior_version=args.prior_version,
+    )
     return {
         "action": "rollback",
         "prior_version": args.prior_version,
         "publication_version": args.version,
+        "publication_event_id": publication_event_id,
         "revision_count": len(revisions),
     }
 

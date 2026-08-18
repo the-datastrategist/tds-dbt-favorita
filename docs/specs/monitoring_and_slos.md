@@ -9,13 +9,16 @@
 
 ## Summary
 
-The repo now has accuracy monitoring, mode-aware source ingestion health, and scheduled pipeline
-health. A complete platform still needs alert delivery and end-to-end SLOs across publication
-freshness, feature completeness, data drift, calibration, and cost.
+The repo now has accuracy monitoring, mode-aware source ingestion health, scheduled pipeline
+health, publication freshness, prediction coverage, feature completeness, realized calibration,
+target and feature drift, pipeline cost, and an opt-in hosted alert evaluator. Repository signals
+are complete; production alert-channel activation remains.
 
 The source and scheduled-pipeline health slice passed live GCP acceptance on 2026-08-06. The
-accepted evidence covers static-demo freshness semantics, policy lineage, stage order, blocking
-gates, output cardinality, horizon coverage, quantiles, and forecast provenance.
+publication-freshness, prediction-coverage, feature-completeness, realized-calibration, drift, and cost
+slices passed live BigQuery acceptance on 2026-08-11. Together, the evidence covers static-demo
+freshness semantics, policy lineage, stage order, blocking gates, output cardinality, horizon
+coverage, publication age, quantiles, and forecast provenance.
 
 This spec adds `docs/monitoring_and_slos.md`, metric marts, alert policies, and configurable notification routing.
 
@@ -59,9 +62,10 @@ Add or extend dbt marts:
 | `forecast_prediction_coverage` | eligible vs predicted entities/horizons |
 | `forecast_publication_freshness` | stale or missing published forecasts |
 | `forecast_accuracy_by_horizon` | error, bias, WAPE by horizon/segment |
-| `forecast_calibration` | coverage, interval width, pinball loss |
-| `forecast_drift` | target and feature drift |
-| `forecast_pipeline_health` | success, duration, retries, cost labels |
+| `forecast_realized_calibration` | realized P10-P90 coverage, interval width, and median bias by contract/horizon |
+| `forecast_data_drift` | window-over-window target and feature drift |
+| `forecast_pipeline_health` | success, duration, and retries |
+| `forecast_pipeline_cost` | run cost, unit cost, allocation quality, and historical anomalies |
 
 Implemented source policies declare `static_demo` or `continuous`. Static snapshots do not fail
 wall-clock freshness merely because their event dates are historical. Continuous sources fail once
@@ -107,15 +111,19 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 
 1. **Complete:** add `docs/monitoring_and_slos.md` and source-mode policy.
 2. **Complete:** add source and scheduled-pipeline health marts with schema tests.
-3. Add alert policy YAML and loader.
-4. Add remaining coverage, publication freshness, calibration, drift, and cost marts.
-5. Add Terraform alert module or extend existing modules.
-6. Add Prefect/GCP notification wiring for local and hosted paths.
-7. Update ops runbooks to point from alert to remediation.
+3. **Complete:** add versioned SLO/alert policy YAML, validation, and deterministic policy hash.
+4. **Complete:** prediction coverage, publication freshness, feature completeness, realized
+   calibration, target/feature drift, and cost monitoring are implemented.
+5. **Complete:** add an opt-in Terraform log metric and Cloud Monitoring failure policy.
+6. **Partial:** direct warehouse evaluation, structured-log routing, environment-indirected
+   webhook routing, and an opt-in Cloud Scheduler → Cloud Run Job are implemented; applying the
+   hosted path with real notification channels remains.
+7. **Complete:** update operator runbooks from each implemented alert to remediation.
 
 ## Testing & validation
 
-- dbt unit tests for coverage/freshness calculations.
+- dbt unit tests for coverage, freshness, feature-completeness, and realized-calibration
+  calculations.
 - Terraform validate with alert resources disabled and enabled via fixture variables.
 - Synthetic failure rows that trigger alert queries.
 - End-to-end smoke test showing stale publication detection.
@@ -127,6 +135,15 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 - Coverage and accuracy are monitored by horizon/segment.
 - At least one alert path is configurable without code changes.
 
+## Current implementation status
+
+The implementation now satisfies the documented SLO, stale/missing publication, prediction
+coverage, feature-completeness, realized-calibration, target/feature-drift, and configurable
+alert-path criteria. Python validation, dbt tests, and disabled Terraform validation pass. The
+warehouse signal, direct-query, and structured-log paths passed live BigQuery acceptance on
+2026-08-11. An enabled Terraform plan/apply with real channel IDs and a witnessed external
+notification remain required before this spec can be marked shipped.
+
 ## Related documents
 
 - [Prediction accuracy monitoring](prediction_accuracy_monitoring.md)
@@ -135,5 +152,10 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 - [IaC and GCP operations](../iac.md)
 - [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md)
 - [Live forecast monitoring acceptance](../acceptance/forecast_monitoring_2026-08-06.md)
+- [Live monitoring and SLO acceptance](../acceptance/monitoring_slos_2026-08-11.md)
+- [Realized calibration acceptance](../acceptance/forecast_realized_calibration_2026-08-11.md)
+- [Target and feature drift acceptance](../acceptance/forecast_data_drift_2026-08-11.md)
+- [Pipeline cost acceptance](../acceptance/forecast_pipeline_cost_2026-08-11.md)
+- [Slack activation progress](../acceptance/monitoring_slack_activation_2026-08-17.md)
 
 {% enddocs %}

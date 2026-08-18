@@ -21,7 +21,7 @@ export GOOGLE_APPLICATION_CREDENTIALS_CONTAINER
 endif
 endif
 
-.PHONY: help install requirements-lock format lint test clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring selector-forecast-monitoring source-ingestion-record load-favorita-gcs load-favorita-bigquery \
+.PHONY: help install requirements-lock format lint test clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring selector-forecast-monitoring forecast-alerts-evaluate forecast-cost-record forecast-fva-build forecast-api-local forecast-api-test source-ingestion-record load-favorita-gcs load-favorita-bigquery \
 	dbt-deps dbt-debug dbt-seed dbt-run dbt-run-full-refresh dbt-run-model dbt-run-operation dbt-create-table \
 	dbt-train dbt-predict dbt-build dbt-test dbt-compile dbt-list dbt-snapshot dbt-source-freshness dbt-clean \
 	docs-serve dbt-ui dbt-docs dbt-docs-generate dbt-docs-serve \
@@ -37,6 +37,7 @@ endif
 	vertex-backfill vertex-backtest-plan vertex-backtest vertex-backtest-persist prefect-flow-vertex-backfill \
 	vertex-lifecycle-plan vertex-lifecycle-evaluate vertex-lifecycle-promote vertex-lifecycle-rollback \
 	forecast-override forecast-approve-publish forecast-revise forecast-rollback forecast-export \
+	forecast-delivery-start forecast-delivery-confirm forecast-delivery-fail forecast-delivery-retry forecast-delivery-abandon \
 	docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
 
 help: ## Show this help message
@@ -160,6 +161,21 @@ selector-accuracy-monitoring: ## Build the prediction-accuracy rolling mart + ru
 
 selector-forecast-monitoring: ## Build and test source + forecast pipeline health marts
 	docker compose run --rm ml-pipeline dbt build --project-dir dbt --target $(DBT_TARGET) --selector forecast_monitoring $(ARGS)
+
+forecast-alerts-evaluate: ## Query monitoring views and route configured alerts (DRY_RUN=true to print only)
+	$(DOCKER_RUN) python scripts/evaluate_monitoring_alerts.py $(if $(filter true,$(DRY_RUN)),--dry-run) $(ARGS)
+
+forecast-cost-record: ## Append normalized cost evidence; pass event fields through ARGS
+	$(DOCKER_RUN) python scripts/record_forecast_cost.py $(ARGS)
+
+forecast-fva-build: ## Build and test Forecast Value Added marts
+	$(DOCKER_RUN) dbt build --project-dir dbt --target $(DBT_TARGET) --select tag:fva $(ARGS)
+
+forecast-api-local: ## Run the Forecast Operations API on port 8080 (mutations disabled by default)
+	$(DOCKER_RUN) uvicorn vertex.api.app:app --host 0.0.0.0 --port 8080 $(ARGS)
+
+forecast-api-test: ## Run focused Forecast Operations API tests
+	$(DOCKER_RUN) pytest -q vertex/tests/test_forecast_api.py
 
 source-ingestion-record: ## Append ingestion evidence (set SOURCE, STATUS, WATERMARK, ROW_COUNT)
 	@test -n "$(SOURCE)" && test -n "$(STATUS)" || (echo "Set SOURCE and STATUS" && exit 1)
@@ -600,9 +616,29 @@ forecast-rollback: ## Republish a prior complete version (FORECAST_RUN_ID, PRIOR
 	@test -n "$(FORECAST_RUN_ID)$(PRIOR_VERSION)$(VERSION)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set FORECAST_RUN_ID, PRIOR_VERSION, VERSION, ACTOR, and IDEMPOTENCY_KEY" && exit 1)
 	$(DOCKER_RUN) python -m vertex.jobs.forecast_operations rollback --forecast-run-id "$(FORECAST_RUN_ID)" --prior-version "$(PRIOR_VERSION)" --version "$(VERSION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" --reason-code "$(REASON_CODE)" --comment "$(COMMENT)" $(ARGS)
 
-forecast-export: ## Export an immutable published run to GCS (FORECAST_RUN_ID, DESTINATION, FORMAT)
-	@test -n "$(FORECAST_RUN_ID)$(DESTINATION)" || (echo "Set FORECAST_RUN_ID and a GCS DESTINATION containing *" && exit 1)
-	$(DOCKER_RUN) python scripts/export_forecast.py --forecast-run-id "$(FORECAST_RUN_ID)" --destination "$(DESTINATION)" --format "$(or $(FORMAT),parquet)" $(ARGS)
+forecast-export: ## Export an immutable published version to GCS (FORECAST_RUN_ID, VERSION, DESTINATION, FORMAT)
+	@test -n "$(FORECAST_RUN_ID)$(VERSION)$(DESTINATION)" || (echo "Set FORECAST_RUN_ID, VERSION, and a GCS DESTINATION containing *" && exit 1)
+	$(DOCKER_RUN) python scripts/export_forecast.py --forecast-run-id "$(FORECAST_RUN_ID)" --publication-version "$(VERSION)" --destination "$(DESTINATION)" --format "$(or $(FORMAT),parquet)" $(ARGS)
+
+forecast-delivery-start: ## Start delivery tracking (FORECAST_RUN_ID, VERSION, DESTINATION, ACTOR, IDEMPOTENCY_KEY)
+	@test -n "$(FORECAST_RUN_ID)$(VERSION)$(DESTINATION)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set FORECAST_RUN_ID, VERSION, DESTINATION, ACTOR, and IDEMPOTENCY_KEY" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_delivery start --forecast-run-id "$(FORECAST_RUN_ID)" --version "$(VERSION)" --destination "$(DESTINATION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" $(ARGS)
+
+forecast-delivery-confirm: ## Confirm downstream delivery (also set DELIVERY_REFERENCE)
+	@test -n "$(FORECAST_RUN_ID)$(VERSION)$(DESTINATION)$(ACTOR)$(IDEMPOTENCY_KEY)$(DELIVERY_REFERENCE)" || (echo "Set delivery scope, actor, idempotency key, and DELIVERY_REFERENCE" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_delivery confirm --forecast-run-id "$(FORECAST_RUN_ID)" --version "$(VERSION)" --destination "$(DESTINATION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" --delivery-reference "$(DELIVERY_REFERENCE)" $(ARGS)
+
+forecast-delivery-fail: ## Record a retryable delivery failure (also set ERROR_MESSAGE)
+	@test -n "$(FORECAST_RUN_ID)$(VERSION)$(DESTINATION)$(ACTOR)$(IDEMPOTENCY_KEY)$(ERROR_MESSAGE)" || (echo "Set delivery scope, actor, idempotency key, and ERROR_MESSAGE" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_delivery fail --forecast-run-id "$(FORECAST_RUN_ID)" --version "$(VERSION)" --destination "$(DESTINATION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" --error-code "$(ERROR_CODE)" --error-message "$(ERROR_MESSAGE)" $(ARGS)
+
+forecast-delivery-retry: ## Start the next delivery attempt after failure
+	@test -n "$(FORECAST_RUN_ID)$(VERSION)$(DESTINATION)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set delivery scope, actor, and idempotency key" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_delivery retry --forecast-run-id "$(FORECAST_RUN_ID)" --version "$(VERSION)" --destination "$(DESTINATION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" $(ARGS)
+
+forecast-delivery-abandon: ## Abandon a pending or failed delivery with an audit event
+	@test -n "$(FORECAST_RUN_ID)$(VERSION)$(DESTINATION)$(ACTOR)$(IDEMPOTENCY_KEY)" || (echo "Set delivery scope, actor, and idempotency key" && exit 1)
+	$(DOCKER_RUN) python -m vertex.jobs.forecast_delivery abandon --forecast-run-id "$(FORECAST_RUN_ID)" --version "$(VERSION)" --destination "$(DESTINATION)" --actor "$(ACTOR)" --idempotency-key "$(IDEMPOTENCY_KEY)" $(ARGS)
 
 # --- CLEANUP COMMANDS ---
 

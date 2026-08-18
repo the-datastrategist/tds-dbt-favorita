@@ -23,3 +23,8 @@ output "bigquery_dataset_ids" {
     analytics = module.bigquery_datasets.analytics_dataset_id
   }
 }
+
+output "forecast_api_url" {
+  description = "Authenticated Forecast Retrieval API URL when enabled."
+  value       = module.forecast_api.service_url
+}

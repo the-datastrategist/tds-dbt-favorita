@@ -24,5 +24,9 @@ select
     champion_candidate_id,
     eligibility_snapshot_id,
     row_count,
+    candidate_count,
+    eligible_count,
+    excluded_count,
+    exception_count,
     error_message
 from {{ source('vertex_ml', 'forecast_runs') }}

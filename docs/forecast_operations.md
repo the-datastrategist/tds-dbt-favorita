@@ -91,5 +91,20 @@ selected source. `forecast_revisions` preserves prior and replacement publicatio
 Stable consumer views and batch export are documented in
 [integration contracts](integration_contracts.md).
 
+## Measure Forecast Value Added
+
+Build and test the FVA views after persisting backtest metrics or when new target-date actuals are
+available:
+
+```bash
+make forecast-fva-build
+```
+
+Use `forecast_value_added_backtest` to compare models and baselines with the configured benchmark.
+Use `forecast_value_added_operations` to compare statistical, planner-adjusted, and published
+values. Operational FVA remains null until every forecast in a comparison group has a matching
+actual; missing actuals are never treated as zero demand. See
+[Forecast Value Added](forecast_value_added.md) for the metric contract and examples.
+
 These commands are the supported operator boundary today. They are not a public multi-tenant API;
 the executing identity must have append access to the forecast-operation tables.

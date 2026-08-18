@@ -24,6 +24,7 @@ from environment validation through canonical forecast output in BigQuery.
 - **CI/CD**: GitHub Actions on every push and PR (Python lint/tests, `dbt parse` / `dbt compile` / `dbt docs generate`)
 - **Hosted documentation**: Docsify portal and dbt Docs deploy together to GitHub Pages on pushes to `main` / `master` (see [Hosted documentation](#hosted-documentation))
 - **dbt Docs & lineage**: Project overview ([`docs/overview.md`](docs/overview.md)), exposures for ML and operational consumers (`dbt/models/exposures.yml`)
+- **Forecast delivery**: Stable warehouse views, immutable batch export, and a private live-accepted Cloud Run retrieval API
 - **Code Quality**: Black, flake8, and mypy for code quality
 - **Open-source GCP platform guide**: Architecture diagrams, accelerators inventory, case study, benchmarks, rollout playbook, and IaC guidance ([docs/platform_guide.md](docs/platform_guide.md))
 
@@ -309,6 +310,34 @@ and does not generate a wall-clock freshness alert. Production adapters should u
 when new data is expected on a cadence. See [Forecast monitoring and source
 freshness](docs/monitoring_and_slos.md).
 
+Build the monitoring marts and evaluate their configured alert policies with:
+
+```bash
+make selector-forecast-monitoring
+make forecast-alerts-evaluate DRY_RUN=true  # inspect live alert events without routing
+make forecast-alerts-evaluate               # route through configured destinations
+```
+
+`forecast_realized_calibration` evaluates matured store-level forecasts by contract and horizon.
+It reports realized P10-P90 coverage, median bias, interval width, and actual availability. New
+contracts remain non-alerting until `realized_calibration_minimum_actuals` outcomes have landed;
+after that threshold, under-coverage or material normalized median bias routes a ticket.
+
+`forecast_data_drift` compares the latest target and feature windows with their immediately
+preceding windows. It reports scale-independent standardized mean difference per configured metric;
+new or sparse metrics remain non-alerting until both windows meet the minimum sample size.
+
+Cost adapters and jobs append provider-independent evidence with
+`make forecast-cost-record ARGS='...'`. `forecast_pipeline_cost` attributes spend to runs and contracts, checks per-run and
+per-thousand-output budgets, detects historical anomalies, and tickets missing allocation labels.
+
+Publication paging is explicitly scoped by `publication_monitored_contracts` in
+`dbt/dbt_project.yml`; add only contracts that are expected to publish continuously.
+Scheduled forecast runs also persist immutable `forecast_eligibility_decisions`. Pipeline health
+alerts when that evidence is missing or disagrees with the run snapshot, population counts, or
+persisted predictions; historical runs created before the ledger are intentionally reported as
+`missing_eligibility_evidence` until a new scheduled run completes.
+
 ### dbt commands (Docker)
 
 ```bash
@@ -593,6 +622,8 @@ The current platform is strongest as a production-style GCP demand forecasting f
 - forecast operations: append-only override, approval, publication, revision, and rollback commands
 - delivery contracts: current/by-run warehouse views, audit views, and GCS CSV/Parquet export
 - monitoring, SLOs, and integration contracts
+- ForecastLab browser workbench for forecast exploration, model comparison, operational
+  visibility, and governed planner actions
 
 See [docs/specs/README.md](docs/specs/README.md) for the spec-driven roadmap.
 

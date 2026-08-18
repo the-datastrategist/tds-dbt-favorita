@@ -136,6 +136,8 @@ def run_scheduled_forecast_pipeline_cycle(
         eligibility_snapshot_id=eligibility_snapshot_id(predictions, contract),
         code_sha=code_sha,
     )
+    frozen_eligibility = predictions[[*contract.dimensions, "date", "forecast_horizon"]].copy()
+    frozen_eligibility["is_eligible"] = True
     planned_run_id = build_forecast_run_id(
         contract,
         forecast_origin=predictions["date"].iloc[0],
@@ -147,6 +149,7 @@ def run_scheduled_forecast_pipeline_cycle(
             calibration,
             contract=contract,
             pins=pins,
+            eligibility_rows=frozen_eligibility,
             hierarchy_config=hierarchy_config,
             hierarchy_nodes=hierarchy_nodes,
             hierarchy_edges=hierarchy_edges,
