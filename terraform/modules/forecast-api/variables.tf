@@ -26,6 +26,38 @@ variable "enable_lifecycle_mutations" {
   type        = bool
   default     = false
 }
+variable "enable_publication_webhook" {
+  description = "Deliver signed publication events after successful API publication. Requires lifecycle mutations and both Secret Manager IDs."
+  type        = bool
+  default     = false
+  validation {
+    condition     = !var.enable_publication_webhook || var.enable_lifecycle_mutations
+    error_message = "enable_publication_webhook requires enable_lifecycle_mutations."
+  }
+}
+variable "publication_webhook_url_secret_id" {
+  description = "Secret Manager secret ID containing the HTTPS webhook URL."
+  type        = string
+  default     = ""
+  validation {
+    condition     = !var.enable_publication_webhook || var.publication_webhook_url_secret_id != ""
+    error_message = "publication_webhook_url_secret_id is required when webhook delivery is enabled."
+  }
+}
+variable "publication_webhook_signing_secret_id" {
+  description = "Secret Manager secret ID containing the HMAC signing secret."
+  type        = string
+  default     = ""
+  validation {
+    condition     = !var.enable_publication_webhook || var.publication_webhook_signing_secret_id != ""
+    error_message = "publication_webhook_signing_secret_id is required when webhook delivery is enabled."
+  }
+}
+variable "publication_webhook_name" {
+  description = "Non-secret destination name used in delivery audit records."
+  type        = string
+  default     = "default"
+}
 variable "invoker_members" {
   description = "IAM members allowed to invoke the authenticated Cloud Run service."
   type        = set(string)

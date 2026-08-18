@@ -205,7 +205,9 @@ live accepted. Backtest and operations FVA marts now implement configured-benchm
 planner/published accuracy attribution, and fail-closed coverage semantics. A planner UI remains
 open; read-only retrieval is live accepted and lifecycle mutation endpoints are locally validated. See the
 [FVA acceptance evidence](../acceptance/forecast_value_added_2026-08-11.md) and
-[retrieval API acceptance evidence](../acceptance/forecast_retrieval_api_2026-08-11.md).
+[retrieval API acceptance evidence](../acceptance/forecast_retrieval_api_2026-08-11.md). Local API
+mutation evidence is recorded in
+[forecast lifecycle mutation acceptance](../acceptance/forecast_lifecycle_mutation_api_2026-08-18.md).
 
 ## Testing & validation
 

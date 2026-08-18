@@ -109,7 +109,11 @@ set under its idempotency key. Publication must name that exact approval key:
 ```
 
 Publication rejects missing or incomplete approval sets and non-monotonic versions. Successful
-publication also appends a version-level `forecast.published` event.
+publication appends a version-level `forecast.published` event and, when configured, attempts a
+signed outbound webhook. The response reports `webhook_delivery_status` and
+`webhook_delivery_event_id`; a delivery failure is recorded independently and does not undo the
+publication. See [Forecast delivery events](forecast_delivery.md) for receiver verification and
+retry semantics.
 
 ## Errors
 
@@ -148,6 +152,22 @@ To activate mutations, set `enable_forecast_api_mutations = true` and replace co
 invoker membership with an operator-only group before applying. Leaving the flag false preserves
 the previously accepted read-only service and least-privilege dataset reader role.
 
+Outbound delivery is opt-in and requires mutations. Store the destination URL and signing secret
+in separate Secret Manager secrets, then configure:
+
+```hcl
+enable_publication_webhook            = true
+publication_webhook_url_secret_id     = "forecast-publication-webhook-url"
+publication_webhook_signing_secret_id = "forecast-publication-webhook-signing-secret"
+publication_webhook_name              = "planning"
+```
+
+The module grants the runtime identity access only to those two secrets. The URL must use HTTPS and
+must not contain embedded credentials. Disable the flag to stop outbound attempts without changing
+publication history.
+
 The reference development environment passed live private Cloud Run, IAM, BigQuery retrieval,
 filter, pagination, provenance, and structured-error acceptance on 2026-08-11. See
-[Forecast Retrieval API acceptance](acceptance/forecast_retrieval_api_2026-08-11.md).
+[Forecast Retrieval API acceptance](acceptance/forecast_retrieval_api_2026-08-11.md). The mutation
+routes passed [local lifecycle API acceptance](acceptance/forecast_lifecycle_mutation_api_2026-08-18.md)
+and remain disabled in production pending controlled activation.

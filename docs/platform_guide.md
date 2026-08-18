@@ -80,9 +80,9 @@ Guidance for evaluating, adopting, operating, and extending the platform:
 | IaC / GCP ops | [iac.md](iac.md) + `vertex/ops/README.md` | Runbook + Terraform modules available |
 | Demand and eligibility | [demand_data_model.md](demand_data_model.md) | Live-accepted observed-sales proxy, immutable candidate decisions, exclusion reasons, pinned snapshots, population gates, and monitoring |
 | Forecast monitoring | [monitoring_and_slos.md](monitoring_and_slos.md) | Live-accepted source, pipeline, publication-freshness, prediction-coverage, feature-completeness, realized-calibration, and target/feature-drift signals; configurable routing and opt-in Cloud Monitoring policy available |
-| Forecast operations | [forecast_operations.md](forecast_operations.md) | Override, approval, revision, and rollback commands available |
+| Forecast operations | [forecast_operations.md](forecast_operations.md) | Append-only override, approval, and publication API; revision and rollback commands available |
 | Forecast Value Added | [forecast_value_added.md](forecast_value_added.md) | Benchmark, planner-adjustment, and publication accuracy attribution |
-| Integration contracts | [integration_contracts.md](integration_contracts.md) | Stable warehouse views, GCS batch export, delivery events, and a private live-accepted retrieval API |
+| Integration contracts | [integration_contracts.md](integration_contracts.md) | Stable warehouse views, GCS batch export, delivery events, live-accepted retrieval, and locally accepted lifecycle mutations plus signed outbound webhooks |
 | Hierarchical reconciliation | [hierarchical_reconciliation.md](hierarchical_reconciliation.md) | Configuration, validation, metrics, and fail-closed runbook available |
 
 → Index: [delivery_artifacts.md](delivery_artifacts.md)

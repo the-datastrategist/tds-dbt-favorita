@@ -97,15 +97,19 @@ module "monitoring_runner" {
 module "forecast_api" {
   source = "../../modules/forecast-api"
 
-  project_id                 = var.project_id
-  region                     = var.region
-  enabled                    = var.enable_forecast_api
-  enable_lifecycle_mutations = var.enable_forecast_api_mutations
-  container_image            = var.forecast_api_image
-  dbt_dataset                = var.dbt_dataset
-  invoker_members            = var.forecast_api_invoker_members
-  min_instance_count         = var.forecast_api_min_instances
-  max_instance_count         = var.forecast_api_max_instances
+  project_id                            = var.project_id
+  region                                = var.region
+  enabled                               = var.enable_forecast_api
+  enable_lifecycle_mutations            = var.enable_forecast_api_mutations
+  enable_publication_webhook            = var.enable_forecast_publication_webhook
+  publication_webhook_url_secret_id     = var.forecast_publication_webhook_url_secret_id
+  publication_webhook_signing_secret_id = var.forecast_publication_webhook_signing_secret_id
+  publication_webhook_name              = var.forecast_publication_webhook_name
+  container_image                       = var.forecast_api_image
+  dbt_dataset                           = var.dbt_dataset
+  invoker_members                       = var.forecast_api_invoker_members
+  min_instance_count                    = var.forecast_api_min_instances
+  max_instance_count                    = var.forecast_api_max_instances
 
   depends_on = [module.gcp_apis, module.bigquery_datasets]
 }

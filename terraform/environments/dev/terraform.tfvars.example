@@ -25,6 +25,10 @@ monitoring_runner_schedule = "15 * * * *"
 # The service remains IAM-authenticated; grant only explicit callers.
 enable_forecast_api           = false
 enable_forecast_api_mutations = false
+enable_forecast_publication_webhook = false
+forecast_publication_webhook_url_secret_id = "forecast-publication-webhook-url"
+forecast_publication_webhook_signing_secret_id = "forecast-publication-webhook-signing"
+forecast_publication_webhook_name = "planning-system"
 forecast_api_image           = "us-central1-docker.pkg.dev/my-client-dev/vertex/ml-pipeline@sha256:replace-me"
 forecast_api_invoker_members = ["user:analyst@example.com"]
 forecast_api_max_instances   = 3

@@ -29,7 +29,7 @@ flowchart TB
     APIs[Enabled APIs: BQ, GCS, Vertex, Artifact Registry]
     AR[Artifact Registry: tds-favorita image]
     BQ[(BigQuery datasets)]
-    ForecastAPI[Private Forecast Retrieval API]
+    ForecastAPI[Private Forecast Operations API]
     GCSRaw[(GCS raw)]
     GCSStage[(GCS vertex-staging)]
     GCSModels[(GCS models)]
@@ -72,6 +72,9 @@ The Forecast Operations API uses a separate service account with project-level
 lifecycle mutations changes the dataset grant to `roles/bigquery.dataEditor`; in that mode,
 invocation must be restricted to trusted operators. Invocation is restricted by
 Cloud Run IAM to the configured `forecast_api_invoker_members`; no public principal is granted.
+Optional publication webhooks use two Secret Manager references for the HTTPS URL and HMAC signing
+secret. The module grants the API runtime service account `roles/secretmanager.secretAccessor` on
+only those secrets; webhook activation also requires lifecycle mutations to be enabled.
 The reference development deployment passed live private-service and zero-drift Terraform
 acceptance on 2026-08-11; see the
 [Forecast Retrieval API acceptance evidence](acceptance/forecast_retrieval_api_2026-08-11.md).
