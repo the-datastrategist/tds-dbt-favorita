@@ -25,3 +25,23 @@ test("Pages serves and refreshes experiment routes beneath the repository subpat
     page.getByRole("heading", { name: "Experiment Runs" }),
   ).toBeVisible();
 });
+
+test("Pages refreshes accuracy and operations routes without enabling actions", async ({
+  page,
+}) => {
+  await page.goto("#/accuracy?horizon=7");
+  await expect(
+    page.getByRole("heading", { name: "Error Analysis" }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Horizon")).toHaveValue("7");
+
+  await page.goto("#/operations");
+  await expect(
+    page.getByRole("heading", { name: "Publication Control" }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByText(/Actions are disabled in this deployment/),
+  ).toBeVisible();
+});

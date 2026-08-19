@@ -11,6 +11,8 @@ from fastapi.testclient import TestClient
 from vertex.api.app import create_app
 from vertex.api.repository import (
     BigQueryForecastRepository,
+    ExperimentOptions,
+    ExperimentResult,
     ForecastExplorerOptions,
     ForecastExplorerResult,
     ForecastFilters,
@@ -52,6 +54,37 @@ def _row(publication_id: str = "publication-1") -> dict:
     }
 
 
+def _experiment_run() -> dict:
+    metric = {"wape": 12.0, "bias": -1.0, "coverage": 0.81}
+    return {
+        "id": "backtest-1:model-1",
+        "label": "model-1 · 2026-08-18",
+        "modelId": "model-1",
+        "modelName": "model-1",
+        "modelFamily": "xgboost",
+        "featureVersion": "contract:hash-1",
+        "status": "completed",
+        "createdAt": "2026-08-18T00:00:00Z",
+        "completedAt": "2026-08-18T00:05:00Z",
+        "runtimeMinutes": 5.0,
+        "comparable": True,
+        "summary": metric,
+        "configuration": {
+            "backtest_contract": "contract-1",
+            "contract_hash": "hash-1",
+            "model_config": "model-1",
+            "model_type": "xgboost",
+            "target": "demand_units",
+            "grain": "store-day",
+        },
+        "horizons": [{"horizon": 7, **metric}],
+        "segments": [{"segmentId": "{}", "segmentName": "All entities", **metric}],
+        "rollingOrigins": [{"origin": "2026-08-11", **metric}],
+        "statisticalEvidence": None,
+        "forecastLink": None,
+    }
+
+
 @pytest.mark.unit
 def test_forecastlab_spa_is_served_without_shadowing_api_routes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -86,6 +119,29 @@ class FakeRepository:
             self.scope = scope
         self.failure = failure
         self.calls: list[tuple[object, ...]] = []
+
+    def experiment_options(self):
+        self.calls.append(("experiment_options",))
+        return ExperimentOptions(
+            runs=[
+                {
+                    "id": "backtest-1:model-1",
+                    "label": "model-1 · 2026-08-18",
+                    "comparable": True,
+                }
+            ],
+            models=[{"id": "model-1", "name": "model-1"}],
+            model_families=["xgboost"],
+            feature_versions=["contract:hash-1"],
+            statuses=["completed"],
+            horizons=[7],
+        )
+
+    def experiment_runs(self, **kwargs):
+        self.calls.append(("experiment_runs", kwargs))
+        requested = kwargs.get("run_ids", ())
+        missing = [run_id for run_id in requested if run_id != "backtest-1:model-1"]
+        return ExperimentResult(runs=[_experiment_run()], missing_run_ids=missing)
 
     def forecast_explorer_options(self, *, forecast_run_id=None):
         self.calls.append(("explorer_options", forecast_run_id))
@@ -198,6 +254,64 @@ class FakeRepository:
             "retry": False,
         }
 
+    def supersede_run(self, **kwargs):
+        self.calls.append(("supersede", kwargs))
+        if self.failure:
+            raise self.failure
+        return {
+            "action": "revise",
+            "publication_count": 2,
+            "publication_version": 4,
+            "prior_version": 3,
+            "publication_event_id": "event-supersede",
+            "revision_count": 2,
+            "retry": False,
+        }
+
+    def rollback_run(self, **kwargs):
+        self.calls.append(("rollback", kwargs))
+        if self.failure:
+            raise self.failure
+        return {
+            "action": "rollback",
+            "publication_count": 2,
+            "publication_version": 5,
+            "prior_version": 2,
+            "publication_event_id": "event-rollback",
+            "revision_count": 2,
+            "retry": False,
+        }
+
+    def operations_snapshot(self):
+        self.calls.append(("operations",))
+        return [
+            {
+                "runId": "run-1",
+                "origin": "2026-08-11",
+                "status": "published",
+                "modelName": "favorita_xgboost",
+                "outputCount": 2,
+                "exceptionCount": 1,
+                "overrideCount": 1,
+                "approvalCount": 2,
+                "publicationVersion": 3,
+                "deliveryStatus": "delivered",
+                "fvaStatus": "comparable",
+                "plannerWapeFvaPoints": 0.4,
+                "totalWapeFvaPoints": 0.7,
+                "updatedAt": "2026-08-11T12:00:00Z",
+                "outputs": [
+                    {
+                        "id": "output-1",
+                        "entityLabel": "store_nbr 1",
+                        "targetDate": "2026-08-18",
+                        "currentValue": 42.0,
+                        "exceptionState": "watch",
+                    }
+                ],
+            }
+        ]
+
 
 @pytest.mark.unit
 def test_current_endpoint_resolves_one_delivered_version_and_normalizes_filters():
@@ -268,6 +382,53 @@ def test_forecastlab_options_and_forecasts_expose_live_typed_contract():
     assert "/v1/forecasts/options" in openapi["paths"]
     assert "/v1/forecast-runs/{forecast_run_id}" in openapi["paths"]
     assert "ExplorerProvenance" in openapi["components"]["schemas"]
+
+
+@pytest.mark.unit
+def test_experiment_endpoints_filter_and_compare_live_backtest_evidence():
+    repository = FakeRepository()
+    client = TestClient(create_app(repository))
+
+    options = client.get("/v1/experiments/options")
+    runs = client.get(
+        "/v1/experiments",
+        params={
+            "model_id": "model-1",
+            "model_family": "xgboost",
+            "feature_version": "contract:hash-1",
+            "status": "completed",
+            "horizon": 7,
+        },
+    )
+    comparison = client.get(
+        "/v1/experiments/compare",
+        params=[("runs", "backtest-1:model-1"), ("runs", "missing:model")],
+    )
+
+    assert options.status_code == 200
+    assert options.json()["horizons"] == [7]
+    assert runs.status_code == 200
+    assert runs.json()["datasetKind"] == "live"
+    assert runs.json()["runs"][0]["summary"]["coverage"] == 0.81
+    assert repository.calls[-2] == (
+        "experiment_runs",
+        {
+            "model_id": "model-1",
+            "model_family": "xgboost",
+            "feature_version": "contract:hash-1",
+            "status": "completed",
+            "horizon": 7,
+        },
+    )
+    assert comparison.status_code == 200
+    assert comparison.json()["missingRunIds"] == ["missing:model"]
+
+    duplicate = client.get(
+        "/v1/experiments/compare",
+        params=[("runs", "backtest-1:model-1"), ("runs", "backtest-1:model-1")],
+    )
+    assert duplicate.status_code == 422
+    assert duplicate.json()["code"] == "invalid_experiment_comparison"
 
 
 @pytest.mark.unit
@@ -553,6 +714,126 @@ def test_lifecycle_mutations_are_disabled_by_default():
 
 
 @pytest.mark.unit
+def test_operations_and_capabilities_expose_role_scoped_workbench_contract():
+    repository = FakeRepository()
+    client = TestClient(
+        create_app(
+            repository,
+            mutations_enabled=True,
+            authorization_enabled=True,
+            role_members={"publisher": ["publisher@example.com"]},
+        )
+    )
+
+    anonymous = client.get("/v1/capabilities")
+    authorized = client.get(
+        "/v1/capabilities",
+        headers={"X-Goog-Authenticated-User-Email": "accounts.google.com:publisher@example.com"},
+    )
+    operations = client.get("/v1/operations")
+
+    assert anonymous.json() == {
+        "mutationsEnabled": False,
+        "actor": None,
+        "roles": ["viewer"],
+    }
+    assert authorized.json()["mutationsEnabled"] is True
+    assert authorized.json()["actor"] == "publisher@example.com"
+    assert authorized.json()["roles"] == ["approver", "planner", "publisher", "viewer"]
+    assert operations.status_code == 200
+    assert operations.json()["runs"][0]["deliveryStatus"] == "delivered"
+    assert operations.json()["runs"][0]["outputs"][0]["exceptionState"] == "watch"
+
+
+@pytest.mark.unit
+def test_iap_role_authorization_uses_authenticated_actor_and_blocks_insufficient_roles():
+    repository = FakeRepository()
+    client = TestClient(
+        create_app(
+            repository,
+            mutations_enabled=True,
+            authorization_enabled=True,
+            role_members={
+                "planner": ["planner@example.com"],
+                "publisher": ["publisher@example.com"],
+            },
+        )
+    )
+    body = {
+        "forecast_run_id": "run-1",
+        "forecast_output_id": "output-1",
+        "override_value": 44,
+        "reason_code": "local_event",
+        "comment": "Expected demand uplift",
+        "actor": "spoofed@example.com",
+        "idempotency_key": "override-iap-1",
+    }
+
+    allowed = client.post(
+        "/v1/overrides",
+        json=body,
+        headers={"X-Goog-Authenticated-User-Email": "accounts.google.com:planner@example.com"},
+    )
+    blocked = client.post(
+        "/v1/forecast-runs/run-1/publish",
+        json={
+            "approval_idempotency_key": "approval-1",
+            "publication_version": 4,
+            "idempotency_key": "publish-1",
+        },
+        headers={"X-Goog-Authenticated-User-Email": "accounts.google.com:planner@example.com"},
+    )
+
+    assert allowed.status_code == 200
+    assert repository.calls[-1][1]["actor"] == "planner@example.com"
+    assert blocked.status_code == 403
+    assert blocked.json()["code"] == "role_required"
+
+
+@pytest.mark.unit
+def test_publisher_can_supersede_and_rollback_complete_versions():
+    repository = FakeRepository()
+    client = TestClient(
+        create_app(
+            repository,
+            mutations_enabled=True,
+            authorization_enabled=True,
+            role_members={"publisher": ["publisher@example.com"]},
+        )
+    )
+    headers = {"X-Goog-Authenticated-User-Email": "accounts.google.com:publisher@example.com"}
+    base = {
+        "destination": "canonical_bigquery",
+        "reason_code": "corrected_evidence",
+        "comment": "Reviewed immutable replacement version",
+        "idempotency_key": "revision-1",
+    }
+
+    supersede = client.post(
+        "/v1/forecast-runs/run-1/supersede",
+        json={**base, "prior_version": 3, "publication_version": 4},
+        headers=headers,
+    )
+    rollback = client.post(
+        "/v1/forecast-runs/run-1/rollback",
+        json={
+            **base,
+            "idempotency_key": "rollback-1",
+            "prior_version": 2,
+            "publication_version": 5,
+        },
+        headers=headers,
+    )
+
+    assert supersede.status_code == 200
+    assert supersede.json()["revision_count"] == 2
+    assert rollback.status_code == 200
+    assert rollback.json()["prior_version"] == 2
+    assert repository.calls[-1][0] == "rollback"
+    assert repository.calls[-1][1]["actor"] == "publisher@example.com"
+
+
+@pytest.mark.unit
 def test_page_token_is_stable_and_rejects_tampering():
     token = encode_page_token(_row())
 
@@ -703,3 +984,67 @@ def test_bigquery_repository_shapes_only_delivered_forecastlab_evidence(client_c
     assert "LEFT JOIN `project.dataset.int_demand_store_daily`" in forecast_query
     assert "f.horizon = @horizon" in forecast_query
     assert "@exception_state" in forecast_query
+
+
+@pytest.mark.unit
+@patch("vertex.api.repository.bigquery.Client")
+def test_bigquery_repository_shapes_live_rolling_origin_experiments(client_class):
+    client_class.return_value = MagicMock()
+    repository = BigQueryForecastRepository(project_id="project", table_prefix="project.dataset")
+    metrics = pd.DataFrame(
+        [
+            {
+                "experiment_run_id": "backtest-1:model-1",
+                "backtest_contract_name": "contract-1",
+                "backtest_contract_hash": "hash-1234567890",
+                "model_config_name": "model-1",
+                "model_family": "xgboost",
+                "model_type": "xgboost",
+                "target": "demand_units",
+                "grain": "store-day",
+                "run_status": "completed",
+                "origin_end": date(2026, 8, 11),
+                "run_created_at": datetime(2026, 8, 18, tzinfo=timezone.utc),
+                "baseline_name": "model-1",
+                "display_model_family": "xgboost",
+                "display_model_type": "xgboost",
+                "feature_version": "contract:hash-1234567",
+                "forecast_origin": date(2026, 8, 11),
+                "horizon": 7,
+                "segment_key_json": "{}",
+                "eligible_count": 10,
+                "wape": 0.12,
+                "bias": -0.01,
+                "interval_coverage": 0.81,
+                "metric_created_at": datetime(2026, 8, 18, 0, 5, tzinfo=timezone.utc),
+            }
+        ]
+    )
+    repository._dataframe = MagicMock(return_value=metrics)
+
+    result = repository.experiment_runs(
+        model_id="model-1",
+        model_family="xgboost",
+        feature_version="contract:hash-1234567",
+        status="completed",
+        horizon=7,
+        run_ids=("backtest-1:model-1", "missing:model"),
+    )
+
+    assert result.runs[0]["summary"]["wape"] == pytest.approx(12.0)
+    assert result.runs[0]["summary"]["bias"] == pytest.approx(-1.0)
+    assert result.runs[0]["summary"]["coverage"] == pytest.approx(0.81)
+    assert result.runs[0]["runtimeMinutes"] == 5.0
+    assert result.missing_run_ids == ["missing:model"]
+    query = repository._dataframe.call_args.args[0]
+    assert "`project.dataset.backtest_runs`" in query
+    assert "`project.dataset.backtest_metrics`" in query
+    parameters = repository._dataframe.call_args.args[1]
+    assert {parameter.name for parameter in parameters} == {
+        "model_id",
+        "model_family",
+        "feature_version",
+        "status",
+        "horizon",
+        "run_ids",
+    }

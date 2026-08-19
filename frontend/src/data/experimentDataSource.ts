@@ -1,6 +1,9 @@
 import fixtureJson from "../fixtures/forecastlab_experiments_demo_v1.json";
 import {
+  experimentComparisonResultSchema,
   experimentFixtureSchema,
+  experimentListResultSchema,
+  experimentOptionsSchema,
   type ExperimentComparisonResult,
   type ExperimentFilters,
   type ExperimentListResult,
@@ -8,9 +11,15 @@ import {
   type ExperimentRun,
 } from "../types/experiments";
 
+export interface ExperimentDataSource {
+  getOptions(): Promise<ExperimentOptions>;
+  list(filters: ExperimentFilters): Promise<ExperimentListResult>;
+  compare(runIds: string[]): Promise<ExperimentComparisonResult>;
+}
+
 const fixture = experimentFixtureSchema.parse(fixtureJson);
 
-export class ExperimentFixtureDataSource {
+export class ExperimentFixtureDataSource implements ExperimentDataSource {
   async getOptions(): Promise<ExperimentOptions> {
     const unique = <T>(values: T[]) => [...new Set(values)];
     return {
@@ -69,4 +78,49 @@ export class ExperimentFixtureDataSource {
   }
 }
 
-export const experimentDataSource = new ExperimentFixtureDataSource();
+export class ExperimentApiDataSource implements ExperimentDataSource {
+  constructor(private readonly baseUrl: string) {}
+
+  private async request(path: string) {
+    const response = await fetch(`${this.baseUrl}${path}`);
+    if (!response.ok) {
+      const requestId = response.headers.get("x-request-id");
+      throw new Error(
+        `Experiment request failed (${response.status})${requestId ? ` · request ${requestId}` : ""}`,
+      );
+    }
+    return response.json();
+  }
+
+  async getOptions(): Promise<ExperimentOptions> {
+    return experimentOptionsSchema.parse(
+      await this.request("/v1/experiments/options"),
+    );
+  }
+
+  async list(filters: ExperimentFilters): Promise<ExperimentListResult> {
+    const query = new URLSearchParams();
+    if (filters.modelId) query.set("model_id", filters.modelId);
+    if (filters.modelFamily) query.set("model_family", filters.modelFamily);
+    if (filters.featureVersion)
+      query.set("feature_version", filters.featureVersion);
+    if (filters.status !== "all") query.set("status", filters.status);
+    if (filters.horizon !== null) query.set("horizon", String(filters.horizon));
+    return experimentListResultSchema.parse(
+      await this.request(`/v1/experiments?${query}`),
+    );
+  }
+
+  async compare(runIds: string[]): Promise<ExperimentComparisonResult> {
+    const query = new URLSearchParams();
+    runIds.forEach((runId) => query.append("runs", runId));
+    return experimentComparisonResultSchema.parse(
+      await this.request(`/v1/experiments/compare?${query}`),
+    );
+  }
+}
+
+export const createExperimentDataSource = (): ExperimentDataSource =>
+  import.meta.env.VITE_DATA_MODE === "api"
+    ? new ExperimentApiDataSource(import.meta.env.VITE_API_BASE_URL ?? "")
+    : new ExperimentFixtureDataSource();

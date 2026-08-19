@@ -194,7 +194,9 @@ export const ExperimentComparisonPage = () => {
               </div>
               <span className="environment-label">
                 <FlaskConical size={13} aria-hidden="true" />{" "}
-                {result?.fixtureVersion}
+                {result?.datasetKind === "live"
+                  ? "Live warehouse evidence"
+                  : result?.fixtureVersion}
               </span>
             </div>
             <div className="table-scroll">

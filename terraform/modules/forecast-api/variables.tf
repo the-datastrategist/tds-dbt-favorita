@@ -26,6 +26,22 @@ variable "enable_lifecycle_mutations" {
   type        = bool
   default     = false
 }
+variable "lifecycle_role_members" {
+  description = "IAP-authenticated email addresses authorized for planner, approver, publisher, or operator roles. Higher lifecycle roles inherit lower action permissions."
+  type        = map(set(string))
+  default     = {}
+  validation {
+    condition = alltrue([
+      for role in keys(var.lifecycle_role_members) :
+      contains(["planner", "approver", "publisher", "operator"], role)
+    ])
+    error_message = "lifecycle_role_members keys must be planner, approver, publisher, or operator."
+  }
+  validation {
+    condition     = var.enable_iap || length(var.lifecycle_role_members) == 0
+    error_message = "lifecycle_role_members requires enable_iap = true."
+  }
+}
 variable "enable_publication_webhook" {
   description = "Deliver signed publication events after successful API publication. Requires lifecycle mutations and both Secret Manager IDs."
   type        = bool

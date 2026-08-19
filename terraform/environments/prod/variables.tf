@@ -154,6 +154,12 @@ variable "forecastlab_iap_access_members" {
   default     = []
 }
 
+variable "forecastlab_lifecycle_role_members" {
+  description = "IAP-authenticated users assigned ForecastLab lifecycle roles."
+  type        = map(set(string))
+  default     = {}
+}
+
 variable "forecast_api_min_instances" {
   description = "Minimum warm Cloud Run instances for the Forecast Retrieval API."
   type        = number

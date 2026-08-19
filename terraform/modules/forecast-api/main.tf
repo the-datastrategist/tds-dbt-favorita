@@ -76,6 +76,16 @@ resource "google_cloud_run_v2_service" "api" {
         value = tostring(var.enable_lifecycle_mutations)
       }
       env {
+        name  = "FORECAST_API_AUTHORIZATION_ENABLED"
+        value = tostring(var.enable_iap)
+      }
+      env {
+        name = "FORECAST_API_ROLE_MEMBERS_JSON"
+        value = jsonencode({
+          for role, members in var.lifecycle_role_members : role => sort(tolist(members))
+        })
+      }
+      env {
         name  = "FORECAST_PUBLICATION_WEBHOOK_NAME"
         value = var.publication_webhook_name
       }
