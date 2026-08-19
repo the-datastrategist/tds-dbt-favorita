@@ -1,8 +1,14 @@
 # ForecastLab production activation
 
-This checklist records the remaining live acceptance for the same-origin ForecastLab frontend and
-read-only API. Do not mark it accepted until an immutable merged image is deployed and all evidence
-below is captured.
+ForecastLab activation is intentionally split into two independent gates. Phase 1 proves the
+same-origin frontend and API with IAP and warehouse reads while lifecycle mutations and lifecycle
+roles remain disabled. Phase 2 is a later, controlled mutation exercise. Passing the read-only gate
+must never be interpreted as authorization to enable writes.
+
+## Phase 1 — read-only IAP acceptance
+
+Do not mark this phase accepted until an immutable merged image is deployed and the automated and
+manual evidence below is captured.
 
 ## Deployment inputs
 
@@ -13,7 +19,7 @@ below is captured.
 | Cloud Run service | Pending |
 | Revision | Pending |
 | Image digest | Pending |
-| IAP access members | Pending |
+| IAP access members | Pending (record count, not personal addresses, in public evidence) |
 
 ## Required Terraform configuration
 
@@ -22,17 +28,44 @@ enable_forecast_api            = true
 enable_forecast_api_mutations  = false
 enable_forecastlab_iap         = true
 forecastlab_iap_access_members = ["user:analyst@example.com"]
-forecastlab_lifecycle_role_members = {
-  planner   = ["planner@example.com"]
-  approver  = ["approver@example.com"]
-  publisher = ["publisher@example.com"]
-}
+forecastlab_lifecycle_role_members = {}
 forecast_api_image             = "us-central1-docker.pkg.dev/PROJECT/vertex/ml-pipeline@sha256:..."
 ```
 
 The plan must enable IAP on the service, grant `roles/run.invoker` to the IAP service agent, and
 grant `roles/iap.httpsResourceAccessor` only to the declared members. It must not introduce
-`allUsers` or `allAuthenticatedUsers`.
+`allUsers` or `allAuthenticatedUsers`, lifecycle roles, BigQuery editor access, or a mutable image
+tag.
+
+### Repeatable plan gate
+
+Create, but do not apply, the development plan and run the fail-closed gate:
+
+```bash
+terraform -chdir=terraform/environments/dev plan -out=tfplan
+make forecastlab-readonly-plan-check
+```
+
+The command rejects destructive changes, public principals, mutable images, disabled IAP,
+lifecycle roles, mutation mode, missing IAP users, missing IAP invocation, and BigQuery editor
+access. It writes sanitized evidence to `artifacts/forecastlab-acceptance/plan.json`; the raw plan
+must not be committed because it can contain deployment configuration.
+
+After an approved apply, an authorized operator can capture deployment and API evidence:
+
+```bash
+make forecastlab-readonly-live-check \
+  PROJECT=PROJECT_ID \
+  REGION=us-central1 \
+  SERVICE=forecast-retrieval-api \
+  URL=https://SERVICE_URL \
+  IAP_CLIENT_ID=IAP_OAUTH_CLIENT_ID
+```
+
+The operator running this command needs an authenticated `gcloud` session and IAP access. The
+identity token is held only in memory. The generated `live.json` contains revision and digest
+metadata, counts, response statuses, and request-ID presence; it excludes tokens and response
+bodies.
 
 ## Browser and API evidence
 
@@ -52,10 +85,12 @@ grant `roles/iap.httpsResourceAccessor` only to the declared members. It must no
   comparable confidence evidence.
 - `/v1/operations` exposes lifecycle, exception, delivery, and FVA evidence without leaking comments
   or unrestricted logs.
-- A planner cannot publish, an approver cannot publish, and a publisher can complete a controlled
-  idempotent lifecycle action; the persisted actor equals the IAP identity rather than request body.
+- `/v1/capabilities` reports `mutationsEnabled: false` and no lifecycle action is attempted.
+- The automated live check passes and its sanitized evidence is attached to the acceptance record.
+- An authorized interactive browser session completes IAP sign-in and the direct-route checks.
+  The bearer-token probe does not replace this browser-session evidence.
 
-## Result
+### Phase 1 result
 
 **Pending live deployment and acceptance.** Local unit, browser, production build, API contract,
 Terraform format, and Terraform validation gates pass. Replace this result only after recording
@@ -64,5 +99,20 @@ the immutable revision and observed evidence above.
 Preflight observation on 2026-08-19: the existing `forecast-retrieval-api-00005-gm5` revision uses
 image digest `sha256:cabf3fe04f4ab47d2107dcc7f50d416aa2b54cee05f7bbb82ce9c4a75282994c`,
 has lifecycle mutations disabled, and is not IAP-enabled. This is baseline state, not acceptance
-evidence. Activation requires a newly built immutable image plus approved IAP access members and
-lifecycle-role assignments in the development Terraform variables.
+evidence. Activation requires a newly built immutable image plus approved IAP access members in
+the development Terraform variables. Lifecycle-role assignments are intentionally excluded.
+
+## Phase 2 — controlled lifecycle mutation acceptance
+
+This phase begins only after Phase 1 is accepted and a separate change is approved. Use a controlled
+environment, set `enable_forecast_api_mutations = true`, and assign named planner, approver, and
+publisher roles. Record evidence that:
+
+- a planner can propose an override but cannot approve or publish;
+- an approver can approve or reject but cannot publish;
+- a publisher can complete an idempotent publication, supersession, and rollback exercise;
+- conflicting retries fail without rewriting append-only history;
+- the persisted actor equals the IAP identity and ignores any actor supplied by the browser; and
+- rollback to the accepted read-only image and configuration is tested.
+
+Mutation acceptance has its own rollback decision and must not overwrite the Phase 1 evidence.

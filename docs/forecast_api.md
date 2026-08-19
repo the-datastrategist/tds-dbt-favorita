@@ -184,11 +184,7 @@ forecast_api_image           = "us-central1-docker.pkg.dev/PROJECT/vertex/ml-pip
 forecast_api_invoker_members = ["group:forecast-consumers@example.com"]
 enable_forecastlab_iap = true
 forecastlab_iap_access_members = ["group:forecast-consumers@example.com"]
-forecastlab_lifecycle_role_members = {
-  planner   = ["planner@example.com"]
-  approver  = ["approver@example.com"]
-  publisher = ["publisher@example.com"]
-}
+forecastlab_lifecycle_role_members = {}
 ```
 
 The production image embeds the API-mode ForecastLab build, so browser routes and `/v1` share one
@@ -197,12 +193,20 @@ configure the project's OAuth consent/brand if Google Cloud requests it; OAuth c
 a one-time console-owned prerequisite. Validate in a private browser session before removing any
 existing direct operator access.
 
+Before applying, run `make forecastlab-readonly-plan-check` against the saved Terraform plan. After
+deployment, run `make forecastlab-readonly-live-check` with the project, region, service URL, and
+IAP OAuth client ID. These commands fail closed on mutable images, public access, write privileges,
+or disabled authorization and create sanitized evidence under `artifacts/forecastlab-acceptance/`.
+The complete two-phase procedure is in
+[ForecastLab production activation](acceptance/forecastlab_production_activation.md).
+
 Apply the selected environment and use its `forecast_api_url` output. Roll back by deploying the
 prior immutable digest. Disabling the module removes the service, service account, and grants; it
 does not modify forecast data.
 
-To activate mutations, set `enable_forecast_api_mutations = true` and configure explicit lifecycle
-role members. With IAP enabled, the API derives the actor from the authenticated IAP email header;
+To activate mutations after separate read-only acceptance, set
+`enable_forecast_api_mutations = true` and configure explicit lifecycle role members. With IAP
+enabled, the API derives the actor from the authenticated IAP email header;
 publisher inherits approver and planner permissions, and approver inherits planner permissions.
 The browser cannot select or spoof its audit actor. Leaving mutations false preserves the accepted
 read-only service and least-privilege dataset reader role.

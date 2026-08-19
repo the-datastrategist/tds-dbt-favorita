@@ -12,14 +12,16 @@
 
 ## In progress
 
-- Live IAP deployment acceptance for the same-origin ForecastLab container.
+- Phase 1 live read-only IAP deployment acceptance for the same-origin ForecastLab container; the
+  fail-closed plan gate and sanitized live evidence command are implemented.
 - Live warehouse acceptance for experiment, operations, and lifecycle UI workflows.
 - Optional demand-source adapters and controlled production activation for external integrations.
 
 ## Experimental
 
-- Planner mutation UI. The contracts are implemented, but deployments must explicitly enable
-  mutations and assign IAP roles; the public demo remains read-only.
+- Phase 2 controlled planner mutation acceptance. The contracts and UI are implemented, but it
+  remains separate from read-only activation and requires explicit mutation enablement and IAP
+  roles; the public demo remains read-only.
 - Bootstrap confidence evidence across matched rolling origins.
 
 ## Planned
