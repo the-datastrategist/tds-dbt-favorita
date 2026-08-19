@@ -149,8 +149,10 @@ Implementation checkpoint (2026-08-18): the public fixture mode now ships the ap
 platform overview, model leaderboard, and model-detail route. The overview summarizes the current
 champion, day-seven baseline comparison, probabilistic coverage, and WAPE across every configured
 horizon. The production fixture build is assembled into the repository's GitHub Pages artifact
-under `/app/`. Remaining sections below continue to define the target product rather than shipped
-screens.
+under `/app/`. The Forecast Explorer now exposes URL-addressable run, entity, horizon, model, and
+exception filters; actuals and P10/P50/P90 forecasts; statistical-versus-published values; and the
+complete synthetic provenance chain. Remaining sections below continue to define the target
+product rather than shipped screens.
 
 ### 1. Platform overview
 

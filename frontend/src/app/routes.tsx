@@ -3,12 +3,14 @@ import { AppShell } from "./AppShell";
 import { ModelDetailPage } from "../features/models/ModelDetailPage";
 import { ModelLeaderboardPage } from "../features/models/ModelLeaderboardPage";
 import { OverviewPage } from "../features/overview/OverviewPage";
+import { ForecastExplorerPage } from "../features/forecasts/ForecastExplorerPage";
 
 export const AppRoutes = () => (
   <Routes>
     <Route element={<AppShell />}>
       <Route index element={<Navigate replace to="/overview" />} />
       <Route path="overview" element={<OverviewPage />} />
+      <Route path="forecasts" element={<ForecastExplorerPage />} />
       <Route path="models/leaderboard" element={<ModelLeaderboardPage />} />
       <Route path="models/:modelId" element={<ModelDetailPage />} />
       <Route path="*" element={<Navigate replace to="/overview" />} />

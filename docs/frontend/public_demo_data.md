@@ -6,21 +6,23 @@
 
 ## Decision
 
-The public ForecastLab demo uses `forecastlab_demo_v1`, a deterministic synthetic dataset. It is
-not an extract, anonymization, or sample of production data, and it does not redistribute raw
-Favorita competition rows. The GitHub Pages build is read-only and makes no authenticated or cloud
-data request.
+The public ForecastLab demo uses the deterministic synthetic `forecastlab_demo_v1` model-evidence
+fixture and `forecastlab_forecasts_demo_v1` canonical-forecast fixture. Neither is an extract,
+anonymization, or sample of production data, and neither redistributes raw Favorita competition
+rows. The GitHub Pages build is read-only and makes no authenticated or cloud data request.
 
 ## Demonstration population
 
-The first fixture release models:
+The packaged fixture release models:
 
-- 12 fictional store series grouped into 3 fictional regions;
-- 180 historical daily periods and 28 future target dates on a fixed demonstration calendar;
-- regular, seasonal, intermittent, and cold-start demand behavior;
+- 2 fictional store series in 2 fictional hierarchy nodes;
+- 2 fictional publication runs, including published and superseded lifecycle states;
+- actuals and seven future target dates on a fixed demonstration calendar;
 - 3 fictional model candidates plus seasonal-naive and moving-average baselines;
 - horizons 1 through 7 with P10, P50, and P90 predictions;
-- one coherent regional hierarchy and controlled calibration, drift, and pipeline-health examples.
+- one controlled published adjustment and exception state; and
+- synthetic contract, model, calibration, reconciliation, hierarchy, feature, cutoff, code, and
+  publication provenance.
 
 All identifiers use a `demo_` prefix. Values and outcomes are generated specifically for the demo;
 they must not be copied from live warehouse rows.

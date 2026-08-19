@@ -3,10 +3,66 @@ import {
   type LeaderboardFilters,
   type LeaderboardOptions,
 } from "../types/leaderboard";
+import {
+  forecastFixtureSchema,
+  type ForecastFilters,
+  type ForecastOptions,
+} from "../types/forecasts";
 import type { ForecastLabDataSource } from "./dataSource";
 
 export class ApiDataSource implements ForecastLabDataSource {
   constructor(private readonly baseUrl: string) {}
+
+  async getForecastOptions(): Promise<ForecastOptions> {
+    const response = await fetch(`${this.baseUrl}/v1/forecasts/options`);
+    if (!response.ok) {
+      throw new Error(`Forecast options request failed (${response.status})`);
+    }
+    return (await response.json()) as ForecastOptions;
+  }
+
+  async getForecasts(filters: ForecastFilters) {
+    const query = new URLSearchParams({
+      run_id: filters.runId,
+      entity_id: filters.entityId,
+      model_id: filters.modelId,
+      exception_state: filters.exceptionState,
+    });
+    if (filters.horizon !== null) query.set("horizon", String(filters.horizon));
+    const response = await fetch(`${this.baseUrl}/v1/forecasts?${query}`);
+    if (!response.ok) {
+      throw new Error(`Forecast request failed (${response.status})`);
+    }
+    const payload = await response.json();
+    const parsed = forecastFixtureSchema
+      .pick({
+        metadata: true,
+        runs: true,
+        entities: true,
+        models: true,
+        rows: true,
+      })
+      .parse(payload);
+    const run = parsed.runs[0];
+    const entity = parsed.entities[0];
+    const model = parsed.models[0];
+    if (!run || !entity || !model)
+      throw new Error("Forecast response is incomplete");
+    return {
+      datasetKind: parsed.metadata.datasetKind,
+      fixtureVersion: parsed.metadata.fixtureVersion,
+      run: {
+        id: run.id,
+        label: run.label,
+        origin: run.origin,
+        publicationStatus: run.publicationStatus,
+      },
+      entity,
+      model,
+      rows: parsed.rows,
+      provenance: run.provenance,
+    };
+  }
 
   async getLeaderboardOptions(): Promise<LeaderboardOptions> {
     return {

@@ -4,6 +4,11 @@ import type {
   LeaderboardResult,
   LeaderboardRow,
 } from "../types/leaderboard";
+import type {
+  ForecastFilters,
+  ForecastOptions,
+  ForecastResult,
+} from "../types/forecasts";
 
 export interface ForecastLabDataSource {
   getLeaderboardOptions(): Promise<LeaderboardOptions>;
@@ -12,4 +17,6 @@ export interface ForecastLabDataSource {
     modelId: string,
     filters: LeaderboardFilters,
   ): Promise<LeaderboardRow | null>;
+  getForecastOptions(): Promise<ForecastOptions>;
+  getForecasts(filters: ForecastFilters): Promise<ForecastResult>;
 }

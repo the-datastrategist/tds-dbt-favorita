@@ -41,6 +41,36 @@ select:focus-visible {
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
+.secondary-button,
+.icon-button {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.secondary-button {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.secondary-button:hover,
+.icon-button:hover {
+  background: var(--surface-hover);
+}
+
+.icon-button {
+  width: 34px;
+  padding: 0;
+}
+
 a {
   color: inherit;
 }
@@ -388,6 +418,110 @@ h2 {
 
 .overview-chart {
   height: 360px;
+}
+
+.forecast-filters .filter-field {
+  min-width: 145px;
+  flex: 1 1 145px;
+}
+
+.forecast-layout {
+  position: relative;
+}
+
+.forecast-chart {
+  height: 390px;
+}
+
+.forecast-table td,
+.forecast-table th {
+  text-align: right;
+}
+
+.forecast-table td:first-child,
+.forecast-table th:first-child,
+.forecast-table td:last-child,
+.forecast-table th:last-child {
+  text-align: left;
+}
+
+.exception-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 3px 7px;
+  font-size: 10px;
+  font-weight: 650;
+  text-transform: capitalize;
+  border-radius: 999px;
+}
+
+.exception-badge.clear {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.exception-badge.watch {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.exception-badge.blocked {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.provenance-drawer {
+  position: fixed;
+  z-index: 10;
+  top: 58px;
+  right: 0;
+  width: min(420px, 100vw);
+  height: calc(100vh - 58px);
+  padding: 22px;
+  overflow-y: auto;
+  background: var(--surface-raised);
+  border-left: 1px solid var(--border-default);
+  box-shadow: -10px 0 28px rgb(32 33 31 / 12%);
+}
+
+.drawer-header {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.drawer-header h2 {
+  margin-bottom: 0;
+}
+
+.provenance-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.provenance-list div {
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.provenance-list dt {
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.provenance-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
 }
 
 .rationale-body {

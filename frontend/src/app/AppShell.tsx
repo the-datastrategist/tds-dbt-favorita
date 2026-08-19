@@ -8,7 +8,6 @@ const navigation = [
     label: "Forecast explorer",
     to: "/forecasts",
     icon: BarChart3,
-    disabled: true,
   },
 ];
 
@@ -28,28 +27,17 @@ export const AppShell = () => (
       <nav aria-label="Primary navigation">
         <div className="nav-section-label">Science</div>
         <ul className="nav-list">
-          {navigation.map(({ label, to, icon: Icon, disabled }) => (
+          {navigation.map(({ label, to, icon: Icon }) => (
             <li key={to}>
-              {disabled ? (
-                <span
-                  className="nav-link"
-                  aria-disabled="true"
-                  title="Planned for the next slice"
-                >
-                  <Icon size={15} aria-hidden="true" />
-                  {label}
-                </span>
-              ) : (
-                <NavLink
-                  className={({ isActive }) =>
-                    `nav-link${isActive ? " active" : ""}`
-                  }
-                  to={to}
-                >
-                  <Icon size={15} aria-hidden="true" />
-                  {label}
-                </NavLink>
-              )}
+              <NavLink
+                className={({ isActive }) =>
+                  `nav-link${isActive ? " active" : ""}`
+                }
+                to={to}
+              >
+                <Icon size={15} aria-hidden="true" />
+                {label}
+              </NavLink>
             </li>
           ))}
         </ul>
