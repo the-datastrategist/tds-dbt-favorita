@@ -70,9 +70,15 @@ Dockerfile
 
 # Terraform local state and downloaded providers
 **/.terraform/
+**/tfplan
 *.tfstate
 *.tfstate.*
 *.tfvars
+
+# Frontend developer and build artifacts
+**/node_modules/
+frontend/dist/
+frontend/test-results/
 
 # CI/CD
 .github/

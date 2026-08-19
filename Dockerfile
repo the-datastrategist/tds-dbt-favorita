@@ -45,7 +45,11 @@ RUN /usr/local/bin/python -m pip uninstall --yes setuptools wheel \
 
 COPY . .
 
-RUN mkdir -p vertex/models/tmp dbt/target
+# Resolve dbt packages while building so scheduled jobs do not depend on
+# outbound package downloads at runtime. dbt renders the profile during deps,
+# so supply a non-production placeholder project without authenticating.
+RUN GOOGLE_PROJECT_ID=container-build dbt deps --project-dir dbt --profiles-dir dbt/profiles \
+    && mkdir -p vertex/models/tmp dbt/target
 
 # Production image: run Vertex workloads without root privileges.
 FROM runtime AS production

@@ -23,12 +23,24 @@
 - Fresh temporary initialization and validation passed for both dev and prod configurations with
   Google provider `7.44.0`.
 
-## Pending live acceptance
+## Live acceptance — 2026-08-18
 
-The Slack connector can create and post to channels but cannot create or reveal an incoming
-webhook. A Slack administrator must create/authorize the webhook for `#forecasting-ops`, then add
-its URL as the first secret version using the stdin workflow in `docs/monitoring_and_slos.md`.
-After that, build and push the committed image, apply the reviewed Terraform plan, inject one
-controlled alert, witness exactly one Slack delivery, clear the condition, and verify recovery.
+- Added an enabled Secret Manager version for `forecast-slack-webhook`; the URL was never written
+  to the repository or Terraform state.
+- Applied the enabled monitoring runner and hourly UTC scheduler with zero Terraform destroys.
+- Deployed the immutable Linux/AMD64 production image
+  `sha256:cabf3fe04f4ab47d2107dcc7f50d416aa2b54cee05f7bbb82ce9c4a75282994c`.
+- Corrected the production dbt target to use Cloud Run service-account ADC and made the image
+  self-contained by resolving dbt packages at build time.
+- Cloud Run execution `forecast-monitoring-evaluator-6mcz7` completed successfully. The selected
+  monitoring build ran 136 resources/tests and the evaluator read every configured BigQuery
+  signal.
+- The hosted evaluator delivered three real policy alerts to private channel `#forecasting-ops`
+  (`C0BQVUZ15PU`): two `missing_eligibility_evidence` alerts and one stale-publication alert.
+- A separate, clearly labeled `controlled_slack_acceptance` event was routed through the same
+  application code and webhook secret. Routing reported exactly one emitted event, and the exact
+  message was witnessed in the channel with resource key `forecast-monitoring-evaluator-6mcz7`.
 
-Until those steps are complete, the monitoring specification remains at 99% rather than shipped.
+The Slack path is now live accepted. The alerts reflect the current static demonstration data and
+should be remediated or explicitly acknowledged through the associated runbooks; they do not
+invalidate notification delivery acceptance.
