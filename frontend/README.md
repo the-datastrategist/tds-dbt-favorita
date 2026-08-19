@@ -24,6 +24,9 @@ requests. Available routes are:
 
 The public build is published with the documentation site at
 `https://the-datastrategist.github.io/tds-dbt-favorita/app/`.
+Static-host routes use fragments, so the Forecast Explorer is directly addressable at
+`https://the-datastrategist.github.io/tds-dbt-favorita/app/#/forecasts` without a Pages 404 on
+refresh. Root-hosted and API deployments continue to use normal browser paths.
 
 ## Validate
 
