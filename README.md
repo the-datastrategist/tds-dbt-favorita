@@ -22,7 +22,7 @@ from environment validation through canonical forecast output in BigQuery.
 - **pip + Docker**: Locked dependencies in `requirements.txt`; all local commands run in Docker
 - **Testing**: pytest for Vertex utilities; dbt data tests on staging and intermediate models
 - **CI/CD**: GitHub Actions on every push and PR (Python lint/tests, `dbt parse` / `dbt compile` / `dbt docs generate`)
-- **Hosted documentation**: Docsify portal and dbt Docs deploy together to GitHub Pages on pushes to `main` / `master` (see [Hosted documentation](#hosted-documentation))
+- **Hosted documentation and workbench**: Docsify, dbt Docs, and the synthetic ForecastLab demo deploy together to GitHub Pages on pushes to `main` / `master` (see [Hosted documentation](#hosted-documentation))
 - **dbt Docs & lineage**: Project overview ([`docs/overview.md`](docs/overview.md)), exposures for ML and operational consumers (`dbt/models/exposures.yml`)
 - **Forecast delivery**: Stable warehouse views, immutable batch export, and a private live-accepted Cloud Run retrieval API
 - **Code Quality**: Black, flake8, and mypy for code quality

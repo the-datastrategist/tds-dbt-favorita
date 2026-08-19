@@ -21,6 +21,9 @@ requests. Available routes are:
 - `/models/leaderboard` for horizon- and segment-filtered comparisons; and
 - `/models/:modelId` for model evidence details.
 
+The public build is published with the documentation site at
+`https://the-datastrategist.github.io/tds-dbt-favorita/app/`.
+
 ## Validate
 
 ```bash
