@@ -252,12 +252,15 @@ data/
 !frontend/src/data/
 !frontend/src/data/**
 mlruns/
+artifacts/quickstart/
 *.csv
 *.parquet
 !dbt/seeds/*.csv
 
 # Terraform
 **/.terraform/
+**/tfplan
+*.tfplan
 *.tfstate
 *.tfstate.*
 *.tfvars

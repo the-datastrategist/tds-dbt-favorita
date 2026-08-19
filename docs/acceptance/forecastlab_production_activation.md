@@ -22,6 +22,11 @@ enable_forecast_api            = true
 enable_forecast_api_mutations  = false
 enable_forecastlab_iap         = true
 forecastlab_iap_access_members = ["user:analyst@example.com"]
+forecastlab_lifecycle_role_members = {
+  planner   = ["planner@example.com"]
+  approver  = ["approver@example.com"]
+  publisher = ["publisher@example.com"]
+}
 forecast_api_image             = "us-central1-docker.pkg.dev/PROJECT/vertex/ml-pipeline@sha256:..."
 ```
 
@@ -32,7 +37,8 @@ grant `roles/iap.httpsResourceAccessor` only to the declared members. It must no
 ## Browser and API evidence
 
 - An unauthorized private-browser session is denied or redirected to sign-in.
-- An authorized account loads `/overview`, `/experiments`, and a direct refresh of `/forecasts`.
+- An authorized account loads `/overview`, `/experiments`, `/accuracy`, `/operations`, and a direct
+  refresh of `/forecasts`.
 - The environment label reads `Authenticated production data`.
 - `/v1/forecasts/options?run_id=...` returns only entities, models, and horizons from that run.
 - Forecast filtering, target-date bounds, and opaque pagination return immutable delivered rows.
@@ -42,9 +48,21 @@ grant `roles/iap.httpsResourceAccessor` only to the declared members. It must no
   in Cloud Run logs.
 - GitHub Pages still identifies itself as `Synthetic public demo` and makes no production API
   request.
+- `/v1/experiments` returns persisted rolling origins, horizons, segments, feature evidence, and
+  comparable confidence evidence.
+- `/v1/operations` exposes lifecycle, exception, delivery, and FVA evidence without leaking comments
+  or unrestricted logs.
+- A planner cannot publish, an approver cannot publish, and a publisher can complete a controlled
+  idempotent lifecycle action; the persisted actor equals the IAP identity rather than request body.
 
 ## Result
 
 **Pending live deployment and acceptance.** Local unit, browser, production build, API contract,
 Terraform format, and Terraform validation gates pass. Replace this result only after recording
 the immutable revision and observed evidence above.
+
+Preflight observation on 2026-08-19: the existing `forecast-retrieval-api-00005-gm5` revision uses
+image digest `sha256:cabf3fe04f4ab47d2107dcc7f50d416aa2b54cee05f7bbb82ce9c4a75282994c`,
+has lifecycle mutations disabled, and is not IAP-enabled. This is baseline state, not acceptance
+evidence. Activation requires a newly built immutable image plus approved IAP access members and
+lifecycle-role assignments in the development Terraform variables.

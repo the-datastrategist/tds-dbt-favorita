@@ -378,7 +378,7 @@ def test_forecastlab_options_and_forecasts_expose_live_typed_contract():
         },
     )
     openapi = client.get("/openapi.json").json()
-    assert openapi["info"]["version"] == "1.2.0"
+    assert openapi["info"]["version"] == "1.3.0"
     assert "/v1/forecasts/options" in openapi["paths"]
     assert "/v1/forecast-runs/{forecast_run_id}" in openapi["paths"]
     assert "ExplorerProvenance" in openapi["components"]["schemas"]
@@ -1048,3 +1048,78 @@ def test_bigquery_repository_shapes_live_rolling_origin_experiments(client_class
         "horizon",
         "run_ids",
     }
+
+
+@pytest.mark.unit
+def test_experiment_confidence_uses_deterministic_paired_origins():
+    reference = _experiment_run()
+    reference["id"] = "reference"
+    reference["createdAt"] = "2026-08-01T00:00:00Z"
+    reference["rollingOrigins"] = [
+        {"origin": "2026-07-01", "wape": 14.0, "bias": 0.0, "coverage": 0.8},
+        {"origin": "2026-07-08", "wape": 13.0, "bias": 0.0, "coverage": 0.8},
+        {"origin": "2026-07-15", "wape": 12.0, "bias": 0.0, "coverage": 0.8},
+    ]
+    candidate = _experiment_run()
+    candidate["id"] = "candidate"
+    candidate["createdAt"] = "2026-08-02T00:00:00Z"
+    candidate["rollingOrigins"] = [
+        {"origin": "2026-07-01", "wape": 12.0, "bias": 0.0, "coverage": 0.8},
+        {"origin": "2026-07-08", "wape": 11.0, "bias": 0.0, "coverage": 0.8},
+        {"origin": "2026-07-15", "wape": 10.0, "bias": 0.0, "coverage": 0.8},
+    ]
+
+    first = BigQueryForecastRepository._attach_experiment_confidence([reference, candidate])
+    evidence = first[1]["statisticalEvidence"]
+
+    assert evidence["referenceRunId"] == "reference"
+    assert evidence["deltaWapePp"] == -2.0
+    assert evidence["ciLower"] == evidence["ciUpper"] == -2.0
+    assert evidence["conclusion"] == "meaningful"
+
+
+@pytest.mark.unit
+@patch("vertex.api.repository.bigquery.Client")
+def test_bigquery_repository_shapes_operations_snapshot(client_class):
+    client_class.return_value = MagicMock()
+    repository = BigQueryForecastRepository(project_id="project", table_prefix="project.dataset")
+    summaries = pd.DataFrame(
+        [
+            {
+                "forecast_run_id": "run-1",
+                "origin": date(2026, 8, 11),
+                "status": "published",
+                "model_name": "model-1",
+                "output_count": 2,
+                "exception_count": 1,
+                "override_count": 1,
+                "approval_count": 2,
+                "publication_version": 3,
+                "delivery_status": "delivered",
+                "fva_status": "comparable",
+                "planner_wape_fva_points": 0.004,
+                "total_wape_fva_points": 0.007,
+                "updated_at": datetime(2026, 8, 11, 12, tzinfo=timezone.utc),
+            }
+        ]
+    )
+    samples = pd.DataFrame(
+        [
+            {
+                "forecast_run_id": "run-1",
+                "forecast_output_id": "output-1",
+                "entity_key_json": '{"store_nbr":1}',
+                "target_date": date(2026, 8, 18),
+                "current_value": 42.0,
+                "exception_state": "watch",
+            }
+        ]
+    )
+    repository._dataframe = MagicMock(side_effect=[summaries, samples])
+
+    result = repository.operations_snapshot()
+
+    assert result[0]["publicationVersion"] == 3
+    assert result[0]["plannerWapeFvaPoints"] == pytest.approx(0.4)
+    assert result[0]["outputs"][0]["entityLabel"] == "store_nbr 1"
+    assert "forecast_value_added_operations" in repository._dataframe.call_args_list[0].args[0]

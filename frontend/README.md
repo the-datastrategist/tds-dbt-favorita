@@ -2,11 +2,11 @@
 
 ForecastLab is the React, TypeScript, and Vite workbench for the forecasting platform. Its current
 public-demo slice includes a platform overview, responsive model leaderboard, model-evidence
-drilldown, experiment history and comparison, and canonical Forecast Explorer backed by
-deterministic synthetic fixtures.
+drilldown, experiment history and comparison, error analysis, publication operations, and canonical
+Forecast Explorer backed by deterministic synthetic fixtures.
 
-The production adapter validates the typed responses from `GET /v1/forecasts/options` and
-`GET /v1/forecasts`. The root Dockerfile creates this build and embeds it in the FastAPI image:
+The production adapters validate typed forecast, experiment, accuracy, capability, and operations
+responses. The root Dockerfile creates this build and embeds it in the FastAPI image:
 
 ```bash
 VITE_DATA_MODE=api VITE_API_BASE_URL= npm run build
@@ -33,6 +33,8 @@ requests. Available routes are:
 - `/forecasts` for actuals, P10/P50/P90 forecasts, published adjustments, and provenance;
 - `/experiments` for sortable, filterable run history and comparison selection;
 - `/experiments/compare?runs=…` for 2–5 run scientific comparisons;
+- `/accuracy?run=…&horizon=…` for horizon, origin, segment, bias, and calibration diagnostics;
+- `/operations?run=…` for lifecycle, exception, delivery, FVA, and guarded planner workflows;
 - `/models/leaderboard` for horizon- and segment-filtered comparisons; and
 - `/models/:modelId` for model evidence details.
 
@@ -68,6 +70,10 @@ routes load and survive refresh beneath the repository subpath.
 Only public values may use the `VITE_` prefix because Vite embeds them in browser assets. The demo
 fixture is synthetic and is covered by a regression test for URLs, email addresses, secrets, and
 customer identifiers.
+
+Production mutations remain disabled unless the API enables them. When IAP authorization is
+enabled, the API derives the actor from `X-Goog-Authenticated-User-Email` and checks configured
+planner, approver, or publisher roles. Browser-supplied actor values are not trusted.
 
 ## Packaged assets
 

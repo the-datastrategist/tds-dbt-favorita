@@ -5,6 +5,11 @@
   * [Reference architecture](reference_architecture.md)
   * [Case study](case_study.md)
   * [Platform roadmap](specs/README.md)
+  * [Product roadmap](product_roadmap.md)
+  * [Local quickstart](quickstart_local.md)
+  * [Compatibility](compatibility.md)
+  * [Extension guide](extensions.md)
+  * [Open-source governance](open_source_governance.md)
 
 * Forecasting platform
   * [Forecast contract](forecast_contract.md)

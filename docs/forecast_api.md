@@ -43,6 +43,11 @@ Do not grant `allUsers` or `allAuthenticatedUsers` in production.
 GET /v1/forecasts/options
 GET /v1/forecasts?run_id=...&entity_id=...&model_id=...
 GET /v1/forecast-runs/{forecast_run_id}?entity_id=...&model_id=...
+GET /v1/experiments/options
+GET /v1/experiments
+GET /v1/experiments/compare?runs=...&runs=...
+GET /v1/operations
+GET /v1/capabilities
 ```
 
 `options` returns runs, entities, models, and horizons found in completely delivered immutable
@@ -60,6 +65,11 @@ state, and complete contract/model/calibration/reconciliation/hierarchy/feature/
 provenance. Only `canonical_bigquery` versions whose latest delivery status is `delivered` are
 eligible. Unknown, empty, or undelivered selections return `404` rather than falling through to
 draft output.
+
+Experiment endpoints expose persisted rolling-origin WAPE, bias, coverage, runtime, configuration,
+horizon, segment, origin, feature-availability, and paired bootstrap confidence evidence. The
+operations endpoint combines lifecycle counters, exception samples, delivery status, and FVA.
+`capabilities` tells the browser whether the authenticated identity may submit lifecycle actions.
 
 ### Latest delivered version
 
@@ -174,6 +184,11 @@ forecast_api_image           = "us-central1-docker.pkg.dev/PROJECT/vertex/ml-pip
 forecast_api_invoker_members = ["group:forecast-consumers@example.com"]
 enable_forecastlab_iap = true
 forecastlab_iap_access_members = ["group:forecast-consumers@example.com"]
+forecastlab_lifecycle_role_members = {
+  planner   = ["planner@example.com"]
+  approver  = ["approver@example.com"]
+  publisher = ["publisher@example.com"]
+}
 ```
 
 The production image embeds the API-mode ForecastLab build, so browser routes and `/v1` share one
@@ -186,9 +201,11 @@ Apply the selected environment and use its `forecast_api_url` output. Roll back 
 prior immutable digest. Disabling the module removes the service, service account, and grants; it
 does not modify forecast data.
 
-To activate mutations, set `enable_forecast_api_mutations = true` and replace consumer-oriented
-invoker membership with an operator-only group before applying. Leaving the flag false preserves
-the previously accepted read-only service and least-privilege dataset reader role.
+To activate mutations, set `enable_forecast_api_mutations = true` and configure explicit lifecycle
+role members. With IAP enabled, the API derives the actor from the authenticated IAP email header;
+publisher inherits approver and planner permissions, and approver inherits planner permissions.
+The browser cannot select or spoof its audit actor. Leaving mutations false preserves the accepted
+read-only service and least-privilege dataset reader role.
 
 Outbound delivery is opt-in and requires mutations. Store the destination URL and signing secret
 in separate Secret Manager secrets, then configure:
