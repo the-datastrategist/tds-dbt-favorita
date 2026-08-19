@@ -94,7 +94,10 @@ export const ForecastExplorerPage = () => {
           </p>
         </div>
         <span className="demo-pill">
-          <Sparkles size={12} aria-hidden="true" /> Synthetic fixture
+          <Sparkles size={12} aria-hidden="true" />
+          {result.datasetKind === "live"
+            ? "Live warehouse"
+            : "Synthetic fixture"}
         </span>
       </header>
 
@@ -175,7 +178,8 @@ export const ForecastExplorerPage = () => {
           </select>
         </div>
         <span className="environment-label">
-          <Database size={13} aria-hidden="true" /> {result.fixtureVersion}
+          <Database size={13} aria-hidden="true" />
+          {result.fixtureVersion ?? "production API"}
         </span>
       </section>
 

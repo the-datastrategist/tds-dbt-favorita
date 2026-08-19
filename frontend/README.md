@@ -4,6 +4,17 @@ ForecastLab is the React, TypeScript, and Vite workbench for the forecasting pla
 public-demo slice includes a platform overview, responsive model leaderboard, model-evidence
 drilldown, and canonical Forecast Explorer backed by deterministic synthetic fixtures.
 
+The production adapter validates the typed responses from `GET /v1/forecasts/options` and
+`GET /v1/forecasts`. Enable it only in an authenticated production build:
+
+```bash
+VITE_DATA_MODE=api VITE_API_BASE_URL=https://forecast-api.example npm run build
+```
+
+The public Pages build always remains fixture-backed and makes no production warehouse requests.
+The API origin must be an authenticated same-origin gateway or a narrowly configured protected
+origin; do not embed bearer tokens or cloud credentials in Vite environment variables.
+
 ## Run locally
 
 Node.js 22.12 or newer is required.

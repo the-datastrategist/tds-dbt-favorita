@@ -35,6 +35,26 @@ Do not grant `allUsers` or `allAuthenticatedUsers` in production.
 
 ## Endpoints
 
+### ForecastLab discovery and read model
+
+```text
+GET /v1/forecasts/options
+GET /v1/forecasts?run_id=...&entity_id=...&model_id=...
+GET /v1/forecast-runs/{forecast_run_id}?entity_id=...&model_id=...
+```
+
+`options` returns runs, entities, models, and horizons found in completely delivered immutable
+publication versions. The two read endpoints expose the same ForecastLab response contract; the
+run route is a stable alias for deep links. Both accept optional positive `horizon` and
+`exception_state=clear|watch|blocked` filters. `entity_id` is the canonical entity-key JSON.
+
+The response includes observed actuals when the target date exists in `int_demand_store_daily`,
+P10/P50/P90, statistical and published values, routing strategy, confidence-derived exception
+state, and complete contract/model/calibration/reconciliation/hierarchy/feature/code/publication
+provenance. Only `canonical_bigquery` versions whose latest delivery status is `delivered` are
+eligible. Unknown, empty, or undelivered selections return `404` rather than falling through to
+draft output.
+
 ### Latest delivered version
 
 ```text

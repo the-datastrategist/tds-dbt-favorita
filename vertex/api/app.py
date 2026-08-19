@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import os
-from datetime import date
-from typing import Annotated, Any
+from datetime import date, datetime
+from typing import Annotated, Any, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from vertex.api.repository import (
     BigQueryForecastRepository,
+    ForecastExplorerOptions,
+    ForecastExplorerResult,
     ForecastFilters,
     ForecastPageResult,
     ForecastRepository,
@@ -38,6 +40,84 @@ class ForecastPage(BaseModel):
     publication_row_count: int
     items: list[dict[str, Any]]
     next_page_token: str | None = None
+
+
+class ExplorerRun(BaseModel):
+    id: str
+    label: str
+    origin: date
+    publicationStatus: Literal["draft", "published", "superseded"] | None = None
+
+
+class ExplorerEntity(BaseModel):
+    id: str
+    name: str
+    hierarchyNode: str
+    hierarchyLevel: str
+
+
+class ExplorerModel(BaseModel):
+    id: str
+    name: str
+
+
+class ExplorerRow(BaseModel):
+    runId: str
+    entityId: str
+    modelId: str
+    targetDate: date
+    horizon: int = Field(ge=1)
+    actual: float | None = Field(default=None, ge=0)
+    p10: float = Field(ge=0)
+    p50: float = Field(ge=0)
+    p90: float = Field(ge=0)
+    statisticalForecast: float = Field(ge=0)
+    publishedForecast: float = Field(ge=0)
+    strategy: str
+    exceptionState: Literal["clear", "watch", "blocked"]
+
+    @model_validator(mode="after")
+    def quantiles_are_ordered(self) -> "ExplorerRow":
+        if not self.p10 <= self.p50 <= self.p90:
+            raise ValueError("forecast quantiles must be ordered")
+        return self
+
+
+class ExplorerProvenance(BaseModel):
+    contractName: str
+    contractHash: str
+    modelRunId: str
+    calibrationRunId: str
+    reconciliationRunId: str
+    hierarchyVersion: str
+    featureVersion: str
+    featureAvailabilityHash: str
+    dataCutoff: datetime
+    codeSha: str
+    publicationVersion: str
+
+
+def _exception_states() -> list[Literal["clear", "watch", "blocked"]]:
+    return ["clear", "watch", "blocked"]
+
+
+class ExplorerOptionsResponse(BaseModel):
+    runs: list[ExplorerRun]
+    entities: list[ExplorerEntity]
+    models: list[ExplorerModel]
+    horizons: list[int]
+    exceptionStates: list[Literal["clear", "watch", "blocked"]] = Field(
+        default_factory=_exception_states
+    )
+
+
+class ExplorerResponse(BaseModel):
+    datasetKind: Literal["live"] = "live"
+    run: ExplorerRun
+    entity: ExplorerEntity
+    model: ExplorerModel
+    rows: list[ExplorerRow]
+    provenance: ExplorerProvenance
 
 
 class QueryFilters(BaseModel):
@@ -214,7 +294,7 @@ def create_app(
     )
     app = FastAPI(
         title="Forecast Operations API",
-        version="1.1.0",
+        version="1.2.0",
         description=(
             "Read complete immutable forecast versions and append governed lifecycle mutations."
         ),
@@ -274,6 +354,106 @@ def create_app(
             destination=destination,
         )
         return _fetch(repository, scope, filters)
+
+    @app.get(
+        "/v1/forecasts/options",
+        response_model=ExplorerOptionsResponse,
+        tags=["forecastlab"],
+    )
+    def forecast_explorer_options(
+        repository: ForecastRepository = Depends(_repository),
+    ) -> ExplorerOptionsResponse:
+        result: ForecastExplorerOptions = repository.forecast_explorer_options()
+        return ExplorerOptionsResponse(
+            runs=[ExplorerRun.model_validate(value) for value in result.runs],
+            entities=[ExplorerEntity.model_validate(value) for value in result.entities],
+            models=[ExplorerModel.model_validate(value) for value in result.models],
+            horizons=result.horizons,
+        )
+
+    def explorer_response(result: ForecastExplorerResult | None) -> ExplorerResponse:
+        if result is None:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "code": "forecast_selection_not_found",
+                    "message": "no delivered forecasts match the requested selection",
+                },
+            )
+        return ExplorerResponse(
+            run=ExplorerRun.model_validate(result.run),
+            entity=ExplorerEntity.model_validate(result.entity),
+            model=ExplorerModel.model_validate(result.model),
+            rows=[ExplorerRow.model_validate(value) for value in result.rows],
+            provenance=ExplorerProvenance.model_validate(result.provenance),
+        )
+
+    def read_explorer_forecasts(
+        *,
+        forecast_run_id: str,
+        entity_id: str,
+        model_id: str,
+        horizon: int | None,
+        exception_state: str | None,
+        repository: ForecastRepository,
+    ) -> ExplorerResponse:
+        try:
+            entity_key = canonical_entity_key(entity_id)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "invalid_entity_id", "message": str(exc)},
+            ) from exc
+        assert entity_key is not None
+        return explorer_response(
+            repository.forecast_explorer_result(
+                forecast_run_id=forecast_run_id,
+                entity_key_json=entity_key,
+                model_id=model_id,
+                horizon=horizon,
+                exception_state=exception_state,
+            )
+        )
+
+    @app.get("/v1/forecasts", response_model=ExplorerResponse, tags=["forecastlab"])
+    def forecast_explorer(
+        run_id: Annotated[str, Query(min_length=1)],
+        entity_id: Annotated[str, Query(min_length=1)],
+        model_id: Annotated[str, Query(min_length=1)],
+        horizon: Annotated[int | None, Query(ge=1)] = None,
+        exception_state: Annotated[str | None, Query(pattern="^(clear|watch|blocked)$")] = None,
+        repository: ForecastRepository = Depends(_repository),
+    ) -> ExplorerResponse:
+        return read_explorer_forecasts(
+            forecast_run_id=run_id,
+            entity_id=entity_id,
+            model_id=model_id,
+            horizon=horizon,
+            exception_state=exception_state,
+            repository=repository,
+        )
+
+    @app.get(
+        "/v1/forecast-runs/{forecast_run_id}",
+        response_model=ExplorerResponse,
+        tags=["forecastlab"],
+    )
+    def forecast_explorer_run(
+        forecast_run_id: str,
+        entity_id: Annotated[str, Query(min_length=1)],
+        model_id: Annotated[str, Query(min_length=1)],
+        horizon: Annotated[int | None, Query(ge=1)] = None,
+        exception_state: Annotated[str | None, Query(pattern="^(clear|watch|blocked)$")] = None,
+        repository: ForecastRepository = Depends(_repository),
+    ) -> ExplorerResponse:
+        return read_explorer_forecasts(
+            forecast_run_id=forecast_run_id,
+            entity_id=entity_id,
+            model_id=model_id,
+            horizon=horizon,
+            exception_state=exception_state,
+            repository=repository,
+        )
 
     @app.get(
         "/v1/forecasts/runs/{forecast_run_id}",

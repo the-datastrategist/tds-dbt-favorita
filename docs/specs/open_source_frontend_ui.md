@@ -154,6 +154,13 @@ exception filters; actuals and P10/P50/P90 forecasts; statistical-versus-publish
 complete synthetic provenance chain. Remaining sections below continue to define the target
 product rather than shipped screens.
 
+The production read-only boundary now implements ForecastLab option discovery and immutable
+forecast selection through `/v1/forecasts/options`, `/v1/forecasts`, and
+`/v1/forecast-runs/{forecast_run_id}`. The TypeScript adapter schema-checks live rows and
+provenance before rendering. Activation still requires an authenticated production frontend
+origin and private Cloud Run invoker configuration; the public Pages build intentionally remains
+synthetic.
+
 ### 1. Platform overview
 
 Show the latest forecast origin, active champion, publication status, coverage, exception count,

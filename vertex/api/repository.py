@@ -51,6 +51,8 @@ FORECAST_COLUMNS = (
     "prediction_p90",
     "forecast_strategy",
     "confidence_flag",
+    "calibration_method",
+    "calibration_run_id",
     "hierarchy_version",
     "reconciliation_method",
     "reconciliation_run_id",
@@ -60,11 +62,29 @@ FORECAST_COLUMNS = (
     "model_family",
     "model_type",
     "feature_version",
+    "feature_availability_hash",
     "code_sha",
     "data_cutoff",
     "published_at",
     "published_by",
 )
+
+
+@dataclass(frozen=True)
+class ForecastExplorerOptions:
+    runs: list[dict[str, Any]]
+    entities: list[dict[str, Any]]
+    models: list[dict[str, Any]]
+    horizons: list[int]
+
+
+@dataclass(frozen=True)
+class ForecastExplorerResult:
+    run: dict[str, Any]
+    entity: dict[str, Any]
+    model: dict[str, Any]
+    rows: list[dict[str, Any]]
+    provenance: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -103,6 +123,20 @@ class MutationConflictError(ValueError):
 
 
 class ForecastRepository(Protocol):
+    def forecast_explorer_options(self) -> ForecastExplorerOptions:
+        """Return filter values drawn only from completely delivered publications."""
+
+    def forecast_explorer_result(
+        self,
+        *,
+        forecast_run_id: str,
+        entity_key_json: str,
+        model_id: str,
+        horizon: int | None,
+        exception_state: str | None,
+    ) -> ForecastExplorerResult | None:
+        """Return one UI-shaped immutable delivered forecast selection."""
+
     def resolve_current(self, *, contract_name: str, destination: str) -> PublicationScope | None:
         """Resolve the latest completely delivered version for a contract/destination."""
 
@@ -239,6 +273,7 @@ class BigQueryForecastRepository:
         self.delivery_events_table = validate_bq_table_id(
             f"{table_prefix}.forecast_delivery_events"
         )
+        self.demand_table = validate_bq_table_id(f"{table_prefix}.int_demand_store_daily")
         self.webhook_url = webhook_url
         self.webhook_signing_secret = webhook_signing_secret
         self.webhook_name = webhook_name
@@ -642,6 +677,191 @@ class BigQueryForecastRepository:
                 bigquery.ScalarQueryParameter("contract_name", "STRING", contract_name),
                 bigquery.ScalarQueryParameter("destination", "STRING", destination),
             ],
+        )
+
+    @staticmethod
+    def _entity_option(entity_key_json: str, grain: str) -> dict[str, Any]:
+        key = json.loads(entity_key_json)
+        label = ", ".join(f"{name} {value}" for name, value in sorted(key.items()))
+        return {
+            "id": entity_key_json,
+            "name": label,
+            "hierarchyNode": entity_key_json,
+            "hierarchyLevel": grain,
+        }
+
+    def forecast_explorer_options(self) -> ForecastExplorerOptions:
+        rows = self._dataframe(
+            f"""
+            SELECT
+              forecasts.forecast_run_id,
+              forecasts.forecast_origin,
+              forecasts.publication_version,
+              forecasts.entity_key_json,
+              forecasts.grain,
+              forecasts.model_id,
+              forecasts.model_family,
+              forecasts.config_name,
+              forecasts.horizon
+            FROM `{self.publication_table}` AS forecasts
+            INNER JOIN `{self.delivery_table}` AS deliveries
+              USING (forecast_run_id, publication_version, destination)
+            WHERE deliveries.delivery_status = 'delivered'
+            ORDER BY forecast_origin DESC, publication_version DESC,
+                     entity_key_json, model_id, horizon
+            """,
+            [],
+        )
+        if rows.empty:
+            return ForecastExplorerOptions(runs=[], entities=[], models=[], horizons=[])
+        records = rows.to_dict(orient="records")
+        run_keys: set[str] = set()
+        entity_keys: set[str] = set()
+        model_keys: set[str] = set()
+        runs: list[dict[str, Any]] = []
+        entities: list[dict[str, Any]] = []
+        models: list[dict[str, Any]] = []
+        for row in records:
+            run_id = str(row["forecast_run_id"])
+            if run_id not in run_keys:
+                run_keys.add(run_id)
+                origin = str(row["forecast_origin"])
+                runs.append(
+                    {
+                        "id": run_id,
+                        "label": f"{origin} · published v{int(row['publication_version'])}",
+                        "origin": origin,
+                    }
+                )
+            entity_id = canonical_entity_key(str(row["entity_key_json"]))
+            if entity_id and entity_id not in entity_keys:
+                entity_keys.add(entity_id)
+                entities.append(self._entity_option(entity_id, str(row["grain"])))
+            model_id = str(row["model_id"])
+            if model_id not in model_keys:
+                model_keys.add(model_id)
+                name = row.get("config_name") or row.get("model_family") or model_id
+                models.append({"id": model_id, "name": str(name)})
+        return ForecastExplorerOptions(
+            runs=runs,
+            entities=entities,
+            models=models,
+            horizons=sorted({int(value) for value in rows["horizon"]}),
+        )
+
+    def forecast_explorer_result(
+        self,
+        *,
+        forecast_run_id: str,
+        entity_key_json: str,
+        model_id: str,
+        horizon: int | None,
+        exception_state: str | None,
+    ) -> ForecastExplorerResult | None:
+        scope_rows = self._dataframe(
+            f"""
+            SELECT * FROM `{self.delivery_table}`
+            WHERE forecast_run_id = @forecast_run_id
+              AND destination = 'canonical_bigquery'
+              AND delivery_status = 'delivered'
+            ORDER BY publication_version DESC
+            LIMIT 1
+            """,
+            [bigquery.ScalarQueryParameter("forecast_run_id", "STRING", forecast_run_id)],
+        )
+        if scope_rows.empty:
+            return None
+        scope = self._scope(scope_rows.iloc[0])
+        clauses = [
+            "f.forecast_run_id = @forecast_run_id",
+            "f.publication_version = @publication_version",
+            "f.destination = @destination",
+            "f.entity_key_json = @entity_key_json",
+            "f.model_id = @model_id",
+        ]
+        parameters: list[Any] = [
+            bigquery.ScalarQueryParameter("forecast_run_id", "STRING", forecast_run_id),
+            bigquery.ScalarQueryParameter(
+                "publication_version", "INT64", scope.publication_version
+            ),
+            bigquery.ScalarQueryParameter("destination", "STRING", scope.destination),
+            bigquery.ScalarQueryParameter("entity_key_json", "STRING", entity_key_json),
+            bigquery.ScalarQueryParameter("model_id", "STRING", model_id),
+        ]
+        if horizon is not None:
+            clauses.append("f.horizon = @horizon")
+            parameters.append(bigquery.ScalarQueryParameter("horizon", "INT64", horizon))
+        if exception_state is not None:
+            clauses.append(
+                "CASE f.confidence_flag WHEN 'low' THEN 'blocked' "
+                "WHEN 'medium' THEN 'watch' ELSE 'clear' END = @exception_state"
+            )
+            parameters.append(
+                bigquery.ScalarQueryParameter("exception_state", "STRING", exception_state)
+            )
+        rows = self._dataframe(
+            f"""
+            SELECT
+              f.*,
+              demand.observed_sales_units AS actual,
+              CASE f.confidence_flag WHEN 'low' THEN 'blocked'
+                   WHEN 'medium' THEN 'watch' ELSE 'clear' END AS exception_state
+            FROM `{self.publication_table}` AS f
+            LEFT JOIN `{self.demand_table}` AS demand
+              ON demand.date = f.target_date
+             AND demand.store_nbr = SAFE_CAST(JSON_VALUE(f.entity_key_json, '$.store_nbr') AS INT64)
+            WHERE {' AND '.join(clauses)}
+            ORDER BY f.target_date, f.horizon, f.publication_id
+            """,
+            parameters,
+        )
+        if rows.empty:
+            return None
+        records = rows.to_dict(orient="records")
+        first = records[0]
+        entity = self._entity_option(entity_key_json, str(first["grain"]))
+        model_name = first.get("config_name") or first.get("model_family") or model_id
+        output_rows = [
+            {
+                "runId": forecast_run_id,
+                "entityId": entity_key_json,
+                "modelId": model_id,
+                "targetDate": str(row["target_date"]),
+                "horizon": int(row["horizon"]),
+                "actual": None if pd.isna(row.get("actual")) else float(row["actual"]),
+                "p10": float(row["prediction_p10"]),
+                "p50": float(row["prediction_p50"]),
+                "p90": float(row["prediction_p90"]),
+                "statisticalForecast": float(row["statistical_forecast"]),
+                "publishedForecast": float(row["published_value"]),
+                "strategy": str(row["forecast_strategy"]),
+                "exceptionState": str(row["exception_state"]),
+            }
+            for row in records
+        ]
+        return ForecastExplorerResult(
+            run={
+                "id": forecast_run_id,
+                "label": f"{first['forecast_origin']} · published v{scope.publication_version}",
+                "origin": str(first["forecast_origin"]),
+                "publicationStatus": "published",
+            },
+            entity=entity,
+            model={"id": model_id, "name": str(model_name)},
+            rows=output_rows,
+            provenance={
+                "contractName": str(first["forecast_contract_name"]),
+                "contractHash": str(first["forecast_contract_hash"]),
+                "modelRunId": str(first["model_run_id"]),
+                "calibrationRunId": str(first["calibration_run_id"]),
+                "reconciliationRunId": str(first["reconciliation_run_id"]),
+                "hierarchyVersion": str(first["hierarchy_version"]),
+                "featureVersion": str(first["feature_version"]),
+                "featureAvailabilityHash": str(first["feature_availability_hash"]),
+                "dataCutoff": first["data_cutoff"].isoformat(),
+                "codeSha": str(first["code_sha"]),
+                "publicationVersion": str(scope.publication_version),
+            },
         )
 
     def resolve_version(
