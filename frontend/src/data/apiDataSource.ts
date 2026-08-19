@@ -14,10 +14,22 @@ import type { ForecastLabDataSource } from "./dataSource";
 export class ApiDataSource implements ForecastLabDataSource {
   constructor(private readonly baseUrl: string) {}
 
-  async getForecastOptions(): Promise<ForecastOptions> {
-    const response = await fetch(`${this.baseUrl}/v1/forecasts/options`);
+  private requestError(label: string, response: Response) {
+    const requestId = response.headers.get("x-request-id");
+    return new Error(
+      `${label} request failed (${response.status})${requestId ? ` · request ${requestId}` : ""}`,
+    );
+  }
+
+  async getForecastOptions(runId?: string): Promise<ForecastOptions> {
+    const query = new URLSearchParams();
+    if (runId) query.set("run_id", runId);
+    const suffix = query.size > 0 ? `?${query}` : "";
+    const response = await fetch(
+      `${this.baseUrl}/v1/forecasts/options${suffix}`,
+    );
     if (!response.ok) {
-      throw new Error(`Forecast options request failed (${response.status})`);
+      throw this.requestError("Forecast options", response);
     }
     return forecastApiOptionsSchema.parse(await response.json());
   }
@@ -32,7 +44,7 @@ export class ApiDataSource implements ForecastLabDataSource {
     if (filters.horizon !== null) query.set("horizon", String(filters.horizon));
     const response = await fetch(`${this.baseUrl}/v1/forecasts?${query}`);
     if (!response.ok) {
-      throw new Error(`Forecast request failed (${response.status})`);
+      throw this.requestError("Forecast", response);
     }
     const payload = await response.json();
     return forecastApiResultSchema.parse(payload);

@@ -6,6 +6,14 @@ resource "google_service_account" "api" {
   display_name = "Forecast Retrieval API"
 }
 
+resource "google_project_service_identity" "iap" {
+  provider = google-beta
+  count    = var.enabled && var.enable_iap ? 1 : 0
+
+  project = var.project_id
+  service = "iap.googleapis.com"
+}
+
 resource "google_project_iam_member" "bigquery_job_user" {
   count = var.enabled ? 1 : 0
 
@@ -36,6 +44,7 @@ resource "google_cloud_run_v2_service" "api" {
   name                = var.service_name
   ingress             = "INGRESS_TRAFFIC_ALL"
   deletion_protection = false
+  iap_enabled         = var.enable_iap
 
   template {
     service_account = google_service_account.api[0].email
@@ -138,4 +147,24 @@ resource "google_cloud_run_v2_service_iam_member" "invoker" {
   name     = google_cloud_run_v2_service.api[0].name
   role     = "roles/run.invoker"
   member   = each.value
+}
+
+resource "google_cloud_run_v2_service_iam_member" "iap_invoker" {
+  count = var.enabled && var.enable_iap ? 1 : 0
+
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.api[0].name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_project_service_identity.iap[0].email}"
+}
+
+resource "google_iap_web_cloud_run_service_iam_member" "forecastlab_user" {
+  for_each = var.enabled && var.enable_iap ? var.iap_access_members : toset([])
+
+  project                = var.project_id
+  location               = var.region
+  cloud_run_service_name = google_cloud_run_v2_service.api[0].name
+  role                   = "roles/iap.httpsResourceAccessor"
+  member                 = each.value
 }

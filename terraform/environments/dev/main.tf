@@ -107,6 +107,8 @@ module "forecast_api" {
   container_image                       = var.forecast_api_image
   dbt_dataset                           = var.dbt_dataset
   invoker_members                       = var.forecast_api_invoker_members
+  enable_iap                            = var.enable_forecastlab_iap
+  iap_access_members                    = var.forecastlab_iap_access_members
   max_instance_count                    = var.forecast_api_max_instances
 
   depends_on = [module.gcp_apis, module.bigquery_datasets]

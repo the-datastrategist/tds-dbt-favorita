@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import json
+import logging
 import os
+import re
 from datetime import date, datetime
+from pathlib import Path
+from time import perf_counter
 from typing import Annotated, Any, Literal
+from uuid import uuid4
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field, model_validator
 
 from vertex.api.repository import (
@@ -23,6 +29,8 @@ from vertex.api.repository import (
     PublicationScope,
     canonical_entity_key,
 )
+
+LOGGER = logging.getLogger("forecast_api.requests")
 
 
 class ErrorBody(BaseModel):
@@ -118,6 +126,7 @@ class ExplorerResponse(BaseModel):
     model: ExplorerModel
     rows: list[ExplorerRow]
     provenance: ExplorerProvenance
+    nextPageToken: str | None = None
 
 
 class QueryFilters(BaseModel):
@@ -302,6 +311,29 @@ def create_app(
     if repository is not None:
         app.dependency_overrides[_repository] = lambda: repository
 
+    @app.middleware("http")
+    async def attach_request_id(request: Request, call_next: Any) -> Any:
+        supplied = request.headers.get("X-Request-ID", "")
+        request_id = supplied if re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", supplied) else str(uuid4())
+        request.state.request_id = request_id
+        started_at = perf_counter()
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        LOGGER.info(
+            json.dumps(
+                {
+                    "event": "forecast_api_request",
+                    "request_id": request_id,
+                    "method": request.method,
+                    "path": request.url.path,
+                    "status_code": response.status_code,
+                    "duration_ms": round((perf_counter() - started_at) * 1000, 2),
+                },
+                sort_keys=True,
+            )
+        )
+        return response
+
     def require_mutations() -> None:
         if not mutations_enabled:
             raise HTTPException(
@@ -361,9 +393,20 @@ def create_app(
         tags=["forecastlab"],
     )
     def forecast_explorer_options(
+        run_id: Annotated[str | None, Query(min_length=1)] = None,
         repository: ForecastRepository = Depends(_repository),
     ) -> ExplorerOptionsResponse:
-        result: ForecastExplorerOptions = repository.forecast_explorer_options()
+        result: ForecastExplorerOptions = repository.forecast_explorer_options(
+            forecast_run_id=run_id
+        )
+        if run_id is not None and not result.entities:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "code": "forecast_run_not_found",
+                    "message": "forecast run has no delivered canonical publication",
+                },
+            )
         return ExplorerOptionsResponse(
             runs=[ExplorerRun.model_validate(value) for value in result.runs],
             entities=[ExplorerEntity.model_validate(value) for value in result.entities],
@@ -386,6 +429,7 @@ def create_app(
             model=ExplorerModel.model_validate(result.model),
             rows=[ExplorerRow.model_validate(value) for value in result.rows],
             provenance=ExplorerProvenance.model_validate(result.provenance),
+            nextPageToken=result.next_page_token,
         )
 
     def read_explorer_forecasts(
@@ -395,6 +439,10 @@ def create_app(
         model_id: str,
         horizon: int | None,
         exception_state: str | None,
+        target_start: date | None,
+        target_end: date | None,
+        limit: int,
+        page_token: str | None,
         repository: ForecastRepository,
     ) -> ExplorerResponse:
         try:
@@ -405,15 +453,32 @@ def create_app(
                 detail={"code": "invalid_entity_id", "message": str(exc)},
             ) from exc
         assert entity_key is not None
-        return explorer_response(
-            repository.forecast_explorer_result(
+        if target_start and target_end and target_start > target_end:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "invalid_date_range",
+                    "message": "target_start exceeds target_end",
+                },
+            )
+        try:
+            result = repository.forecast_explorer_result(
                 forecast_run_id=forecast_run_id,
                 entity_key_json=entity_key,
                 model_id=model_id,
                 horizon=horizon,
                 exception_state=exception_state,
+                target_start=target_start,
+                target_end=target_end,
+                limit=limit,
+                page_token=page_token,
             )
-        )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail={"code": "invalid_page_token", "message": str(exc)},
+            ) from exc
+        return explorer_response(result)
 
     @app.get("/v1/forecasts", response_model=ExplorerResponse, tags=["forecastlab"])
     def forecast_explorer(
@@ -422,6 +487,10 @@ def create_app(
         model_id: Annotated[str, Query(min_length=1)],
         horizon: Annotated[int | None, Query(ge=1)] = None,
         exception_state: Annotated[str | None, Query(pattern="^(clear|watch|blocked)$")] = None,
+        target_start: date | None = None,
+        target_end: date | None = None,
+        limit: Annotated[int, Query(ge=1, le=500)] = 100,
+        page_token: str | None = None,
         repository: ForecastRepository = Depends(_repository),
     ) -> ExplorerResponse:
         return read_explorer_forecasts(
@@ -430,6 +499,10 @@ def create_app(
             model_id=model_id,
             horizon=horizon,
             exception_state=exception_state,
+            target_start=target_start,
+            target_end=target_end,
+            limit=limit,
+            page_token=page_token,
             repository=repository,
         )
 
@@ -444,6 +517,10 @@ def create_app(
         model_id: Annotated[str, Query(min_length=1)],
         horizon: Annotated[int | None, Query(ge=1)] = None,
         exception_state: Annotated[str | None, Query(pattern="^(clear|watch|blocked)$")] = None,
+        target_start: date | None = None,
+        target_end: date | None = None,
+        limit: Annotated[int, Query(ge=1, le=500)] = 100,
+        page_token: str | None = None,
         repository: ForecastRepository = Depends(_repository),
     ) -> ExplorerResponse:
         return read_explorer_forecasts(
@@ -452,6 +529,10 @@ def create_app(
             model_id=model_id,
             horizon=horizon,
             exception_state=exception_state,
+            target_start=target_start,
+            target_end=target_end,
+            limit=limit,
+            page_token=page_token,
             repository=repository,
         )
 
@@ -538,6 +619,18 @@ def create_app(
                 idempotency_key=request.idempotency_key,
             )
         )
+
+    frontend_dist = Path(
+        os.getenv("FORECASTLAB_DIST_DIR", Path(__file__).parents[2] / "frontend" / "dist")
+    ).resolve()
+    if (frontend_dist / "index.html").is_file():
+
+        @app.get("/{asset_path:path}", include_in_schema=False)
+        def forecastlab_spa(asset_path: str) -> FileResponse:
+            requested = (frontend_dist / asset_path).resolve()
+            if requested.is_relative_to(frontend_dist) and requested.is_file():
+                return FileResponse(requested)
+            return FileResponse(frontend_dist / "index.html")
 
     return app
 

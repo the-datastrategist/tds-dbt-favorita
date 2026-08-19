@@ -17,6 +17,6 @@ export interface ForecastLabDataSource {
     modelId: string,
     filters: LeaderboardFilters,
   ): Promise<LeaderboardRow | null>;
-  getForecastOptions(): Promise<ForecastOptions>;
+  getForecastOptions(runId?: string): Promise<ForecastOptions>;
   getForecasts(filters: ForecastFilters): Promise<ForecastResult>;
 }

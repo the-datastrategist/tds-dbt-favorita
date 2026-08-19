@@ -63,6 +63,20 @@ variable "invoker_members" {
   type        = set(string)
   default     = []
 }
+variable "enable_iap" {
+  description = "Protect the Cloud Run ForecastLab UI and API with Identity-Aware Proxy."
+  type        = bool
+  default     = false
+}
+variable "iap_access_members" {
+  description = "IAM members allowed through IAP to the ForecastLab UI and API."
+  type        = set(string)
+  default     = []
+  validation {
+    condition     = var.enable_iap || length(var.iap_access_members) == 0
+    error_message = "iap_access_members requires enable_iap = true."
+  }
+}
 variable "min_instance_count" {
   type    = number
   default = 0

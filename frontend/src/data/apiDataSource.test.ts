@@ -69,7 +69,7 @@ describe("ApiDataSource forecast contract", () => {
     vi.stubGlobal("fetch", fetchMock);
     const source = new ApiDataSource("https://forecast.example");
 
-    await expect(source.getForecastOptions()).resolves.toEqual(options);
+    await expect(source.getForecastOptions("run-1")).resolves.toEqual(options);
     await expect(
       source.getForecasts({
         runId: "run-1",
@@ -79,6 +79,9 @@ describe("ApiDataSource forecast contract", () => {
         exceptionState: "watch",
       }),
     ).resolves.toEqual(result);
+
+    const optionsUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
+    expect(optionsUrl.searchParams.get("run_id")).toBe("run-1");
 
     const url = new URL(String(fetchMock.mock.calls[1]?.[0]));
     expect(url.pathname).toBe("/v1/forecasts");
@@ -113,5 +116,21 @@ describe("ApiDataSource forecast contract", () => {
         exceptionState: "all",
       }),
     ).rejects.toThrow("Forecast quantiles must be ordered");
+  });
+
+  it("includes the server request ID in actionable errors", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("failed", {
+          status: 500,
+          headers: { "x-request-id": "request-123" },
+        }),
+      ),
+    );
+
+    await expect(new ApiDataSource("").getForecastOptions()).rejects.toThrow(
+      "Forecast options request failed (500) · request request-123",
+    );
   });
 });

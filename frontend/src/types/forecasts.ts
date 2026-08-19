@@ -104,6 +104,7 @@ export const forecastApiResultSchema = z.object({
     }),
   ),
   provenance: provenanceSchema,
+  nextPageToken: z.string().nullable().optional(),
 });
 
 export const forecastApiOptionsSchema = forecastOptionSchema;
@@ -145,4 +146,5 @@ export interface ForecastResult {
   model: ForecastOptions["models"][number];
   rows: ForecastRow[];
   provenance: ForecastProvenance;
+  nextPageToken?: string | null;
 }

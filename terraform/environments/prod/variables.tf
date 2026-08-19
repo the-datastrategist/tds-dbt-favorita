@@ -142,6 +142,18 @@ variable "forecast_api_invoker_members" {
   default     = []
 }
 
+variable "enable_forecastlab_iap" {
+  description = "Protect the same-origin ForecastLab UI and API with Identity-Aware Proxy."
+  type        = bool
+  default     = false
+}
+
+variable "forecastlab_iap_access_members" {
+  description = "IAM members allowed to access ForecastLab through IAP."
+  type        = set(string)
+  default     = []
+}
+
 variable "forecast_api_min_instances" {
   description = "Minimum warm Cloud Run instances for the Forecast Retrieval API."
   type        = number

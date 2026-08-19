@@ -108,6 +108,8 @@ module "forecast_api" {
   container_image                       = var.forecast_api_image
   dbt_dataset                           = var.dbt_dataset
   invoker_members                       = var.forecast_api_invoker_members
+  enable_iap                            = var.enable_forecastlab_iap
+  iap_access_members                    = var.forecastlab_iap_access_members
   min_instance_count                    = var.forecast_api_min_instances
   max_instance_count                    = var.forecast_api_max_instances
 

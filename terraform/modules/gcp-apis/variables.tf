@@ -15,6 +15,7 @@ variable "apis" {
     "secretmanager.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
+    "iap.googleapis.com",
     "logging.googleapis.com",
     "monitoring.googleapis.com",
     "sts.googleapis.com",

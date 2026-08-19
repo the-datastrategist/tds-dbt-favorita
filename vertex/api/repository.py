@@ -85,6 +85,7 @@ class ForecastExplorerResult:
     model: dict[str, Any]
     rows: list[dict[str, Any]]
     provenance: dict[str, Any]
+    next_page_token: str | None = None
 
 
 @dataclass(frozen=True)
@@ -123,7 +124,9 @@ class MutationConflictError(ValueError):
 
 
 class ForecastRepository(Protocol):
-    def forecast_explorer_options(self) -> ForecastExplorerOptions:
+    def forecast_explorer_options(
+        self, *, forecast_run_id: str | None = None
+    ) -> ForecastExplorerOptions:
         """Return filter values drawn only from completely delivered publications."""
 
     def forecast_explorer_result(
@@ -134,6 +137,10 @@ class ForecastRepository(Protocol):
         model_id: str,
         horizon: int | None,
         exception_state: str | None,
+        target_start: date | None = None,
+        target_end: date | None = None,
+        limit: int = 100,
+        page_token: str | None = None,
     ) -> ForecastExplorerResult | None:
         """Return one UI-shaped immutable delivered forecast selection."""
 
@@ -690,7 +697,9 @@ class BigQueryForecastRepository:
             "hierarchyLevel": grain,
         }
 
-    def forecast_explorer_options(self) -> ForecastExplorerOptions:
+    def forecast_explorer_options(
+        self, *, forecast_run_id: str | None = None
+    ) -> ForecastExplorerOptions:
         rows = self._dataframe(
             f"""
             SELECT
@@ -733,6 +742,8 @@ class BigQueryForecastRepository:
                         "origin": origin,
                     }
                 )
+            if forecast_run_id is not None and run_id != forecast_run_id:
+                continue
             entity_id = canonical_entity_key(str(row["entity_key_json"]))
             if entity_id and entity_id not in entity_keys:
                 entity_keys.add(entity_id)
@@ -757,6 +768,10 @@ class BigQueryForecastRepository:
         model_id: str,
         horizon: int | None,
         exception_state: str | None,
+        target_start: date | None = None,
+        target_end: date | None = None,
+        limit: int = 100,
+        page_token: str | None = None,
     ) -> ForecastExplorerResult | None:
         scope_rows = self._dataframe(
             f"""
@@ -799,6 +814,32 @@ class BigQueryForecastRepository:
             parameters.append(
                 bigquery.ScalarQueryParameter("exception_state", "STRING", exception_state)
             )
+        if target_start is not None:
+            clauses.append("f.target_date >= @target_start")
+            parameters.append(bigquery.ScalarQueryParameter("target_start", "DATE", target_start))
+        if target_end is not None:
+            clauses.append("f.target_date <= @target_end")
+            parameters.append(bigquery.ScalarQueryParameter("target_end", "DATE", target_end))
+        cursor = decode_page_token(page_token)
+        if cursor is not None:
+            if cursor["entity_key_json"] != entity_key_json:
+                raise ValueError("page_token does not belong to the selected entity")
+            clauses.append(
+                "(f.target_date > @cursor_date "
+                "OR (f.target_date = @cursor_date AND f.horizon > @cursor_horizon) "
+                "OR (f.target_date = @cursor_date AND f.horizon = @cursor_horizon "
+                "AND f.publication_id > @cursor_publication_id))"
+            )
+            parameters.extend(
+                [
+                    bigquery.ScalarQueryParameter("cursor_date", "DATE", cursor["target_date"]),
+                    bigquery.ScalarQueryParameter("cursor_horizon", "INT64", cursor["horizon"]),
+                    bigquery.ScalarQueryParameter(
+                        "cursor_publication_id", "STRING", cursor["publication_id"]
+                    ),
+                ]
+            )
+        parameters.append(bigquery.ScalarQueryParameter("page_limit", "INT64", limit + 1))
         rows = self._dataframe(
             f"""
             SELECT
@@ -812,12 +853,15 @@ class BigQueryForecastRepository:
              AND demand.store_nbr = SAFE_CAST(JSON_VALUE(f.entity_key_json, '$.store_nbr') AS INT64)
             WHERE {' AND '.join(clauses)}
             ORDER BY f.target_date, f.horizon, f.publication_id
+            LIMIT @page_limit
             """,
             parameters,
         )
         if rows.empty:
             return None
         records = rows.to_dict(orient="records")
+        has_more = len(records) > limit
+        records = records[:limit]
         first = records[0]
         entity = self._entity_option(entity_key_json, str(first["grain"]))
         model_name = first.get("config_name") or first.get("model_family") or model_id
@@ -862,6 +906,7 @@ class BigQueryForecastRepository:
                 "codeSha": str(first["code_sha"]),
                 "publicationVersion": str(scope.publication_version),
             },
+            next_page_token=(encode_page_token(records[-1]) if has_more else None),
         )
 
     def resolve_version(

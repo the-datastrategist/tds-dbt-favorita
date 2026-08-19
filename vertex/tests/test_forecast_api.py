@@ -1,10 +1,11 @@
 """Read-only forecast retrieval API contract tests."""
 
 from datetime import date, datetime, timezone
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 import pandas as pd
+import pytest
 from fastapi.testclient import TestClient
 
 from vertex.api.app import create_app
@@ -51,6 +52,23 @@ def _row(publication_id: str = "publication-1") -> dict:
     }
 
 
+@pytest.mark.unit
+def test_forecastlab_spa_is_served_without_shadowing_api_routes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    (tmp_path / "index.html").write_text("<html>ForecastLab</html>", encoding="utf-8")
+    assets = tmp_path / "assets"
+    assets.mkdir()
+    (assets / "app.js").write_text("console.log('ForecastLab')", encoding="utf-8")
+    monkeypatch.setenv("FORECASTLAB_DIST_DIR", str(tmp_path))
+    client = TestClient(create_app(FakeRepository()))
+
+    assert client.get("/healthz").json() == {"status": "ok"}
+    assert client.get("/forecasts").text == "<html>ForecastLab</html>"
+    assert "console.log" in client.get("/assets/app.js").text
+    assert client.get("/../requirements.txt").text == "<html>ForecastLab</html>"
+
+
 _DEFAULT_SCOPE = object()
 
 
@@ -69,8 +87,8 @@ class FakeRepository:
         self.failure = failure
         self.calls: list[tuple[object, ...]] = []
 
-    def forecast_explorer_options(self):
-        self.calls.append(("explorer_options",))
+    def forecast_explorer_options(self, *, forecast_run_id=None):
+        self.calls.append(("explorer_options", forecast_run_id))
         return ForecastExplorerOptions(
             runs=[{"id": "run-1", "label": "2026-08-11 · published v3", "origin": "2026-08-11"}],
             entities=[
@@ -224,6 +242,7 @@ def test_forecastlab_options_and_forecasts_expose_live_typed_contract():
     )
 
     assert options.status_code == 200
+    assert options.headers["x-request-id"]
     assert options.json()["horizons"] == [1, 7]
     assert options.json()["exceptionStates"] == ["clear", "watch", "blocked"]
     assert forecasts.status_code == 200
@@ -238,6 +257,10 @@ def test_forecastlab_options_and_forecasts_expose_live_typed_contract():
             "model_id": "model-1",
             "horizon": 7,
             "exception_state": "clear",
+            "target_start": None,
+            "target_end": None,
+            "limit": 100,
+            "page_token": None,
         },
     )
     openapi = client.get("/openapi.json").json()
@@ -245,6 +268,44 @@ def test_forecastlab_options_and_forecasts_expose_live_typed_contract():
     assert "/v1/forecasts/options" in openapi["paths"]
     assert "/v1/forecast-runs/{forecast_run_id}" in openapi["paths"]
     assert "ExplorerProvenance" in openapi["components"]["schemas"]
+
+
+@pytest.mark.unit
+def test_forecastlab_scopes_options_and_preserves_valid_request_ids():
+    repository = FakeRepository()
+    client = TestClient(create_app(repository))
+
+    response = client.get(
+        "/v1/forecasts/options",
+        params={"run_id": "run-1"},
+        headers={"X-Request-ID": "forecastlab-test-123"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["x-request-id"] == "forecastlab-test-123"
+    assert repository.calls[-1] == ("explorer_options", "run-1")
+
+
+@pytest.mark.unit
+def test_forecastlab_validates_date_bounds_and_page_tokens():
+    repository = FakeRepository(failure=ValueError("invalid page_token"))
+    client = TestClient(create_app(repository))
+    params = {
+        "run_id": "run-1",
+        "entity_id": '{"store_nbr":1}',
+        "model_id": "model-1",
+    }
+
+    invalid_range = client.get(
+        "/v1/forecasts",
+        params={**params, "target_start": "2026-08-20", "target_end": "2026-08-18"},
+    )
+    invalid_token = client.get("/v1/forecasts", params={**params, "page_token": "tampered"})
+
+    assert invalid_range.status_code == 422
+    assert invalid_range.json()["code"] == "invalid_date_range"
+    assert invalid_token.status_code == 400
+    assert invalid_token.json()["code"] == "invalid_page_token"
 
 
 @pytest.mark.unit
