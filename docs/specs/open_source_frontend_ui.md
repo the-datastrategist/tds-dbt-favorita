@@ -148,7 +148,8 @@ modules rather than duplicating validation or transition logic.
 Implementation checkpoint (2026-08-18): the public fixture mode now ships the application shell,
 platform overview, model leaderboard, and model-detail route. The overview summarizes the current
 champion, day-seven baseline comparison, probabilistic coverage, and WAPE across every configured
-horizon. Remaining sections below continue to define the target product rather than shipped
+horizon. The production fixture build is assembled into the repository's GitHub Pages artifact
+under `/app/`. Remaining sections below continue to define the target product rather than shipped
 screens.
 
 ### 1. Platform overview
