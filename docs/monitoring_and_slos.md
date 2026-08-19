@@ -162,6 +162,12 @@ python scripts/evaluate_monitoring_alerts.py \
 The repository routes ticket/page policies to `forecasting_ops_slack`. Local non-dry-run evaluation
 requires `FORECAST_SLACK_WEBHOOK_URL`; hosted evaluation receives that variable from Secret Manager.
 
+Publication freshness follows the declared ingestion mode. Continuous sources compare the latest
+publication timestamp with the configured wall-clock threshold. When every registered source is
+`static_demo`, the mart reports `freshness_status = 'static_demo'` and does not page merely because
+the intentionally fixed dataset has not produced another publication. Missing or failed source
+ingestion and other pipeline-health signals remain independently alertable.
+
 ## Cloud-managed failure alert
 
 Terraform includes an opt-in `monitoring-alerts` module. It creates an error-log metric and a Cloud

@@ -44,3 +44,13 @@
 The Slack path is now live accepted. The alerts reflect the current static demonstration data and
 should be remediated or explicitly acknowledged through the associated runbooks; they do not
 invalidate notification delivery acceptance.
+
+## Static-demo freshness follow-up — 2026-08-18
+
+The witnessed stale-publication alert exposed an inconsistency: source health already treated
+`static_demo` freshness as not applicable, while publication freshness continued applying a
+24-hour recurring-data threshold. Publication freshness is now source-mode aware. Focused dbt
+validation passed with two unit tests and seven schema tests, and the live mart reports
+`data_mode = 'static_demo'`, `freshness_status = 'static_demo'`, and `is_alerting = false` for the
+hierarchical publication contract. Continuous-mode stale and missing detection remains covered and
+enabled.
