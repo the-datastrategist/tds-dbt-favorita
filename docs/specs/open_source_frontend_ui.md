@@ -367,6 +367,8 @@ Additional requirements:
 - A new contributor can run the frontend and fixture API locally using documented commands.
 - The public demo loads from `/tds-dbt-favorita/app/` without breaking the documentation portal or
   dbt Docs.
+- Public-demo routes use static-host-safe fragment URLs so direct links and refreshes do not depend
+  on server rewrite support; production deployments retain normal browser paths.
 - A viewer can find a published forecast, inspect uncertainty, and trace it to its model, contract,
   feature cutoff, calibration, reconciliation, and publication metadata.
 - An analyst can compare ML models and baselines across rolling origins and horizons.

@@ -1,11 +1,21 @@
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, HashRouter } from "react-router-dom";
 import { AppProviders } from "./providers";
 import { AppRoutes } from "./routes";
 
-export const App = () => (
-  <AppProviders>
-    <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <AppRoutes />
-    </BrowserRouter>
-  </AppProviders>
-);
+export const App = () => {
+  const Router = import.meta.env.MODE === "pages" ? HashRouter : BrowserRouter;
+
+  return (
+    <AppProviders>
+      <Router
+        basename={
+          import.meta.env.MODE === "pages"
+            ? undefined
+            : import.meta.env.BASE_URL
+        }
+      >
+        <AppRoutes />
+      </Router>
+    </AppProviders>
+  );
+};
