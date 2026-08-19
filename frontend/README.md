@@ -2,7 +2,19 @@
 
 ForecastLab is the React, TypeScript, and Vite workbench for the forecasting platform. Its current
 public-demo slice includes a platform overview, responsive model leaderboard, model-evidence
-drilldown, and canonical Forecast Explorer backed by deterministic synthetic fixtures.
+drilldown, experiment history and comparison, and canonical Forecast Explorer backed by
+deterministic synthetic fixtures.
+
+The production adapter validates the typed responses from `GET /v1/forecasts/options` and
+`GET /v1/forecasts`. The root Dockerfile creates this build and embeds it in the FastAPI image:
+
+```bash
+VITE_DATA_MODE=api VITE_API_BASE_URL= npm run build
+```
+
+The public Pages build always remains fixture-backed and makes no production warehouse requests.
+Cloud Run serves the browser application and API from the same IAP-protected origin; do not embed
+bearer tokens or cloud credentials in Vite environment variables.
 
 ## Run locally
 
@@ -19,6 +31,8 @@ requests. Available routes are:
 
 - `/overview` for the champion, horizon-performance, and selection-evidence summary;
 - `/forecasts` for actuals, P10/P50/P90 forecasts, published adjustments, and provenance;
+- `/experiments` for sortable, filterable run history and comparison selection;
+- `/experiments/compare?runs=…` for 2–5 run scientific comparisons;
 - `/models/leaderboard` for horizon- and segment-filtered comparisons; and
 - `/models/:modelId` for model evidence details.
 
@@ -34,11 +48,14 @@ refresh. Root-hosted and API deployments continue to use normal browser paths.
 npm run validate
 npx playwright install chromium
 npm run test:e2e
+npm run build:pages
+npm run test:pages
 ```
 
 `validate` checks formatting, lint rules, TypeScript, unit/component tests, and the GitHub Pages
-production build. `test:e2e` checks the primary filter-to-drilldown journey and automated WCAG
-violations in Chromium.
+production build. `test:e2e` checks the primary filter-to-drilldown journeys and automated WCAG
+violations in Chromium. After `build:pages`, `test:pages` verifies that direct experiment hash
+routes load and survive refresh beneath the repository subpath.
 
 ## Builds and data modes
 

@@ -1,0 +1,485 @@
+{
+  "metadata": {
+    "datasetKind": "synthetic",
+    "fixtureVersion": "forecastlab_experiments_demo_v1",
+    "generatedAt": "2026-08-18T00:00:00Z",
+    "description": "Deterministic fictional rolling-origin experiment evidence for the public ForecastLab demo."
+  },
+  "runs": [
+    {
+      "id": "demo_experiment_xgb_global_v17",
+      "label": "xgb-global-promo-lag-v17",
+      "modelId": "demo_model_global_xgboost",
+      "modelName": "Global XGBoost v17",
+      "modelFamily": "Gradient boosted trees",
+      "featureVersion": "features_v12",
+      "status": "completed",
+      "createdAt": "2026-08-17T13:05:00Z",
+      "completedAt": "2026-08-17T13:23:24Z",
+      "runtimeMinutes": 18.4,
+      "comparable": true,
+      "summary": { "wape": 11.8, "bias": -0.7, "coverage": 0.81 },
+      "configuration": {
+        "forecast_strategy": "direct_multi_horizon",
+        "max_depth": 8,
+        "learning_rate": 0.05,
+        "promotion_lag": true,
+        "calibration": "conformal_v2",
+        "feature_version": "features_v12"
+      },
+      "horizons": [
+        { "horizon": 1, "wape": 10.3, "bias": -0.3, "coverage": 0.83 },
+        { "horizon": 2, "wape": 10.7, "bias": -0.4, "coverage": 0.83 },
+        { "horizon": 3, "wape": 11.1, "bias": -0.5, "coverage": 0.82 },
+        { "horizon": 4, "wape": 11.6, "bias": -0.7, "coverage": 0.82 },
+        { "horizon": 5, "wape": 12.2, "bias": -0.8, "coverage": 0.81 },
+        { "horizon": 6, "wape": 12.9, "bias": -1.0, "coverage": 0.79 },
+        { "horizon": 7, "wape": 13.8, "bias": -1.2, "coverage": 0.78 }
+      ],
+      "segments": [
+        {
+          "segmentId": "demo_all",
+          "segmentName": "All regions",
+          "wape": 11.8,
+          "bias": -0.7,
+          "coverage": 0.81
+        },
+        {
+          "segmentId": "demo_north",
+          "segmentName": "North region",
+          "wape": 10.9,
+          "bias": -0.4,
+          "coverage": 0.83
+        },
+        {
+          "segmentId": "demo_central",
+          "segmentName": "Central region",
+          "wape": 12.1,
+          "bias": -0.8,
+          "coverage": 0.81
+        },
+        {
+          "segmentId": "demo_coastal",
+          "segmentName": "Coastal region",
+          "wape": 13.3,
+          "bias": -1.3,
+          "coverage": 0.77
+        }
+      ],
+      "rollingOrigins": [
+        { "origin": "2026-07-13", "wape": 12.2, "bias": -0.9, "coverage": 0.8 },
+        {
+          "origin": "2026-07-20",
+          "wape": 11.9,
+          "bias": -0.6,
+          "coverage": 0.81
+        },
+        {
+          "origin": "2026-07-27",
+          "wape": 11.6,
+          "bias": -0.5,
+          "coverage": 0.82
+        },
+        {
+          "origin": "2026-08-03",
+          "wape": 11.7,
+          "bias": -0.7,
+          "coverage": 0.81
+        },
+        { "origin": "2026-08-10", "wape": 11.5, "bias": -0.8, "coverage": 0.81 }
+      ],
+      "statisticalEvidence": {
+        "referenceRunId": "demo_experiment_xgb_global_v16",
+        "deltaWapePp": -0.8,
+        "confidenceLevel": 0.95,
+        "ciLower": -1.2,
+        "ciUpper": -0.3,
+        "pValue": 0.014,
+        "conclusion": "meaningful"
+      },
+      "forecastLink": {
+        "runId": "demo_run_2026_08_18",
+        "entityId": "demo_store_quito_01",
+        "modelId": "demo_model_global_xgboost",
+        "exceptionState": "all"
+      }
+    },
+    {
+      "id": "demo_experiment_xgb_global_v16",
+      "label": "xgb-global-core-v16",
+      "modelId": "demo_model_global_xgboost",
+      "modelName": "Global XGBoost v16",
+      "modelFamily": "Gradient boosted trees",
+      "featureVersion": "features_v11",
+      "status": "completed",
+      "createdAt": "2026-08-10T12:40:00Z",
+      "completedAt": "2026-08-10T12:57:06Z",
+      "runtimeMinutes": 17.1,
+      "comparable": true,
+      "summary": { "wape": 12.6, "bias": -2.1, "coverage": 0.78 },
+      "configuration": {
+        "forecast_strategy": "direct_multi_horizon",
+        "max_depth": 6,
+        "learning_rate": 0.08,
+        "promotion_lag": false,
+        "calibration": "conformal_v1",
+        "feature_version": "features_v11"
+      },
+      "horizons": [
+        { "horizon": 1, "wape": 11.1, "bias": -1.4, "coverage": 0.8 },
+        { "horizon": 2, "wape": 11.5, "bias": -1.6, "coverage": 0.8 },
+        { "horizon": 3, "wape": 12.0, "bias": -1.8, "coverage": 0.79 },
+        { "horizon": 4, "wape": 12.5, "bias": -2.0, "coverage": 0.79 },
+        { "horizon": 5, "wape": 13.0, "bias": -2.2, "coverage": 0.78 },
+        { "horizon": 6, "wape": 13.7, "bias": -2.5, "coverage": 0.76 },
+        { "horizon": 7, "wape": 14.4, "bias": -2.8, "coverage": 0.75 }
+      ],
+      "segments": [
+        {
+          "segmentId": "demo_all",
+          "segmentName": "All regions",
+          "wape": 12.6,
+          "bias": -2.1,
+          "coverage": 0.78
+        },
+        {
+          "segmentId": "demo_north",
+          "segmentName": "North region",
+          "wape": 11.8,
+          "bias": -1.6,
+          "coverage": 0.8
+        },
+        {
+          "segmentId": "demo_central",
+          "segmentName": "Central region",
+          "wape": 12.9,
+          "bias": -2.2,
+          "coverage": 0.78
+        },
+        {
+          "segmentId": "demo_coastal",
+          "segmentName": "Coastal region",
+          "wape": 14.1,
+          "bias": -3.1,
+          "coverage": 0.73
+        }
+      ],
+      "rollingOrigins": [
+        {
+          "origin": "2026-07-13",
+          "wape": 13.0,
+          "bias": -2.3,
+          "coverage": 0.77
+        },
+        {
+          "origin": "2026-07-20",
+          "wape": 12.8,
+          "bias": -2.0,
+          "coverage": 0.78
+        },
+        {
+          "origin": "2026-07-27",
+          "wape": 12.4,
+          "bias": -1.9,
+          "coverage": 0.79
+        },
+        {
+          "origin": "2026-08-03",
+          "wape": 12.5,
+          "bias": -2.1,
+          "coverage": 0.78
+        },
+        { "origin": "2026-08-10", "wape": 12.3, "bias": -2.2, "coverage": 0.78 }
+      ],
+      "statisticalEvidence": null,
+      "forecastLink": null
+    },
+    {
+      "id": "demo_experiment_prophet_v08",
+      "label": "prophet-holiday-priors-v08",
+      "modelId": "demo_model_prophet",
+      "modelName": "Prophet v08",
+      "modelFamily": "Additive time series",
+      "featureVersion": "calendar_v08",
+      "status": "completed",
+      "createdAt": "2026-08-09T16:10:00Z",
+      "completedAt": "2026-08-09T16:21:48Z",
+      "runtimeMinutes": 11.8,
+      "comparable": true,
+      "summary": { "wape": 14.1, "bias": 0.8, "coverage": 0.79 },
+      "configuration": {
+        "forecast_strategy": "local_recursive",
+        "seasonality_mode": "multiplicative",
+        "changepoint_prior": 0.08,
+        "promotion_lag": false,
+        "calibration": "model_native",
+        "feature_version": "calendar_v08"
+      },
+      "horizons": [
+        { "horizon": 1, "wape": 12.8, "bias": 0.4, "coverage": 0.82 },
+        { "horizon": 2, "wape": 13.2, "bias": 0.5, "coverage": 0.81 },
+        { "horizon": 3, "wape": 13.6, "bias": 0.6, "coverage": 0.8 },
+        { "horizon": 4, "wape": 14.0, "bias": 0.8, "coverage": 0.79 },
+        { "horizon": 5, "wape": 14.4, "bias": 0.9, "coverage": 0.79 },
+        { "horizon": 6, "wape": 15.1, "bias": 1.1, "coverage": 0.77 },
+        { "horizon": 7, "wape": 15.6, "bias": 1.3, "coverage": 0.76 }
+      ],
+      "segments": [
+        {
+          "segmentId": "demo_all",
+          "segmentName": "All regions",
+          "wape": 14.1,
+          "bias": 0.8,
+          "coverage": 0.79
+        },
+        {
+          "segmentId": "demo_north",
+          "segmentName": "North region",
+          "wape": 13.2,
+          "bias": 0.5,
+          "coverage": 0.81
+        },
+        {
+          "segmentId": "demo_central",
+          "segmentName": "Central region",
+          "wape": 14.3,
+          "bias": 0.9,
+          "coverage": 0.79
+        },
+        {
+          "segmentId": "demo_coastal",
+          "segmentName": "Coastal region",
+          "wape": 15.7,
+          "bias": 1.4,
+          "coverage": 0.75
+        }
+      ],
+      "rollingOrigins": [
+        { "origin": "2026-07-13", "wape": 14.6, "bias": 1.0, "coverage": 0.78 },
+        { "origin": "2026-07-20", "wape": 14.2, "bias": 0.7, "coverage": 0.79 },
+        { "origin": "2026-07-27", "wape": 13.9, "bias": 0.8, "coverage": 0.8 },
+        { "origin": "2026-08-03", "wape": 14.1, "bias": 0.8, "coverage": 0.79 },
+        { "origin": "2026-08-10", "wape": 13.8, "bias": 0.6, "coverage": 0.8 }
+      ],
+      "statisticalEvidence": {
+        "referenceRunId": "demo_experiment_xgb_global_v16",
+        "deltaWapePp": 1.5,
+        "confidenceLevel": 0.95,
+        "ciLower": 0.9,
+        "ciUpper": 2.1,
+        "pValue": 0.006,
+        "conclusion": "worse"
+      },
+      "forecastLink": null
+    },
+    {
+      "id": "demo_experiment_arima_v05",
+      "label": "arima-stable-seasonal-v05",
+      "modelId": "demo_model_arima_plus",
+      "modelName": "ARIMA Plus v05",
+      "modelFamily": "Statistical time series",
+      "featureVersion": "calendar_v07",
+      "status": "completed",
+      "createdAt": "2026-08-08T11:15:00Z",
+      "completedAt": "2026-08-08T11:23:36Z",
+      "runtimeMinutes": 8.6,
+      "comparable": true,
+      "summary": { "wape": 14.8, "bias": -1.1, "coverage": 0.76 },
+      "configuration": {
+        "forecast_strategy": "local_direct",
+        "auto_arima": true,
+        "holiday_region": "EC",
+        "promotion_lag": false,
+        "calibration": "model_native",
+        "feature_version": "calendar_v07"
+      },
+      "horizons": [
+        { "horizon": 1, "wape": 13.4, "bias": -1.5, "coverage": 0.79 },
+        { "horizon": 2, "wape": 13.7, "bias": -1.4, "coverage": 0.78 },
+        { "horizon": 3, "wape": 14.2, "bias": -1.3, "coverage": 0.78 },
+        { "horizon": 4, "wape": 14.7, "bias": -1.1, "coverage": 0.77 },
+        { "horizon": 5, "wape": 15.2, "bias": -1.0, "coverage": 0.76 },
+        { "horizon": 6, "wape": 15.9, "bias": -0.8, "coverage": 0.74 },
+        { "horizon": 7, "wape": 16.5, "bias": -0.6, "coverage": 0.72 }
+      ],
+      "segments": [
+        {
+          "segmentId": "demo_all",
+          "segmentName": "All regions",
+          "wape": 14.8,
+          "bias": -1.1,
+          "coverage": 0.76
+        },
+        {
+          "segmentId": "demo_north",
+          "segmentName": "North region",
+          "wape": 13.8,
+          "bias": -0.8,
+          "coverage": 0.78
+        },
+        {
+          "segmentId": "demo_central",
+          "segmentName": "Central region",
+          "wape": 15.1,
+          "bias": -1.2,
+          "coverage": 0.76
+        },
+        {
+          "segmentId": "demo_coastal",
+          "segmentName": "Coastal region",
+          "wape": 16.3,
+          "bias": -1.6,
+          "coverage": 0.71
+        }
+      ],
+      "rollingOrigins": [
+        {
+          "origin": "2026-07-13",
+          "wape": 15.2,
+          "bias": -1.3,
+          "coverage": 0.75
+        },
+        {
+          "origin": "2026-07-20",
+          "wape": 14.9,
+          "bias": -1.0,
+          "coverage": 0.76
+        },
+        {
+          "origin": "2026-07-27",
+          "wape": 14.6,
+          "bias": -1.1,
+          "coverage": 0.77
+        },
+        {
+          "origin": "2026-08-03",
+          "wape": 14.8,
+          "bias": -1.2,
+          "coverage": 0.76
+        },
+        { "origin": "2026-08-10", "wape": 14.5, "bias": -0.9, "coverage": 0.76 }
+      ],
+      "statisticalEvidence": {
+        "referenceRunId": "demo_experiment_xgb_global_v16",
+        "deltaWapePp": 2.2,
+        "confidenceLevel": 0.95,
+        "ciLower": 1.5,
+        "ciUpper": 2.9,
+        "pValue": 0.002,
+        "conclusion": "worse"
+      },
+      "forecastLink": null
+    },
+    {
+      "id": "demo_experiment_seasonal_naive_v03",
+      "label": "seasonal-naive-baseline-v03",
+      "modelId": "demo_model_seasonal_naive",
+      "modelName": "Seasonal naive v03",
+      "modelFamily": "Baseline",
+      "featureVersion": "baseline_v03",
+      "status": "completed",
+      "createdAt": "2026-08-07T09:20:00Z",
+      "completedAt": "2026-08-07T09:22:42Z",
+      "runtimeMinutes": 2.7,
+      "comparable": true,
+      "summary": { "wape": 18.2, "bias": -1.9, "coverage": 0.7 },
+      "configuration": {
+        "forecast_strategy": "seasonal_carry_forward",
+        "seasonal_period": 7,
+        "promotion_lag": false,
+        "calibration": "empirical_v1",
+        "feature_version": "baseline_v03"
+      },
+      "horizons": [
+        { "horizon": 1, "wape": 16.5, "bias": -2.2, "coverage": 0.72 },
+        { "horizon": 2, "wape": 16.8, "bias": -2.1, "coverage": 0.72 },
+        { "horizon": 3, "wape": 17.2, "bias": -2.0, "coverage": 0.71 },
+        { "horizon": 4, "wape": 17.6, "bias": -1.9, "coverage": 0.71 },
+        { "horizon": 5, "wape": 18.2, "bias": -1.8, "coverage": 0.7 },
+        { "horizon": 6, "wape": 18.7, "bias": -1.7, "coverage": 0.69 },
+        { "horizon": 7, "wape": 19.2, "bias": -1.5, "coverage": 0.68 }
+      ],
+      "segments": [
+        {
+          "segmentId": "demo_all",
+          "segmentName": "All regions",
+          "wape": 18.2,
+          "bias": -1.9,
+          "coverage": 0.7
+        },
+        {
+          "segmentId": "demo_north",
+          "segmentName": "North region",
+          "wape": 17.1,
+          "bias": -1.5,
+          "coverage": 0.72
+        },
+        {
+          "segmentId": "demo_central",
+          "segmentName": "Central region",
+          "wape": 18.6,
+          "bias": -2.0,
+          "coverage": 0.7
+        },
+        {
+          "segmentId": "demo_coastal",
+          "segmentName": "Coastal region",
+          "wape": 20.1,
+          "bias": -2.7,
+          "coverage": 0.65
+        }
+      ],
+      "rollingOrigins": [
+        {
+          "origin": "2026-07-13",
+          "wape": 18.8,
+          "bias": -2.1,
+          "coverage": 0.69
+        },
+        { "origin": "2026-07-20", "wape": 18.4, "bias": -1.8, "coverage": 0.7 },
+        {
+          "origin": "2026-07-27",
+          "wape": 18.0,
+          "bias": -1.7,
+          "coverage": 0.71
+        },
+        { "origin": "2026-08-03", "wape": 18.2, "bias": -1.9, "coverage": 0.7 },
+        { "origin": "2026-08-10", "wape": 17.8, "bias": -2.0, "coverage": 0.7 }
+      ],
+      "statisticalEvidence": null,
+      "forecastLink": {
+        "runId": "demo_run_2026_08_11",
+        "entityId": "demo_store_quito_01",
+        "modelId": "demo_model_seasonal_naive",
+        "exceptionState": "all"
+      }
+    },
+    {
+      "id": "demo_experiment_xgb_ablation_v04",
+      "label": "xgb-promo-lag-ablation-v04",
+      "modelId": "demo_model_global_xgboost",
+      "modelName": "Global XGBoost ablation v04",
+      "modelFamily": "Gradient boosted trees",
+      "featureVersion": "features_v12_no_promo",
+      "status": "failed",
+      "createdAt": "2026-08-16T18:05:00Z",
+      "completedAt": null,
+      "runtimeMinutes": 4.7,
+      "comparable": false,
+      "summary": null,
+      "configuration": {
+        "forecast_strategy": "direct_multi_horizon",
+        "max_depth": 8,
+        "learning_rate": 0.05,
+        "promotion_lag": false,
+        "calibration": "not_run",
+        "feature_version": "features_v12_no_promo"
+      },
+      "horizons": [],
+      "segments": [],
+      "rollingOrigins": [],
+      "statisticalEvidence": null,
+      "forecastLink": null
+    }
+  ]
+}

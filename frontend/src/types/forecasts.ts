@@ -13,7 +13,7 @@ const forecastRowSchema = z
     p90: z.number().nonnegative(),
     statisticalForecast: z.number().nonnegative(),
     publishedForecast: z.number().nonnegative(),
-    strategy: z.enum(["ml", "baseline", "cold_start", "intermittent"]),
+    strategy: z.string().min(1),
     exceptionState: z.enum(["clear", "watch", "blocked"]),
   })
   .refine(({ p10, p50, p90 }) => p10 <= p50 && p50 <= p90, {
@@ -64,6 +64,51 @@ export const forecastFixtureSchema = z.object({
   rows: z.array(forecastRowSchema),
 });
 
+const forecastOptionSchema = z.object({
+  runs: z.array(
+    z.object({
+      id: z.string().min(1),
+      label: z.string(),
+      origin: z.iso.date(),
+    }),
+  ),
+  entities: z.array(
+    z.object({
+      id: z.string().min(1),
+      name: z.string(),
+      hierarchyNode: z.string(),
+      hierarchyLevel: z.string(),
+    }),
+  ),
+  models: z.array(z.object({ id: z.string().min(1), name: z.string() })),
+  horizons: z.array(z.number().int().positive()),
+  exceptionStates: z.array(z.enum(["clear", "watch", "blocked"])),
+});
+
+export const forecastApiResultSchema = z.object({
+  datasetKind: z.literal("live"),
+  run: z.object({
+    id: z.string().min(1),
+    label: z.string(),
+    origin: z.iso.date(),
+    publicationStatus: z.enum(["draft", "published", "superseded"]),
+  }),
+  entity: forecastOptionSchema.shape.entities.element,
+  model: forecastOptionSchema.shape.models.element,
+  rows: z.array(
+    forecastRowSchema.safeExtend({
+      runId: z.string().min(1),
+      entityId: z.string().min(1),
+      modelId: z.string().min(1),
+      horizon: z.number().int().positive(),
+    }),
+  ),
+  provenance: provenanceSchema,
+  nextPageToken: z.string().nullable().optional(),
+});
+
+export const forecastApiOptionsSchema = forecastOptionSchema;
+
 export type ForecastRow = z.infer<typeof forecastRowSchema>;
 export type ForecastProvenance = z.infer<typeof provenanceSchema>;
 
@@ -101,4 +146,5 @@ export interface ForecastResult {
   model: ForecastOptions["models"][number];
   rows: ForecastRow[];
   provenance: ForecastProvenance;
+  nextPageToken?: string | null;
 }

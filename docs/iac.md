@@ -17,7 +17,7 @@ Guidance for provisioning and operating this forecasting stack in a **client GCP
 | **Docker image** | `Dockerfile`, `docker-compose.yml` | Reproducible runtime |
 | **CI pipeline** | `.github/workflows/ci.yml` | Validate without live GCP |
 | **Terraform modules** | `terraform/` | Versioned, reviewable GCP provisioning (see below) |
-| **Forecast Operations API** | `terraform/modules/forecast-api` | Private Cloud Run service with read-only default, opt-in lifecycle writes, and Secret Manager-backed signed webhooks |
+| **ForecastLab + Forecast Operations API** | `terraform/modules/forecast-api` | Same-origin Cloud Run UI/API with read-only default, optional IAP, opt-in lifecycle writes, and Secret Manager-backed signed webhooks |
 
 ---
 
@@ -29,7 +29,7 @@ flowchart TB
     APIs[Enabled APIs: BQ, GCS, Vertex, Artifact Registry]
     AR[Artifact Registry: tds-favorita image]
     BQ[(BigQuery datasets)]
-    ForecastAPI[Private Forecast Operations API]
+    ForecastAPI[IAP-protected ForecastLab and API]
     GCSRaw[(GCS raw)]
     GCSStage[(GCS vertex-staging)]
     GCSModels[(GCS models)]
@@ -70,8 +70,10 @@ Create **`sa-vertex-ml@PROJECT.iam.gserviceaccount.com`** per environment.
 The Forecast Operations API uses a separate service account with project-level
 `roles/bigquery.jobUser` and, by default, dataset-level `roles/bigquery.dataViewer`. Enabling
 lifecycle mutations changes the dataset grant to `roles/bigquery.dataEditor`; in that mode,
-invocation must be restricted to trusted operators. Invocation is restricted by
-Cloud Run IAM to the configured `forecast_api_invoker_members`; no public principal is granted.
+invocation must be restricted to trusted operators. Machine invocation is restricted by Cloud Run
+IAM to `forecast_api_invoker_members`. Browser access can instead be protected by IAP with explicit
+`forecastlab_iap_access_members`; Terraform grants Cloud Run invocation to the Google-managed IAP
+service agent. No public principal is granted.
 Optional publication webhooks use two Secret Manager references for the HTTPS URL and HMAC signing
 secret. The module grants the API runtime service account `roles/secretmanager.secretAccessor` on
 only those secrets; webhook activation also requires lifecycle mutations to be enabled.

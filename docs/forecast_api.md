@@ -17,8 +17,10 @@ OpenAPI is available at `http://localhost:8080/docs` and
 
 ## Authentication
 
-The Terraform service is private by default. Cloud Run validates the caller's Google-signed OIDC
-token and grants invocation only to `forecast_api_invoker_members`. In read-only mode, the runtime
+The Terraform service is private by default. Machine callers can use Cloud Run IAM through
+`forecast_api_invoker_members`. For browser access, enable IAP and grant only named
+`forecastlab_iap_access_members`; IAP authenticates the browser and invokes the same-origin UI and
+API as its service agent. In read-only mode, the runtime
 service account has `roles/bigquery.jobUser` at project scope and `roles/bigquery.dataViewer` on the
 dbt dataset. Enabling lifecycle mutations changes the dataset role to
 `roles/bigquery.dataEditor`; configure only trusted operators as invokers in that mode.
@@ -34,6 +36,30 @@ curl --fail --silent \
 Do not grant `allUsers` or `allAuthenticatedUsers` in production.
 
 ## Endpoints
+
+### ForecastLab discovery and read model
+
+```text
+GET /v1/forecasts/options
+GET /v1/forecasts?run_id=...&entity_id=...&model_id=...
+GET /v1/forecast-runs/{forecast_run_id}?entity_id=...&model_id=...
+```
+
+`options` returns runs, entities, models, and horizons found in completely delivered immutable
+publication versions. The two read endpoints expose the same ForecastLab response contract; the
+run route is a stable alias for deep links. Both accept optional positive `horizon` and
+`exception_state=clear|watch|blocked` filters. `entity_id` is the canonical entity-key JSON.
+Passing `run_id` to `options` scopes entities, models, and horizons to that immutable run while
+retaining the run selector. Read endpoints also accept inclusive `target_start`/`target_end`, a
+page size from 1 to 500, and an opaque `page_token`; responses return `nextPageToken` when another
+page exists.
+
+The response includes observed actuals when the target date exists in `int_demand_store_daily`,
+P10/P50/P90, statistical and published values, routing strategy, confidence-derived exception
+state, and complete contract/model/calibration/reconciliation/hierarchy/feature/code/publication
+provenance. Only `canonical_bigquery` versions whose latest delivery status is `delivered` are
+eligible. Unknown, empty, or undelivered selections return `404` rather than falling through to
+draft output.
 
 ### Latest delivered version
 
@@ -119,6 +145,10 @@ retry semantics.
 
 Errors use a stable `code` and human-readable `message`:
 
+Every response includes `X-Request-ID`. A valid caller-provided ID is preserved; otherwise the API
+creates one. Frontend errors include that ID so operators can correlate a failure with Cloud Run
+logs.
+
 | Status | Code | Meaning |
 |---|---|---|
 | 400 | `invalid_page_token` | Cursor is malformed or has an incompatible shape |
@@ -142,7 +172,15 @@ enable_forecast_api          = true
 enable_forecast_api_mutations = false
 forecast_api_image           = "us-central1-docker.pkg.dev/PROJECT/vertex/ml-pipeline@sha256:..."
 forecast_api_invoker_members = ["group:forecast-consumers@example.com"]
+enable_forecastlab_iap = true
+forecastlab_iap_access_members = ["group:forecast-consumers@example.com"]
 ```
+
+The production image embeds the API-mode ForecastLab build, so browser routes and `/v1` share one
+origin and no bearer credential is placed in frontend configuration. Before the first IAP apply,
+configure the project's OAuth consent/brand if Google Cloud requests it; OAuth client creation is
+a one-time console-owned prerequisite. Validate in a private browser session before removing any
+existing direct operator access.
 
 Apply the selected environment and use its `forecast_api_url` output. Roll back by deploying the
 prior immutable digest. Disabling the module removes the service, service account, and grants; it

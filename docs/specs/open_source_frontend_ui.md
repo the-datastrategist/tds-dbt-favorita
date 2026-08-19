@@ -66,12 +66,12 @@ an authorization control.
 ```text
 GitHub Pages demo                   Production deployment
 -----------------                   ---------------------
-React/Vite static assets            React/Vite static assets
+React/Vite static assets            Cloud Run: React/Vite + FastAPI
         |                                    |
-bundled sanitized fixtures          OIDC access token over HTTPS
+bundled sanitized fixtures          Identity-Aware Proxy session
                                              |
                                              v
-                                      versioned FastAPI
+                                      versioned same-origin API
                                              |
                            +-----------------+-----------------+
                            |                 |                 |
@@ -151,8 +151,22 @@ champion, day-seven baseline comparison, probabilistic coverage, and WAPE across
 horizon. The production fixture build is assembled into the repository's GitHub Pages artifact
 under `/app/`. The Forecast Explorer now exposes URL-addressable run, entity, horizon, model, and
 exception filters; actuals and P10/P50/P90 forecasts; statistical-versus-published values; and the
-complete synthetic provenance chain. Remaining sections below continue to define the target
-product rather than shipped screens.
+complete synthetic provenance chain. Experiment Runs now provides URL-addressable model, family,
+feature, status, and horizon filters with sortable history and 2–5 run selection. Experiment
+Comparison preserves run and metric state in the URL and compares WAPE, bias, coverage, runtime,
+configuration differences, horizon and segment performance, rolling origins, and bootstrap
+confidence evidence. Model detail links into filtered experiments, and published experiment rows
+link into filtered Forecast Explorer evidence. Remaining sections below continue to define the
+target product rather than shipped screens.
+
+The production read-only boundary now implements ForecastLab option discovery and immutable
+forecast selection through `/v1/forecasts/options`, `/v1/forecasts`, and
+`/v1/forecast-runs/{forecast_run_id}`. The TypeScript adapter schema-checks live rows and
+provenance before rendering. The production container now builds the API-backed frontend and
+serves the SPA and `/v1` API from one Cloud Run origin. Terraform can enable Identity-Aware Proxy,
+grant its service agent Cloud Run invocation, and assign explicit `roles/iap.httpsResourceAccessor`
+members. Live activation and browser acceptance remain; the public Pages build intentionally
+remains synthetic.
 
 ### 1. Platform overview
 

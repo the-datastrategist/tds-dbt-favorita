@@ -4,7 +4,8 @@ import {
   type LeaderboardOptions,
 } from "../types/leaderboard";
 import {
-  forecastFixtureSchema,
+  forecastApiOptionsSchema,
+  forecastApiResultSchema,
   type ForecastFilters,
   type ForecastOptions,
 } from "../types/forecasts";
@@ -13,12 +14,24 @@ import type { ForecastLabDataSource } from "./dataSource";
 export class ApiDataSource implements ForecastLabDataSource {
   constructor(private readonly baseUrl: string) {}
 
-  async getForecastOptions(): Promise<ForecastOptions> {
-    const response = await fetch(`${this.baseUrl}/v1/forecasts/options`);
+  private requestError(label: string, response: Response) {
+    const requestId = response.headers.get("x-request-id");
+    return new Error(
+      `${label} request failed (${response.status})${requestId ? ` · request ${requestId}` : ""}`,
+    );
+  }
+
+  async getForecastOptions(runId?: string): Promise<ForecastOptions> {
+    const query = new URLSearchParams();
+    if (runId) query.set("run_id", runId);
+    const suffix = query.size > 0 ? `?${query}` : "";
+    const response = await fetch(
+      `${this.baseUrl}/v1/forecasts/options${suffix}`,
+    );
     if (!response.ok) {
-      throw new Error(`Forecast options request failed (${response.status})`);
+      throw this.requestError("Forecast options", response);
     }
-    return (await response.json()) as ForecastOptions;
+    return forecastApiOptionsSchema.parse(await response.json());
   }
 
   async getForecasts(filters: ForecastFilters) {
@@ -31,37 +44,10 @@ export class ApiDataSource implements ForecastLabDataSource {
     if (filters.horizon !== null) query.set("horizon", String(filters.horizon));
     const response = await fetch(`${this.baseUrl}/v1/forecasts?${query}`);
     if (!response.ok) {
-      throw new Error(`Forecast request failed (${response.status})`);
+      throw this.requestError("Forecast", response);
     }
     const payload = await response.json();
-    const parsed = forecastFixtureSchema
-      .pick({
-        metadata: true,
-        runs: true,
-        entities: true,
-        models: true,
-        rows: true,
-      })
-      .parse(payload);
-    const run = parsed.runs[0];
-    const entity = parsed.entities[0];
-    const model = parsed.models[0];
-    if (!run || !entity || !model)
-      throw new Error("Forecast response is incomplete");
-    return {
-      datasetKind: parsed.metadata.datasetKind,
-      fixtureVersion: parsed.metadata.fixtureVersion,
-      run: {
-        id: run.id,
-        label: run.label,
-        origin: run.origin,
-        publicationStatus: run.publicationStatus,
-      },
-      entity,
-      model,
-      rows: parsed.rows,
-      provenance: run.provenance,
-    };
+    return forecastApiResultSchema.parse(payload);
   }
 
   async getLeaderboardOptions(): Promise<LeaderboardOptions> {

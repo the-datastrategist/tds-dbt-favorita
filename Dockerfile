@@ -19,6 +19,14 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+FROM node:24-slim@sha256:3638d9a6fe4030bd716be989438248074489337ba3275657f93595428be4fc03 AS frontend-builder
+
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN VITE_DATA_MODE=api VITE_API_BASE_URL= npm run build
+
 FROM python:3.11-slim@sha256:db3ff2e1800a8581e2c48a27c3995339d47bdf046da21c7627accd3d51053a93 AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -37,6 +45,7 @@ RUN apt-get update && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /opt/venv /opt/venv
+COPY --from=frontend-builder /frontend/dist /app/frontend/dist
 
 # Build frontends are unnecessary at runtime. Removing both the base-image and
 # virtualenv copies also keeps their vendored packages out of vulnerability scans.

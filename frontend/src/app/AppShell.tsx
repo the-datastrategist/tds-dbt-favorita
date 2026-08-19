@@ -1,15 +1,31 @@
-import { BarChart3, ExternalLink, LayoutDashboard, Trophy } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  ExternalLink,
+  FlaskConical,
+  LayoutDashboard,
+  Settings2,
+  Trophy,
+} from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
 const navigation = [
   { label: "Overview", to: "/overview", icon: LayoutDashboard },
   { label: "Model leaderboard", to: "/models/leaderboard", icon: Trophy },
+  { label: "Experiments", to: "/experiments", icon: FlaskConical },
+  { label: "Error analysis", to: "/accuracy", icon: Activity },
+  { label: "Operations", to: "/operations", icon: Settings2 },
   {
     label: "Forecast explorer",
     to: "/forecasts",
     icon: BarChart3,
   },
 ];
+
+const environmentLabel =
+  import.meta.env.VITE_DATA_MODE === "api"
+    ? "Authenticated production data"
+    : "Synthetic public demo";
 
 export const AppShell = () => (
   <div className="app-shell">
@@ -62,7 +78,7 @@ export const AppShell = () => (
       <header className="topbar">
         <span className="environment-label">
           <span className="environment-dot" aria-hidden="true" />
-          Synthetic public demo
+          {environmentLabel}
         </span>
         <a
           className="topbar-link"

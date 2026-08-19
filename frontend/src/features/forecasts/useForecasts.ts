@@ -4,10 +4,10 @@ import type { ForecastFilters } from "../../types/forecasts";
 
 const dataSource = createDataSource();
 
-export const useForecastOptions = () =>
+export const useForecastOptions = (runId?: string) =>
   useQuery({
-    queryKey: ["forecast-options"],
-    queryFn: () => dataSource.getForecastOptions(),
+    queryKey: ["forecast-options", runId],
+    queryFn: () => dataSource.getForecastOptions(runId),
   });
 
 export const useForecasts = (filters: ForecastFilters | null) =>

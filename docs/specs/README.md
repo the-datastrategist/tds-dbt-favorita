@@ -26,7 +26,7 @@ A completed spec should graduate into an accelerator entry in [accelerators.md](
 Status reviewed **2026-08-18**. The completion figures are implementation estimates, while
 the status column continues to use the acceptance-based definitions above. Across the full
 platform roadmap, including the proposed frontend and separate generalization workstream, the
-current implementation is approximately **86% complete**. Excluding open-source productization,
+current implementation is approximately **88% complete**. Excluding open-source productization,
 the proposed frontend, and generalization, the accepted core platform roadmap is approximately
 **99% complete**.
 
@@ -47,7 +47,7 @@ the proposed frontend, and generalization, the accepted core platform roadmap is
 | [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md) | Shipped | 100% | Cross-spec operational integration | Live-accepted deterministic champion scoring, routing, calibration, reconciliation gates, leases, failure evidence, Prefect deployment, idempotent retry, and atomic draft visibility |
 | [Monitoring, alerts, and SLOs](monitoring_and_slos.md) | Shipped | 100% | Platform roadmap → P1 monitoring | All repository signals and the scheduled Cloud Run evaluator are live accepted, with Secret Manager-backed Slack policy and controlled-test deliveries witnessed in `#forecasting-ops` |
 | [Integration contracts and forecast delivery](integration_contracts.md) | In progress | 99% | Platform roadmap → P2 integrations | Stable views, GCS export, events, delivery confirmation, retrieval, lifecycle mutations, and signed outbound webhooks are implemented; controlled production activation remains |
-| [Open-source forecasting platform UI](open_source_frontend_ui.md) | In progress | 30% | Platform roadmap → P2/P3 frontend | React/Vite shell, public deployment, platform overview, canonical Forecast Explorer with full provenance, model leaderboard/detail views, and accessible tests are implemented; experiment/error analysis, operational views, and the production API remain |
+| [Open-source forecasting platform UI](open_source_frontend_ui.md) | In progress | 50% | Platform roadmap → P2/P3 frontend | Public overview, model, forecast, and experiment workflows plus the typed production read API, same-origin container, and IAP Terraform are implemented; live IAP acceptance, live experiment evidence, error analysis, and operational/action views remain |
 | [Open-source product readiness](open_source_product_readiness.md) | Proposed | 40% | Platform roadmap → P3 open source | Add governance, first-run quickstart, roadmap, compatibility, extension, and modularization plans |
 | [General-purpose demand forecasting platform](platform_generalization.md) | Proposed | 0% | Separate platform-generalization workstream | Add canonical datasets, configurable periods, resource parameterization, and typed extension interfaces; multi-implementation validation is deferred |
 

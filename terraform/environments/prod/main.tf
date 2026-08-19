@@ -101,6 +101,7 @@ module "forecast_api" {
   region                                = var.region
   enabled                               = var.enable_forecast_api
   enable_lifecycle_mutations            = var.enable_forecast_api_mutations
+  lifecycle_role_members                = var.forecastlab_lifecycle_role_members
   enable_publication_webhook            = var.enable_forecast_publication_webhook
   publication_webhook_url_secret_id     = var.forecast_publication_webhook_url_secret_id
   publication_webhook_signing_secret_id = var.forecast_publication_webhook_signing_secret_id
@@ -108,6 +109,8 @@ module "forecast_api" {
   container_image                       = var.forecast_api_image
   dbt_dataset                           = var.dbt_dataset
   invoker_members                       = var.forecast_api_invoker_members
+  enable_iap                            = var.enable_forecastlab_iap
+  iap_access_members                    = var.forecastlab_iap_access_members
   min_instance_count                    = var.forecast_api_min_instances
   max_instance_count                    = var.forecast_api_max_instances
 

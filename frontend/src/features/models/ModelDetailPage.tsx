@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FlaskConical } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { MetricCard } from "../../components/MetricCard";
 import { PageSkeleton, PageState } from "../../components/PageState";
@@ -64,6 +64,15 @@ export const ModelDetailPage = () => {
           {model.lifecycleStatus}
         </span>
       </header>
+
+      <div className="page-actions">
+        <Link
+          className="primary-button"
+          to={`/experiments?model=${encodeURIComponent(model.modelId)}`}
+        >
+          <FlaskConical size={15} aria-hidden="true" /> View experiments
+        </Link>
+      </div>
 
       <section className="metric-grid" aria-label="Selected model metrics">
         <MetricCard

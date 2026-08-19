@@ -1,14 +1,20 @@
 """Read-only forecast retrieval API contract tests."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
 from vertex.api.app import create_app
 from vertex.api.repository import (
     BigQueryForecastRepository,
+    ExperimentOptions,
+    ExperimentResult,
+    ForecastExplorerOptions,
+    ForecastExplorerResult,
     ForecastFilters,
     ForecastPageResult,
     MutationConflictError,
@@ -48,6 +54,54 @@ def _row(publication_id: str = "publication-1") -> dict:
     }
 
 
+def _experiment_run() -> dict:
+    metric = {"wape": 12.0, "bias": -1.0, "coverage": 0.81}
+    return {
+        "id": "backtest-1:model-1",
+        "label": "model-1 · 2026-08-18",
+        "modelId": "model-1",
+        "modelName": "model-1",
+        "modelFamily": "xgboost",
+        "featureVersion": "contract:hash-1",
+        "status": "completed",
+        "createdAt": "2026-08-18T00:00:00Z",
+        "completedAt": "2026-08-18T00:05:00Z",
+        "runtimeMinutes": 5.0,
+        "comparable": True,
+        "summary": metric,
+        "configuration": {
+            "backtest_contract": "contract-1",
+            "contract_hash": "hash-1",
+            "model_config": "model-1",
+            "model_type": "xgboost",
+            "target": "demand_units",
+            "grain": "store-day",
+        },
+        "horizons": [{"horizon": 7, **metric}],
+        "segments": [{"segmentId": "{}", "segmentName": "All entities", **metric}],
+        "rollingOrigins": [{"origin": "2026-08-11", **metric}],
+        "statisticalEvidence": None,
+        "forecastLink": None,
+    }
+
+
+@pytest.mark.unit
+def test_forecastlab_spa_is_served_without_shadowing_api_routes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    (tmp_path / "index.html").write_text("<html>ForecastLab</html>", encoding="utf-8")
+    assets = tmp_path / "assets"
+    assets.mkdir()
+    (assets / "app.js").write_text("console.log('ForecastLab')", encoding="utf-8")
+    monkeypatch.setenv("FORECASTLAB_DIST_DIR", str(tmp_path))
+    client = TestClient(create_app(FakeRepository()))
+
+    assert client.get("/healthz").json() == {"status": "ok"}
+    assert client.get("/forecasts").text == "<html>ForecastLab</html>"
+    assert "console.log" in client.get("/assets/app.js").text
+    assert client.get("/../requirements.txt").text == "<html>ForecastLab</html>"
+
+
 _DEFAULT_SCOPE = object()
 
 
@@ -65,6 +119,97 @@ class FakeRepository:
             self.scope = scope
         self.failure = failure
         self.calls: list[tuple[object, ...]] = []
+
+    def experiment_options(self):
+        self.calls.append(("experiment_options",))
+        return ExperimentOptions(
+            runs=[
+                {
+                    "id": "backtest-1:model-1",
+                    "label": "model-1 · 2026-08-18",
+                    "comparable": True,
+                }
+            ],
+            models=[{"id": "model-1", "name": "model-1"}],
+            model_families=["xgboost"],
+            feature_versions=["contract:hash-1"],
+            statuses=["completed"],
+            horizons=[7],
+        )
+
+    def experiment_runs(self, **kwargs):
+        self.calls.append(("experiment_runs", kwargs))
+        requested = kwargs.get("run_ids", ())
+        missing = [run_id for run_id in requested if run_id != "backtest-1:model-1"]
+        return ExperimentResult(runs=[_experiment_run()], missing_run_ids=missing)
+
+    def forecast_explorer_options(self, *, forecast_run_id=None):
+        self.calls.append(("explorer_options", forecast_run_id))
+        return ForecastExplorerOptions(
+            runs=[{"id": "run-1", "label": "2026-08-11 · published v3", "origin": "2026-08-11"}],
+            entities=[
+                {
+                    "id": '{"store_nbr":1}',
+                    "name": "store_nbr 1",
+                    "hierarchyNode": '{"store_nbr":1}',
+                    "hierarchyLevel": "store_day",
+                }
+            ],
+            models=[{"id": "model-1", "name": "favorita_xgboost"}],
+            horizons=[1, 7],
+        )
+
+    def forecast_explorer_result(self, **kwargs):
+        self.calls.append(("explorer_result", kwargs))
+        if self.failure:
+            raise self.failure
+        if self.scope is None:
+            return None
+        return ForecastExplorerResult(
+            run={
+                "id": "run-1",
+                "label": "2026-08-11 · published v3",
+                "origin": "2026-08-11",
+                "publicationStatus": "published",
+            },
+            entity={
+                "id": '{"store_nbr":1}',
+                "name": "store_nbr 1",
+                "hierarchyNode": '{"store_nbr":1}',
+                "hierarchyLevel": "store_day",
+            },
+            model={"id": "model-1", "name": "favorita_xgboost"},
+            rows=[
+                {
+                    "runId": "run-1",
+                    "entityId": '{"store_nbr":1}',
+                    "modelId": "model-1",
+                    "targetDate": "2026-08-18",
+                    "horizon": 7,
+                    "actual": 40.0,
+                    "p10": 35.0,
+                    "p50": 42.0,
+                    "p90": 49.0,
+                    "statisticalForecast": 42.0,
+                    "publishedForecast": 43.0,
+                    "strategy": "entity_model",
+                    "exceptionState": "clear",
+                }
+            ],
+            provenance={
+                "contractName": "contract-1",
+                "contractHash": "hash-1",
+                "modelRunId": "model-run-1",
+                "calibrationRunId": "calibration-1",
+                "reconciliationRunId": "reconciliation-1",
+                "hierarchyVersion": "hierarchy-1",
+                "featureVersion": "features-1",
+                "featureAvailabilityHash": "availability-1",
+                "dataCutoff": "2026-08-11T00:00:00+00:00",
+                "codeSha": "abc123",
+                "publicationVersion": "3",
+            },
+        )
 
     def resolve_current(self, *, contract_name: str, destination: str):
         self.calls.append(("current", contract_name, destination))
@@ -109,6 +254,64 @@ class FakeRepository:
             "retry": False,
         }
 
+    def supersede_run(self, **kwargs):
+        self.calls.append(("supersede", kwargs))
+        if self.failure:
+            raise self.failure
+        return {
+            "action": "revise",
+            "publication_count": 2,
+            "publication_version": 4,
+            "prior_version": 3,
+            "publication_event_id": "event-supersede",
+            "revision_count": 2,
+            "retry": False,
+        }
+
+    def rollback_run(self, **kwargs):
+        self.calls.append(("rollback", kwargs))
+        if self.failure:
+            raise self.failure
+        return {
+            "action": "rollback",
+            "publication_count": 2,
+            "publication_version": 5,
+            "prior_version": 2,
+            "publication_event_id": "event-rollback",
+            "revision_count": 2,
+            "retry": False,
+        }
+
+    def operations_snapshot(self):
+        self.calls.append(("operations",))
+        return [
+            {
+                "runId": "run-1",
+                "origin": "2026-08-11",
+                "status": "published",
+                "modelName": "favorita_xgboost",
+                "outputCount": 2,
+                "exceptionCount": 1,
+                "overrideCount": 1,
+                "approvalCount": 2,
+                "publicationVersion": 3,
+                "deliveryStatus": "delivered",
+                "fvaStatus": "comparable",
+                "plannerWapeFvaPoints": 0.4,
+                "totalWapeFvaPoints": 0.7,
+                "updatedAt": "2026-08-11T12:00:00Z",
+                "outputs": [
+                    {
+                        "id": "output-1",
+                        "entityLabel": "store_nbr 1",
+                        "targetDate": "2026-08-18",
+                        "currentValue": 42.0,
+                        "exceptionState": "watch",
+                    }
+                ],
+            }
+        ]
+
 
 @pytest.mark.unit
 def test_current_endpoint_resolves_one_delivered_version_and_normalizes_filters():
@@ -133,6 +336,184 @@ def test_current_endpoint_resolves_one_delivered_version_and_normalizes_filters(
     fetch = repository.calls[-1]
     assert fetch[2] == ForecastFilters(entity_key_json='{"store_nbr":1}', horizons=(7, 14))
     assert fetch[3] == 25
+
+
+@pytest.mark.unit
+def test_forecastlab_options_and_forecasts_expose_live_typed_contract():
+    repository = FakeRepository()
+    client = TestClient(create_app(repository))
+
+    options = client.get("/v1/forecasts/options")
+    forecasts = client.get(
+        "/v1/forecasts",
+        params={
+            "run_id": "run-1",
+            "entity_id": '{"store_nbr": 1}',
+            "model_id": "model-1",
+            "horizon": 7,
+            "exception_state": "clear",
+        },
+    )
+
+    assert options.status_code == 200
+    assert options.headers["x-request-id"]
+    assert options.json()["horizons"] == [1, 7]
+    assert options.json()["exceptionStates"] == ["clear", "watch", "blocked"]
+    assert forecasts.status_code == 200
+    assert forecasts.json()["datasetKind"] == "live"
+    assert forecasts.json()["rows"][0]["publishedForecast"] == 43.0
+    assert forecasts.json()["provenance"]["featureAvailabilityHash"] == "availability-1"
+    assert repository.calls[-1] == (
+        "explorer_result",
+        {
+            "forecast_run_id": "run-1",
+            "entity_key_json": '{"store_nbr":1}',
+            "model_id": "model-1",
+            "horizon": 7,
+            "exception_state": "clear",
+            "target_start": None,
+            "target_end": None,
+            "limit": 100,
+            "page_token": None,
+        },
+    )
+    openapi = client.get("/openapi.json").json()
+    assert openapi["info"]["version"] == "1.2.0"
+    assert "/v1/forecasts/options" in openapi["paths"]
+    assert "/v1/forecast-runs/{forecast_run_id}" in openapi["paths"]
+    assert "ExplorerProvenance" in openapi["components"]["schemas"]
+
+
+@pytest.mark.unit
+def test_experiment_endpoints_filter_and_compare_live_backtest_evidence():
+    repository = FakeRepository()
+    client = TestClient(create_app(repository))
+
+    options = client.get("/v1/experiments/options")
+    runs = client.get(
+        "/v1/experiments",
+        params={
+            "model_id": "model-1",
+            "model_family": "xgboost",
+            "feature_version": "contract:hash-1",
+            "status": "completed",
+            "horizon": 7,
+        },
+    )
+    comparison = client.get(
+        "/v1/experiments/compare",
+        params=[("runs", "backtest-1:model-1"), ("runs", "missing:model")],
+    )
+
+    assert options.status_code == 200
+    assert options.json()["horizons"] == [7]
+    assert runs.status_code == 200
+    assert runs.json()["datasetKind"] == "live"
+    assert runs.json()["runs"][0]["summary"]["coverage"] == 0.81
+    assert repository.calls[-2] == (
+        "experiment_runs",
+        {
+            "model_id": "model-1",
+            "model_family": "xgboost",
+            "feature_version": "contract:hash-1",
+            "status": "completed",
+            "horizon": 7,
+        },
+    )
+    assert comparison.status_code == 200
+    assert comparison.json()["missingRunIds"] == ["missing:model"]
+
+    duplicate = client.get(
+        "/v1/experiments/compare",
+        params=[("runs", "backtest-1:model-1"), ("runs", "backtest-1:model-1")],
+    )
+    assert duplicate.status_code == 422
+    assert duplicate.json()["code"] == "invalid_experiment_comparison"
+
+
+@pytest.mark.unit
+def test_forecastlab_scopes_options_and_preserves_valid_request_ids():
+    repository = FakeRepository()
+    client = TestClient(create_app(repository))
+
+    response = client.get(
+        "/v1/forecasts/options",
+        params={"run_id": "run-1"},
+        headers={"X-Request-ID": "forecastlab-test-123"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["x-request-id"] == "forecastlab-test-123"
+    assert repository.calls[-1] == ("explorer_options", "run-1")
+
+
+@pytest.mark.unit
+def test_forecastlab_validates_date_bounds_and_page_tokens():
+    repository = FakeRepository(failure=ValueError("invalid page_token"))
+    client = TestClient(create_app(repository))
+    params = {
+        "run_id": "run-1",
+        "entity_id": '{"store_nbr":1}',
+        "model_id": "model-1",
+    }
+
+    invalid_range = client.get(
+        "/v1/forecasts",
+        params={**params, "target_start": "2026-08-20", "target_end": "2026-08-18"},
+    )
+    invalid_token = client.get("/v1/forecasts", params={**params, "page_token": "tampered"})
+
+    assert invalid_range.status_code == 422
+    assert invalid_range.json()["code"] == "invalid_date_range"
+    assert invalid_token.status_code == 400
+    assert invalid_token.json()["code"] == "invalid_page_token"
+
+
+@pytest.mark.unit
+def test_forecastlab_run_alias_and_validation_use_structured_errors():
+    repository = FakeRepository()
+    client = TestClient(create_app(repository))
+
+    alias = client.get(
+        "/v1/forecast-runs/run-1",
+        params={"entity_id": '{"store_nbr":1}', "model_id": "model-1"},
+    )
+    invalid_entity = client.get(
+        "/v1/forecasts",
+        params={"run_id": "run-1", "entity_id": "bad", "model_id": "model-1"},
+    )
+    invalid_state = client.get(
+        "/v1/forecasts",
+        params={
+            "run_id": "run-1",
+            "entity_id": '{"store_nbr":1}',
+            "model_id": "model-1",
+            "exception_state": "unknown",
+        },
+    )
+
+    assert alias.status_code == 200
+    assert invalid_entity.status_code == 422
+    assert invalid_entity.json()["code"] == "invalid_entity_id"
+    assert invalid_state.status_code == 422
+    assert invalid_state.json()["code"] == "validation_error"
+
+
+@pytest.mark.unit
+def test_forecastlab_returns_not_found_for_undelivered_or_empty_selection():
+    client = TestClient(create_app(FakeRepository(scope=None)))
+
+    response = client.get(
+        "/v1/forecasts",
+        params={
+            "run_id": "missing",
+            "entity_id": '{"store_nbr":1}',
+            "model_id": "model-1",
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "forecast_selection_not_found"
 
 
 @pytest.mark.unit
@@ -333,6 +714,126 @@ def test_lifecycle_mutations_are_disabled_by_default():
 
 
 @pytest.mark.unit
+def test_operations_and_capabilities_expose_role_scoped_workbench_contract():
+    repository = FakeRepository()
+    client = TestClient(
+        create_app(
+            repository,
+            mutations_enabled=True,
+            authorization_enabled=True,
+            role_members={"publisher": ["publisher@example.com"]},
+        )
+    )
+
+    anonymous = client.get("/v1/capabilities")
+    authorized = client.get(
+        "/v1/capabilities",
+        headers={"X-Goog-Authenticated-User-Email": "accounts.google.com:publisher@example.com"},
+    )
+    operations = client.get("/v1/operations")
+
+    assert anonymous.json() == {
+        "mutationsEnabled": False,
+        "actor": None,
+        "roles": ["viewer"],
+    }
+    assert authorized.json()["mutationsEnabled"] is True
+    assert authorized.json()["actor"] == "publisher@example.com"
+    assert authorized.json()["roles"] == ["approver", "planner", "publisher", "viewer"]
+    assert operations.status_code == 200
+    assert operations.json()["runs"][0]["deliveryStatus"] == "delivered"
+    assert operations.json()["runs"][0]["outputs"][0]["exceptionState"] == "watch"
+
+
+@pytest.mark.unit
+def test_iap_role_authorization_uses_authenticated_actor_and_blocks_insufficient_roles():
+    repository = FakeRepository()
+    client = TestClient(
+        create_app(
+            repository,
+            mutations_enabled=True,
+            authorization_enabled=True,
+            role_members={
+                "planner": ["planner@example.com"],
+                "publisher": ["publisher@example.com"],
+            },
+        )
+    )
+    body = {
+        "forecast_run_id": "run-1",
+        "forecast_output_id": "output-1",
+        "override_value": 44,
+        "reason_code": "local_event",
+        "comment": "Expected demand uplift",
+        "actor": "spoofed@example.com",
+        "idempotency_key": "override-iap-1",
+    }
+
+    allowed = client.post(
+        "/v1/overrides",
+        json=body,
+        headers={"X-Goog-Authenticated-User-Email": "accounts.google.com:planner@example.com"},
+    )
+    blocked = client.post(
+        "/v1/forecast-runs/run-1/publish",
+        json={
+            "approval_idempotency_key": "approval-1",
+            "publication_version": 4,
+            "idempotency_key": "publish-1",
+        },
+        headers={"X-Goog-Authenticated-User-Email": "accounts.google.com:planner@example.com"},
+    )
+
+    assert allowed.status_code == 200
+    assert repository.calls[-1][1]["actor"] == "planner@example.com"
+    assert blocked.status_code == 403
+    assert blocked.json()["code"] == "role_required"
+
+
+@pytest.mark.unit
+def test_publisher_can_supersede_and_rollback_complete_versions():
+    repository = FakeRepository()
+    client = TestClient(
+        create_app(
+            repository,
+            mutations_enabled=True,
+            authorization_enabled=True,
+            role_members={"publisher": ["publisher@example.com"]},
+        )
+    )
+    headers = {"X-Goog-Authenticated-User-Email": "accounts.google.com:publisher@example.com"}
+    base = {
+        "destination": "canonical_bigquery",
+        "reason_code": "corrected_evidence",
+        "comment": "Reviewed immutable replacement version",
+        "idempotency_key": "revision-1",
+    }
+
+    supersede = client.post(
+        "/v1/forecast-runs/run-1/supersede",
+        json={**base, "prior_version": 3, "publication_version": 4},
+        headers=headers,
+    )
+    rollback = client.post(
+        "/v1/forecast-runs/run-1/rollback",
+        json={
+            **base,
+            "idempotency_key": "rollback-1",
+            "prior_version": 2,
+            "publication_version": 5,
+        },
+        headers=headers,
+    )
+
+    assert supersede.status_code == 200
+    assert supersede.json()["revision_count"] == 2
+    assert rollback.status_code == 200
+    assert rollback.json()["prior_version"] == 2
+    assert repository.calls[-1][0] == "rollback"
+    assert repository.calls[-1][1]["actor"] == "publisher@example.com"
+
+
+@pytest.mark.unit
 def test_page_token_is_stable_and_rejects_tampering():
     token = encode_page_token(_row())
 
@@ -410,4 +911,140 @@ def test_bigquery_repository_uses_keyset_pagination_with_bound_parameters(client
         "horizons",
         "cursor_publication_id",
         "page_limit",
+    }
+
+
+@pytest.mark.unit
+@patch("vertex.api.repository.bigquery.Client")
+def test_bigquery_repository_shapes_only_delivered_forecastlab_evidence(client_class):
+    client_class.return_value = MagicMock()
+    repository = BigQueryForecastRepository(project_id="project", table_prefix="project.dataset")
+    delivered = pd.DataFrame(
+        [
+            {
+                "forecast_run_id": "run-1",
+                "forecast_contract_name": "contract-1",
+                "forecast_contract_hash": "hash-1",
+                "publication_version": 3,
+                "destination": "canonical_bigquery",
+                "publication_row_count": 1,
+                "published_at": datetime(2026, 8, 18, tzinfo=timezone.utc),
+                "delivery_status": "delivered",
+            }
+        ]
+    )
+    forecast = pd.DataFrame(
+        [
+            {
+                "publication_id": "publication-1",
+                "forecast_run_id": "run-1",
+                "forecast_contract_name": "contract-1",
+                "forecast_contract_hash": "hash-1",
+                "forecast_origin": date(2026, 8, 18),
+                "target_date": date(2026, 8, 19),
+                "horizon": 1,
+                "grain": "store_day",
+                "prediction_p10": 10,
+                "prediction_p50": 12,
+                "prediction_p90": 15,
+                "statistical_forecast": 12,
+                "published_value": 13,
+                "forecast_strategy": "entity_model",
+                "exception_state": "clear",
+                "actual": 11,
+                "config_name": "favorita_xgboost",
+                "model_family": "xgboost",
+                "model_run_id": "model-run-1",
+                "calibration_run_id": "calibration-1",
+                "reconciliation_run_id": "reconciliation-1",
+                "hierarchy_version": "hierarchy-1",
+                "feature_version": "features-1",
+                "feature_availability_hash": "availability-1",
+                "data_cutoff": datetime(2026, 8, 18, tzinfo=timezone.utc),
+                "code_sha": "abc123",
+            }
+        ]
+    )
+    repository._dataframe = MagicMock(side_effect=[delivered, forecast])
+
+    result = repository.forecast_explorer_result(
+        forecast_run_id="run-1",
+        entity_key_json='{"store_nbr":1}',
+        model_id="model-1",
+        horizon=1,
+        exception_state="clear",
+    )
+
+    assert result is not None
+    assert result.rows[0]["actual"] == 11.0
+    assert result.rows[0]["publishedForecast"] == 13.0
+    assert result.provenance["featureAvailabilityHash"] == "availability-1"
+    forecast_query = repository._dataframe.call_args_list[1].args[0]
+    assert "delivery_status = 'delivered'" in repository._dataframe.call_args_list[0].args[0]
+    assert "LEFT JOIN `project.dataset.int_demand_store_daily`" in forecast_query
+    assert "f.horizon = @horizon" in forecast_query
+    assert "@exception_state" in forecast_query
+
+
+@pytest.mark.unit
+@patch("vertex.api.repository.bigquery.Client")
+def test_bigquery_repository_shapes_live_rolling_origin_experiments(client_class):
+    client_class.return_value = MagicMock()
+    repository = BigQueryForecastRepository(project_id="project", table_prefix="project.dataset")
+    metrics = pd.DataFrame(
+        [
+            {
+                "experiment_run_id": "backtest-1:model-1",
+                "backtest_contract_name": "contract-1",
+                "backtest_contract_hash": "hash-1234567890",
+                "model_config_name": "model-1",
+                "model_family": "xgboost",
+                "model_type": "xgboost",
+                "target": "demand_units",
+                "grain": "store-day",
+                "run_status": "completed",
+                "origin_end": date(2026, 8, 11),
+                "run_created_at": datetime(2026, 8, 18, tzinfo=timezone.utc),
+                "baseline_name": "model-1",
+                "display_model_family": "xgboost",
+                "display_model_type": "xgboost",
+                "feature_version": "contract:hash-1234567",
+                "forecast_origin": date(2026, 8, 11),
+                "horizon": 7,
+                "segment_key_json": "{}",
+                "eligible_count": 10,
+                "wape": 0.12,
+                "bias": -0.01,
+                "interval_coverage": 0.81,
+                "metric_created_at": datetime(2026, 8, 18, 0, 5, tzinfo=timezone.utc),
+            }
+        ]
+    )
+    repository._dataframe = MagicMock(return_value=metrics)
+
+    result = repository.experiment_runs(
+        model_id="model-1",
+        model_family="xgboost",
+        feature_version="contract:hash-1234567",
+        status="completed",
+        horizon=7,
+        run_ids=("backtest-1:model-1", "missing:model"),
+    )
+
+    assert result.runs[0]["summary"]["wape"] == pytest.approx(12.0)
+    assert result.runs[0]["summary"]["bias"] == pytest.approx(-1.0)
+    assert result.runs[0]["summary"]["coverage"] == pytest.approx(0.81)
+    assert result.runs[0]["runtimeMinutes"] == 5.0
+    assert result.missing_run_ids == ["missing:model"]
+    query = repository._dataframe.call_args.args[0]
+    assert "`project.dataset.backtest_runs`" in query
+    assert "`project.dataset.backtest_metrics`" in query
+    parameters = repository._dataframe.call_args.args[1]
+    assert {parameter.name for parameter in parameters} == {
+        "model_id",
+        "model_family",
+        "feature_version",
+        "status",
+        "horizon",
+        "run_ids",
     }

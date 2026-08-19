@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:pages": "playwright test --config=playwright.pages.config.ts",
     "validate": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build:pages"
   },
   "dependencies": {

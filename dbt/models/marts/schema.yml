@@ -236,6 +236,10 @@ models:
         data_tests: [not_null]
       - name: published_value
         data_tests: [not_null]
+      - name: calibration_run_id
+        data_tests: [not_null]
+      - name: feature_availability_hash
+        data_tests: [not_null]
 
   - name: published_forecasts_current
     description: Latest publication for each contract, entity, target, horizon, and destination.

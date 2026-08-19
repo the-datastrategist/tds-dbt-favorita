@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
     environment: "jsdom",
     globals: true,
     setupFiles: "./src/test/setup.tsx",
-    exclude: ["e2e/**", "node_modules/**", "dist/**"],
+    exclude: ["e2e/**", "e2e-pages/**", "node_modules/**", "dist/**"],
     css: true,
     coverage: {
       reporter: ["text", "html"],

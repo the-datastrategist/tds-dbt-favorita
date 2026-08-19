@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import base64
 import binascii
+import hashlib
 import json
+import math
+import random
+from argparse import Namespace
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any, Protocol
@@ -12,6 +16,7 @@ from typing import Any, Protocol
 import pandas as pd
 from google.cloud import bigquery
 
+from vertex.jobs.forecast_operations import run as run_forecast_operation
 from vertex.utils.bigquery_utils import validate_bq_table_id
 from vertex.utils.forecast_delivery import (
     build_delivery_event,
@@ -51,6 +56,8 @@ FORECAST_COLUMNS = (
     "prediction_p90",
     "forecast_strategy",
     "confidence_flag",
+    "calibration_method",
+    "calibration_run_id",
     "hierarchy_version",
     "reconciliation_method",
     "reconciliation_run_id",
@@ -60,11 +67,46 @@ FORECAST_COLUMNS = (
     "model_family",
     "model_type",
     "feature_version",
+    "feature_availability_hash",
     "code_sha",
     "data_cutoff",
     "published_at",
     "published_by",
 )
+
+
+@dataclass(frozen=True)
+class ForecastExplorerOptions:
+    runs: list[dict[str, Any]]
+    entities: list[dict[str, Any]]
+    models: list[dict[str, Any]]
+    horizons: list[int]
+
+
+@dataclass(frozen=True)
+class ForecastExplorerResult:
+    run: dict[str, Any]
+    entity: dict[str, Any]
+    model: dict[str, Any]
+    rows: list[dict[str, Any]]
+    provenance: dict[str, Any]
+    next_page_token: str | None = None
+
+
+@dataclass(frozen=True)
+class ExperimentOptions:
+    runs: list[dict[str, Any]]
+    models: list[dict[str, Any]]
+    model_families: list[str]
+    feature_versions: list[str]
+    statuses: list[str]
+    horizons: list[int]
+
+
+@dataclass(frozen=True)
+class ExperimentResult:
+    runs: list[dict[str, Any]]
+    missing_run_ids: list[str]
 
 
 @dataclass(frozen=True)
@@ -103,6 +145,44 @@ class MutationConflictError(ValueError):
 
 
 class ForecastRepository(Protocol):
+    def experiment_options(self) -> ExperimentOptions:
+        """Return filters for persisted rolling-origin experiment evidence."""
+
+    def experiment_runs(
+        self,
+        *,
+        run_ids: tuple[str, ...] = (),
+        model_id: str | None = None,
+        model_family: str | None = None,
+        feature_version: str | None = None,
+        status: str | None = None,
+        horizon: int | None = None,
+    ) -> ExperimentResult:
+        """Return immutable rolling-origin experiment evidence."""
+
+    def operations_snapshot(self) -> list[dict[str, Any]]:
+        """Return lifecycle, exception, delivery, and FVA evidence by run."""
+
+    def forecast_explorer_options(
+        self, *, forecast_run_id: str | None = None
+    ) -> ForecastExplorerOptions:
+        """Return filter values drawn only from completely delivered publications."""
+
+    def forecast_explorer_result(
+        self,
+        *,
+        forecast_run_id: str,
+        entity_key_json: str,
+        model_id: str,
+        horizon: int | None,
+        exception_state: str | None,
+        target_start: date | None = None,
+        target_end: date | None = None,
+        limit: int = 100,
+        page_token: str | None = None,
+    ) -> ForecastExplorerResult | None:
+        """Return one UI-shaped immutable delivered forecast selection."""
+
     def resolve_current(self, *, contract_name: str, destination: str) -> PublicationScope | None:
         """Resolve the latest completely delivered version for a contract/destination."""
 
@@ -160,6 +240,34 @@ class ForecastRepository(Protocol):
         idempotency_key: str,
     ) -> dict[str, Any]:
         """Publish one complete explicit approval set idempotently."""
+
+    def supersede_run(
+        self,
+        *,
+        forecast_run_id: str,
+        prior_version: int,
+        publication_version: int,
+        destination: str,
+        reason_code: str,
+        comment: str,
+        actor: str,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        """Supersede a complete version with a newly approved immutable version."""
+
+    def rollback_run(
+        self,
+        *,
+        forecast_run_id: str,
+        prior_version: int,
+        publication_version: int,
+        destination: str,
+        reason_code: str,
+        comment: str,
+        actor: str,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        """Republish a complete prior version as a new immutable version."""
 
 
 def canonical_entity_key(value: str | None) -> str | None:
@@ -239,6 +347,16 @@ class BigQueryForecastRepository:
         self.delivery_events_table = validate_bq_table_id(
             f"{table_prefix}.forecast_delivery_events"
         )
+        self.demand_table = validate_bq_table_id(f"{table_prefix}.int_demand_store_daily")
+        self.backtest_runs_table = validate_bq_table_id(f"{table_prefix}.backtest_runs")
+        self.backtest_metrics_table = validate_bq_table_id(f"{table_prefix}.backtest_metrics")
+        self.backtest_predictions_table = validate_bq_table_id(
+            f"{table_prefix}.backtest_predictions"
+        )
+        self.forecast_runs_table = validate_bq_table_id(f"{table_prefix}.forecast_runs")
+        self.operations_fva_table = validate_bq_table_id(
+            f"{table_prefix}.forecast_value_added_operations"
+        )
         self.webhook_url = webhook_url
         self.webhook_signing_secret = webhook_signing_secret
         self.webhook_name = webhook_name
@@ -257,16 +375,12 @@ class BigQueryForecastRepository:
             delivery_status=row["delivery_status"],
         )
 
-    def _resolve(
-        self, query: str, parameters: list[bigquery.ScalarQueryParameter]
-    ) -> PublicationScope | None:
+    def _resolve(self, query: str, parameters: list[Any]) -> PublicationScope | None:
         config = bigquery.QueryJobConfig(query_parameters=parameters)
         rows = list(self.client.query(query, job_config=config).result())
         return self._scope(rows[0]) if rows else None
 
-    def _dataframe(
-        self, query: str, parameters: list[bigquery.ScalarQueryParameter]
-    ) -> pd.DataFrame:
+    def _dataframe(self, query: str, parameters: list[Any]) -> pd.DataFrame:
         config = bigquery.QueryJobConfig(query_parameters=parameters)
         return self.client.query(query, job_config=config).to_dataframe()
 
@@ -642,6 +756,687 @@ class BigQueryForecastRepository:
                 bigquery.ScalarQueryParameter("contract_name", "STRING", contract_name),
                 bigquery.ScalarQueryParameter("destination", "STRING", destination),
             ],
+        )
+
+    @staticmethod
+    def _entity_option(entity_key_json: str, grain: str) -> dict[str, Any]:
+        key = json.loads(entity_key_json)
+        label = ", ".join(f"{name} {value}" for name, value in sorted(key.items()))
+        return {
+            "id": entity_key_json,
+            "name": label,
+            "hierarchyNode": entity_key_json,
+            "hierarchyLevel": grain,
+        }
+
+    def forecast_explorer_options(
+        self, *, forecast_run_id: str | None = None
+    ) -> ForecastExplorerOptions:
+        rows = self._dataframe(
+            f"""
+            SELECT
+              forecasts.forecast_run_id,
+              forecasts.forecast_origin,
+              forecasts.publication_version,
+              forecasts.entity_key_json,
+              forecasts.grain,
+              forecasts.model_id,
+              forecasts.model_family,
+              forecasts.config_name,
+              forecasts.horizon
+            FROM `{self.publication_table}` AS forecasts
+            INNER JOIN `{self.delivery_table}` AS deliveries
+              USING (forecast_run_id, publication_version, destination)
+            WHERE deliveries.delivery_status = 'delivered'
+            ORDER BY forecast_origin DESC, publication_version DESC,
+                     entity_key_json, model_id, horizon
+            """,
+            [],
+        )
+        if rows.empty:
+            return ForecastExplorerOptions(runs=[], entities=[], models=[], horizons=[])
+        records = rows.to_dict(orient="records")
+        run_keys: set[str] = set()
+        entity_keys: set[str] = set()
+        model_keys: set[str] = set()
+        runs: list[dict[str, Any]] = []
+        entities: list[dict[str, Any]] = []
+        models: list[dict[str, Any]] = []
+        for row in records:
+            run_id = str(row["forecast_run_id"])
+            if run_id not in run_keys:
+                run_keys.add(run_id)
+                origin = str(row["forecast_origin"])
+                runs.append(
+                    {
+                        "id": run_id,
+                        "label": f"{origin} · published v{int(row['publication_version'])}",
+                        "origin": origin,
+                    }
+                )
+            if forecast_run_id is not None and run_id != forecast_run_id:
+                continue
+            entity_id = canonical_entity_key(str(row["entity_key_json"]))
+            if entity_id and entity_id not in entity_keys:
+                entity_keys.add(entity_id)
+                entities.append(self._entity_option(entity_id, str(row["grain"])))
+            model_id = str(row["model_id"])
+            if model_id not in model_keys:
+                model_keys.add(model_id)
+                name = row.get("config_name") or row.get("model_family") or model_id
+                models.append({"id": model_id, "name": str(name)})
+        return ForecastExplorerOptions(
+            runs=runs,
+            entities=entities,
+            models=models,
+            horizons=sorted({int(value) for value in rows["horizon"]}),
+        )
+
+    @staticmethod
+    def _weighted_metric(rows: pd.DataFrame, column: str) -> float | None:
+        valid = rows.loc[rows[column].notna() & rows["eligible_count"].gt(0)]
+        if valid.empty:
+            return None
+        return float(
+            (valid[column].astype(float) * valid["eligible_count"].astype(float)).sum()
+            / valid["eligible_count"].astype(float).sum()
+        )
+
+    @classmethod
+    def _experiment_metric(cls, rows: pd.DataFrame) -> dict[str, float] | None:
+        wape = cls._weighted_metric(rows, "wape")
+        bias = cls._weighted_metric(rows, "bias")
+        coverage = cls._weighted_metric(rows, "interval_coverage")
+        if wape is None or bias is None or coverage is None:
+            return None
+        return {"wape": wape * 100, "bias": bias * 100, "coverage": coverage}
+
+    @classmethod
+    def _shape_experiment_run(cls, rows: pd.DataFrame) -> dict[str, Any]:
+        first = rows.iloc[0]
+        status = (
+            "completed"
+            if str(first["run_status"]).lower()
+            in {
+                "completed",
+                "succeeded",
+                "success",
+            }
+            else "failed"
+        )
+        summary = cls._experiment_metric(rows)
+        run_id = str(first["experiment_run_id"])
+        model_id = str(first["baseline_name"])
+        created_at = pd.to_datetime(first["run_created_at"], utc=True)
+        metric_created_at = pd.to_datetime(rows["metric_created_at"], utc=True).max()
+        runtime_minutes = max(
+            0.01,
+            float((metric_created_at - created_at).total_seconds() / 60),
+        )
+
+        horizons: list[dict[str, Any]] = []
+        for horizon, grouped in rows.groupby("horizon", sort=True):
+            metric = cls._experiment_metric(grouped)
+            if metric is not None:
+                horizons.append({"horizon": int(horizon), **metric})
+
+        segments: list[dict[str, Any]] = []
+        for segment_id, grouped in rows.groupby("segment_key_json", sort=True):
+            metric = cls._experiment_metric(grouped)
+            if metric is not None:
+                segments.append(
+                    {
+                        "segmentId": str(segment_id),
+                        "segmentName": (
+                            "All entities" if str(segment_id) == "{}" else str(segment_id)
+                        ),
+                        **metric,
+                    }
+                )
+
+        rolling_origins: list[dict[str, Any]] = []
+        for origin, grouped in rows.groupby("forecast_origin", sort=True):
+            metric = cls._experiment_metric(grouped)
+            if metric is not None:
+                rolling_origins.append({"origin": str(origin), **metric})
+
+        completed_at = metric_created_at.isoformat().replace("+00:00", "Z")
+        return {
+            "id": run_id,
+            "label": f"{model_id} · {str(first['origin_end'])}",
+            "modelId": model_id,
+            "modelName": model_id,
+            "modelFamily": str(first["display_model_family"]),
+            "featureVersion": str(first["feature_version"]),
+            "status": status,
+            "createdAt": created_at.isoformat().replace("+00:00", "Z"),
+            "completedAt": completed_at if status == "completed" else None,
+            "runtimeMinutes": runtime_minutes,
+            "comparable": status == "completed" and summary is not None,
+            "summary": summary,
+            "configuration": {
+                "backtest_contract": str(first["backtest_contract_name"]),
+                "contract_hash": str(first["backtest_contract_hash"]),
+                "model_config": str(first["model_config_name"]),
+                "model_type": str(first["display_model_type"]),
+                "target": str(first["target"]),
+                "grain": str(first["grain"]),
+            },
+            "horizons": horizons,
+            "segments": segments,
+            "rollingOrigins": rolling_origins,
+            "statisticalEvidence": None,
+            "forecastLink": None,
+        }
+
+    @staticmethod
+    def _attach_experiment_confidence(
+        runs: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        comparable = [run for run in runs if run["comparable"] and run["rollingOrigins"]]
+        if len(comparable) < 2:
+            return runs
+        reference = min(comparable, key=lambda run: str(run["createdAt"]))
+        reference_values = {
+            row["origin"]: float(row["wape"]) for row in reference["rollingOrigins"]
+        }
+        for run in comparable:
+            if run["id"] == reference["id"]:
+                continue
+            values = {row["origin"]: float(row["wape"]) for row in run["rollingOrigins"]}
+            origins = sorted(set(values) & set(reference_values))
+            if len(origins) < 2:
+                continue
+            differences = [values[origin] - reference_values[origin] for origin in origins]
+            seed = int.from_bytes(
+                hashlib.sha256(f"{run['id']}:{reference['id']}".encode()).digest()[:8],
+                "big",
+            )
+            generator = random.Random(seed)
+            samples = sorted(
+                sum(generator.choice(differences) for _ in differences) / len(differences)
+                for _ in range(2000)
+            )
+            lower = samples[math.floor(0.025 * (len(samples) - 1))]
+            upper = samples[math.ceil(0.975 * (len(samples) - 1))]
+            delta = sum(differences) / len(differences)
+            opposing = (
+                sum(1 for value in samples if value >= 0)
+                if delta < 0
+                else sum(1 for value in samples if value <= 0)
+            )
+            run["statisticalEvidence"] = {
+                "referenceRunId": reference["id"],
+                "deltaWapePp": round(delta, 3),
+                "confidenceLevel": 0.95,
+                "ciLower": round(lower, 3),
+                "ciUpper": round(upper, 3),
+                "pValue": round(min(1.0, 2 * opposing / len(samples)), 4),
+                "conclusion": (
+                    "meaningful" if upper < 0 else "worse" if lower > 0 else "inconclusive"
+                ),
+            }
+        return runs
+
+    def experiment_runs(
+        self,
+        *,
+        model_id: str | None = None,
+        model_family: str | None = None,
+        feature_version: str | None = None,
+        status: str | None = None,
+        horizon: int | None = None,
+        run_ids: tuple[str, ...] = (),
+    ) -> ExperimentResult:
+        clauses = ["runs.target IS NOT NULL", "runs.metric_policy_json IS NOT NULL"]
+        parameters: list[Any] = []
+        if model_id:
+            clauses.append("metrics.baseline_name = @model_id")
+            parameters.append(bigquery.ScalarQueryParameter("model_id", "STRING", model_id))
+        if model_family:
+            clauses.append(
+                "IF(metrics.baseline_name = runs.model_config_name, runs.model_family, "
+                "'baseline') = @model_family"
+            )
+            parameters.append(bigquery.ScalarQueryParameter("model_family", "STRING", model_family))
+        if feature_version:
+            clauses.append(
+                "COALESCE(features.feature_availability_hash, "
+                "CONCAT('contract:', SUBSTR(runs.backtest_contract_hash, 1, 12))) "
+                "= @feature_version"
+            )
+            parameters.append(
+                bigquery.ScalarQueryParameter("feature_version", "STRING", feature_version)
+            )
+        if status:
+            clauses.append(
+                "IF(LOWER(runs.status) IN ('completed', 'succeeded', 'success'), "
+                "'completed', 'failed') = @status"
+            )
+            parameters.append(bigquery.ScalarQueryParameter("status", "STRING", status))
+        if horizon is not None:
+            clauses.append("metrics.horizon = @horizon")
+            parameters.append(bigquery.ScalarQueryParameter("horizon", "INT64", horizon))
+        if run_ids:
+            clauses.append(
+                "CONCAT(runs.backtest_run_id, ':', metrics.baseline_name) IN UNNEST(@run_ids)"
+            )
+            parameters.append(bigquery.ArrayQueryParameter("run_ids", "STRING", list(run_ids)))
+        rows = self._dataframe(
+            f"""
+            WITH features AS (
+              SELECT
+                backtest_run_id,
+                baseline_name,
+                ARRAY_AGG(
+                  DISTINCT feature_availability_hash IGNORE NULLS
+                  ORDER BY feature_availability_hash LIMIT 1
+                )[SAFE_OFFSET(0)] AS feature_availability_hash
+              FROM `{self.backtest_predictions_table}`
+              GROUP BY backtest_run_id, baseline_name
+            )
+            SELECT
+              CONCAT(runs.backtest_run_id, ':', metrics.baseline_name) AS experiment_run_id,
+              runs.backtest_contract_name,
+              runs.backtest_contract_hash,
+              runs.model_config_name,
+              runs.model_family,
+              runs.model_type,
+              runs.target,
+              runs.grain,
+              runs.status AS run_status,
+              runs.origin_end,
+              runs.created_at AS run_created_at,
+              metrics.baseline_name,
+              IF(metrics.baseline_name = runs.model_config_name, runs.model_family, 'baseline')
+                AS display_model_family,
+              IF(metrics.baseline_name = runs.model_config_name, runs.model_type, 'baseline')
+                AS display_model_type,
+              COALESCE(features.feature_availability_hash,
+                CONCAT('contract:', SUBSTR(runs.backtest_contract_hash, 1, 12)))
+                AS feature_version,
+              metrics.forecast_origin,
+              metrics.horizon,
+              metrics.segment_key_json,
+              metrics.eligible_count,
+              metrics.wape,
+              metrics.bias,
+              metrics.interval_coverage,
+              metrics.created_at AS metric_created_at
+            FROM `{self.backtest_runs_table}` AS runs
+            INNER JOIN `{self.backtest_metrics_table}` AS metrics
+              USING (backtest_run_id, backtest_contract_name, backtest_contract_hash)
+            LEFT JOIN features
+              USING (backtest_run_id, baseline_name)
+            WHERE {' AND '.join(clauses)}
+            ORDER BY runs.created_at DESC, experiment_run_id,
+                     metrics.forecast_origin, metrics.horizon, metrics.segment_key_json
+            """,
+            parameters,
+        )
+        if rows.empty:
+            return ExperimentResult(runs=[], missing_run_ids=list(dict.fromkeys(run_ids)))
+        shaped = self._attach_experiment_confidence(
+            [
+                self._shape_experiment_run(group)
+                for _, group in rows.groupby("experiment_run_id", sort=False)
+            ]
+        )
+        found = {str(run["id"]) for run in shaped}
+        return ExperimentResult(
+            runs=shaped,
+            missing_run_ids=[run_id for run_id in dict.fromkeys(run_ids) if run_id not in found],
+        )
+
+    def experiment_options(self) -> ExperimentOptions:
+        result = self.experiment_runs()
+        runs = result.runs
+        return ExperimentOptions(
+            runs=[
+                {"id": run["id"], "label": run["label"], "comparable": run["comparable"]}
+                for run in runs
+            ],
+            models=list(
+                {
+                    str(run["modelId"]): {
+                        "id": str(run["modelId"]),
+                        "name": str(run["modelName"]),
+                    }
+                    for run in runs
+                }.values()
+            ),
+            model_families=sorted({str(run["modelFamily"]) for run in runs}),
+            feature_versions=sorted({str(run["featureVersion"]) for run in runs}),
+            statuses=sorted({str(run["status"]) for run in runs}),
+            horizons=sorted({int(metric["horizon"]) for run in runs for metric in run["horizons"]}),
+        )
+
+    def operations_snapshot(self) -> list[dict[str, Any]]:
+        summaries = self._dataframe(
+            f"""
+            WITH output_counts AS (
+              SELECT forecast_run_id, COUNT(*) AS output_count,
+                     COUNTIF(confidence_flag IN ('medium', 'low')) AS exception_count,
+                     ANY_VALUE(config_name) AS model_name
+              FROM `{self.outputs_table}` GROUP BY forecast_run_id
+            ), override_counts AS (
+              SELECT forecast_run_id, COUNT(DISTINCT override_id) AS override_count
+              FROM `{self.overrides_table}` GROUP BY forecast_run_id
+            ), approval_counts AS (
+              SELECT forecast_run_id, COUNT(DISTINCT approval_id) AS approval_count
+              FROM `{self.approvals_table}` WHERE decision = 'approved'
+              GROUP BY forecast_run_id
+            ), latest_publications AS (
+              SELECT forecast_run_id, MAX(publication_version) AS publication_version,
+                     MAX(published_at) AS published_at
+              FROM `{self.publications_table}` WHERE destination = 'canonical_bigquery'
+              GROUP BY forecast_run_id
+            ), latest_delivery AS (
+              SELECT * EXCEPT(row_number) FROM (
+                SELECT forecast_run_id, publication_version, delivery_status, delivery_status_at,
+                       ROW_NUMBER() OVER (
+                         PARTITION BY forecast_run_id ORDER BY publication_version DESC,
+                         delivery_status_at DESC
+                       ) AS row_number
+                FROM `{self.delivery_table}` WHERE destination = 'canonical_bigquery'
+              ) WHERE row_number = 1
+            ), fva AS (
+              SELECT forecast_run_id,
+                     ARRAY_AGG(STRUCT(
+                       comparison_status, planner_wape_fva_points, total_wape_fva_points
+                     ) ORDER BY publication_version DESC, horizon DESC LIMIT 1)[OFFSET(0)] AS latest
+              FROM `{self.operations_fva_table}` GROUP BY forecast_run_id
+            )
+            SELECT runs.forecast_run_id, DATE(runs.forecast_origin) AS origin,
+              CASE WHEN runs.run_status IN
+                ('draft', 'approved', 'published', 'superseded', 'failed')
+                THEN runs.run_status WHEN runs.error_message IS NOT NULL THEN 'failed'
+                ELSE 'draft' END AS status,
+              COALESCE(outputs.model_name, runs.config_name, runs.model_id, 'unknown') AS model_name,
+              COALESCE(outputs.output_count, runs.row_count, 0) AS output_count,
+              COALESCE(runs.exception_count, outputs.exception_count, 0) AS exception_count,
+              COALESCE(overrides.override_count, 0) AS override_count,
+              COALESCE(approvals.approval_count, 0) AS approval_count,
+              publications.publication_version,
+              COALESCE(delivery.delivery_status, 'not_published') AS delivery_status,
+              COALESCE(fva.latest.comparison_status, 'awaiting_actuals') AS fva_status,
+              fva.latest.planner_wape_fva_points, fva.latest.total_wape_fva_points,
+              COALESCE(delivery.delivery_status_at, publications.published_at,
+                       runs.finished_at, runs.started_at) AS updated_at
+            FROM `{self.forecast_runs_table}` AS runs
+            LEFT JOIN output_counts AS outputs USING (forecast_run_id)
+            LEFT JOIN override_counts AS overrides USING (forecast_run_id)
+            LEFT JOIN approval_counts AS approvals USING (forecast_run_id)
+            LEFT JOIN latest_publications AS publications USING (forecast_run_id)
+            LEFT JOIN latest_delivery AS delivery USING (forecast_run_id, publication_version)
+            LEFT JOIN fva USING (forecast_run_id)
+            WHERE outputs.output_count IS NOT NULL
+            ORDER BY runs.forecast_origin DESC, runs.forecast_run_id DESC LIMIT 100
+            """,
+            [],
+        )
+        if summaries.empty:
+            return []
+        run_ids = [str(value) for value in summaries["forecast_run_id"]]
+        samples = self._dataframe(
+            f"""
+            SELECT * EXCEPT(row_number) FROM (
+              SELECT forecast_run_id, forecast_output_id, entity_key_json, target_date,
+                     COALESCE(planner_override, prediction_p50) AS current_value,
+                     CASE confidence_flag WHEN 'low' THEN 'blocked'
+                       WHEN 'medium' THEN 'watch' ELSE 'clear' END AS exception_state,
+                     ROW_NUMBER() OVER (
+                       PARTITION BY forecast_run_id ORDER BY
+                         CASE confidence_flag WHEN 'low' THEN 1
+                           WHEN 'medium' THEN 2 ELSE 3 END,
+                         target_date, forecast_output_id
+                     ) AS row_number
+              FROM `{self.outputs_table}` WHERE forecast_run_id IN UNNEST(@run_ids)
+            ) WHERE row_number <= 20 ORDER BY forecast_run_id, row_number
+            """,
+            [bigquery.ArrayQueryParameter("run_ids", "STRING", run_ids)],
+        )
+        outputs_by_run: dict[str, list[dict[str, Any]]] = {}
+        for row in samples.to_dict(orient="records"):
+            run_id = str(row["forecast_run_id"])
+            entity_key = canonical_entity_key(str(row["entity_key_json"])) or "{}"
+            outputs_by_run.setdefault(run_id, []).append(
+                {
+                    "id": str(row["forecast_output_id"]),
+                    "entityLabel": self._entity_option(entity_key, "")["name"],
+                    "targetDate": str(row["target_date"]),
+                    "currentValue": float(row["current_value"]),
+                    "exceptionState": str(row["exception_state"]),
+                }
+            )
+        result: list[dict[str, Any]] = []
+        for row in summaries.to_dict(orient="records"):
+            run_id = str(row["forecast_run_id"])
+            result.append(
+                {
+                    "runId": run_id,
+                    "origin": str(row["origin"]),
+                    "status": str(row["status"]),
+                    "modelName": str(row["model_name"]),
+                    "outputCount": int(row["output_count"]),
+                    "exceptionCount": int(row["exception_count"]),
+                    "overrideCount": int(row["override_count"]),
+                    "approvalCount": int(row["approval_count"]),
+                    "publicationVersion": (
+                        None
+                        if pd.isna(row["publication_version"])
+                        else int(row["publication_version"])
+                    ),
+                    "deliveryStatus": str(row["delivery_status"]),
+                    "fvaStatus": str(row["fva_status"]),
+                    "plannerWapeFvaPoints": (
+                        None
+                        if pd.isna(row["planner_wape_fva_points"])
+                        else float(row["planner_wape_fva_points"]) * 100
+                    ),
+                    "totalWapeFvaPoints": (
+                        None
+                        if pd.isna(row["total_wape_fva_points"])
+                        else float(row["total_wape_fva_points"]) * 100
+                    ),
+                    "updatedAt": row["updated_at"].isoformat(),
+                    "outputs": outputs_by_run.get(run_id, []),
+                }
+            )
+        return result
+
+    def _revision_operation(
+        self,
+        *,
+        action: str,
+        forecast_run_id: str,
+        prior_version: int,
+        publication_version: int,
+        destination: str,
+        reason_code: str,
+        comment: str,
+        actor: str,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        try:
+            result = run_forecast_operation(
+                Namespace(
+                    action=action,
+                    forecast_run_id=forecast_run_id,
+                    idempotency_key=idempotency_key,
+                    actor=actor,
+                    reason_code=reason_code,
+                    comment=comment,
+                    project_id=self.project_id,
+                    table_prefix=self.table_prefix,
+                    forecast_output_id=None,
+                    value=None,
+                    destination=destination,
+                    version=publication_version,
+                    prior_version=prior_version,
+                )
+            )
+        except ValueError as exc:
+            message = str(exc)
+            if "no canonical output" in message or "source version" in message:
+                raise MutationNotFoundError(message) from exc
+            raise MutationConflictError(message) from exc
+        result.setdefault("retry", False)
+        return result
+
+    def supersede_run(self, **kwargs: Any) -> dict[str, Any]:
+        return self._revision_operation(action="revise", **kwargs)
+
+    def rollback_run(self, **kwargs: Any) -> dict[str, Any]:
+        return self._revision_operation(action="rollback", **kwargs)
+
+    def forecast_explorer_result(
+        self,
+        *,
+        forecast_run_id: str,
+        entity_key_json: str,
+        model_id: str,
+        horizon: int | None,
+        exception_state: str | None,
+        target_start: date | None = None,
+        target_end: date | None = None,
+        limit: int = 100,
+        page_token: str | None = None,
+    ) -> ForecastExplorerResult | None:
+        scope_rows = self._dataframe(
+            f"""
+            SELECT * FROM `{self.delivery_table}`
+            WHERE forecast_run_id = @forecast_run_id
+              AND destination = 'canonical_bigquery'
+              AND delivery_status = 'delivered'
+            ORDER BY publication_version DESC
+            LIMIT 1
+            """,
+            [bigquery.ScalarQueryParameter("forecast_run_id", "STRING", forecast_run_id)],
+        )
+        if scope_rows.empty:
+            return None
+        scope = self._scope(scope_rows.iloc[0])
+        clauses = [
+            "f.forecast_run_id = @forecast_run_id",
+            "f.publication_version = @publication_version",
+            "f.destination = @destination",
+            "f.entity_key_json = @entity_key_json",
+            "f.model_id = @model_id",
+        ]
+        parameters: list[Any] = [
+            bigquery.ScalarQueryParameter("forecast_run_id", "STRING", forecast_run_id),
+            bigquery.ScalarQueryParameter(
+                "publication_version", "INT64", scope.publication_version
+            ),
+            bigquery.ScalarQueryParameter("destination", "STRING", scope.destination),
+            bigquery.ScalarQueryParameter("entity_key_json", "STRING", entity_key_json),
+            bigquery.ScalarQueryParameter("model_id", "STRING", model_id),
+        ]
+        if horizon is not None:
+            clauses.append("f.horizon = @horizon")
+            parameters.append(bigquery.ScalarQueryParameter("horizon", "INT64", horizon))
+        if exception_state is not None:
+            clauses.append(
+                "CASE f.confidence_flag WHEN 'low' THEN 'blocked' "
+                "WHEN 'medium' THEN 'watch' ELSE 'clear' END = @exception_state"
+            )
+            parameters.append(
+                bigquery.ScalarQueryParameter("exception_state", "STRING", exception_state)
+            )
+        if target_start is not None:
+            clauses.append("f.target_date >= @target_start")
+            parameters.append(bigquery.ScalarQueryParameter("target_start", "DATE", target_start))
+        if target_end is not None:
+            clauses.append("f.target_date <= @target_end")
+            parameters.append(bigquery.ScalarQueryParameter("target_end", "DATE", target_end))
+        cursor = decode_page_token(page_token)
+        if cursor is not None:
+            if cursor["entity_key_json"] != entity_key_json:
+                raise ValueError("page_token does not belong to the selected entity")
+            clauses.append(
+                "(f.target_date > @cursor_date "
+                "OR (f.target_date = @cursor_date AND f.horizon > @cursor_horizon) "
+                "OR (f.target_date = @cursor_date AND f.horizon = @cursor_horizon "
+                "AND f.publication_id > @cursor_publication_id))"
+            )
+            parameters.extend(
+                [
+                    bigquery.ScalarQueryParameter("cursor_date", "DATE", cursor["target_date"]),
+                    bigquery.ScalarQueryParameter("cursor_horizon", "INT64", cursor["horizon"]),
+                    bigquery.ScalarQueryParameter(
+                        "cursor_publication_id", "STRING", cursor["publication_id"]
+                    ),
+                ]
+            )
+        parameters.append(bigquery.ScalarQueryParameter("page_limit", "INT64", limit + 1))
+        rows = self._dataframe(
+            f"""
+            SELECT
+              f.*,
+              demand.observed_sales_units AS actual,
+              CASE f.confidence_flag WHEN 'low' THEN 'blocked'
+                   WHEN 'medium' THEN 'watch' ELSE 'clear' END AS exception_state
+            FROM `{self.publication_table}` AS f
+            LEFT JOIN `{self.demand_table}` AS demand
+              ON demand.date = f.target_date
+             AND demand.store_nbr = SAFE_CAST(JSON_VALUE(f.entity_key_json, '$.store_nbr') AS INT64)
+            WHERE {' AND '.join(clauses)}
+            ORDER BY f.target_date, f.horizon, f.publication_id
+            LIMIT @page_limit
+            """,
+            parameters,
+        )
+        if rows.empty:
+            return None
+        records = rows.to_dict(orient="records")
+        has_more = len(records) > limit
+        records = records[:limit]
+        first = records[0]
+        entity = self._entity_option(entity_key_json, str(first["grain"]))
+        model_name = first.get("config_name") or first.get("model_family") or model_id
+        output_rows = [
+            {
+                "runId": forecast_run_id,
+                "entityId": entity_key_json,
+                "modelId": model_id,
+                "targetDate": str(row["target_date"]),
+                "horizon": int(row["horizon"]),
+                "actual": None if pd.isna(row.get("actual")) else float(row["actual"]),
+                "p10": float(row["prediction_p10"]),
+                "p50": float(row["prediction_p50"]),
+                "p90": float(row["prediction_p90"]),
+                "statisticalForecast": float(row["statistical_forecast"]),
+                "publishedForecast": float(row["published_value"]),
+                "strategy": str(row["forecast_strategy"]),
+                "exceptionState": str(row["exception_state"]),
+            }
+            for row in records
+        ]
+        return ForecastExplorerResult(
+            run={
+                "id": forecast_run_id,
+                "label": f"{first['forecast_origin']} · published v{scope.publication_version}",
+                "origin": str(first["forecast_origin"]),
+                "publicationStatus": "published",
+            },
+            entity=entity,
+            model={"id": model_id, "name": str(model_name)},
+            rows=output_rows,
+            provenance={
+                "contractName": str(first["forecast_contract_name"]),
+                "contractHash": str(first["forecast_contract_hash"]),
+                "modelRunId": str(first["model_run_id"]),
+                "calibrationRunId": str(first["calibration_run_id"]),
+                "reconciliationRunId": str(first["reconciliation_run_id"]),
+                "hierarchyVersion": str(first["hierarchy_version"]),
+                "featureVersion": str(first["feature_version"]),
+                "featureAvailabilityHash": str(first["feature_availability_hash"]),
+                "dataCutoff": first["data_cutoff"].isoformat(),
+                "codeSha": str(first["code_sha"]),
+                "publicationVersion": str(scope.publication_version),
+            },
+            next_page_token=(encode_page_token(records[-1]) if has_more else None),
         )
 
     def resolve_version(

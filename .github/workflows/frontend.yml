@@ -49,6 +49,9 @@ jobs:
       - name: Run browser and accessibility tests
         run: npm run test:e2e
 
+      - name: Verify GitHub Pages routes and refreshes
+        run: npm run test:pages
+
       - name: Verify public bundle guardrails
         run: |
           test -f dist/index.html

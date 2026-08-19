@@ -25,5 +25,12 @@ forecast_publication_webhook_signing_secret_id = "forecast-publication-webhook-s
 forecast_publication_webhook_name = "planning-system"
 forecast_api_image           = "us-central1-docker.pkg.dev/my-client-prod/vertex/ml-pipeline@sha256:replace-me"
 forecast_api_invoker_members = ["group:forecast-consumers@example.com"]
+enable_forecastlab_iap       = true
+forecastlab_iap_access_members = ["group:forecast-consumers@example.com"]
+forecastlab_lifecycle_role_members = {
+  planner   = ["planner@example.com"]
+  approver  = ["approver@example.com"]
+  publisher = ["publisher@example.com"]
+}
 forecast_api_min_instances   = 0
 forecast_api_max_instances   = 10

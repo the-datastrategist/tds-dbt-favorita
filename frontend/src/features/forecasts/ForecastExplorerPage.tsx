@@ -19,23 +19,38 @@ const parseHorizon = (value: string | null) => {
 const makeFilters = (
   params: URLSearchParams,
   options: ForecastOptions,
-): ForecastFilters => ({
-  runId: params.get("run") ?? options.runs[0]?.id ?? "",
-  entityId: params.get("entity") ?? options.entities[0]?.id ?? "",
-  horizon: parseHorizon(params.get("horizon")),
-  modelId: params.get("model") ?? options.models[0]?.id ?? "",
-  exceptionState:
-    params.get("exception") === "watch" || params.get("exception") === "blocked"
-      ? (params.get("exception") as "watch" | "blocked")
-      : params.get("exception") === "clear"
-        ? "clear"
-        : "all",
-});
+): ForecastFilters => {
+  const requestedRun = params.get("run");
+  const requestedEntity = params.get("entity");
+  const requestedModel = params.get("model");
+  return {
+    runId:
+      options.runs.find(({ id }) => id === requestedRun)?.id ??
+      options.runs[0]?.id ??
+      "",
+    entityId:
+      options.entities.find(({ id }) => id === requestedEntity)?.id ??
+      options.entities[0]?.id ??
+      "",
+    horizon: parseHorizon(params.get("horizon")),
+    modelId:
+      options.models.find(({ id }) => id === requestedModel)?.id ??
+      options.models[0]?.id ??
+      "",
+    exceptionState:
+      params.get("exception") === "watch" ||
+      params.get("exception") === "blocked"
+        ? (params.get("exception") as "watch" | "blocked")
+        : params.get("exception") === "clear"
+          ? "clear"
+          : "all",
+  };
+};
 
 export const ForecastExplorerPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showProvenance, setShowProvenance] = useState(false);
-  const optionsQuery = useForecastOptions();
+  const optionsQuery = useForecastOptions(searchParams.get("run") ?? undefined);
   const filters = optionsQuery.data
     ? makeFilters(searchParams, optionsQuery.data)
     : null;
@@ -94,7 +109,10 @@ export const ForecastExplorerPage = () => {
           </p>
         </div>
         <span className="demo-pill">
-          <Sparkles size={12} aria-hidden="true" /> Synthetic fixture
+          <Sparkles size={12} aria-hidden="true" />
+          {result.datasetKind === "live"
+            ? "Live warehouse"
+            : "Synthetic fixture"}
         </span>
       </header>
 
@@ -175,7 +193,8 @@ export const ForecastExplorerPage = () => {
           </select>
         </div>
         <span className="environment-label">
-          <Database size={13} aria-hidden="true" /> {result.fixtureVersion}
+          <Database size={13} aria-hidden="true" />
+          {result.fixtureVersion ?? "production API"}
         </span>
       </section>
 
