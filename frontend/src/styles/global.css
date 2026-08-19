@@ -379,6 +379,62 @@ h2 {
   padding: 2px 10px 14px;
 }
 
+.overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.65fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.overview-chart {
+  height: 360px;
+}
+
+.rationale-body {
+  padding: 4px 18px 20px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.champion-name {
+  margin: 0 0 4px;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.evidence-list {
+  display: grid;
+  gap: 10px;
+  padding: 14px 0 0;
+  margin: 14px 0 0;
+  border-top: 1px solid var(--border-default);
+  list-style: none;
+}
+
+.evidence-list li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.evidence-list svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  flex: none;
+}
+
+.evidence-pass svg {
+  color: var(--success);
+}
+
+.evidence-watch svg {
+  color: var(--warning);
+}
+
 .table-scroll {
   overflow-x: auto;
 }
@@ -585,6 +641,10 @@ h2 {
   }
 
   .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -14,6 +14,11 @@ resource "google_project_iam_member" "bigquery_job_user" {
   member  = "serviceAccount:${google_service_account.api[0].email}"
 }
 
+moved {
+  from = google_bigquery_dataset_iam_member.forecast_reader
+  to   = google_bigquery_dataset_iam_member.forecast_dataset_access
+}
+
 resource "google_bigquery_dataset_iam_member" "forecast_dataset_access" {
   count = var.enabled ? 1 : 0
 

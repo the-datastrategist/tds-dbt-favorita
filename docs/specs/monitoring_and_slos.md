@@ -115,9 +115,8 @@ The existing `assert_no_material_accuracy_drift` remains useful, but should beco
 4. **Complete:** prediction coverage, publication freshness, feature completeness, realized
    calibration, target/feature drift, and cost monitoring are implemented.
 5. **Complete:** add an opt-in Terraform log metric and Cloud Monitoring failure policy.
-6. **Partial:** direct warehouse evaluation, structured-log routing, environment-indirected
-   webhook routing, and an opt-in Cloud Scheduler → Cloud Run Job are implemented; applying the
-   hosted path with real notification channels remains.
+6. **Complete:** direct warehouse evaluation, structured-log routing, environment-indirected
+   Slack routing, and the Cloud Scheduler → Cloud Run Job path are implemented and live accepted.
 7. **Complete:** update operator runbooks from each implemented alert to remediation.
 
 ## Testing & validation
@@ -141,8 +140,9 @@ The implementation now satisfies the documented SLO, stale/missing publication, 
 coverage, feature-completeness, realized-calibration, target/feature-drift, and configurable
 alert-path criteria. Python validation, dbt tests, and disabled Terraform validation pass. The
 warehouse signal, direct-query, and structured-log paths passed live BigQuery acceptance on
-2026-08-11. An enabled Terraform plan/apply with real channel IDs and a witnessed external
-notification remain required before this spec can be marked shipped.
+2026-08-11. On 2026-08-18, the enabled Cloud Scheduler/Cloud Run path completed successfully and
+both live policy alerts and one controlled acceptance event were witnessed in `#forecasting-ops`.
+This specification is shipped.
 
 ## Related documents
 
@@ -156,6 +156,6 @@ notification remain required before this spec can be marked shipped.
 - [Realized calibration acceptance](../acceptance/forecast_realized_calibration_2026-08-11.md)
 - [Target and feature drift acceptance](../acceptance/forecast_data_drift_2026-08-11.md)
 - [Pipeline cost acceptance](../acceptance/forecast_pipeline_cost_2026-08-11.md)
-- [Slack activation progress](../acceptance/monitoring_slack_activation_2026-08-17.md)
+- [Slack live acceptance](../acceptance/monitoring_slack_activation_2026-08-17.md)
 
 {% enddocs %}

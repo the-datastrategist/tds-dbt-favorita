@@ -105,7 +105,7 @@ models:
         data_tests: [not_null]
 
   - name: forecast_publication_freshness
-    description: Latest publication age per forecast contract with configurable stale and missing detection.
+    description: Latest publication age per forecast contract with source-mode-aware stale and missing detection.
     columns:
       - name: forecast_contract_name
         data_tests: [unique, not_null]
@@ -114,7 +114,13 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: [fresh, stale, missing]
+                values: [fresh, stale, missing, static_demo]
+      - name: data_mode
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [static_demo, continuous]
       - name: is_alerting
         data_tests: [not_null]
 
@@ -758,10 +764,34 @@ unit_tests:
       - input: ref('published_forecasts_by_run')
         rows:
           - {publication_id: pub_1, forecast_contract_name: fresh_contract, published_at: '2026-08-05 11:00:00+00', delivery_status: delivered}
+      - input: ref('stg_source_ingestion_runs')
+        rows:
+          - {ingestion_run_id: ingestion_1, source_name: favorita_sales, data_mode: continuous}
     expect:
       rows:
         - {forecast_contract_name: fresh_contract, freshness_status: fresh, is_alerting: false}
         - {forecast_contract_name: missing_contract, freshness_status: missing, is_alerting: true}
+
+  - name: test_forecast_publication_freshness_suppresses_wall_clock_alerts_for_static_demo
+    model: forecast_publication_freshness
+    overrides:
+      vars:
+        monitoring_evaluated_at: '2026-08-05 12:00:00+00'
+        publication_freshness_threshold_minutes: 120
+        publication_monitored_contracts: [static_contract]
+    given:
+      - input: ref('stg_forecast_runs')
+        rows:
+          - {forecast_run_id: static_run, forecast_contract_name: static_contract, forecast_origin: '2017-08-16', started_at: '2026-08-01 10:00:00+00'}
+      - input: ref('published_forecasts_by_run')
+        rows:
+          - {publication_id: static_pub, forecast_contract_name: static_contract, published_at: '2026-08-01 11:00:00+00', delivery_status: delivered}
+      - input: ref('stg_source_ingestion_runs')
+        rows:
+          - {ingestion_run_id: static_ingestion, source_name: favorita_sales, data_mode: static_demo}
+    expect:
+      rows:
+        - {forecast_contract_name: static_contract, data_mode: static_demo, freshness_status: static_demo, is_alerting: false}
 
   - name: test_forecast_prediction_coverage_detects_incomplete_latest_run
     model: forecast_prediction_coverage

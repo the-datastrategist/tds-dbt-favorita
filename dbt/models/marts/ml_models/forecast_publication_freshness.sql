@@ -38,6 +38,13 @@ with contracts as (
         countif(delivery_status not in ('delivered', 'published')) as unconfirmed_delivery_count
     from {{ ref('published_forecasts_by_run') }}
     group by forecast_contract_name
+), source_context as (
+    select
+        case
+            when count(*) > 0 and countif(data_mode = 'continuous') = 0 then 'static_demo'
+            else 'continuous'
+        end as data_mode
+    from {{ ref('stg_source_ingestion_runs') }}
 )
 select
     contracts.forecast_contract_name,
@@ -47,16 +54,19 @@ select
     coalesce(publications.publication_count, 0) as publication_count,
     coalesce(publications.unconfirmed_delivery_count, 0) as unconfirmed_delivery_count,
     {{ evaluated_at }} as evaluated_at,
+    source_context.data_mode,
     {{ threshold_minutes }} as threshold_minutes,
     timestamp_diff({{ evaluated_at }}, publications.latest_published_at, minute)
         as publication_age_minutes,
     case
+        when source_context.data_mode = 'static_demo' then 'static_demo'
         when publications.latest_published_at is null then 'missing'
         when timestamp_diff({{ evaluated_at }}, publications.latest_published_at, minute)
             > {{ threshold_minutes }} then 'stale'
         else 'fresh'
     end as freshness_status,
     case
+        when source_context.data_mode = 'static_demo' then false
         when publications.latest_published_at is null then true
         when timestamp_diff({{ evaluated_at }}, publications.latest_published_at, minute)
             > {{ threshold_minutes }} then true
@@ -64,3 +74,4 @@ select
     end as is_alerting
 from contracts
 left join publications using (forecast_contract_name)
+cross join source_context
