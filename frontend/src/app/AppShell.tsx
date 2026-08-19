@@ -1,7 +1,8 @@
-import { BarChart3, ExternalLink, Trophy } from "lucide-react";
+import { BarChart3, ExternalLink, LayoutDashboard, Trophy } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
 const navigation = [
+  { label: "Overview", to: "/overview", icon: LayoutDashboard },
   { label: "Model leaderboard", to: "/models/leaderboard", icon: Trophy },
   {
     label: "Forecast explorer",

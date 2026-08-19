@@ -1,8 +1,8 @@
 # ForecastLab frontend
 
-ForecastLab is the React, TypeScript, and Vite workbench for the forecasting platform. Its first
-vertical slice is a responsive model leaderboard and model-evidence drilldown backed by a
-deterministic, synthetic fixture.
+ForecastLab is the React, TypeScript, and Vite workbench for the forecasting platform. Its current
+public-demo slice includes a platform overview, responsive model leaderboard, and model-evidence
+drilldown backed by a deterministic, synthetic fixture.
 
 ## Run locally
 
@@ -14,8 +14,12 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:5173/models/leaderboard`. The default data source is local and makes no
-network requests.
+Open `http://localhost:5173/overview`. The default data source is local and makes no network
+requests. Available routes are:
+
+- `/overview` for the champion, horizon-performance, and selection-evidence summary;
+- `/models/leaderboard` for horizon- and segment-filtered comparisons; and
+- `/models/:modelId` for model evidence details.
 
 ## Validate
 
