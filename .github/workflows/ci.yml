@@ -59,10 +59,13 @@ jobs:
 
       - name: Validate Forecast Retrieval API contract
         run: |
-          python -c "from vertex.api.app import app; paths=app.openapi()['paths']; assert '/v1/forecasts/current' in paths; assert '/v1/forecasts/runs/{forecast_run_id}' in paths"
+          python -c "from vertex.api.app import app; paths=app.openapi()['paths']; required={'/v1/forecasts/current','/v1/forecasts/runs/{forecast_run_id}','/v1/experiments','/v1/operations','/v1/capabilities'}; assert required <= paths.keys()"
 
       - name: Validate rolling-origin backtest plan
         run: python -m vertex.jobs.backtest --dry-run
+
+      - name: Run credential-free quickstart
+        run: make quickstart-local QUICKSTART_DIR=/tmp/forecastlab-quickstart
 
       - name: Validate model lifecycle contract and dry-run plan
         run: python -m vertex.jobs.model_lifecycle plan

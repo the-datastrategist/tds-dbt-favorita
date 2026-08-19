@@ -159,6 +159,13 @@ confidence evidence. Model detail links into filtered experiments, and published
 link into filtered Forecast Explorer evidence. Remaining sections below continue to define the
 target product rather than shipped screens.
 
+Error Analysis now preserves run and horizon state in the URL and diagnoses horizon degradation,
+origin instability, worst segments, bias, and interval coverage. Publication Control exposes
+exception samples, immutable lifecycle counters, delivery state, and operational FVA. In API mode,
+explicit confirmation forms submit override, approval, publication, supersession, and rollback
+intentions; the server derives identity from IAP, enforces configured roles, and retains lifecycle
+and idempotency validation. The Pages demo exposes the same evidence but cannot mutate state.
+
 The production read-only boundary now implements ForecastLab option discovery and immutable
 forecast selection through `/v1/forecasts/options`, `/v1/forecasts`, and
 `/v1/forecast-runs/{forecast_run_id}`. The TypeScript adapter schema-checks live rows and

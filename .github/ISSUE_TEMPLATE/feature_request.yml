@@ -1,0 +1,17 @@
+name: Feature request
+description: Propose a scoped platform improvement.
+body:
+  - type: textarea
+    id: problem
+    attributes: { label: Problem, description: What user or operational problem should be solved? }
+    validations: { required: true }
+  - type: textarea
+    id: proposal
+    attributes: { label: Proposed outcome, description: Describe behavior and acceptance evidence. }
+    validations: { required: true }
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options: [Core contracts, ForecastLab, GCP deployment, dbt implementation, Documentation]
+    validations: { required: true }

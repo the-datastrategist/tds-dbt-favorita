@@ -2,7 +2,7 @@
 
 # SPEC: Open-source product readiness
 
-**Status:** Proposed
+**Status:** In progress
 **Roadmap reference:** [Specs overview](README.md) — P3 "Open-source product readiness"
 
 ---
@@ -12,6 +12,10 @@
 The repo is strong as a GCP demand forecasting foundation, but open-source users need a self-contained first run, contribution and release governance, clear platform boundaries, compatibility promises, and clear scope language.
 
 This spec adds `docs/open_source_governance.md`, `docs/product_roadmap.md`, community files, a local quickstart, and a modularization plan that separates reusable platform contracts from project-specific dbt implementations.
+
+Implementation checkpoint (2026-08-19): governance/community files, product roadmap, compatibility
+policy, extension guide, and the deterministic `make quickstart-local` workflow are implemented and
+CI-enforced. The gradual platform-core modularization and second project implementation remain.
 
 ## Goals
 

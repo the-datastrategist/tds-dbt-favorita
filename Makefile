@@ -21,7 +21,7 @@ export GOOGLE_APPLICATION_CREDENTIALS_CONTAINER
 endif
 endif
 
-.PHONY: help install requirements-lock format lint test clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring selector-forecast-monitoring forecast-alerts-evaluate forecast-cost-record forecast-fva-build forecast-api-local forecast-api-test source-ingestion-record load-favorita-gcs load-favorita-bigquery \
+.PHONY: help install requirements-lock format lint test clean quickstart-local quickstart-clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring selector-forecast-monitoring forecast-alerts-evaluate forecast-cost-record forecast-fva-build forecast-api-local forecast-api-test source-ingestion-record load-favorita-gcs load-favorita-bigquery \
 	dbt-deps dbt-debug dbt-seed dbt-run dbt-run-full-refresh dbt-run-model dbt-run-operation dbt-create-table \
 	dbt-train dbt-predict dbt-build dbt-test dbt-compile dbt-list dbt-snapshot dbt-source-freshness dbt-clean \
 	docs-serve dbt-ui dbt-docs dbt-docs-generate dbt-docs-serve \
@@ -59,6 +59,14 @@ requirements-lock: ## Regenerate requirements.txt and requirements-dev.txt (requ
 format: ## Format code with black and isort
 	$(DOCKER_RUN) black vertex orchestration
 	$(DOCKER_RUN) isort vertex orchestration
+
+QUICKSTART_DIR ?= artifacts/quickstart
+
+quickstart-local: ## Run a deterministic local forecast example without cloud credentials
+	python3 scripts/quickstart_local.py --output-dir "$(QUICKSTART_DIR)"
+
+quickstart-clean: ## Remove generated local quickstart artifacts
+	rm -rf "$(QUICKSTART_DIR)"
 
 lint: ## Lint code with flake8
 	$(DOCKER_RUN) flake8 vertex orchestration

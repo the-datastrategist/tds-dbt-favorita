@@ -444,7 +444,7 @@ def create_app(
             raise ValueError("FORECAST_API_ROLE_MEMBERS_JSON must be valid JSON") from exc
     app = FastAPI(
         title="Forecast Operations API",
-        version="1.2.0",
+        version="1.3.0",
         description=(
             "Read complete immutable forecast versions and append governed lifecycle mutations."
         ),
