@@ -1,4 +1,5 @@
 import fixture from "../fixtures/forecastlab_demo_v1.json";
+import forecastFixture from "../fixtures/forecastlab_forecasts_demo_v1.json";
 import { FixtureDataSource } from "./fixtureDataSource";
 
 describe("FixtureDataSource", () => {
@@ -55,8 +56,27 @@ describe("FixtureDataSource", () => {
     ).rejects.toThrow("Unknown demo segment");
   });
 
+  it("filters canonical forecast rows without breaking quantile order", async () => {
+    const result = await source.getForecasts({
+      runId: "demo_run_2026_08_18",
+      entityId: "demo_store_quito_01",
+      horizon: 3,
+      modelId: "demo_model_global_xgboost",
+      exceptionState: "watch",
+    });
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]).toMatchObject({
+      p10: 119,
+      p50: 136,
+      p90: 154,
+      publishedForecast: 142,
+    });
+    expect(result.provenance.featureAvailabilityHash).toBeTruthy();
+  });
+
   it("contains no public-demo secret or customer identifiers", () => {
-    const serialized = JSON.stringify(fixture);
+    const serialized = JSON.stringify({ fixture, forecastFixture });
 
     expect(serialized).not.toMatch(/gs:\/\//i);
     expect(serialized).not.toMatch(/https?:\/\//i);

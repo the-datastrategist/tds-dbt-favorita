@@ -1,8 +1,8 @@
 # ForecastLab frontend
 
 ForecastLab is the React, TypeScript, and Vite workbench for the forecasting platform. Its current
-public-demo slice includes a platform overview, responsive model leaderboard, and model-evidence
-drilldown backed by a deterministic, synthetic fixture.
+public-demo slice includes a platform overview, responsive model leaderboard, model-evidence
+drilldown, and canonical Forecast Explorer backed by deterministic synthetic fixtures.
 
 ## Run locally
 
@@ -18,6 +18,7 @@ Open `http://localhost:5173/overview`. The default data source is local and make
 requests. Available routes are:
 
 - `/overview` for the champion, horizon-performance, and selection-evidence summary;
+- `/forecasts` for actuals, P10/P50/P90 forecasts, published adjustments, and provenance;
 - `/models/leaderboard` for horizon- and segment-filtered comparisons; and
 - `/models/:modelId` for model evidence details.
 
@@ -40,7 +41,8 @@ violations in Chromium.
 
 - `npm run build` creates a root-hosted production build.
 - `npm run build:pages` creates a build with the `/tds-dbt-favorita/app/` base path.
-- `VITE_DATA_MODE=fixture` is the default and reads `src/fixtures/forecastlab_demo_v1.json`.
+- `VITE_DATA_MODE=fixture` is the default and reads the allowlisted model-performance and canonical
+  forecast fixtures in `src/fixtures/`.
 - `VITE_DATA_MODE=api VITE_API_BASE_URL=http://localhost:8000` opts into the typed FastAPI adapter.
 
 Only public values may use the `VITE_` prefix because Vite embeds them in browser assets. The demo

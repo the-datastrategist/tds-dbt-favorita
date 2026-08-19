@@ -1,4 +1,11 @@
 import fixtureJson from "../fixtures/forecastlab_demo_v1.json";
+import forecastFixtureJson from "../fixtures/forecastlab_forecasts_demo_v1.json";
+import {
+  forecastFixtureSchema,
+  type ForecastFilters,
+  type ForecastOptions,
+  type ForecastResult,
+} from "../types/forecasts";
 import {
   leaderboardFixtureSchema,
   type LeaderboardFilters,
@@ -8,12 +15,66 @@ import {
 import type { ForecastLabDataSource } from "./dataSource";
 
 const fixture = leaderboardFixtureSchema.parse(fixtureJson);
+const forecastFixture = forecastFixtureSchema.parse(forecastFixtureJson);
 
 const round = (value: number, digits = 1) => Number(value.toFixed(digits));
 const clamp = (value: number, minimum: number, maximum: number) =>
   Math.min(maximum, Math.max(minimum, value));
 
 export class FixtureDataSource implements ForecastLabDataSource {
+  async getForecastOptions(): Promise<ForecastOptions> {
+    return {
+      runs: forecastFixture.runs.map(({ id, label, origin }) => ({
+        id,
+        label,
+        origin,
+      })),
+      entities: forecastFixture.entities,
+      models: forecastFixture.models,
+      horizons: [1, 2, 3, 4, 5, 6, 7],
+      exceptionStates: ["clear", "watch", "blocked"],
+    };
+  }
+
+  async getForecasts(filters: ForecastFilters): Promise<ForecastResult> {
+    const run = forecastFixture.runs.find(({ id }) => id === filters.runId);
+    const entity = forecastFixture.entities.find(
+      ({ id }) => id === filters.entityId,
+    );
+    const model = forecastFixture.models.find(
+      ({ id }) => id === filters.modelId,
+    );
+    if (!run) throw new Error(`Unknown demo forecast run: ${filters.runId}`);
+    if (!entity) throw new Error(`Unknown demo entity: ${filters.entityId}`);
+    if (!model)
+      throw new Error(`Unknown demo forecast model: ${filters.modelId}`);
+
+    const rows = forecastFixture.rows.filter(
+      (row) =>
+        row.runId === filters.runId &&
+        row.entityId === filters.entityId &&
+        row.modelId === filters.modelId &&
+        (filters.horizon === null || row.horizon === filters.horizon) &&
+        (filters.exceptionState === "all" ||
+          row.exceptionState === filters.exceptionState),
+    );
+
+    return {
+      datasetKind: forecastFixture.metadata.datasetKind,
+      fixtureVersion: forecastFixture.metadata.fixtureVersion,
+      run: {
+        id: run.id,
+        label: run.label,
+        origin: run.origin,
+        publicationStatus: run.publicationStatus,
+      },
+      entity,
+      model,
+      rows,
+      provenance: run.provenance,
+    };
+  }
+
   async getLeaderboardOptions() {
     return {
       horizons: fixture.horizons,
