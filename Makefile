@@ -21,7 +21,7 @@ export GOOGLE_APPLICATION_CREDENTIALS_CONTAINER
 endif
 endif
 
-.PHONY: help install requirements-lock format lint test clean quickstart-local quickstart-clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring selector-forecast-monitoring forecast-alerts-evaluate forecast-cost-record forecast-fva-build forecast-api-local forecast-api-test source-ingestion-record load-favorita-gcs load-favorita-bigquery \
+.PHONY: help install requirements-lock format lint test clean quickstart-local quickstart-clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring selector-forecast-monitoring forecast-alerts-evaluate forecast-cost-record forecast-fva-build forecast-api-local forecast-api-test forecastlab-readonly-plan-check forecastlab-readonly-live-check source-ingestion-record load-favorita-gcs load-favorita-bigquery \
 	dbt-deps dbt-debug dbt-seed dbt-run dbt-run-full-refresh dbt-run-model dbt-run-operation dbt-create-table \
 	dbt-train dbt-predict dbt-build dbt-test dbt-compile dbt-list dbt-snapshot dbt-source-freshness dbt-clean \
 	docs-serve dbt-ui dbt-docs dbt-docs-generate dbt-docs-serve \
@@ -184,6 +184,16 @@ forecast-api-local: ## Run the Forecast Operations API on port 8080 (mutations d
 
 forecast-api-test: ## Run focused Forecast Operations API tests
 	$(DOCKER_RUN) pytest -q vertex/tests/test_forecast_api.py
+
+FORECASTLAB_PLAN ?= terraform/environments/dev/tfplan
+FORECASTLAB_EVIDENCE_DIR ?= artifacts/forecastlab-acceptance
+
+forecastlab-readonly-plan-check: ## Fail closed unless PLAN is immutable, IAP-only, and read-only
+	python3 scripts/forecastlab_readonly_acceptance.py plan --plan "$(FORECASTLAB_PLAN)" --output "$(FORECASTLAB_EVIDENCE_DIR)/plan.json"
+
+forecastlab-readonly-live-check: ## Capture sanitized live IAP/API evidence (set PROJECT, REGION, SERVICE, URL, IAP_CLIENT_ID)
+	@test -n "$(PROJECT)" && test -n "$(REGION)" && test -n "$(SERVICE)" && test -n "$(URL)" && test -n "$(IAP_CLIENT_ID)" || (echo "Set PROJECT, REGION, SERVICE, URL, and IAP_CLIENT_ID" && exit 1)
+	python3 scripts/forecastlab_readonly_acceptance.py live --project "$(PROJECT)" --region "$(REGION)" --service "$(SERVICE)" --base-url "$(URL)" --iap-client-id "$(IAP_CLIENT_ID)" --output "$(FORECASTLAB_EVIDENCE_DIR)/live.json"
 
 source-ingestion-record: ## Append ingestion evidence (set SOURCE, STATUS, WATERMARK, ROW_COUNT)
 	@test -n "$(SOURCE)" && test -n "$(STATUS)" || (echo "Set SOURCE and STATUS" && exit 1)

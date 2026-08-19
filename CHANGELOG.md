@@ -11,3 +11,5 @@ Changelog sections and semantic versioning once the compatibility policy is acti
 - Added authenticated same-origin deployment, role-scoped lifecycle actions, and production read
   models.
 - Added a credential-free local quickstart and open-source governance baseline.
+- Added fail-closed read-only IAP plan validation, sanitized live ForecastLab evidence capture, and
+  separate read-only and lifecycle-mutation acceptance phases.
