@@ -186,10 +186,11 @@ forecast-api-test: ## Run focused Forecast Operations API tests
 	$(DOCKER_RUN) pytest -q vertex/tests/test_forecast_api.py
 
 FORECASTLAB_PLAN ?= terraform/environments/dev/tfplan
+FORECASTLAB_TERRAFORM_DIR ?= terraform/environments/dev
 FORECASTLAB_EVIDENCE_DIR ?= artifacts/forecastlab-acceptance
 
 forecastlab-readonly-plan-check: ## Fail closed unless PLAN is immutable, IAP-only, and read-only
-	python3 scripts/forecastlab_readonly_acceptance.py plan --plan "$(FORECASTLAB_PLAN)" --output "$(FORECASTLAB_EVIDENCE_DIR)/plan.json"
+	python3 scripts/forecastlab_readonly_acceptance.py plan --plan "$(FORECASTLAB_PLAN)" --terraform-dir "$(FORECASTLAB_TERRAFORM_DIR)" --output "$(FORECASTLAB_EVIDENCE_DIR)/plan.json"
 
 forecastlab-readonly-live-check: ## Capture sanitized live IAP/API evidence (set PROJECT, REGION, SERVICE, URL, IAP_CLIENT_ID)
 	@test -n "$(PROJECT)" && test -n "$(REGION)" && test -n "$(SERVICE)" && test -n "$(URL)" && test -n "$(IAP_CLIENT_ID)" || (echo "Set PROJECT, REGION, SERVICE, URL, and IAP_CLIENT_ID" && exit 1)

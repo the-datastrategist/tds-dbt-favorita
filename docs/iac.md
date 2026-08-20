@@ -82,6 +82,9 @@ only those secrets; webhook activation also requires lifecycle mutations to be e
 The reference development deployment passed live private-service and zero-drift Terraform
 acceptance on 2026-08-11; see the
 [Forecast Retrieval API acceptance evidence](acceptance/forecast_retrieval_api_2026-08-11.md).
+The same service completed browser-oriented IAP acceptance and full Terraform state reconciliation
+on 2026-08-19; see the
+[ForecastLab production acceptance evidence](acceptance/forecastlab_production_2026-08-19.md).
 
 Prefer **bucket-level** GCS IAM over project-wide storage admin.
 

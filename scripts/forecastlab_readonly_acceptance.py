@@ -20,8 +20,8 @@ PUBLIC_MEMBERS = {"allUsers", "allAuthenticatedUsers"}
 PLAN_RESOURCE_PREFIX = "module.forecast_api"
 
 
-def _run(command: Sequence[str]) -> str:
-    result = subprocess.run(command, text=True, capture_output=True, check=False)
+def _run(command: Sequence[str], *, cwd: Path | None = None) -> str:
+    result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, check=False)
     if result.returncode:
         detail = (result.stderr or result.stdout).strip()
         raise RuntimeError(f"command failed ({' '.join(command)}): {detail}")
@@ -121,10 +121,12 @@ def validate_readonly_plan(plan: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _load_plan(plan_path: Path) -> dict[str, Any]:
+def _load_plan(plan_path: Path, terraform_dir: Path | None = None) -> dict[str, Any]:
     if plan_path.suffix == ".json":
         return json.loads(plan_path.read_text())
-    return json.loads(_run(("terraform", "show", "-json", str(plan_path))))
+    return json.loads(
+        _run(("terraform", "show", "-json", str(plan_path.resolve())), cwd=terraform_dir)
+    )
 
 
 class _NoRedirect(HTTPRedirectHandler):
@@ -306,6 +308,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     plan = subparsers.add_parser("plan", help="validate a Terraform plan before apply")
     plan.add_argument("--plan", type=Path, required=True)
+    plan.add_argument(
+        "--terraform-dir",
+        type=Path,
+        help="Terraform working directory containing the initialized provider plugins",
+    )
     plan.add_argument("--output", type=Path, required=True)
     live = subparsers.add_parser("live", help="capture sanitized evidence after deployment")
     live.add_argument("--project", required=True)
@@ -321,7 +328,7 @@ def main() -> int:
     args = build_parser().parse_args()
     try:
         if args.command == "plan":
-            evidence = validate_readonly_plan(_load_plan(args.plan))
+            evidence = validate_readonly_plan(_load_plan(args.plan, args.terraform_dir))
         else:
             evidence = capture_live_evidence(
                 project=args.project,
