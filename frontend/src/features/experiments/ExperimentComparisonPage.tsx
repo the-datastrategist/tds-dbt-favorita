@@ -114,7 +114,10 @@ export const ExperimentComparisonPage = () => {
           </p>
         </div>
         <span className="demo-pill">
-          <Sparkles size={12} aria-hidden="true" /> Synthetic fixture
+          <Sparkles size={12} aria-hidden="true" />{" "}
+          {result?.datasetKind === "live"
+            ? "Live warehouse evidence"
+            : "Synthetic fixture"}
         </span>
       </header>
 
@@ -224,14 +227,16 @@ export const ExperimentComparisonPage = () => {
                   <tr>
                     <th scope="row">Bias</th>
                     {runs.map((run) => (
-                      <td key={run.id}>{run.summary?.bias.toFixed(1)}%</td>
+                      <td key={run.id}>{run.summary?.bias.toFixed(1)}</td>
                     ))}
                   </tr>
                   <tr>
                     <th scope="row">Coverage</th>
                     {runs.map((run) => (
                       <td key={run.id}>
-                        {((run.summary?.coverage ?? 0) * 100).toFixed(0)}%
+                        {run.summary?.coverage === null || !run.summary
+                          ? "—"
+                          : `${(run.summary.coverage * 100).toFixed(0)}%`}
                       </td>
                     ))}
                   </tr>
@@ -309,9 +314,13 @@ export const ExperimentComparisonPage = () => {
                             {segment ? (
                               <span className="segment-metrics">
                                 <strong>{segment.wape.toFixed(1)}% WAPE</strong>
-                                <span>{segment.bias.toFixed(1)}% bias</span>
                                 <span>
-                                  {(segment.coverage * 100).toFixed(0)}%
+                                  {segment.bias.toFixed(1)} bias units
+                                </span>
+                                <span>
+                                  {segment.coverage === null
+                                    ? "—"
+                                    : `${(segment.coverage * 100).toFixed(0)}%`}
                                   coverage
                                 </span>
                               </span>

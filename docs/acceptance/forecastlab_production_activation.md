@@ -59,13 +59,14 @@ make forecastlab-readonly-live-check \
   REGION=us-central1 \
   SERVICE=forecast-retrieval-api \
   URL=https://SERVICE_URL \
-  IAP_CLIENT_ID=IAP_OAUTH_CLIENT_ID
+  MANUAL_BROWSER=true
 ```
 
 The operator running this command needs an authenticated `gcloud` session and IAP access. The
-identity token is held only in memory. The generated `live.json` contains revision and digest
-metadata, counts, response statuses, and request-ID presence; it excludes tokens and response
-bodies.
+generated `live.json` contains revision and digest metadata plus the anonymous-denial result; it
+excludes identities, tokens, and response bodies. `MANUAL_BROWSER=true` is required when IAP uses
+only a human web OAuth client. A separately allowlisted programmatic client or service-account
+identity can instead supply `IAP_CLIENT_ID` to automate the authenticated API probes.
 
 ## Browser and API evidence
 

@@ -157,7 +157,7 @@ export const AccuracyPage = () => {
         </article>
         <article className="metric-card">
           <span>Bias</span>
-          <strong>{horizon.bias.toFixed(1)}%</strong>
+          <strong>{horizon.bias.toFixed(1)}</strong>
           <small>
             {Math.abs(horizon.bias) < 1
               ? "near neutral"
@@ -166,8 +166,16 @@ export const AccuracyPage = () => {
         </article>
         <article className="metric-card">
           <span>Interval coverage</span>
-          <strong>{(horizon.coverage * 100).toFixed(0)}%</strong>
-          <small>P10–P90 realized coverage</small>
+          <strong>
+            {horizon.coverage === null
+              ? "—"
+              : `${(horizon.coverage * 100).toFixed(0)}%`}
+          </strong>
+          <small>
+            {horizon.coverage === null
+              ? "No interval evidence"
+              : "P10–P90 realized coverage"}
+          </small>
         </article>
         <article className="metric-card">
           <span>Horizon degradation</span>
@@ -220,8 +228,12 @@ export const AccuracyPage = () => {
                       </button>
                     </th>
                     <td>{item.wape.toFixed(1)}%</td>
-                    <td>{item.bias.toFixed(1)}%</td>
-                    <td>{(item.coverage * 100).toFixed(0)}%</td>
+                    <td>{item.bias.toFixed(1)}</td>
+                    <td>
+                      {item.coverage === null
+                        ? "—"
+                        : `${(item.coverage * 100).toFixed(0)}%`}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -259,8 +271,12 @@ export const AccuracyPage = () => {
                   <tr key={item.origin}>
                     <th scope="row">{item.origin}</th>
                     <td>{item.wape.toFixed(1)}%</td>
-                    <td>{item.bias.toFixed(1)}%</td>
-                    <td>{(item.coverage * 100).toFixed(0)}%</td>
+                    <td>{item.bias.toFixed(1)}</td>
+                    <td>
+                      {item.coverage === null
+                        ? "—"
+                        : `${(item.coverage * 100).toFixed(0)}%`}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -297,14 +313,20 @@ export const AccuracyPage = () => {
                   <td>{index + 1}</td>
                   <th scope="row">{item.segmentName}</th>
                   <td>{item.wape.toFixed(1)}%</td>
-                  <td>{item.bias.toFixed(1)}%</td>
-                  <td>{(item.coverage * 100).toFixed(0)}%</td>
+                  <td>{item.bias.toFixed(1)}</td>
                   <td>
-                    {item.coverage < 0.75
-                      ? "Under-covered"
-                      : Math.abs(item.bias) > 2
-                        ? "Directional bias"
-                        : "Stable"}
+                    {item.coverage === null
+                      ? "—"
+                      : `${(item.coverage * 100).toFixed(0)}%`}
+                  </td>
+                  <td>
+                    {item.coverage === null
+                      ? "Coverage unavailable"
+                      : item.coverage < 0.75
+                        ? "Under-covered"
+                        : Math.abs(item.bias) > 2
+                          ? "Directional bias"
+                          : "Stable"}
                   </td>
                 </tr>
               ))}

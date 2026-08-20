@@ -847,9 +847,9 @@ class BigQueryForecastRepository:
         wape = cls._weighted_metric(rows, "wape")
         bias = cls._weighted_metric(rows, "bias")
         coverage = cls._weighted_metric(rows, "interval_coverage")
-        if wape is None or bias is None or coverage is None:
+        if wape is None or bias is None:
             return None
-        return {"wape": wape * 100, "bias": bias * 100, "coverage": coverage}
+        return {"wape": wape * 100, "bias": bias, "coverage": coverage}
 
     @classmethod
     def _shape_experiment_run(cls, rows: pd.DataFrame) -> dict[str, Any]:

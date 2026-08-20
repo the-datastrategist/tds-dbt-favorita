@@ -23,14 +23,19 @@ const colors = ["#59651f", "#3559a8", "#8a5d00", "#7a3e91", "#247a4a"];
 
 const metricLabel: Record<ExperimentMetric, string> = {
   wape: "WAPE (%)",
-  bias: "Bias (%)",
+  bias: "Bias (units)",
   coverage: "Coverage (%)",
 };
 
 const metricValue = (
-  value: { wape: number; bias: number; coverage: number },
+  value: { wape: number; bias: number; coverage: number | null },
   metric: ExperimentMetric,
-) => (metric === "coverage" ? value.coverage * 100 : value[metric]);
+) =>
+  metric === "coverage"
+    ? value.coverage === null
+      ? null
+      : value.coverage * 100
+    : value[metric];
 
 export const ExperimentHorizonChart = ({
   runs,
@@ -62,7 +67,10 @@ export const ExperimentHorizonChart = ({
     yAxis: {
       type: "value",
       name: metricLabel[metric],
-      axisLabel: { formatter: "{value}%", color: "#5f625c" },
+      axisLabel: {
+        formatter: metric === "bias" ? "{value}" : "{value}%",
+        color: "#5f625c",
+      },
       splitLine: { lineStyle: { color: "#ededed" } },
     },
     series: runs.map((run) => ({

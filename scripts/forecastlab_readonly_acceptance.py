@@ -164,7 +164,13 @@ def _json_probe(base_url: str, path: str, token: str) -> tuple[dict[str, Any], d
 
 
 def capture_live_evidence(
-    *, project: str, region: str, service_name: str, base_url: str, iap_client_id: str
+    *,
+    project: str,
+    region: str,
+    service_name: str,
+    base_url: str,
+    iap_client_id: str | None,
+    manual_browser: bool = False,
 ) -> dict[str, Any]:
     """Capture only deployment metadata, response shapes, counts, and request-ID presence."""
     service = json.loads(
@@ -243,34 +249,45 @@ def capture_live_evidence(
     if PUBLIC_MEMBERS.intersection(iap_members):
         raise RuntimeError("deployed IAP policy has a public access binding")
 
-    token = _run(("gcloud", "auth", "print-identity-token", f"--audiences={iap_client_id}")).strip()
-    if not token:
-        raise RuntimeError("gcloud returned an empty IAP identity token")
-
     unauthorized_status, _, _ = _request(base_url, None, follow_redirects=False)
     if unauthorized_status not in (302, 303, 307, 401, 403):
         raise RuntimeError(f"unauthenticated root returned unexpected HTTP {unauthorized_status}")
 
     probes: list[dict[str, Any]] = []
-    capabilities, probe = _json_probe(base_url, "/v1/capabilities", token)
-    probes.append(probe)
-    if capabilities.get("mutationsEnabled") is not False:
-        raise RuntimeError("capabilities endpoint reports mutations enabled")
-    experiments, probe = _json_probe(base_url, "/v1/experiments", token)
-    probe["run_count"] = len(experiments.get("runs", []))
-    probes.append(probe)
-    operations, probe = _json_probe(base_url, "/v1/operations", token)
-    probe["run_count"] = len(operations.get("runs", []))
-    probes.append(probe)
-    options, probe = _json_probe(base_url, "/v1/forecasts/options", token)
-    probe["run_count"] = len(options.get("runs", []))
-    probes.append(probe)
+    if not manual_browser:
+        if not iap_client_id:
+            raise RuntimeError("--iap-client-id is required for programmatic authenticated probes")
+        try:
+            token = _run(
+                ("gcloud", "auth", "print-identity-token", f"--audiences={iap_client_id}")
+            ).strip()
+        except RuntimeError as exc:
+            raise RuntimeError(
+                "programmatic IAP probing requires a service-account identity or a separately "
+                "allowlisted desktop OAuth client; use --manual-browser for a human-only IAP client"
+            ) from exc
+        if not token:
+            raise RuntimeError("gcloud returned an empty IAP identity token")
 
-    for path in ("/overview", "/experiments", "/accuracy", "/operations", "/forecasts"):
-        status, headers, _ = _request(f"{base_url}{path}", token)
-        if status != 200 or "text/html" not in headers.get("Content-Type", ""):
-            raise RuntimeError(f"browser route {path} did not return the application shell")
-        probes.append({"path": path, "status": status, "content_type": "text/html"})
+        capabilities, probe = _json_probe(base_url, "/v1/capabilities", token)
+        probes.append(probe)
+        if capabilities.get("mutationsEnabled") is not False:
+            raise RuntimeError("capabilities endpoint reports mutations enabled")
+        experiments, probe = _json_probe(base_url, "/v1/experiments", token)
+        probe["run_count"] = len(experiments.get("runs", []))
+        probes.append(probe)
+        operations, probe = _json_probe(base_url, "/v1/operations", token)
+        probe["run_count"] = len(operations.get("runs", []))
+        probes.append(probe)
+        options, probe = _json_probe(base_url, "/v1/forecasts/options", token)
+        probe["run_count"] = len(options.get("runs", []))
+        probes.append(probe)
+
+        for path in ("/overview", "/experiments", "/accuracy", "/operations", "/forecasts"):
+            status, headers, _ = _request(f"{base_url}{path}", token)
+            if status != 200 or "text/html" not in headers.get("Content-Type", ""):
+                raise RuntimeError(f"browser route {path} did not return the application shell")
+            probes.append({"path": path, "status": status, "content_type": "text/html"})
 
     revision = (
         service.get("status", {}).get("latestReadyRevisionName")
@@ -292,7 +309,8 @@ def capture_live_evidence(
         "public_access_bindings": 0,
         "unauthenticated_root_status": unauthorized_status,
         "probes": probes,
-        "manual_browser_session_required": True,
+        "authenticated_probe_mode": "manual_browser" if manual_browser else "programmatic",
+        "manual_browser_session_required": manual_browser,
     }
 
 
@@ -319,7 +337,12 @@ def build_parser() -> argparse.ArgumentParser:
     live.add_argument("--region", required=True)
     live.add_argument("--service", required=True)
     live.add_argument("--base-url", required=True)
-    live.add_argument("--iap-client-id", required=True)
+    live.add_argument("--iap-client-id")
+    live.add_argument(
+        "--manual-browser",
+        action="store_true",
+        help="verify infrastructure and anonymous denial; record authenticated routes manually",
+    )
     live.add_argument("--output", type=Path, required=True)
     return parser
 
@@ -336,6 +359,7 @@ def main() -> int:
                 service_name=args.service,
                 base_url=args.base_url.rstrip("/"),
                 iap_client_id=args.iap_client_id,
+                manual_browser=args.manual_browser,
             )
         _write_evidence(args.output, evidence)
     except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:

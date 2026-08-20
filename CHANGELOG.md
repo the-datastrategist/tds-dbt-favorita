@@ -13,3 +13,5 @@ Changelog sections and semantic versioning once the compatibility policy is acti
 - Added a credential-free local quickstart and open-source governance baseline.
 - Added fail-closed read-only IAP plan validation, sanitized live ForecastLab evidence capture, and
   separate read-only and lifecycle-mutation acceptance phases.
+- Added the live model-leaderboard API, preserved point-forecast evidence when interval coverage is
+  unavailable, and made unknown `/v1` routes return structured JSON errors instead of the SPA shell.

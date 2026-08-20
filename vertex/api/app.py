@@ -134,7 +134,7 @@ class ExplorerResponse(BaseModel):
 class ExperimentMetric(BaseModel):
     wape: float = Field(ge=0)
     bias: float
-    coverage: float = Field(ge=0, le=1)
+    coverage: float | None = Field(default=None, ge=0, le=1)
 
 
 class ExperimentHorizon(ExperimentMetric):
@@ -204,6 +204,37 @@ class ExperimentListResponse(BaseModel):
 
 class ExperimentComparisonResponse(ExperimentListResponse):
     missingRunIds: list[str]
+
+
+class LeaderboardRowResponse(BaseModel):
+    rank: int | None = Field(default=None, ge=1)
+    modelId: str
+    modelName: str
+    family: str
+    lifecycleStatus: Literal["champion", "candidate", "baseline"]
+    evidenceStatus: Literal["sufficient", "insufficient"]
+    description: str
+    horizon: int = Field(ge=1)
+    segmentId: str
+    segmentName: str
+    wape: float = Field(ge=0)
+    bias: float
+    coverage: float | None = Field(default=None, ge=0, le=1)
+    baselineImprovement: float
+    lastEvaluatedAt: datetime
+
+
+class LeaderboardOptionsResponse(BaseModel):
+    horizons: list[int]
+    segments: list[dict[str, str]]
+
+
+class LeaderboardResponse(BaseModel):
+    datasetKind: Literal["live"] = "live"
+    horizon: int
+    segmentId: str
+    segmentName: str
+    rows: list[LeaderboardRowResponse]
 
 
 class OperationOutput(BaseModel):
@@ -444,7 +475,7 @@ def create_app(
             raise ValueError("FORECAST_API_ROLE_MEMBERS_JSON must be valid JSON") from exc
     app = FastAPI(
         title="Forecast Operations API",
-        version="1.3.0",
+        version="1.4.0",
         description=(
             "Read complete immutable forecast versions and append governed lifecycle mutations."
         ),
@@ -696,6 +727,96 @@ def create_app(
         return ExperimentComparisonResponse(
             runs=[ExperimentRunResponse.model_validate(run) for run in result.runs],
             missingRunIds=result.missing_run_ids,
+        )
+
+    @app.get(
+        "/v1/models/leaderboard/options",
+        response_model=LeaderboardOptionsResponse,
+        tags=["forecastlab"],
+    )
+    def leaderboard_options(
+        repository: ForecastRepository = Depends(_repository),
+    ) -> LeaderboardOptionsResponse:
+        options = repository.experiment_options()
+        return LeaderboardOptionsResponse(
+            horizons=options.horizons,
+            segments=[{"id": "all", "name": "All entities"}],
+        )
+
+    @app.get(
+        "/v1/models/leaderboard",
+        response_model=LeaderboardResponse,
+        tags=["forecastlab"],
+    )
+    def model_leaderboard(
+        horizon: Annotated[int, Query(ge=1)],
+        segment_id: str = "all",
+        repository: ForecastRepository = Depends(_repository),
+    ) -> LeaderboardResponse:
+        if segment_id not in {"all", "demo_all"}:
+            return LeaderboardResponse(
+                horizon=horizon,
+                segmentId=segment_id,
+                segmentName=segment_id,
+                rows=[],
+            )
+        result = repository.experiment_runs(horizon=horizon)
+        latest_by_model: dict[str, dict[str, Any]] = {}
+        for run in result.runs:
+            if run.get("summary") is None:
+                continue
+            model_id = str(run["modelId"])
+            current = latest_by_model.get(model_id)
+            if current is None or str(run["createdAt"]) > str(current["createdAt"]):
+                latest_by_model[model_id] = run
+        ranked = sorted(
+            latest_by_model.values(),
+            key=lambda run: (float(run["summary"]["wape"]), str(run["modelId"])),
+        )
+        baseline = next(
+            (run for run in ranked if str(run["modelId"]) == "seasonal_naive_7d"),
+            next((run for run in ranked if str(run["modelFamily"]) == "baseline"), None),
+        )
+        baseline_wape = float(baseline["summary"]["wape"]) if baseline is not None else None
+        rows: list[LeaderboardRowResponse] = []
+        for index, run in enumerate(ranked, start=1):
+            summary = run["summary"]
+            model_id = str(run["modelId"])
+            family = str(run["modelFamily"])
+            lifecycle_status: Literal["champion", "candidate", "baseline"] = (
+                "champion" if index == 1 else "baseline" if family == "baseline" else "candidate"
+            )
+            wape = float(summary["wape"])
+            rows.append(
+                LeaderboardRowResponse(
+                    rank=index,
+                    modelId=model_id,
+                    modelName=str(run["modelName"]),
+                    family=family,
+                    lifecycleStatus=lifecycle_status,
+                    evidenceStatus=(
+                        "sufficient" if len(run.get("rollingOrigins", [])) >= 2 else "insufficient"
+                    ),
+                    description=f"Latest persisted rolling-origin evidence for {model_id}.",
+                    horizon=horizon,
+                    segmentId="all",
+                    segmentName="All entities",
+                    wape=wape,
+                    bias=float(summary["bias"]),
+                    coverage=summary.get("coverage"),
+                    baselineImprovement=(
+                        0.0
+                        if not baseline_wape
+                        else round((baseline_wape - wape) / baseline_wape * 100, 3)
+                    ),
+                    lastEvaluatedAt=run["completedAt"] or run["createdAt"],
+                )
+            )
+        return LeaderboardResponse(
+            horizon=horizon,
+            segmentId="all",
+            segmentName="All entities",
+            rows=rows,
         )
 
     def explorer_response(result: ForecastExplorerResult | None) -> ExplorerResponse:
@@ -961,7 +1082,12 @@ def create_app(
     if (frontend_dist / "index.html").is_file():
 
         @app.get("/{asset_path:path}", include_in_schema=False)
-        def forecastlab_spa(asset_path: str) -> FileResponse:
+        def forecastlab_spa(asset_path: str) -> Any:
+            if asset_path == "v1" or asset_path.startswith("v1/"):
+                return JSONResponse(
+                    status_code=404,
+                    content={"code": "api_route_not_found", "message": "API route not found"},
+                )
             requested = (frontend_dist / asset_path).resolve()
             if requested.is_relative_to(frontend_dist) and requested.is_file():
                 return FileResponse(requested)

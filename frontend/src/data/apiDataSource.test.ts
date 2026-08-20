@@ -133,4 +133,49 @@ describe("ApiDataSource forecast contract", () => {
       "Forecast options request failed (500) · request request-123",
     );
   });
+
+  it("loads typed live leaderboard options and nullable interval evidence", async () => {
+    const leaderboardOptions = {
+      horizons: [7],
+      segments: [{ id: "all", name: "All entities" }],
+    };
+    const leaderboard = {
+      datasetKind: "live",
+      horizon: 7,
+      segmentId: "all",
+      segmentName: "All entities",
+      rows: [
+        {
+          rank: 1,
+          modelId: "model-1",
+          modelName: "Model 1",
+          family: "xgboost",
+          lifecycleStatus: "champion",
+          evidenceStatus: "sufficient",
+          description: "Latest rolling-origin evidence.",
+          horizon: 7,
+          segmentId: "all",
+          segmentName: "All entities",
+          wape: 12,
+          bias: -1,
+          coverage: null,
+          baselineImprovement: 5,
+          lastEvaluatedAt: "2026-08-18T00:05:00Z",
+        },
+      ],
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(leaderboardOptions)))
+      .mockResolvedValueOnce(new Response(JSON.stringify(leaderboard)));
+    vi.stubGlobal("fetch", fetchMock);
+    const source = new ApiDataSource("");
+
+    await expect(source.getLeaderboardOptions()).resolves.toEqual(
+      leaderboardOptions,
+    );
+    await expect(
+      source.getLeaderboard({ horizon: 7, segmentId: "all" }),
+    ).resolves.toEqual(leaderboard);
+  });
 });
