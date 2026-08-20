@@ -192,9 +192,10 @@ FORECASTLAB_EVIDENCE_DIR ?= artifacts/forecastlab-acceptance
 forecastlab-readonly-plan-check: ## Fail closed unless PLAN is immutable, IAP-only, and read-only
 	python3 scripts/forecastlab_readonly_acceptance.py plan --plan "$(FORECASTLAB_PLAN)" --terraform-dir "$(FORECASTLAB_TERRAFORM_DIR)" --output "$(FORECASTLAB_EVIDENCE_DIR)/plan.json"
 
-forecastlab-readonly-live-check: ## Capture sanitized live IAP/API evidence (set PROJECT, REGION, SERVICE, URL, IAP_CLIENT_ID)
-	@test -n "$(PROJECT)" && test -n "$(REGION)" && test -n "$(SERVICE)" && test -n "$(URL)" && test -n "$(IAP_CLIENT_ID)" || (echo "Set PROJECT, REGION, SERVICE, URL, and IAP_CLIENT_ID" && exit 1)
-	python3 scripts/forecastlab_readonly_acceptance.py live --project "$(PROJECT)" --region "$(REGION)" --service "$(SERVICE)" --base-url "$(URL)" --iap-client-id "$(IAP_CLIENT_ID)" --output "$(FORECASTLAB_EVIDENCE_DIR)/live.json"
+forecastlab-readonly-live-check: ## Capture sanitized live IAP/API evidence (use MANUAL_BROWSER=true for human-only OAuth)
+	@test -n "$(PROJECT)" && test -n "$(REGION)" && test -n "$(SERVICE)" && test -n "$(URL)" || (echo "Set PROJECT, REGION, SERVICE, and URL" && exit 1)
+	@test "$(MANUAL_BROWSER)" = "true" || test -n "$(IAP_CLIENT_ID)" || (echo "Set IAP_CLIENT_ID or MANUAL_BROWSER=true" && exit 1)
+	python3 scripts/forecastlab_readonly_acceptance.py live --project "$(PROJECT)" --region "$(REGION)" --service "$(SERVICE)" --base-url "$(URL)" $(if $(filter true,$(MANUAL_BROWSER)),--manual-browser,--iap-client-id "$(IAP_CLIENT_ID)") --output "$(FORECASTLAB_EVIDENCE_DIR)/live.json"
 
 source-ingestion-record: ## Append ingestion evidence (set SOURCE, STATUS, WATERMARK, ROW_COUNT)
 	@test -n "$(SOURCE)" && test -n "$(STATUS)" || (echo "Set SOURCE and STATUS" && exit 1)

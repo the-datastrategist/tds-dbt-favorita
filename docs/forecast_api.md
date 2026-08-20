@@ -46,6 +46,8 @@ GET /v1/forecast-runs/{forecast_run_id}?entity_id=...&model_id=...
 GET /v1/experiments/options
 GET /v1/experiments
 GET /v1/experiments/compare?runs=...&runs=...
+GET /v1/models/leaderboard/options
+GET /v1/models/leaderboard?horizon=7&segment_id=all
 GET /v1/operations
 GET /v1/capabilities
 ```
@@ -70,6 +72,10 @@ Experiment endpoints expose persisted rolling-origin WAPE, bias, coverage, runti
 horizon, segment, origin, feature-availability, and paired bootstrap confidence evidence. The
 operations endpoint combines lifecycle counters, exception samples, delivery status, and FVA.
 `capabilities` tells the browser whether the authenticated identity may submit lifecycle actions.
+Point-forecast runs retain WAPE and bias when interval coverage is unavailable; the API returns a
+null coverage value rather than discarding the otherwise comparable run or inventing interval
+evidence. The leaderboard ranks the latest persisted rolling-origin evidence by WAPE and preserves
+that distinction in the UI.
 
 ### Latest delivered version
 

@@ -13,7 +13,9 @@ export const ModelDetailPage = () => {
   const { modelId = "" } = useParams();
   const [searchParams] = useSearchParams();
   const horizon = toHorizon(searchParams.get("horizon"));
-  const segmentId = searchParams.get("segment") ?? "demo_all";
+  const segmentId =
+    searchParams.get("segment") ??
+    (import.meta.env.VITE_DATA_MODE === "api" ? "all" : "demo_all");
   const modelQuery = useModel(modelId, { horizon, segmentId });
   const query = `?horizon=${horizon}&segment=${encodeURIComponent(segmentId)}`;
 
@@ -82,13 +84,21 @@ export const ModelDetailPage = () => {
         />
         <MetricCard
           label="Bias"
-          value={`${model.bias.toFixed(1)}%`}
-          context="Zero is unbiased"
+          value={model.bias.toFixed(1)}
+          context="Demand units; zero is unbiased"
         />
         <MetricCard
           label="Coverage"
-          value={`${(model.coverage * 100).toFixed(0)}%`}
-          context="P10–P90 interval"
+          value={
+            model.coverage === null
+              ? "Unavailable"
+              : `${(model.coverage * 100).toFixed(0)}%`
+          }
+          context={
+            model.coverage === null
+              ? "No interval evidence for this run"
+              : "P10–P90 interval"
+          }
         />
         <MetricCard
           label="vs baseline"
@@ -121,11 +131,19 @@ export const ModelDetailPage = () => {
             <dt>Model ID</dt>
             <dd>{model.modelId}</dd>
             <dt>Data mode</dt>
-            <dd>Synthetic fixture</dd>
+            <dd>
+              {model.modelId.startsWith("demo_")
+                ? "Synthetic fixture"
+                : "Live warehouse"}
+            </dd>
             <dt>Population</dt>
             <dd>Identical rolling-origin evaluation rows</dd>
             <dt>Publication</dt>
-            <dd>Read-only public demonstration</dd>
+            <dd>
+              {model.modelId.startsWith("demo_")
+                ? "Read-only public demonstration"
+                : "Authenticated read-only deployment"}
+            </dd>
           </dl>
         </article>
       </section>

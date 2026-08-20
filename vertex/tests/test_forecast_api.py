@@ -100,6 +100,7 @@ def test_forecastlab_spa_is_served_without_shadowing_api_routes(
     assert client.get("/forecasts").text == "<html>ForecastLab</html>"
     assert "console.log" in client.get("/assets/app.js").text
     assert client.get("/../requirements.txt").text == "<html>ForecastLab</html>"
+    assert client.get("/v1/not-a-route").json()["code"] == "api_route_not_found"
 
 
 _DEFAULT_SCOPE = object()
@@ -378,7 +379,7 @@ def test_forecastlab_options_and_forecasts_expose_live_typed_contract():
         },
     )
     openapi = client.get("/openapi.json").json()
-    assert openapi["info"]["version"] == "1.3.0"
+    assert openapi["info"]["version"] == "1.4.0"
     assert "/v1/forecasts/options" in openapi["paths"]
     assert "/v1/forecast-runs/{forecast_run_id}" in openapi["paths"]
     assert "ExplorerProvenance" in openapi["components"]["schemas"]
@@ -429,6 +430,26 @@ def test_experiment_endpoints_filter_and_compare_live_backtest_evidence():
     )
     assert duplicate.status_code == 422
     assert duplicate.json()["code"] == "invalid_experiment_comparison"
+
+
+@pytest.mark.unit
+def test_leaderboard_endpoints_shape_latest_experiment_evidence():
+    repository = FakeRepository()
+    client = TestClient(create_app(repository))
+
+    options = client.get("/v1/models/leaderboard/options")
+    leaderboard = client.get("/v1/models/leaderboard", params={"horizon": 7, "segment_id": "all"})
+
+    assert options.status_code == 200
+    assert options.json() == {
+        "horizons": [7],
+        "segments": [{"id": "all", "name": "All entities"}],
+    }
+    assert leaderboard.status_code == 200
+    assert leaderboard.json()["datasetKind"] == "live"
+    assert leaderboard.json()["rows"][0]["modelId"] == "model-1"
+    assert leaderboard.json()["rows"][0]["lifecycleStatus"] == "champion"
+    assert repository.calls[-1] == ("experiment_runs", {"horizon": 7})
 
 
 @pytest.mark.unit
@@ -1032,7 +1053,7 @@ def test_bigquery_repository_shapes_live_rolling_origin_experiments(client_class
     )
 
     assert result.runs[0]["summary"]["wape"] == pytest.approx(12.0)
-    assert result.runs[0]["summary"]["bias"] == pytest.approx(-1.0)
+    assert result.runs[0]["summary"]["bias"] == pytest.approx(-0.01)
     assert result.runs[0]["summary"]["coverage"] == pytest.approx(0.81)
     assert result.runs[0]["runtimeMinutes"] == 5.0
     assert result.missing_run_ids == ["missing:model"]
@@ -1047,6 +1068,22 @@ def test_bigquery_repository_shapes_live_rolling_origin_experiments(client_class
         "status",
         "horizon",
         "run_ids",
+    }
+
+
+@pytest.mark.unit
+@patch("vertex.api.repository.bigquery.Client")
+def test_bigquery_experiment_metrics_preserve_point_evidence_without_intervals(client_class):
+    client_class.return_value = MagicMock()
+    repository = BigQueryForecastRepository(project_id="project", table_prefix="project.dataset")
+    rows = pd.DataFrame(
+        [{"wape": 0.12, "bias": -0.01, "interval_coverage": None, "eligible_count": 10}]
+    )
+
+    assert repository._experiment_metric(rows) == {
+        "wape": pytest.approx(12.0),
+        "bias": pytest.approx(-0.01),
+        "coverage": None,
     }
 
 

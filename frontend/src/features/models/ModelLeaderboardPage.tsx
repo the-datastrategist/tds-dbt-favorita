@@ -14,7 +14,9 @@ const toHorizon = (value: string | null) => {
 export const ModelLeaderboardPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const horizon = toHorizon(searchParams.get("horizon"));
-  const segmentId = searchParams.get("segment") ?? "demo_all";
+  const segmentId =
+    searchParams.get("segment") ??
+    (import.meta.env.VITE_DATA_MODE === "api" ? "all" : "demo_all");
   const filters = { horizon, segmentId };
   const optionsQuery = useLeaderboardOptions();
   const leaderboardQuery = useLeaderboard(filters);
@@ -67,7 +69,8 @@ export const ModelLeaderboardPage = () => {
     ({ lifecycleStatus }) => lifecycleStatus === "champion",
   );
   const baseline = result.rows.find(
-    ({ modelId }) => modelId === "demo_model_seasonal_naive",
+    ({ modelId, lifecycleStatus }) =>
+      modelId === "seasonal_naive_7d" || lifecycleStatus === "baseline",
   );
 
   return (
@@ -82,7 +85,10 @@ export const ModelLeaderboardPage = () => {
           </p>
         </div>
         <span className="demo-pill">
-          <Sparkles size={12} aria-hidden="true" /> Synthetic fixture
+          <Sparkles size={12} aria-hidden="true" />{" "}
+          {result.datasetKind === "live"
+            ? "Live warehouse evidence"
+            : "Synthetic fixture"}
         </span>
       </header>
 
@@ -116,7 +122,10 @@ export const ModelLeaderboardPage = () => {
           </select>
         </div>
         <span className="environment-label">
-          <Database size={13} aria-hidden="true" /> {result.fixtureVersion}
+          <Database size={13} aria-hidden="true" />{" "}
+          {result.datasetKind === "live"
+            ? "Live warehouse evidence"
+            : result.fixtureVersion}
         </span>
       </section>
 
@@ -140,8 +149,16 @@ export const ModelLeaderboardPage = () => {
         />
         <MetricCard
           label="Interval coverage"
-          value={champion ? `${(champion.coverage * 100).toFixed(0)}%` : "—"}
-          context="P10–P90 realized coverage"
+          value={
+            champion?.coverage === null || !champion
+              ? "—"
+              : `${(champion.coverage * 100).toFixed(0)}%`
+          }
+          context={
+            champion?.coverage === null
+              ? "No interval evidence for this run"
+              : "P10–P90 realized coverage"
+          }
         />
       </section>
 

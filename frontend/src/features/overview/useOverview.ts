@@ -5,12 +5,13 @@ const dataSource = createDataSource();
 
 export const useOverview = () =>
   useQuery({
-    queryKey: ["platform-overview", "demo_all"],
+    queryKey: ["platform-overview"],
     queryFn: async () => {
       const options = await dataSource.getLeaderboardOptions();
+      const segmentId = options.segments[0]?.id ?? "all";
       const results = await Promise.all(
         options.horizons.map((horizon) =>
-          dataSource.getLeaderboard({ horizon, segmentId: "demo_all" }),
+          dataSource.getLeaderboard({ horizon, segmentId }),
         ),
       );
       return { options, results };
