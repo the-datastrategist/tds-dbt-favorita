@@ -1,0 +1,13 @@
+deployment:
+  platform_name: demand_forecasting
+  environment: dev
+  cloud:
+    project_id: example-forecast-dev
+    region: us-central1
+  bigquery:
+    raw_dataset: forecast_raw
+    platform_dataset: forecast_platform
+    location: US
+  storage:
+    model_bucket: example-forecast-dev-models
+    pipeline_bucket: example-forecast-dev-pipelines

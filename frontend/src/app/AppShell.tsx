@@ -31,6 +31,33 @@ const environmentLabel =
     ? "Authenticated production data"
     : "Synthetic public demo";
 
+const specialistLinks = [
+  {
+    label: "dbt lineage",
+    href:
+      import.meta.env.VITE_DBT_DOCS_URL ||
+      "https://the-datastrategist.github.io/tds-dbt-favorita/dbt-docs/",
+  },
+  {
+    label: "Prefect",
+    href:
+      import.meta.env.VITE_PREFECT_URL ||
+      "https://github.com/the-datastrategist/tds-dbt-favorita/blob/main/docs/prefect/component_guide.md",
+  },
+  {
+    label: "MLflow",
+    href:
+      import.meta.env.VITE_MLFLOW_URL ||
+      "https://github.com/the-datastrategist/tds-dbt-favorita/blob/main/docs/mlflow/component_guide.md",
+  },
+  {
+    label: "Runbook",
+    href:
+      import.meta.env.VITE_RUNBOOK_URL ||
+      "https://github.com/the-datastrategist/tds-dbt-favorita/blob/main/docs/forecast_operations.md",
+  },
+];
+
 export const AppShell = () => (
   <div className="app-shell">
     <aside className="sidebar">
@@ -58,6 +85,20 @@ export const AppShell = () => (
                 <Icon size={15} aria-hidden="true" />
                 {label}
               </NavLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <nav aria-label="Specialist tools">
+        <div className="nav-section-label">Specialist tools</div>
+        <ul className="nav-list">
+          {specialistLinks.map(({ label, href }) => (
+            <li key={label}>
+              <a className="nav-link" href={href} rel="noreferrer" target="_blank">
+                <ExternalLink size={15} aria-hidden="true" />
+                {label}
+              </a>
             </li>
           ))}
         </ul>

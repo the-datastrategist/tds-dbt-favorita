@@ -4,6 +4,8 @@ region        = "us-central1"
 bucket_location = "us-central1"
 environment   = "prod"
 client_label  = "acme-corp"
+dbt_dataset   = "forecast_platform"
+raw_dataset   = "forecast_raw"
 caller_member = "user:you@example.com"
 
 # Opt in only after creating notification channels outside this module.

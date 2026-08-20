@@ -86,6 +86,17 @@ The same service completed browser-oriented IAP acceptance and full Terraform st
 on 2026-08-19; see the
 [ForecastLab production acceptance evidence](acceptance/forecastlab_production_2026-08-19.md).
 
+Reusable deployments must declare raw and platform datasets explicitly; the Terraform modules do
+not supply Favorita defaults. Validate the matching typed resource manifest before planning cloud
+changes:
+
+```bash
+make validate-deployment DEPLOYMENT_CONFIG=vertex/config/deployment.example.yaml
+```
+
+The manifest resolves environment placeholders and rejects invalid or incomplete GCP, BigQuery,
+and GCS identifiers before a job or infrastructure mutation begins.
+
 Prefer **bucket-level** GCS IAM over project-wide storage admin.
 
 Set in `.env`:

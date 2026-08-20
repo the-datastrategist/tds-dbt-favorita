@@ -4,6 +4,7 @@
 PROJECT_NAME = tds-favorita
 DBT_DIR = dbt
 VERTEX_DIR = vertex
+PYTHON ?= python3
 DOCKER_RUN = docker compose run --rm ml-pipeline
 UNIT_TEST_COMMAND = python -m pytest -m unit --cov-fail-under=75
 TEST_COMMAND = python -m pytest --cov-fail-under=75
@@ -33,7 +34,7 @@ endif
 	vertex-train-docker vertex-predict-docker vertex-optimize-docker \
 	vertex-submit-train vertex-submit-predict vertex-submit-optimize \
 	vertex-pipeline-compile vertex-pipeline-submit vertex-pipeline-submit-sync \
-	dbt-vertex dbt-backtest vertex-bq-ddl vertex-forecast-contract-accept vertex-validate-config vertex-validate-configs vertex-hierarchy-materialize vertex-hierarchy-accept vertex-hierarchy-backtest \
+	dbt-vertex dbt-backtest vertex-bq-ddl vertex-forecast-contract-accept vertex-validate-config vertex-validate-configs validate-deployment vertex-hierarchy-materialize vertex-hierarchy-accept vertex-hierarchy-backtest \
 	vertex-backfill vertex-backtest-plan vertex-backtest vertex-backtest-persist prefect-flow-vertex-backfill \
 	vertex-lifecycle-plan vertex-lifecycle-evaluate vertex-lifecycle-promote vertex-lifecycle-rollback \
 	forecast-override forecast-approve-publish forecast-revise forecast-rollback forecast-export \
@@ -431,6 +432,11 @@ print('OK')"
 
 vertex-validate-configs: ## Validate all model configs in model_config.yaml
 	$(DOCKER_RUN) python -m $(VERTEX_DIR).config.validate_all
+
+DEPLOYMENT_CONFIG ?= $(VERTEX_DIR)/config/deployment.example.yaml
+
+validate-deployment: ## Validate portable GCP, BigQuery, and GCS resource configuration
+	$(DOCKER_RUN) $(PYTHON) -m $(VERTEX_DIR).config.deployment --config "$(DEPLOYMENT_CONFIG)"
 
 VERTEX_BACKTEST_CONTRACT ?= $(VERTEX_DIR)/config/backtest_contract.yaml
 VERTEX_BACKTEST_INPUT ?=

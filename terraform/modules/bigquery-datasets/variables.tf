@@ -10,13 +10,11 @@ variable "bq_location" {
 variable "raw_dataset" {
   description = "Maps to BQ_RAW_DATASET."
   type        = string
-  default     = "raw_favorita"
 }
 
 variable "dbt_dataset" {
   description = "Maps to DBT_DATASET."
   type        = string
-  default     = "favorita"
 }
 
 variable "environment" {
