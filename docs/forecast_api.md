@@ -200,6 +200,12 @@ or disabled authorization and create sanitized evidence under `artifacts/forecas
 The complete two-phase procedure is in
 [ForecastLab production activation](acceptance/forecastlab_production_activation.md).
 
+The reference deployment completed read-only IAP acceptance on 2026-08-19 with an immutable image,
+one named IAP user, disabled mutations, viewer-only warehouse access, and a zero-change Terraform
+plan after state adoption. See the
+[production acceptance evidence](acceptance/forecastlab_production_2026-08-19.md). Keep the OAuth
+application in Testing while access is limited to explicitly configured demonstration users.
+
 Apply the selected environment and use its `forecast_api_url` output. Roll back by deploying the
 prior immutable digest. Disabling the module removes the service, service account, and grants; it
 does not modify forecast data.

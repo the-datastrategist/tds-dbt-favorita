@@ -4,7 +4,7 @@ from copy import deepcopy
 
 import pytest
 
-from scripts.forecastlab_readonly_acceptance import validate_readonly_plan
+from scripts.forecastlab_readonly_acceptance import _load_plan, validate_readonly_plan
 
 
 def _change(
@@ -77,6 +77,27 @@ def test_accepts_readonly_iap_plan() -> None:
     assert evidence["iap_access_member_count"] == 1
     assert evidence["mutations_enabled"] is False
     assert len(evidence["plan_sha256"]) == 64
+
+
+def test_loads_binary_plan_from_initialized_terraform_directory(tmp_path, monkeypatch) -> None:
+    plan_path = tmp_path / "release.tfplan"
+    terraform_dir = tmp_path / "terraform"
+    plan_path.write_bytes(b"binary plan")
+    terraform_dir.mkdir()
+    observed: dict[str, object] = {}
+
+    def fake_run(command, *, cwd=None):
+        observed["command"] = command
+        observed["cwd"] = cwd
+        return '{"resource_changes": []}'
+
+    monkeypatch.setattr("scripts.forecastlab_readonly_acceptance._run", fake_run)
+
+    assert _load_plan(plan_path, terraform_dir) == {"resource_changes": []}
+    assert observed == {
+        "command": ("terraform", "show", "-json", str(plan_path.resolve())),
+        "cwd": terraform_dir,
+    }
 
 
 @pytest.mark.parametrize(

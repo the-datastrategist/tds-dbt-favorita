@@ -14,12 +14,12 @@ manual evidence below is captured.
 
 | Field | Accepted value |
 |---|---|
-| Project | Pending |
-| Region | Pending |
-| Cloud Run service | Pending |
-| Revision | Pending |
-| Image digest | Pending |
-| IAP access members | Pending (record count, not personal addresses, in public evidence) |
+| Project | `tds-favorita` |
+| Region | `us-central1` |
+| Cloud Run service | `forecast-retrieval-api` |
+| Revision | `forecast-retrieval-api-00006-2pp` |
+| Image digest | `sha256:b8f3b2636161160dfeb2caa3eeda26b53f312475cc72802cfaa64b93a0dc0b9e` |
+| IAP access members | One named user; no public principal |
 
 ## Required Terraform configuration
 
@@ -92,15 +92,12 @@ bodies.
 
 ### Phase 1 result
 
-**Pending live deployment and acceptance.** Local unit, browser, production build, API contract,
-Terraform format, and Terraform validation gates pass. Replace this result only after recording
-the immutable revision and observed evidence above.
-
-Preflight observation on 2026-08-19: the existing `forecast-retrieval-api-00005-gm5` revision uses
-image digest `sha256:cabf3fe04f4ab47d2107dcc7f50d416aa2b54cee05f7bbb82ce9c4a75282994c`,
-has lifecycle mutations disabled, and is not IAP-enabled. This is baseline state, not acceptance
-evidence. Activation requires a newly built immutable image plus approved IAP access members in
-the development Terraform variables. Lifecycle-role assignments are intentionally excluded.
+**Accepted on 2026-08-19 for read-only use.** The immutable revision is IAP-protected, anonymous
+browser requests redirect to Google sign-in, the authorized operator completed interactive sign-in,
+and the warehouse-backed ForecastLab application loads. Mutations remain disabled, lifecycle roles
+remain empty, the runtime keeps dataset viewer access, and the normal Terraform plan reports no
+changes after state reconciliation. See the
+[production acceptance evidence](forecastlab_production_2026-08-19.md).
 
 ## Phase 2 — controlled lifecycle mutation acceptance
 
