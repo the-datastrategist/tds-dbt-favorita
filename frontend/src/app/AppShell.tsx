@@ -95,7 +95,12 @@ export const AppShell = () => (
         <ul className="nav-list">
           {specialistLinks.map(({ label, href }) => (
             <li key={label}>
-              <a className="nav-link" href={href} rel="noreferrer" target="_blank">
+              <a
+                className="nav-link"
+                href={href}
+                rel="noreferrer"
+                target="_blank"
+              >
                 <ExternalLink size={15} aria-hidden="true" />
                 {label}
               </a>
