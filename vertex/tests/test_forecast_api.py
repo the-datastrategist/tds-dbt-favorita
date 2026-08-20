@@ -144,6 +144,79 @@ class FakeRepository:
         missing = [run_id for run_id in requested if run_id != "backtest-1:model-1"]
         return ExperimentResult(runs=[_experiment_run()], missing_run_ids=missing)
 
+    def pipeline_runs(self):
+        self.calls.append(("pipeline_runs",))
+        return [
+            {
+                "runId": "run-1",
+                "contractName": "store_daily_demand",
+                "origin": "2026-08-18",
+                "status": "draft",
+                "healthStatus": "healthy",
+                "startedAt": "2026-08-18T01:00:00Z",
+                "finishedAt": "2026-08-18T01:04:00Z",
+                "candidateCount": 55,
+                "eligibleCount": 55,
+                "outputCount": 55,
+                "horizonCount": 1,
+                "missingQuantileCount": 0,
+                "stages": [
+                    {
+                        "name": "eligibility",
+                        "position": 1,
+                        "status": "completed",
+                        "inputRows": 55,
+                        "outputRows": 55,
+                        "durationSeconds": 12.0,
+                        "retryState": "idempotent",
+                        "errorMessage": None,
+                    }
+                ],
+                "gates": [
+                    {
+                        "name": "output_cardinality",
+                        "severity": "blocking",
+                        "passed": True,
+                        "observedValue": 55,
+                        "thresholdValue": 55,
+                    }
+                ],
+            }
+        ]
+
+    def hierarchy_snapshot(self, hierarchy_version):
+        self.calls.append(("hierarchy_snapshot", hierarchy_version))
+        if hierarchy_version == "missing":
+            return None
+        return {
+            "hierarchyName": "favorita",
+            "hierarchyVersion": "v1",
+            "reconciliationRunId": "reconciliation-1",
+            "forecastRunId": "run-1",
+            "method": "bottom_up",
+            "status": "completed",
+            "tolerance": 0.001,
+            "nodeCount": 2,
+            "edgeCount": 1,
+            "levels": [
+                {"name": "company", "position": 0, "nodeCount": 1},
+                {"name": "store", "position": 1, "nodeCount": 1},
+            ],
+            "nodes": [
+                {
+                    "id": "company",
+                    "label": '{"company":"favorita"}',
+                    "level": "company",
+                    "levelPosition": 0,
+                    "parentId": None,
+                    "baseP50": 40.0,
+                    "reconciledP50": 42.0,
+                    "delta": 2.0,
+                }
+            ],
+            "gates": [{"name": "Ordered quantiles", "passed": True, "violationCount": 0}],
+        }
+
     def forecast_explorer_options(self, *, forecast_run_id=None):
         self.calls.append(("explorer_options", forecast_run_id))
         return ForecastExplorerOptions(
@@ -379,7 +452,7 @@ def test_forecastlab_options_and_forecasts_expose_live_typed_contract():
         },
     )
     openapi = client.get("/openapi.json").json()
-    assert openapi["info"]["version"] == "1.4.0"
+    assert openapi["info"]["version"] == "1.5.0"
     assert "/v1/forecasts/options" in openapi["paths"]
     assert "/v1/forecast-runs/{forecast_run_id}" in openapi["paths"]
     assert "ExplorerProvenance" in openapi["components"]["schemas"]
@@ -764,6 +837,25 @@ def test_operations_and_capabilities_expose_role_scoped_workbench_contract():
     assert operations.status_code == 200
     assert operations.json()["runs"][0]["deliveryStatus"] == "delivered"
     assert operations.json()["runs"][0]["outputs"][0]["exceptionState"] == "watch"
+
+
+@pytest.mark.unit
+def test_pipeline_and_hierarchy_endpoints_expose_readonly_evidence():
+    repository = FakeRepository()
+    client = TestClient(create_app(repository))
+
+    pipeline = client.get("/v1/pipeline-runs")
+    hierarchy = client.get("/v1/hierarchies/current")
+    missing = client.get("/v1/hierarchies/missing")
+
+    assert pipeline.status_code == 200
+    assert pipeline.json()["runs"][0]["healthStatus"] == "healthy"
+    assert pipeline.json()["runs"][0]["gates"][0]["passed"] is True
+    assert hierarchy.status_code == 200
+    assert hierarchy.json()["hierarchyVersion"] == "v1"
+    assert hierarchy.json()["gates"][0]["violationCount"] == 0
+    assert missing.status_code == 404
+    assert missing.json()["code"] == "hierarchy_not_found"
 
 
 @pytest.mark.unit

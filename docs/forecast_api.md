@@ -49,6 +49,8 @@ GET /v1/experiments/compare?runs=...&runs=...
 GET /v1/models/leaderboard/options
 GET /v1/models/leaderboard?horizon=7&segment_id=all
 GET /v1/operations
+GET /v1/pipeline-runs
+GET /v1/hierarchies/{hierarchy_version}
 GET /v1/capabilities
 ```
 
@@ -71,6 +73,10 @@ draft output.
 Experiment endpoints expose persisted rolling-origin WAPE, bias, coverage, runtime, configuration,
 horizon, segment, origin, feature-availability, and paired bootstrap confidence evidence. The
 operations endpoint combines lifecycle counters, exception samples, delivery status, and FVA.
+`pipeline-runs` exposes ordered stages, durations, retry state, row-count evidence, horizon and
+quantile completeness, and blocking gates. `hierarchies/current` resolves the latest reconciliation
+run; an explicit version returns that version's levels, parent links, base and reconciled P50,
+coherence and quantile gates, method, tolerance, and immutable run identifiers.
 `capabilities` tells the browser whether the authenticated identity may submit lifecycle actions.
 Point-forecast runs retain WAPE and bias when interval coverage is unavailable; the API returns a
 null coverage value rather than discarding the otherwise comparable run or inventing interval

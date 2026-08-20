@@ -11,8 +11,8 @@
 
 The platform exposes forecasting, backtesting, model lifecycle, reconciliation, and publication
 capabilities through warehouse tables, Python services, Prefect flows, documentation, and a
-cohesive ForecastLab browser interface. Pipeline-health and hierarchy-specific screens remain
-before this interface spec is complete.
+cohesive ForecastLab browser interface. The complete read-only interface is implemented;
+controlled production mutation acceptance and optional specialist deep links remain.
 
 This spec defines the ForecastLab open-source frontend built with React, TypeScript, and Vite,
 backed by a versioned FastAPI boundary. The same frontend supports two deployment modes:
@@ -165,6 +165,12 @@ exception samples, immutable lifecycle counters, delivery state, and operational
 explicit confirmation forms submit override, approval, publication, supersession, and rollback
 intentions; the server derives identity from IAP, enforces configured roles, and retains lifecycle
 and idempotency validation. The Pages demo exposes the same evidence but cannot mutate state.
+
+Pipeline Health now presents ordered stage execution, durations, retry-safe component state,
+cardinality and horizon evidence, quantile completeness, and blocking validation gates. Hierarchy
+& Reconciliation provides level navigation, parent lineage, base-to-reconciled P50 deltas,
+coherence checks, quantile checks, and immutable reconciliation provenance. Failed gates remain
+visible and are never silently corrected in the browser.
 
 The production read-only boundary now implements ForecastLab option discovery and immutable
 forecast selection through `/v1/forecasts/options`, `/v1/forecasts`, and
@@ -355,7 +361,7 @@ Additional requirements:
 
 ### Phase 2 — operational visibility
 
-1. Add hierarchy reconciliation, publication history, and pipeline-health views.
+1. Add hierarchy reconciliation, publication history, and pipeline-health views. **Complete.**
 2. Add authenticated production deployment and role-aware navigation. **Complete for the
    read-only reference deployment.**
 3. Add deep links to dbt Docs, Prefect, MLflow, and runbook documentation where configured.

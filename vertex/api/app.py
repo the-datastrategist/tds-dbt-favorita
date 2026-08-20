@@ -268,6 +268,86 @@ class OperationsResponse(BaseModel):
     runs: list[OperationRun]
 
 
+class PipelineStageResponse(BaseModel):
+    name: str
+    position: int = Field(ge=1)
+    status: str
+    inputRows: int = Field(ge=0)
+    outputRows: int = Field(ge=0)
+    durationSeconds: float | None = Field(default=None, ge=0)
+    retryState: str
+    errorMessage: str | None = None
+
+
+class PipelineGateResponse(BaseModel):
+    name: str
+    severity: str
+    passed: bool
+    observedValue: float | None = None
+    thresholdValue: float | None = None
+
+
+class PipelineRunResponse(BaseModel):
+    runId: str
+    contractName: str
+    origin: date
+    status: str
+    healthStatus: str
+    startedAt: datetime
+    finishedAt: datetime | None = None
+    candidateCount: int = Field(ge=0)
+    eligibleCount: int = Field(ge=0)
+    outputCount: int = Field(ge=0)
+    horizonCount: int = Field(ge=0)
+    missingQuantileCount: int = Field(ge=0)
+    stages: list[PipelineStageResponse]
+    gates: list[PipelineGateResponse]
+
+
+class PipelineRunsResponse(BaseModel):
+    datasetKind: Literal["live"] = "live"
+    runs: list[PipelineRunResponse]
+
+
+class HierarchyLevelResponse(BaseModel):
+    name: str
+    position: int = Field(ge=0)
+    nodeCount: int = Field(ge=0)
+
+
+class HierarchyNodeResponse(BaseModel):
+    id: str
+    label: str
+    level: str
+    levelPosition: int = Field(ge=0)
+    parentId: str | None = None
+    baseP50: float | None = Field(default=None, ge=0)
+    reconciledP50: float | None = Field(default=None, ge=0)
+    delta: float | None = None
+
+
+class ReconciliationGateResponse(BaseModel):
+    name: str
+    passed: bool
+    violationCount: int = Field(ge=0)
+
+
+class HierarchyResponse(BaseModel):
+    datasetKind: Literal["live"] = "live"
+    hierarchyName: str
+    hierarchyVersion: str
+    reconciliationRunId: str
+    forecastRunId: str
+    method: str
+    status: str
+    tolerance: float = Field(ge=0)
+    nodeCount: int = Field(ge=0)
+    edgeCount: int = Field(ge=0)
+    levels: list[HierarchyLevelResponse]
+    nodes: list[HierarchyNodeResponse]
+    gates: list[ReconciliationGateResponse]
+
+
 class CapabilitiesResponse(BaseModel):
     mutationsEnabled: bool
     actor: str | None
@@ -475,7 +555,7 @@ def create_app(
             raise ValueError("FORECAST_API_ROLE_MEMBERS_JSON must be valid JSON") from exc
     app = FastAPI(
         title="Forecast Operations API",
-        version="1.4.0",
+        version="1.5.0",
         description=(
             "Read complete immutable forecast versions and append governed lifecycle mutations."
         ),
@@ -622,6 +702,38 @@ def create_app(
         return OperationsResponse(
             runs=[OperationRun.model_validate(run) for run in repository.operations_snapshot()]
         )
+
+    @app.get(
+        "/v1/pipeline-runs",
+        response_model=PipelineRunsResponse,
+        tags=["forecastlab"],
+    )
+    def pipeline_runs(
+        repository: ForecastRepository = Depends(_repository),
+    ) -> PipelineRunsResponse:
+        return PipelineRunsResponse(
+            runs=[PipelineRunResponse.model_validate(run) for run in repository.pipeline_runs()]
+        )
+
+    @app.get(
+        "/v1/hierarchies/{hierarchy_version}",
+        response_model=HierarchyResponse,
+        tags=["forecastlab"],
+    )
+    def hierarchy(
+        hierarchy_version: str,
+        repository: ForecastRepository = Depends(_repository),
+    ) -> HierarchyResponse:
+        snapshot = repository.hierarchy_snapshot(hierarchy_version)
+        if snapshot is None:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "code": "hierarchy_not_found",
+                    "message": "hierarchy version has no reconciliation evidence",
+                },
+            )
+        return HierarchyResponse.model_validate(snapshot)
 
     @app.get("/v1/forecasts/current", response_model=ForecastPage, tags=["forecasts"])
     def current_forecasts(

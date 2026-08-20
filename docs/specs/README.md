@@ -26,7 +26,7 @@ A completed spec should graduate into an accelerator entry in [accelerators.md](
 Status reviewed **2026-08-19**. The completion figures are implementation estimates, while
 the status column continues to use the acceptance-based definitions above. Across the full
 platform roadmap, including the proposed frontend and separate generalization workstream, the
-current implementation is approximately **89% complete**. Excluding open-source productization,
+current implementation is approximately **90% complete**. Excluding open-source productization,
 the proposed frontend, and generalization, the accepted core platform roadmap is approximately
 **99% complete**.
 
@@ -43,11 +43,11 @@ the proposed frontend, and generalization, the accepted core platform roadmap is
 | [Forecasting methods, horizons, cold start, and intermittent demand](forecasting_methods.md) | Shipped | 100% | Platform roadmap → P0/P1 methods | Seven-horizon direct scoring, intermittent-demand baselines, calibrated quantiles, cold-start routing, and live-accepted scheduled-stage integration |
 | [Hierarchical reconciliation](hierarchical_reconciliation.md) | Shipped | 100% | Platform roadmap → P1 reconciliation | Configurable methods, scheduled integration, append-only base/reconciled evidence, level-wise backtest metrics, and live coherence/fail-closed acceptance are complete |
 | [Demand data model](demand_data_model.md) | In progress | 80% | Platform roadmap → P1 demand data | Explicit observed-sales proxy, canonical store-day demand semantics, immutable run-level eligibility evidence, population gates, monitoring, and controlled exclusion acceptance are implemented; live optional-source adapters remain |
-| [Forecast operations](forecast_operations.md) | In progress | 99% | Platform roadmap → P1/P2 operations | Append-only lifecycle, mutations, rollback, delivery confirmation, and FVA marts are implemented; the planner UI remains |
+| [Forecast operations](forecast_operations.md) | In progress | 99% | Platform roadmap → P1/P2 operations | Append-only lifecycle, mutations, rollback, delivery confirmation, FVA marts, and planner UI are implemented; controlled production mutation activation remains |
 | [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md) | Shipped | 100% | Cross-spec operational integration | Live-accepted deterministic champion scoring, routing, calibration, reconciliation gates, leases, failure evidence, Prefect deployment, idempotent retry, and atomic draft visibility |
 | [Monitoring, alerts, and SLOs](monitoring_and_slos.md) | Shipped | 100% | Platform roadmap → P1 monitoring | All repository signals and the scheduled Cloud Run evaluator are live accepted, with Secret Manager-backed Slack policy and controlled-test deliveries witnessed in `#forecasting-ops` |
 | [Integration contracts and forecast delivery](integration_contracts.md) | In progress | 99% | Platform roadmap → P2 integrations | Stable views, GCS export, events, delivery confirmation, retrieval, lifecycle mutations, and signed outbound webhooks are implemented; controlled production activation remains |
-| [Open-source forecasting platform UI](open_source_frontend_ui.md) | In progress | 92% | Platform roadmap → P2/P3 frontend | Overview, model, forecast, experiment, error-analysis, and operations workflows plus typed production APIs are implemented and live-accepted behind IAP; pipeline and hierarchy views remain |
+| [Open-source forecasting platform UI](open_source_frontend_ui.md) | In progress | 98% | Platform roadmap → P2/P3 frontend | All specified read-only workflows and typed production APIs, including pipeline health and hierarchy reconciliation, are implemented; controlled mutation acceptance and optional specialist deep links remain |
 | [Open-source product readiness](open_source_product_readiness.md) | In progress | 90% | Platform roadmap → P3 open source | Governance, credential-free quickstart, roadmap, compatibility, extension guidance, and community templates are implemented; multi-project modularization remains |
 | [General-purpose demand forecasting platform](platform_generalization.md) | Proposed | 0% | Separate platform-generalization workstream | Add canonical datasets, configurable periods, resource parameterization, and typed extension interfaces; multi-implementation validation is deferred |
 
