@@ -100,6 +100,7 @@ def test_forecastlab_spa_is_served_without_shadowing_api_routes(
     assert client.get("/forecasts").text == "<html>ForecastLab</html>"
     assert "console.log" in client.get("/assets/app.js").text
     assert client.get("/../requirements.txt").text == "<html>ForecastLab</html>"
+    assert client.get("/v1/not-a-route").json()["code"] == "api_route_not_found"
 
 
 _DEFAULT_SCOPE = object()
@@ -142,6 +143,79 @@ class FakeRepository:
         requested = kwargs.get("run_ids", ())
         missing = [run_id for run_id in requested if run_id != "backtest-1:model-1"]
         return ExperimentResult(runs=[_experiment_run()], missing_run_ids=missing)
+
+    def pipeline_runs(self):
+        self.calls.append(("pipeline_runs",))
+        return [
+            {
+                "runId": "run-1",
+                "contractName": "store_daily_demand",
+                "origin": "2026-08-18",
+                "status": "draft",
+                "healthStatus": "healthy",
+                "startedAt": "2026-08-18T01:00:00Z",
+                "finishedAt": "2026-08-18T01:04:00Z",
+                "candidateCount": 55,
+                "eligibleCount": 55,
+                "outputCount": 55,
+                "horizonCount": 1,
+                "missingQuantileCount": 0,
+                "stages": [
+                    {
+                        "name": "eligibility",
+                        "position": 1,
+                        "status": "completed",
+                        "inputRows": 55,
+                        "outputRows": 55,
+                        "durationSeconds": 12.0,
+                        "retryState": "idempotent",
+                        "errorMessage": None,
+                    }
+                ],
+                "gates": [
+                    {
+                        "name": "output_cardinality",
+                        "severity": "blocking",
+                        "passed": True,
+                        "observedValue": 55,
+                        "thresholdValue": 55,
+                    }
+                ],
+            }
+        ]
+
+    def hierarchy_snapshot(self, hierarchy_version):
+        self.calls.append(("hierarchy_snapshot", hierarchy_version))
+        if hierarchy_version == "missing":
+            return None
+        return {
+            "hierarchyName": "favorita",
+            "hierarchyVersion": "v1",
+            "reconciliationRunId": "reconciliation-1",
+            "forecastRunId": "run-1",
+            "method": "bottom_up",
+            "status": "completed",
+            "tolerance": 0.001,
+            "nodeCount": 2,
+            "edgeCount": 1,
+            "levels": [
+                {"name": "company", "position": 0, "nodeCount": 1},
+                {"name": "store", "position": 1, "nodeCount": 1},
+            ],
+            "nodes": [
+                {
+                    "id": "company",
+                    "label": '{"company":"favorita"}',
+                    "level": "company",
+                    "levelPosition": 0,
+                    "parentId": None,
+                    "baseP50": 40.0,
+                    "reconciledP50": 42.0,
+                    "delta": 2.0,
+                }
+            ],
+            "gates": [{"name": "Ordered quantiles", "passed": True, "violationCount": 0}],
+        }
 
     def forecast_explorer_options(self, *, forecast_run_id=None):
         self.calls.append(("explorer_options", forecast_run_id))
@@ -378,7 +452,7 @@ def test_forecastlab_options_and_forecasts_expose_live_typed_contract():
         },
     )
     openapi = client.get("/openapi.json").json()
-    assert openapi["info"]["version"] == "1.2.0"
+    assert openapi["info"]["version"] == "1.5.0"
     assert "/v1/forecasts/options" in openapi["paths"]
     assert "/v1/forecast-runs/{forecast_run_id}" in openapi["paths"]
     assert "ExplorerProvenance" in openapi["components"]["schemas"]
@@ -429,6 +503,26 @@ def test_experiment_endpoints_filter_and_compare_live_backtest_evidence():
     )
     assert duplicate.status_code == 422
     assert duplicate.json()["code"] == "invalid_experiment_comparison"
+
+
+@pytest.mark.unit
+def test_leaderboard_endpoints_shape_latest_experiment_evidence():
+    repository = FakeRepository()
+    client = TestClient(create_app(repository))
+
+    options = client.get("/v1/models/leaderboard/options")
+    leaderboard = client.get("/v1/models/leaderboard", params={"horizon": 7, "segment_id": "all"})
+
+    assert options.status_code == 200
+    assert options.json() == {
+        "horizons": [7],
+        "segments": [{"id": "all", "name": "All entities"}],
+    }
+    assert leaderboard.status_code == 200
+    assert leaderboard.json()["datasetKind"] == "live"
+    assert leaderboard.json()["rows"][0]["modelId"] == "model-1"
+    assert leaderboard.json()["rows"][0]["lifecycleStatus"] == "champion"
+    assert repository.calls[-1] == ("experiment_runs", {"horizon": 7})
 
 
 @pytest.mark.unit
@@ -746,6 +840,25 @@ def test_operations_and_capabilities_expose_role_scoped_workbench_contract():
 
 
 @pytest.mark.unit
+def test_pipeline_and_hierarchy_endpoints_expose_readonly_evidence():
+    repository = FakeRepository()
+    client = TestClient(create_app(repository))
+
+    pipeline = client.get("/v1/pipeline-runs")
+    hierarchy = client.get("/v1/hierarchies/current")
+    missing = client.get("/v1/hierarchies/missing")
+
+    assert pipeline.status_code == 200
+    assert pipeline.json()["runs"][0]["healthStatus"] == "healthy"
+    assert pipeline.json()["runs"][0]["gates"][0]["passed"] is True
+    assert hierarchy.status_code == 200
+    assert hierarchy.json()["hierarchyVersion"] == "v1"
+    assert hierarchy.json()["gates"][0]["violationCount"] == 0
+    assert missing.status_code == 404
+    assert missing.json()["code"] == "hierarchy_not_found"
+
+
+@pytest.mark.unit
 def test_iap_role_authorization_uses_authenticated_actor_and_blocks_insufficient_roles():
     repository = FakeRepository()
     client = TestClient(
@@ -1032,7 +1145,7 @@ def test_bigquery_repository_shapes_live_rolling_origin_experiments(client_class
     )
 
     assert result.runs[0]["summary"]["wape"] == pytest.approx(12.0)
-    assert result.runs[0]["summary"]["bias"] == pytest.approx(-1.0)
+    assert result.runs[0]["summary"]["bias"] == pytest.approx(-0.01)
     assert result.runs[0]["summary"]["coverage"] == pytest.approx(0.81)
     assert result.runs[0]["runtimeMinutes"] == 5.0
     assert result.missing_run_ids == ["missing:model"]
@@ -1048,3 +1161,94 @@ def test_bigquery_repository_shapes_live_rolling_origin_experiments(client_class
         "horizon",
         "run_ids",
     }
+
+
+@pytest.mark.unit
+@patch("vertex.api.repository.bigquery.Client")
+def test_bigquery_experiment_metrics_preserve_point_evidence_without_intervals(client_class):
+    client_class.return_value = MagicMock()
+    repository = BigQueryForecastRepository(project_id="project", table_prefix="project.dataset")
+    rows = pd.DataFrame(
+        [{"wape": 0.12, "bias": -0.01, "interval_coverage": None, "eligible_count": 10}]
+    )
+
+    assert repository._experiment_metric(rows) == {
+        "wape": pytest.approx(12.0),
+        "bias": pytest.approx(-0.01),
+        "coverage": None,
+    }
+
+
+@pytest.mark.unit
+def test_experiment_confidence_uses_deterministic_paired_origins():
+    reference = _experiment_run()
+    reference["id"] = "reference"
+    reference["createdAt"] = "2026-08-01T00:00:00Z"
+    reference["rollingOrigins"] = [
+        {"origin": "2026-07-01", "wape": 14.0, "bias": 0.0, "coverage": 0.8},
+        {"origin": "2026-07-08", "wape": 13.0, "bias": 0.0, "coverage": 0.8},
+        {"origin": "2026-07-15", "wape": 12.0, "bias": 0.0, "coverage": 0.8},
+    ]
+    candidate = _experiment_run()
+    candidate["id"] = "candidate"
+    candidate["createdAt"] = "2026-08-02T00:00:00Z"
+    candidate["rollingOrigins"] = [
+        {"origin": "2026-07-01", "wape": 12.0, "bias": 0.0, "coverage": 0.8},
+        {"origin": "2026-07-08", "wape": 11.0, "bias": 0.0, "coverage": 0.8},
+        {"origin": "2026-07-15", "wape": 10.0, "bias": 0.0, "coverage": 0.8},
+    ]
+
+    first = BigQueryForecastRepository._attach_experiment_confidence([reference, candidate])
+    evidence = first[1]["statisticalEvidence"]
+
+    assert evidence["referenceRunId"] == "reference"
+    assert evidence["deltaWapePp"] == -2.0
+    assert evidence["ciLower"] == evidence["ciUpper"] == -2.0
+    assert evidence["conclusion"] == "meaningful"
+
+
+@pytest.mark.unit
+@patch("vertex.api.repository.bigquery.Client")
+def test_bigquery_repository_shapes_operations_snapshot(client_class):
+    client_class.return_value = MagicMock()
+    repository = BigQueryForecastRepository(project_id="project", table_prefix="project.dataset")
+    summaries = pd.DataFrame(
+        [
+            {
+                "forecast_run_id": "run-1",
+                "origin": date(2026, 8, 11),
+                "status": "published",
+                "model_name": "model-1",
+                "output_count": 2,
+                "exception_count": 1,
+                "override_count": 1,
+                "approval_count": 2,
+                "publication_version": 3,
+                "delivery_status": "delivered",
+                "fva_status": "comparable",
+                "planner_wape_fva_points": 0.004,
+                "total_wape_fva_points": 0.007,
+                "updated_at": datetime(2026, 8, 11, 12, tzinfo=timezone.utc),
+            }
+        ]
+    )
+    samples = pd.DataFrame(
+        [
+            {
+                "forecast_run_id": "run-1",
+                "forecast_output_id": "output-1",
+                "entity_key_json": '{"store_nbr":1}',
+                "target_date": date(2026, 8, 18),
+                "current_value": 42.0,
+                "exception_state": "watch",
+            }
+        ]
+    )
+    repository._dataframe = MagicMock(side_effect=[summaries, samples])
+
+    result = repository.operations_snapshot()
+
+    assert result[0]["publicationVersion"] == 3
+    assert result[0]["plannerWapeFvaPoints"] == pytest.approx(0.4)
+    assert result[0]["outputs"][0]["entityLabel"] == "store_nbr 1"
+    assert "forecast_value_added_operations" in repository._dataframe.call_args_list[0].args[0]

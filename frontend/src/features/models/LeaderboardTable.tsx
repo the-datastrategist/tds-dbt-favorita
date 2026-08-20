@@ -71,15 +71,20 @@ export const LeaderboardTable = ({
         accessorKey: "bias",
         header: "Bias",
         cell: ({ getValue }) => (
-          <span className="numeric">{percent(getValue<number>())}</span>
+          <span className="numeric">{getValue<number>().toFixed(1)}</span>
         ),
       },
       {
         accessorKey: "coverage",
         header: "Coverage",
-        cell: ({ getValue }) => (
-          <span className="numeric">{percent(getValue<number>() * 100)}</span>
-        ),
+        cell: ({ getValue }) => {
+          const value = getValue<number | null>();
+          return (
+            <span className="numeric">
+              {value === null ? "—" : percent(value * 100)}
+            </span>
+          );
+        },
       },
       {
         accessorKey: "baselineImprovement",

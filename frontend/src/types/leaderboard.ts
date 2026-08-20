@@ -52,7 +52,7 @@ export const leaderboardRowSchema = z.object({
   segmentName: z.string(),
   wape: z.number().nonnegative(),
   bias: z.number(),
-  coverage: z.number().min(0).max(1),
+  coverage: z.number().min(0).max(1).nullable(),
   baselineImprovement: z.number(),
   lastEvaluatedAt: z.iso.datetime(),
 });

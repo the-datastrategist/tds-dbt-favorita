@@ -5,6 +5,11 @@
   * [Reference architecture](reference_architecture.md)
   * [Case study](case_study.md)
   * [Platform roadmap](specs/README.md)
+  * [Product roadmap](product_roadmap.md)
+  * [Local quickstart](quickstart_local.md)
+  * [Compatibility](compatibility.md)
+  * [Extension guide](extensions.md)
+  * [Open-source governance](open_source_governance.md)
 
 * Forecasting platform
   * [Forecast contract](forecast_contract.md)
@@ -54,6 +59,7 @@
   * [ForecastLab UI/UX design](FORECASTING_WORKBENCH_UI_DESIGN.md)
   * [ForecastLab architecture decision](adr/0001-forecastlab-react-vite-fastapi.md)
   * [ForecastLab public demo data](frontend/public_demo_data.md)
+  * [ForecastLab production acceptance](acceptance/forecastlab_production_2026-08-19.md)
   * [Launch ForecastLab](https://the-datastrategist.github.io/tds-dbt-favorita/app/)
   * [Terraform modules](specs/terraform_modules.md)
   * [Workload Identity Federation](specs/workload_identity_federation.md)

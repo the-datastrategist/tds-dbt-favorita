@@ -73,13 +73,18 @@ lifecycle mutations changes the dataset grant to `roles/bigquery.dataEditor`; in
 invocation must be restricted to trusted operators. Machine invocation is restricted by Cloud Run
 IAM to `forecast_api_invoker_members`. Browser access can instead be protected by IAP with explicit
 `forecastlab_iap_access_members`; Terraform grants Cloud Run invocation to the Google-managed IAP
-service agent. No public principal is granted.
+service agent. `forecastlab_lifecycle_role_members` maps authenticated email addresses to planner,
+approver, publisher, or operator roles; the API enforces these roles and records the IAP identity as
+the mutation actor. No public principal is granted.
 Optional publication webhooks use two Secret Manager references for the HTTPS URL and HMAC signing
 secret. The module grants the API runtime service account `roles/secretmanager.secretAccessor` on
 only those secrets; webhook activation also requires lifecycle mutations to be enabled.
 The reference development deployment passed live private-service and zero-drift Terraform
 acceptance on 2026-08-11; see the
 [Forecast Retrieval API acceptance evidence](acceptance/forecast_retrieval_api_2026-08-11.md).
+The same service completed browser-oriented IAP acceptance and full Terraform state reconciliation
+on 2026-08-19; see the
+[ForecastLab production acceptance evidence](acceptance/forecastlab_production_2026-08-19.md).
 
 Prefer **bucket-level** GCS IAM over project-wide storage admin.
 

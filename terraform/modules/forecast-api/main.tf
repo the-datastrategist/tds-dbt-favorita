@@ -43,7 +43,7 @@ resource "google_cloud_run_v2_service" "api" {
   location            = var.region
   name                = var.service_name
   ingress             = "INGRESS_TRAFFIC_ALL"
-  deletion_protection = false
+  deletion_protection = true
   iap_enabled         = var.enable_iap
 
   template {

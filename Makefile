@@ -21,7 +21,7 @@ export GOOGLE_APPLICATION_CREDENTIALS_CONTAINER
 endif
 endif
 
-.PHONY: help install requirements-lock format lint test clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring selector-forecast-monitoring forecast-alerts-evaluate forecast-cost-record forecast-fva-build forecast-api-local forecast-api-test source-ingestion-record load-favorita-gcs load-favorita-bigquery \
+.PHONY: help install requirements-lock format lint test clean quickstart-local quickstart-clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring selector-forecast-monitoring forecast-alerts-evaluate forecast-cost-record forecast-fva-build forecast-api-local forecast-api-test forecastlab-readonly-plan-check forecastlab-readonly-live-check source-ingestion-record load-favorita-gcs load-favorita-bigquery \
 	dbt-deps dbt-debug dbt-seed dbt-run dbt-run-full-refresh dbt-run-model dbt-run-operation dbt-create-table \
 	dbt-train dbt-predict dbt-build dbt-test dbt-compile dbt-list dbt-snapshot dbt-source-freshness dbt-clean \
 	docs-serve dbt-ui dbt-docs dbt-docs-generate dbt-docs-serve \
@@ -59,6 +59,14 @@ requirements-lock: ## Regenerate requirements.txt and requirements-dev.txt (requ
 format: ## Format code with black and isort
 	$(DOCKER_RUN) black vertex orchestration
 	$(DOCKER_RUN) isort vertex orchestration
+
+QUICKSTART_DIR ?= artifacts/quickstart
+
+quickstart-local: ## Run a deterministic local forecast example without cloud credentials
+	python3 scripts/quickstart_local.py --output-dir "$(QUICKSTART_DIR)"
+
+quickstart-clean: ## Remove generated local quickstart artifacts
+	rm -rf "$(QUICKSTART_DIR)"
 
 lint: ## Lint code with flake8
 	$(DOCKER_RUN) flake8 vertex orchestration
@@ -176,6 +184,18 @@ forecast-api-local: ## Run the Forecast Operations API on port 8080 (mutations d
 
 forecast-api-test: ## Run focused Forecast Operations API tests
 	$(DOCKER_RUN) pytest -q vertex/tests/test_forecast_api.py
+
+FORECASTLAB_PLAN ?= terraform/environments/dev/tfplan
+FORECASTLAB_TERRAFORM_DIR ?= terraform/environments/dev
+FORECASTLAB_EVIDENCE_DIR ?= artifacts/forecastlab-acceptance
+
+forecastlab-readonly-plan-check: ## Fail closed unless PLAN is immutable, IAP-only, and read-only
+	python3 scripts/forecastlab_readonly_acceptance.py plan --plan "$(FORECASTLAB_PLAN)" --terraform-dir "$(FORECASTLAB_TERRAFORM_DIR)" --output "$(FORECASTLAB_EVIDENCE_DIR)/plan.json"
+
+forecastlab-readonly-live-check: ## Capture sanitized live IAP/API evidence (use MANUAL_BROWSER=true for human-only OAuth)
+	@test -n "$(PROJECT)" && test -n "$(REGION)" && test -n "$(SERVICE)" && test -n "$(URL)" || (echo "Set PROJECT, REGION, SERVICE, and URL" && exit 1)
+	@test "$(MANUAL_BROWSER)" = "true" || test -n "$(IAP_CLIENT_ID)" || (echo "Set IAP_CLIENT_ID or MANUAL_BROWSER=true" && exit 1)
+	python3 scripts/forecastlab_readonly_acceptance.py live --project "$(PROJECT)" --region "$(REGION)" --service "$(SERVICE)" --base-url "$(URL)" $(if $(filter true,$(MANUAL_BROWSER)),--manual-browser,--iap-client-id "$(IAP_CLIENT_ID)") --output "$(FORECASTLAB_EVIDENCE_DIR)/live.json"
 
 source-ingestion-record: ## Append ingestion evidence (set SOURCE, STATUS, WATERMARK, ROW_COUNT)
 	@test -n "$(SOURCE)" && test -n "$(STATUS)" || (echo "Set SOURCE and STATUS" && exit 1)

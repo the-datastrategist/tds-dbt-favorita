@@ -32,7 +32,8 @@ export const OverviewPage = () => {
     ({ lifecycleStatus }) => lifecycleStatus === "champion",
   );
   const baseline = daySeven?.rows.find(
-    ({ modelId }) => modelId === "demo_model_seasonal_naive",
+    ({ modelId, lifecycleStatus }) =>
+      modelId === "seasonal_naive_7d" || lifecycleStatus === "baseline",
   );
 
   if (!champion || !baseline || results.length === 0) {
@@ -46,7 +47,12 @@ export const OverviewPage = () => {
     );
   }
 
-  const coverageTargetMet = champion.coverage >= 0.78;
+  const coverageTargetMet =
+    champion.coverage !== null && champion.coverage >= 0.78;
+  const datasetLabel =
+    daySeven?.datasetKind === "live"
+      ? "Live warehouse evidence"
+      : "Synthetic fixture";
 
   return (
     <div className="page">
@@ -60,7 +66,7 @@ export const OverviewPage = () => {
           </p>
         </div>
         <span className="demo-pill">
-          <Sparkles size={12} aria-hidden="true" /> Synthetic fixture
+          <Sparkles size={12} aria-hidden="true" /> {datasetLabel}
         </span>
       </header>
 
@@ -82,8 +88,16 @@ export const OverviewPage = () => {
         />
         <MetricCard
           label="Day 7 interval coverage"
-          value={`${(champion.coverage * 100).toFixed(0)}%`}
-          context="P10–P90 realized coverage"
+          value={
+            champion.coverage === null
+              ? "Unavailable"
+              : `${(champion.coverage * 100).toFixed(0)}%`
+          }
+          context={
+            champion.coverage === null
+              ? "No interval evidence for this run"
+              : "P10–P90 realized coverage"
+          }
         />
       </section>
 
@@ -138,9 +152,9 @@ export const OverviewPage = () => {
                 ) : (
                   <TriangleAlert aria-hidden="true" />
                 )}
-                Day 7 coverage{" "}
-                {coverageTargetMet ? "meets" : "needs review against"} the demo
-                threshold
+                {champion.coverage === null
+                  ? "Interval coverage evidence is unavailable"
+                  : `Day 7 coverage ${coverageTargetMet ? "meets" : "needs review against"} the target`}
               </li>
             </ul>
           </div>

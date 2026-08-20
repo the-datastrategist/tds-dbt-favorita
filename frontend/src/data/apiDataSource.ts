@@ -51,10 +51,13 @@ export class ApiDataSource implements ForecastLabDataSource {
   }
 
   async getLeaderboardOptions(): Promise<LeaderboardOptions> {
-    return {
-      horizons: [1, 2, 3, 4, 5, 6, 7],
-      segments: [{ id: "all", name: "All segments" }],
-    };
+    const response = await fetch(
+      `${this.baseUrl}/v1/models/leaderboard/options`,
+    );
+    if (!response.ok) {
+      throw this.requestError("Leaderboard options", response);
+    }
+    return response.json() as Promise<LeaderboardOptions>;
   }
 
   async getLeaderboard(filters: LeaderboardFilters) {
@@ -66,7 +69,7 @@ export class ApiDataSource implements ForecastLabDataSource {
       `${this.baseUrl}/v1/models/leaderboard?${query}`,
     );
     if (!response.ok) {
-      throw new Error(`Leaderboard request failed (${response.status})`);
+      throw this.requestError("Leaderboard", response);
     }
     return leaderboardResultSchema.parse(await response.json());
   }

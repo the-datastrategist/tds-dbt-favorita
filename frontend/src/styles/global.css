@@ -481,14 +481,14 @@ h2 {
 }
 
 .form-error {
-  color: var(--status-danger);
+  color: var(--danger);
 }
 
 .form-success {
   display: flex;
   gap: 6px;
   align-items: center;
-  color: var(--status-success);
+  color: var(--success);
 }
 
 .permission-note {
@@ -817,6 +817,105 @@ h2 {
   background: var(--warning-soft);
   border: 1px solid var(--warning);
   border-radius: var(--radius-sm);
+}
+
+.danger-alert {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+
+.stage-timeline {
+  display: grid;
+  gap: 0;
+  padding: 4px 18px 18px;
+}
+
+.stage-card {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+  border-top: 1px solid var(--border-default);
+}
+
+.stage-card > div {
+  display: grid;
+}
+
+.stage-card small,
+.stage-card p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.stage-card p {
+  color: var(--danger);
+}
+
+.stage-position {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  color: var(--success);
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--success-soft);
+  border-radius: 50%;
+}
+
+.stage-card:not(.completed) .stage-position {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.gate-result {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  font-weight: 650;
+}
+
+.gate-result.passed,
+.gate-list .passed {
+  color: var(--success);
+}
+
+.gate-result.failed,
+.gate-list .failed {
+  color: var(--danger);
+}
+
+.gate-list {
+  display: grid;
+  gap: 0;
+  padding: 0 18px 12px;
+  margin: 0;
+  list-style: none;
+}
+
+.gate-list li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 11px 0;
+  border-top: 1px solid var(--border-default);
+}
+
+.gate-list li span {
+  display: grid;
+}
+
+.gate-list li small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.compact-provenance {
+  padding: 0 18px 18px;
 }
 
 .comparison-section {
@@ -1278,6 +1377,10 @@ h2 {
   .comparison-evidence-grid {
     grid-template-columns: 1fr;
   }
+
+  .analysis-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1302,6 +1405,7 @@ h2 {
 
   .nav-list {
     display: flex;
+    flex-wrap: wrap;
   }
 
   .nav-link {
@@ -1329,6 +1433,14 @@ h2 {
 
   .selection-bar .primary-button {
     width: 100%;
+  }
+
+  .action-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .full-field {
+    grid-column: auto;
   }
 }
 

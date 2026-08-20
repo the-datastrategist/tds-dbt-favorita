@@ -43,6 +43,15 @@ Do not grant `allUsers` or `allAuthenticatedUsers` in production.
 GET /v1/forecasts/options
 GET /v1/forecasts?run_id=...&entity_id=...&model_id=...
 GET /v1/forecast-runs/{forecast_run_id}?entity_id=...&model_id=...
+GET /v1/experiments/options
+GET /v1/experiments
+GET /v1/experiments/compare?runs=...&runs=...
+GET /v1/models/leaderboard/options
+GET /v1/models/leaderboard?horizon=7&segment_id=all
+GET /v1/operations
+GET /v1/pipeline-runs
+GET /v1/hierarchies/{hierarchy_version}
+GET /v1/capabilities
 ```
 
 `options` returns runs, entities, models, and horizons found in completely delivered immutable
@@ -60,6 +69,19 @@ state, and complete contract/model/calibration/reconciliation/hierarchy/feature/
 provenance. Only `canonical_bigquery` versions whose latest delivery status is `delivered` are
 eligible. Unknown, empty, or undelivered selections return `404` rather than falling through to
 draft output.
+
+Experiment endpoints expose persisted rolling-origin WAPE, bias, coverage, runtime, configuration,
+horizon, segment, origin, feature-availability, and paired bootstrap confidence evidence. The
+operations endpoint combines lifecycle counters, exception samples, delivery status, and FVA.
+`pipeline-runs` exposes ordered stages, durations, retry state, row-count evidence, horizon and
+quantile completeness, and blocking gates. `hierarchies/current` resolves the latest reconciliation
+run; an explicit version returns that version's levels, parent links, base and reconciled P50,
+coherence and quantile gates, method, tolerance, and immutable run identifiers.
+`capabilities` tells the browser whether the authenticated identity may submit lifecycle actions.
+Point-forecast runs retain WAPE and bias when interval coverage is unavailable; the API returns a
+null coverage value rather than discarding the otherwise comparable run or inventing interval
+evidence. The leaderboard ranks the latest persisted rolling-origin evidence by WAPE and preserves
+that distinction in the UI.
 
 ### Latest delivered version
 
@@ -174,6 +196,7 @@ forecast_api_image           = "us-central1-docker.pkg.dev/PROJECT/vertex/ml-pip
 forecast_api_invoker_members = ["group:forecast-consumers@example.com"]
 enable_forecastlab_iap = true
 forecastlab_iap_access_members = ["group:forecast-consumers@example.com"]
+forecastlab_lifecycle_role_members = {}
 ```
 
 The production image embeds the API-mode ForecastLab build, so browser routes and `/v1` share one
@@ -182,13 +205,29 @@ configure the project's OAuth consent/brand if Google Cloud requests it; OAuth c
 a one-time console-owned prerequisite. Validate in a private browser session before removing any
 existing direct operator access.
 
+Before applying, run `make forecastlab-readonly-plan-check` against the saved Terraform plan. After
+deployment, run `make forecastlab-readonly-live-check` with the project, region, service URL, and
+IAP OAuth client ID. These commands fail closed on mutable images, public access, write privileges,
+or disabled authorization and create sanitized evidence under `artifacts/forecastlab-acceptance/`.
+The complete two-phase procedure is in
+[ForecastLab production activation](acceptance/forecastlab_production_activation.md).
+
+The reference deployment completed read-only IAP acceptance on 2026-08-19 with an immutable image,
+one named IAP user, disabled mutations, viewer-only warehouse access, and a zero-change Terraform
+plan after state adoption. See the
+[production acceptance evidence](acceptance/forecastlab_production_2026-08-19.md). Keep the OAuth
+application in Testing while access is limited to explicitly configured demonstration users.
+
 Apply the selected environment and use its `forecast_api_url` output. Roll back by deploying the
 prior immutable digest. Disabling the module removes the service, service account, and grants; it
 does not modify forecast data.
 
-To activate mutations, set `enable_forecast_api_mutations = true` and replace consumer-oriented
-invoker membership with an operator-only group before applying. Leaving the flag false preserves
-the previously accepted read-only service and least-privilege dataset reader role.
+To activate mutations after separate read-only acceptance, set
+`enable_forecast_api_mutations = true` and configure explicit lifecycle role members. With IAP
+enabled, the API derives the actor from the authenticated IAP email header;
+publisher inherits approver and planner permissions, and approver inherits planner permissions.
+The browser cannot select or spoof its audit actor. Leaving mutations false preserves the accepted
+read-only service and least-privilege dataset reader role.
 
 Outbound delivery is opt-in and requires mutations. Store the destination URL and signing secret
 in separate Secret Manager secrets, then configure:

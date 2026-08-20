@@ -3,9 +3,11 @@ import {
   BarChart3,
   ExternalLink,
   FlaskConical,
+  GitBranch,
   LayoutDashboard,
   Settings2,
   Trophy,
+  Workflow,
 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
@@ -14,6 +16,8 @@ const navigation = [
   { label: "Model leaderboard", to: "/models/leaderboard", icon: Trophy },
   { label: "Experiments", to: "/experiments", icon: FlaskConical },
   { label: "Error analysis", to: "/accuracy", icon: Activity },
+  { label: "Pipeline health", to: "/pipeline", icon: Workflow },
+  { label: "Hierarchy", to: "/hierarchy", icon: GitBranch },
   { label: "Operations", to: "/operations", icon: Settings2 },
   {
     label: "Forecast explorer",

@@ -8,6 +8,8 @@ import { ExperimentComparisonPage } from "../features/experiments/ExperimentComp
 import { ExperimentRunsPage } from "../features/experiments/ExperimentRunsPage";
 import { AccuracyPage } from "../features/accuracy/AccuracyPage";
 import { OperationsPage } from "../features/operations/OperationsPage";
+import { PipelineHealthPage } from "../features/pipeline/PipelineHealthPage";
+import { HierarchyPage } from "../features/hierarchy/HierarchyPage";
 
 export const AppRoutes = () => (
   <Routes>
@@ -18,6 +20,8 @@ export const AppRoutes = () => (
       <Route path="experiments" element={<ExperimentRunsPage />} />
       <Route path="accuracy" element={<AccuracyPage />} />
       <Route path="operations" element={<OperationsPage />} />
+      <Route path="pipeline" element={<PipelineHealthPage />} />
+      <Route path="hierarchy" element={<HierarchyPage />} />
       <Route
         path="experiments/compare"
         element={<ExperimentComparisonPage />}

@@ -10,9 +10,9 @@
 ## Summary
 
 The platform exposes forecasting, backtesting, model lifecycle, reconciliation, and publication
-capabilities through warehouse tables, Python services, Prefect flows, and documentation. It does
-not yet provide a cohesive browser interface for analysts, planners, approvers, or platform
-operators.
+capabilities through warehouse tables, Python services, Prefect flows, documentation, and a
+cohesive ForecastLab browser interface. The complete read-only interface is implemented;
+controlled production mutation acceptance and optional specialist deep links remain.
 
 This spec defines the ForecastLab open-source frontend built with React, TypeScript, and Vite,
 backed by a versioned FastAPI boundary. The same frontend supports two deployment modes:
@@ -159,14 +159,28 @@ confidence evidence. Model detail links into filtered experiments, and published
 link into filtered Forecast Explorer evidence. Remaining sections below continue to define the
 target product rather than shipped screens.
 
+Error Analysis now preserves run and horizon state in the URL and diagnoses horizon degradation,
+origin instability, worst segments, bias, and interval coverage. Publication Control exposes
+exception samples, immutable lifecycle counters, delivery state, and operational FVA. In API mode,
+explicit confirmation forms submit override, approval, publication, supersession, and rollback
+intentions; the server derives identity from IAP, enforces configured roles, and retains lifecycle
+and idempotency validation. The Pages demo exposes the same evidence but cannot mutate state.
+
+Pipeline Health now presents ordered stage execution, durations, retry-safe component state,
+cardinality and horizon evidence, quantile completeness, and blocking validation gates. Hierarchy
+& Reconciliation provides level navigation, parent lineage, base-to-reconciled P50 deltas,
+coherence checks, quantile checks, and immutable reconciliation provenance. Failed gates remain
+visible and are never silently corrected in the browser.
+
 The production read-only boundary now implements ForecastLab option discovery and immutable
 forecast selection through `/v1/forecasts/options`, `/v1/forecasts`, and
 `/v1/forecast-runs/{forecast_run_id}`. The TypeScript adapter schema-checks live rows and
 provenance before rendering. The production container now builds the API-backed frontend and
 serves the SPA and `/v1` API from one Cloud Run origin. Terraform can enable Identity-Aware Proxy,
 grant its service agent Cloud Run invocation, and assign explicit `roles/iap.httpsResourceAccessor`
-members. Live activation and browser acceptance remain; the public Pages build intentionally
-remains synthetic.
+members. The reference deployment completed immutable-image, warehouse-read, browser sign-in, IAP,
+and zero-drift Terraform acceptance on 2026-08-19; the public Pages build intentionally remains
+synthetic.
 
 ### 1. Platform overview
 
@@ -347,8 +361,9 @@ Additional requirements:
 
 ### Phase 2 — operational visibility
 
-1. Add hierarchy reconciliation, publication history, and pipeline-health views.
-2. Add authenticated production deployment and role-aware navigation.
+1. Add hierarchy reconciliation, publication history, and pipeline-health views. **Complete.**
+2. Add authenticated production deployment and role-aware navigation. **Complete for the
+   read-only reference deployment.**
 3. Add deep links to dbt Docs, Prefect, MLflow, and runbook documentation where configured.
 
 ### Phase 3 — governed actions
@@ -397,9 +412,6 @@ Additional requirements:
 
 ## Open questions
 
-- Should the first production identity integration use an existing client OIDC provider or a
-  reference Keycloak deployment?
-- Should production serve frontend assets from the API container or from a separate static host?
 - Which hierarchy sizes require server-side aggregation rather than browser rendering?
 - Which operational actions belong in the first UI release versus remaining CLI/API-only?
 

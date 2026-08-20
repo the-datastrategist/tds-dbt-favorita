@@ -3,7 +3,7 @@ import { z } from "zod";
 const metricSchema = z.object({
   wape: z.number().nonnegative(),
   bias: z.number(),
-  coverage: z.number().min(0).max(1),
+  coverage: z.number().min(0).max(1).nullable(),
 });
 
 const configurationValueSchema = z.union([z.string(), z.number(), z.boolean()]);

@@ -94,7 +94,10 @@ export const ExperimentRunsPage = () => {
           </p>
         </div>
         <span className="demo-pill">
-          <Sparkles size={12} aria-hidden="true" /> Synthetic fixture
+          <Sparkles size={12} aria-hidden="true" />{" "}
+          {result.datasetKind === "live"
+            ? "Live warehouse evidence"
+            : "Synthetic fixture"}
         </span>
       </header>
 
@@ -178,7 +181,10 @@ export const ExperimentRunsPage = () => {
           </select>
         </div>
         <span className="environment-label">
-          <FlaskConical size={13} aria-hidden="true" /> {result.fixtureVersion}
+          <FlaskConical size={13} aria-hidden="true" />{" "}
+          {result.datasetKind === "live"
+            ? "Live warehouse evidence"
+            : result.fixtureVersion}
         </span>
       </section>
 

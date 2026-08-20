@@ -163,6 +163,12 @@ class ForecastRepository(Protocol):
     def operations_snapshot(self) -> list[dict[str, Any]]:
         """Return lifecycle, exception, delivery, and FVA evidence by run."""
 
+    def pipeline_runs(self) -> list[dict[str, Any]]:
+        """Return scheduled pipeline stages and fail-closed validation gates."""
+
+    def hierarchy_snapshot(self, hierarchy_version: str) -> dict[str, Any] | None:
+        """Return one hierarchy version with reconciliation and coherence evidence."""
+
     def forecast_explorer_options(
         self, *, forecast_run_id: str | None = None
     ) -> ForecastExplorerOptions:
@@ -356,6 +362,27 @@ class BigQueryForecastRepository:
         self.forecast_runs_table = validate_bq_table_id(f"{table_prefix}.forecast_runs")
         self.operations_fva_table = validate_bq_table_id(
             f"{table_prefix}.forecast_value_added_operations"
+        )
+        self.pipeline_health_table = validate_bq_table_id(
+            f"{table_prefix}.forecast_pipeline_health"
+        )
+        self.pipeline_stages_table = validate_bq_table_id(
+            f"{table_prefix}.forecast_pipeline_stage_runs"
+        )
+        self.validation_checks_table = validate_bq_table_id(
+            f"{table_prefix}.forecast_validation_checks"
+        )
+        self.hierarchy_nodes_table = validate_bq_table_id(
+            f"{table_prefix}.forecast_hierarchy_nodes"
+        )
+        self.hierarchy_edges_table = validate_bq_table_id(
+            f"{table_prefix}.forecast_hierarchy_edges"
+        )
+        self.reconciliation_runs_table = validate_bq_table_id(
+            f"{table_prefix}.forecast_reconciliation_runs"
+        )
+        self.reconciled_outputs_table = validate_bq_table_id(
+            f"{table_prefix}.forecast_reconciled_outputs"
         )
         self.webhook_url = webhook_url
         self.webhook_signing_secret = webhook_signing_secret
@@ -843,13 +870,13 @@ class BigQueryForecastRepository:
         )
 
     @classmethod
-    def _experiment_metric(cls, rows: pd.DataFrame) -> dict[str, float] | None:
+    def _experiment_metric(cls, rows: pd.DataFrame) -> dict[str, float | None] | None:
         wape = cls._weighted_metric(rows, "wape")
         bias = cls._weighted_metric(rows, "bias")
         coverage = cls._weighted_metric(rows, "interval_coverage")
-        if wape is None or bias is None or coverage is None:
+        if wape is None or bias is None:
             return None
-        return {"wape": wape * 100, "bias": bias * 100, "coverage": coverage}
+        return {"wape": wape * 100, "bias": bias, "coverage": coverage}
 
     @classmethod
     def _shape_experiment_run(cls, rows: pd.DataFrame) -> dict[str, Any]:
@@ -1244,6 +1271,244 @@ class BigQueryForecastRepository:
                 }
             )
         return result
+
+    def pipeline_runs(self) -> list[dict[str, Any]]:
+        summaries = self._dataframe(
+            f"""
+            SELECT * FROM `{self.pipeline_health_table}`
+            ORDER BY started_at DESC, forecast_run_id DESC LIMIT 25
+            """,
+            [],
+        )
+        if summaries.empty:
+            return []
+        run_ids = [str(value) for value in summaries["forecast_run_id"]]
+        stages = self._dataframe(
+            f"""
+            SELECT * FROM `{self.pipeline_stages_table}`
+            WHERE forecast_run_id IN UNNEST(@run_ids)
+            ORDER BY forecast_run_id, stage_position
+            """,
+            [bigquery.ArrayQueryParameter("run_ids", "STRING", run_ids)],
+        )
+        checks = self._dataframe(
+            f"""
+            SELECT * FROM `{self.validation_checks_table}`
+            WHERE forecast_run_id IN UNNEST(@run_ids)
+            ORDER BY forecast_run_id, checked_at, check_name
+            """,
+            [bigquery.ArrayQueryParameter("run_ids", "STRING", run_ids)],
+        )
+        stages_by_run: dict[str, list[dict[str, Any]]] = {}
+        for row in stages.to_dict(orient="records"):
+            started = row["started_at"]
+            finished = row.get("finished_at")
+            duration = None if pd.isna(finished) else (finished - started).total_seconds()
+            stages_by_run.setdefault(str(row["forecast_run_id"]), []).append(
+                {
+                    "name": str(row["stage_name"]),
+                    "position": int(row["stage_position"]),
+                    "status": str(row["stage_status"]),
+                    "inputRows": int(row["input_row_count"]),
+                    "outputRows": int(row["output_row_count"]),
+                    "durationSeconds": duration,
+                    "retryState": "idempotent" if str(row["component_run_id"]) else "unknown",
+                    "errorMessage": (
+                        None if pd.isna(row.get("error_message")) else str(row["error_message"])
+                    ),
+                }
+            )
+        checks_by_run: dict[str, list[dict[str, Any]]] = {}
+        for row in checks.to_dict(orient="records"):
+            checks_by_run.setdefault(str(row["forecast_run_id"]), []).append(
+                {
+                    "name": str(row["check_name"]),
+                    "severity": str(row["severity"]),
+                    "passed": bool(row["passed"]),
+                    "observedValue": (
+                        None if pd.isna(row.get("observed_value")) else float(row["observed_value"])
+                    ),
+                    "thresholdValue": (
+                        None
+                        if pd.isna(row.get("threshold_value"))
+                        else float(row["threshold_value"])
+                    ),
+                }
+            )
+        result: list[dict[str, Any]] = []
+        for row in summaries.to_dict(orient="records"):
+            run_id = str(row["forecast_run_id"])
+            result.append(
+                {
+                    "runId": run_id,
+                    "contractName": str(row["forecast_contract_name"]),
+                    "origin": str(row["forecast_origin"]),
+                    "status": str(row["run_status"]),
+                    "healthStatus": str(row["health_status"]),
+                    "startedAt": row["started_at"].isoformat(),
+                    "finishedAt": (
+                        None if pd.isna(row.get("finished_at")) else row["finished_at"].isoformat()
+                    ),
+                    "candidateCount": int(row["candidate_count"]),
+                    "eligibleCount": int(row["eligible_count"]),
+                    "outputCount": int(row["persisted_output_count"]),
+                    "horizonCount": int(row["horizon_count"]),
+                    "missingQuantileCount": int(row["missing_quantile_count"]),
+                    "stages": stages_by_run.get(run_id, []),
+                    "gates": checks_by_run.get(run_id, []),
+                }
+            )
+        return result
+
+    @staticmethod
+    def _has_hierarchy_cycle(edges: list[dict[str, Any]]) -> bool:
+        children: dict[str, list[str]] = {}
+        for edge in edges:
+            children.setdefault(str(edge["parent_node_id"]), []).append(str(edge["child_node_id"]))
+        visiting: set[str] = set()
+        visited: set[str] = set()
+
+        def visit(node: str) -> bool:
+            if node in visiting:
+                return True
+            if node in visited:
+                return False
+            visiting.add(node)
+            if any(visit(child) for child in children.get(node, [])):
+                return True
+            visiting.remove(node)
+            visited.add(node)
+            return False
+
+        return any(visit(node) for node in children)
+
+    def hierarchy_snapshot(self, hierarchy_version: str) -> dict[str, Any] | None:
+        version_filter = (
+            "" if hierarchy_version == "current" else "WHERE hierarchy_version = @version"
+        )
+        parameters = (
+            []
+            if hierarchy_version == "current"
+            else [bigquery.ScalarQueryParameter("version", "STRING", hierarchy_version)]
+        )
+        runs = self._dataframe(
+            f"""
+            SELECT * FROM `{self.reconciliation_runs_table}`
+            {version_filter}
+            ORDER BY started_at DESC, reconciliation_run_id DESC LIMIT 1
+            """,
+            parameters,
+        )
+        if runs.empty:
+            return None
+        run = runs.iloc[0]
+        version = str(run["hierarchy_version"])
+        common = [bigquery.ScalarQueryParameter("version", "STRING", version)]
+        nodes = self._dataframe(
+            f"""SELECT * FROM `{self.hierarchy_nodes_table}`
+            WHERE hierarchy_version = @version ORDER BY level_position, node_id""",
+            common,
+        )
+        edges_frame = self._dataframe(
+            f"""SELECT * FROM `{self.hierarchy_edges_table}`
+            WHERE hierarchy_version = @version ORDER BY parent_node_id, child_node_id""",
+            common,
+        )
+        outputs = self._dataframe(
+            f"""
+            SELECT node_id, level_name,
+              AVG(base_prediction_p50) AS base_p50,
+              AVG(prediction_p50) AS reconciled_p50,
+              COUNTIF(prediction_p10 IS NULL OR prediction_p50 IS NULL OR prediction_p90 IS NULL)
+                AS missing_quantile_count,
+              COUNTIF(NOT (prediction_p10 <= prediction_p50 AND prediction_p50 <= prediction_p90))
+                AS unordered_quantile_count
+            FROM `{self.reconciled_outputs_table}`
+            WHERE reconciliation_run_id = @run_id
+            GROUP BY node_id, level_name ORDER BY level_name, node_id
+            """,
+            [bigquery.ScalarQueryParameter("run_id", "STRING", str(run["reconciliation_run_id"]))],
+        )
+        edge_records = edges_frame.to_dict(orient="records")
+        parent_counts: dict[str, int] = {}
+        parent_by_child: dict[str, str] = {}
+        for edge in edge_records:
+            child = str(edge["child_node_id"])
+            parent_counts[child] = parent_counts.get(child, 0) + 1
+            parent_by_child[child] = str(edge["parent_node_id"])
+        node_records = nodes.to_dict(orient="records")
+        root_position = min((int(row["level_position"]) for row in node_records), default=0)
+        non_roots = [row for row in node_records if int(row["level_position"]) > root_position]
+        parent_violations = sum(parent_counts.get(str(row["node_id"]), 0) != 1 for row in non_roots)
+        output_records = outputs.to_dict(orient="records")
+        missing_quantiles = sum(int(row["missing_quantile_count"]) for row in output_records)
+        unordered_quantiles = sum(int(row["unordered_quantile_count"]) for row in output_records)
+        levels: dict[tuple[int, str], int] = {}
+        for row in node_records:
+            key = (int(row["level_position"]), str(row["level_name"]))
+            levels[key] = levels.get(key, 0) + 1
+        output_by_node = {str(row["node_id"]): row for row in output_records}
+        shaped_nodes = []
+        for row in node_records[:500]:
+            node_id = str(row["node_id"])
+            values = output_by_node.get(node_id, {})
+            base = None if pd.isna(values.get("base_p50")) else float(values["base_p50"])
+            reconciled = (
+                None if pd.isna(values.get("reconciled_p50")) else float(values["reconciled_p50"])
+            )
+            shaped_nodes.append(
+                {
+                    "id": node_id,
+                    "label": str(row["node_key_json"]),
+                    "level": str(row["level_name"]),
+                    "levelPosition": int(row["level_position"]),
+                    "parentId": parent_by_child.get(node_id),
+                    "baseP50": base,
+                    "reconciledP50": reconciled,
+                    "delta": None if base is None or reconciled is None else reconciled - base,
+                }
+            )
+        violation_count = int(run["violation_count"] or 0)
+        cycle = self._has_hierarchy_cycle(edge_records)
+        return {
+            "hierarchyName": str(run["hierarchy_name"]),
+            "hierarchyVersion": version,
+            "reconciliationRunId": str(run["reconciliation_run_id"]),
+            "forecastRunId": str(run["forecast_run_id"]),
+            "method": str(run["reconciliation_method"]),
+            "status": str(run["run_status"]),
+            "tolerance": float(run["tolerance_abs"]),
+            "nodeCount": len(node_records),
+            "edgeCount": len(edge_records),
+            "levels": [
+                {"name": name, "position": position, "nodeCount": count}
+                for (position, name), count in sorted(levels.items())
+            ],
+            "nodes": shaped_nodes,
+            "gates": [
+                {
+                    "name": "Exactly one parent",
+                    "passed": parent_violations == 0,
+                    "violationCount": parent_violations,
+                },
+                {"name": "Acyclic hierarchy", "passed": not cycle, "violationCount": int(cycle)},
+                {
+                    "name": "Coherent child totals",
+                    "passed": violation_count == 0,
+                    "violationCount": violation_count,
+                },
+                {
+                    "name": "All quantiles reconciled",
+                    "passed": missing_quantiles == 0,
+                    "violationCount": missing_quantiles,
+                },
+                {
+                    "name": "Ordered quantiles",
+                    "passed": unordered_quantiles == 0,
+                    "violationCount": unordered_quantiles,
+                },
+            ],
+        }
 
     def _revision_operation(
         self,

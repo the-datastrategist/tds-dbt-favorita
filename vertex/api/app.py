@@ -134,7 +134,7 @@ class ExplorerResponse(BaseModel):
 class ExperimentMetric(BaseModel):
     wape: float = Field(ge=0)
     bias: float
-    coverage: float = Field(ge=0, le=1)
+    coverage: float | None = Field(default=None, ge=0, le=1)
 
 
 class ExperimentHorizon(ExperimentMetric):
@@ -206,6 +206,37 @@ class ExperimentComparisonResponse(ExperimentListResponse):
     missingRunIds: list[str]
 
 
+class LeaderboardRowResponse(BaseModel):
+    rank: int | None = Field(default=None, ge=1)
+    modelId: str
+    modelName: str
+    family: str
+    lifecycleStatus: Literal["champion", "candidate", "baseline"]
+    evidenceStatus: Literal["sufficient", "insufficient"]
+    description: str
+    horizon: int = Field(ge=1)
+    segmentId: str
+    segmentName: str
+    wape: float = Field(ge=0)
+    bias: float
+    coverage: float | None = Field(default=None, ge=0, le=1)
+    baselineImprovement: float
+    lastEvaluatedAt: datetime
+
+
+class LeaderboardOptionsResponse(BaseModel):
+    horizons: list[int]
+    segments: list[dict[str, str]]
+
+
+class LeaderboardResponse(BaseModel):
+    datasetKind: Literal["live"] = "live"
+    horizon: int
+    segmentId: str
+    segmentName: str
+    rows: list[LeaderboardRowResponse]
+
+
 class OperationOutput(BaseModel):
     id: str
     entityLabel: str
@@ -235,6 +266,86 @@ class OperationRun(BaseModel):
 class OperationsResponse(BaseModel):
     datasetKind: Literal["live"] = "live"
     runs: list[OperationRun]
+
+
+class PipelineStageResponse(BaseModel):
+    name: str
+    position: int = Field(ge=1)
+    status: str
+    inputRows: int = Field(ge=0)
+    outputRows: int = Field(ge=0)
+    durationSeconds: float | None = Field(default=None, ge=0)
+    retryState: str
+    errorMessage: str | None = None
+
+
+class PipelineGateResponse(BaseModel):
+    name: str
+    severity: str
+    passed: bool
+    observedValue: float | None = None
+    thresholdValue: float | None = None
+
+
+class PipelineRunResponse(BaseModel):
+    runId: str
+    contractName: str
+    origin: date
+    status: str
+    healthStatus: str
+    startedAt: datetime
+    finishedAt: datetime | None = None
+    candidateCount: int = Field(ge=0)
+    eligibleCount: int = Field(ge=0)
+    outputCount: int = Field(ge=0)
+    horizonCount: int = Field(ge=0)
+    missingQuantileCount: int = Field(ge=0)
+    stages: list[PipelineStageResponse]
+    gates: list[PipelineGateResponse]
+
+
+class PipelineRunsResponse(BaseModel):
+    datasetKind: Literal["live"] = "live"
+    runs: list[PipelineRunResponse]
+
+
+class HierarchyLevelResponse(BaseModel):
+    name: str
+    position: int = Field(ge=0)
+    nodeCount: int = Field(ge=0)
+
+
+class HierarchyNodeResponse(BaseModel):
+    id: str
+    label: str
+    level: str
+    levelPosition: int = Field(ge=0)
+    parentId: str | None = None
+    baseP50: float | None = Field(default=None, ge=0)
+    reconciledP50: float | None = Field(default=None, ge=0)
+    delta: float | None = None
+
+
+class ReconciliationGateResponse(BaseModel):
+    name: str
+    passed: bool
+    violationCount: int = Field(ge=0)
+
+
+class HierarchyResponse(BaseModel):
+    datasetKind: Literal["live"] = "live"
+    hierarchyName: str
+    hierarchyVersion: str
+    reconciliationRunId: str
+    forecastRunId: str
+    method: str
+    status: str
+    tolerance: float = Field(ge=0)
+    nodeCount: int = Field(ge=0)
+    edgeCount: int = Field(ge=0)
+    levels: list[HierarchyLevelResponse]
+    nodes: list[HierarchyNodeResponse]
+    gates: list[ReconciliationGateResponse]
 
 
 class CapabilitiesResponse(BaseModel):
@@ -444,7 +555,7 @@ def create_app(
             raise ValueError("FORECAST_API_ROLE_MEMBERS_JSON must be valid JSON") from exc
     app = FastAPI(
         title="Forecast Operations API",
-        version="1.2.0",
+        version="1.5.0",
         description=(
             "Read complete immutable forecast versions and append governed lifecycle mutations."
         ),
@@ -592,6 +703,38 @@ def create_app(
             runs=[OperationRun.model_validate(run) for run in repository.operations_snapshot()]
         )
 
+    @app.get(
+        "/v1/pipeline-runs",
+        response_model=PipelineRunsResponse,
+        tags=["forecastlab"],
+    )
+    def pipeline_runs(
+        repository: ForecastRepository = Depends(_repository),
+    ) -> PipelineRunsResponse:
+        return PipelineRunsResponse(
+            runs=[PipelineRunResponse.model_validate(run) for run in repository.pipeline_runs()]
+        )
+
+    @app.get(
+        "/v1/hierarchies/{hierarchy_version}",
+        response_model=HierarchyResponse,
+        tags=["forecastlab"],
+    )
+    def hierarchy(
+        hierarchy_version: str,
+        repository: ForecastRepository = Depends(_repository),
+    ) -> HierarchyResponse:
+        snapshot = repository.hierarchy_snapshot(hierarchy_version)
+        if snapshot is None:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "code": "hierarchy_not_found",
+                    "message": "hierarchy version has no reconciliation evidence",
+                },
+            )
+        return HierarchyResponse.model_validate(snapshot)
+
     @app.get("/v1/forecasts/current", response_model=ForecastPage, tags=["forecasts"])
     def current_forecasts(
         contract_name: str,
@@ -696,6 +839,96 @@ def create_app(
         return ExperimentComparisonResponse(
             runs=[ExperimentRunResponse.model_validate(run) for run in result.runs],
             missingRunIds=result.missing_run_ids,
+        )
+
+    @app.get(
+        "/v1/models/leaderboard/options",
+        response_model=LeaderboardOptionsResponse,
+        tags=["forecastlab"],
+    )
+    def leaderboard_options(
+        repository: ForecastRepository = Depends(_repository),
+    ) -> LeaderboardOptionsResponse:
+        options = repository.experiment_options()
+        return LeaderboardOptionsResponse(
+            horizons=options.horizons,
+            segments=[{"id": "all", "name": "All entities"}],
+        )
+
+    @app.get(
+        "/v1/models/leaderboard",
+        response_model=LeaderboardResponse,
+        tags=["forecastlab"],
+    )
+    def model_leaderboard(
+        horizon: Annotated[int, Query(ge=1)],
+        segment_id: str = "all",
+        repository: ForecastRepository = Depends(_repository),
+    ) -> LeaderboardResponse:
+        if segment_id not in {"all", "demo_all"}:
+            return LeaderboardResponse(
+                horizon=horizon,
+                segmentId=segment_id,
+                segmentName=segment_id,
+                rows=[],
+            )
+        result = repository.experiment_runs(horizon=horizon)
+        latest_by_model: dict[str, dict[str, Any]] = {}
+        for run in result.runs:
+            if run.get("summary") is None:
+                continue
+            model_id = str(run["modelId"])
+            current = latest_by_model.get(model_id)
+            if current is None or str(run["createdAt"]) > str(current["createdAt"]):
+                latest_by_model[model_id] = run
+        ranked = sorted(
+            latest_by_model.values(),
+            key=lambda run: (float(run["summary"]["wape"]), str(run["modelId"])),
+        )
+        baseline = next(
+            (run for run in ranked if str(run["modelId"]) == "seasonal_naive_7d"),
+            next((run for run in ranked if str(run["modelFamily"]) == "baseline"), None),
+        )
+        baseline_wape = float(baseline["summary"]["wape"]) if baseline is not None else None
+        rows: list[LeaderboardRowResponse] = []
+        for index, run in enumerate(ranked, start=1):
+            summary = run["summary"]
+            model_id = str(run["modelId"])
+            family = str(run["modelFamily"])
+            lifecycle_status: Literal["champion", "candidate", "baseline"] = (
+                "champion" if index == 1 else "baseline" if family == "baseline" else "candidate"
+            )
+            wape = float(summary["wape"])
+            rows.append(
+                LeaderboardRowResponse(
+                    rank=index,
+                    modelId=model_id,
+                    modelName=str(run["modelName"]),
+                    family=family,
+                    lifecycleStatus=lifecycle_status,
+                    evidenceStatus=(
+                        "sufficient" if len(run.get("rollingOrigins", [])) >= 2 else "insufficient"
+                    ),
+                    description=f"Latest persisted rolling-origin evidence for {model_id}.",
+                    horizon=horizon,
+                    segmentId="all",
+                    segmentName="All entities",
+                    wape=wape,
+                    bias=float(summary["bias"]),
+                    coverage=summary.get("coverage"),
+                    baselineImprovement=(
+                        0.0
+                        if not baseline_wape
+                        else round((baseline_wape - wape) / baseline_wape * 100, 3)
+                    ),
+                    lastEvaluatedAt=run["completedAt"] or run["createdAt"],
+                )
+            )
+        return LeaderboardResponse(
+            horizon=horizon,
+            segmentId="all",
+            segmentName="All entities",
+            rows=rows,
         )
 
     def explorer_response(result: ForecastExplorerResult | None) -> ExplorerResponse:
@@ -961,7 +1194,12 @@ def create_app(
     if (frontend_dist / "index.html").is_file():
 
         @app.get("/{asset_path:path}", include_in_schema=False)
-        def forecastlab_spa(asset_path: str) -> FileResponse:
+        def forecastlab_spa(asset_path: str) -> Any:
+            if asset_path == "v1" or asset_path.startswith("v1/"):
+                return JSONResponse(
+                    status_code=404,
+                    content={"code": "api_route_not_found", "message": "API route not found"},
+                )
             requested = (frontend_dist / asset_path).resolve()
             if requested.is_relative_to(frontend_dist) and requested.is_file():
                 return FileResponse(requested)
