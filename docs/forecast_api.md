@@ -229,6 +229,10 @@ publisher inherits approver and planner permissions, and approver inherits plann
 The browser cannot select or spoof its audit actor. Leaving mutations false preserves the accepted
 read-only service and least-privilege dataset reader role.
 
+The workbench sidebar exposes configurable specialist links through `VITE_DBT_DOCS_URL`,
+`VITE_PREFECT_URL`, `VITE_MLFLOW_URL`, and `VITE_RUNBOOK_URL`. Production images use stable public
+documentation defaults when a deployment does not provide environment-specific consoles.
+
 Outbound delivery is opt-in and requires mutations. Store the destination URL and signing secret
 in separate Secret Manager secrets, then configure:
 

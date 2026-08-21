@@ -54,6 +54,9 @@ jobs:
       - name: Validate model configs
         run: python -m vertex.config.validate_all
 
+      - name: Validate portable deployment manifest
+        run: python -m vertex.config.deployment --config vertex/config/deployment.example.yaml
+
       - name: Validate monitoring contract
         run: python -c "from vertex.config.monitoring import load_monitoring_config; print(load_monitoring_config().hash)"
 

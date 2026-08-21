@@ -54,6 +54,8 @@ jobs:
       TF_IN_AUTOMATION: "true"
       TF_VAR_project_id: ${{ vars.GCP_DEV_PROJECT_ID }}
       TF_VAR_client_label: ${{ vars.GCP_DEV_CLIENT_LABEL }}
+      TF_VAR_dbt_dataset: ${{ vars.GCP_DEV_DBT_DATASET || 'favorita' }}
+      TF_VAR_raw_dataset: ${{ vars.GCP_DEV_RAW_DATASET || 'raw_favorita' }}
       TF_VAR_caller_member: ${{ vars.GCP_DEV_CALLER_MEMBER }}
       TF_VAR_enable_github_wif: "true"
       TF_VAR_github_repository: ${{ github.repository }}

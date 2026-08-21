@@ -1252,3 +1252,35 @@ def test_bigquery_repository_shapes_operations_snapshot(client_class):
     assert result[0]["plannerWapeFvaPoints"] == pytest.approx(0.4)
     assert result[0]["outputs"][0]["entityLabel"] == "store_nbr 1"
     assert "forecast_value_added_operations" in repository._dataframe.call_args_list[0].args[0]
+
+
+@pytest.mark.unit
+@patch("vertex.api.repository.bigquery.Client")
+def test_pipeline_runs_preserve_unmeasured_candidate_counts(client_class):
+    client_class.return_value = MagicMock()
+    repository = BigQueryForecastRepository(project_id="project", table_prefix="project.dataset")
+    summaries = pd.DataFrame(
+        [
+            {
+                "forecast_run_id": "run-1",
+                "forecast_contract_name": "store_daily_demand",
+                "forecast_origin": date(2026, 8, 18),
+                "run_status": "draft",
+                "health_status": "healthy",
+                "started_at": datetime(2026, 8, 18, 1, tzinfo=timezone.utc),
+                "finished_at": datetime(2026, 8, 18, 2, tzinfo=timezone.utc),
+                "candidate_count": None,
+                "eligible_count": None,
+                "persisted_output_count": 55,
+                "horizon_count": 1,
+                "missing_quantile_count": 0,
+            }
+        ]
+    )
+    repository._dataframe = MagicMock(side_effect=[summaries, pd.DataFrame(), pd.DataFrame()])
+
+    result = repository.pipeline_runs()
+
+    assert result[0]["candidateCount"] is None
+    assert result[0]["eligibleCount"] is None
+    assert result[0]["outputCount"] == 55

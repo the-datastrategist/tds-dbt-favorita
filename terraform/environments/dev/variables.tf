@@ -32,13 +32,11 @@ variable "client_label" {
 variable "dbt_dataset" {
   description = "Maps to DBT_DATASET."
   type        = string
-  default     = "favorita"
 }
 
 variable "raw_dataset" {
   description = "Maps to BQ_RAW_DATASET."
   type        = string
-  default     = "raw_favorita"
 }
 
 variable "repo_name" {
