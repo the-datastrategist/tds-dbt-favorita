@@ -1277,9 +1277,7 @@ def test_pipeline_runs_preserve_unmeasured_candidate_counts(client_class):
             }
         ]
     )
-    repository._dataframe = MagicMock(
-        side_effect=[summaries, pd.DataFrame(), pd.DataFrame()]
-    )
+    repository._dataframe = MagicMock(side_effect=[summaries, pd.DataFrame(), pd.DataFrame()])
 
     result = repository.pipeline_runs()
 

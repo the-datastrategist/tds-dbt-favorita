@@ -1350,14 +1350,10 @@ class BigQueryForecastRepository:
                         None if pd.isna(row.get("finished_at")) else row["finished_at"].isoformat()
                     ),
                     "candidateCount": (
-                        None
-                        if pd.isna(row.get("candidate_count"))
-                        else int(row["candidate_count"])
+                        None if pd.isna(row.get("candidate_count")) else int(row["candidate_count"])
                     ),
                     "eligibleCount": (
-                        None
-                        if pd.isna(row.get("eligible_count"))
-                        else int(row["eligible_count"])
+                        None if pd.isna(row.get("eligible_count")) else int(row["eligible_count"])
                     ),
                     "outputCount": int(row["persisted_output_count"]),
                     "horizonCount": int(row["horizon_count"]),
