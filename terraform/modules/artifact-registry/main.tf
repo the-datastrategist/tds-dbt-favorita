@@ -3,5 +3,5 @@ resource "google_artifact_registry_repository" "vertex" {
   location      = var.region
   repository_id = var.repo_name
   format        = "DOCKER"
-  description   = "tds-favorita Vertex training and pipeline image"
+  description   = "Forecasting platform Vertex training and pipeline images"
 }

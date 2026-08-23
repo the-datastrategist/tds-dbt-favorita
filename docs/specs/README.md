@@ -23,10 +23,10 @@ A completed spec should graduate into an accelerator entry in [accelerators.md](
 
 ## Specs
 
-Status reviewed **2026-08-19**. The completion figures are implementation estimates, while
+Status reviewed **2026-08-20**. The completion figures are implementation estimates, while
 the status column continues to use the acceptance-based definitions above. Across the full
 platform roadmap, including the proposed frontend and separate generalization workstream, the
-current implementation is approximately **90% complete**. Excluding open-source productization,
+current implementation is approximately **92% complete**. Excluding open-source productization,
 the proposed frontend, and generalization, the accepted core platform roadmap is approximately
 **99% complete**.
 
@@ -47,9 +47,9 @@ the proposed frontend, and generalization, the accepted core platform roadmap is
 | [Scheduled forecast publication pipeline](scheduled_forecast_publication_pipeline.md) | Shipped | 100% | Cross-spec operational integration | Live-accepted deterministic champion scoring, routing, calibration, reconciliation gates, leases, failure evidence, Prefect deployment, idempotent retry, and atomic draft visibility |
 | [Monitoring, alerts, and SLOs](monitoring_and_slos.md) | Shipped | 100% | Platform roadmap → P1 monitoring | All repository signals and the scheduled Cloud Run evaluator are live accepted, with Secret Manager-backed Slack policy and controlled-test deliveries witnessed in `#forecasting-ops` |
 | [Integration contracts and forecast delivery](integration_contracts.md) | In progress | 99% | Platform roadmap → P2 integrations | Stable views, GCS export, events, delivery confirmation, retrieval, lifecycle mutations, and signed outbound webhooks are implemented; controlled production activation remains |
-| [Open-source forecasting platform UI](open_source_frontend_ui.md) | In progress | 98% | Platform roadmap → P2/P3 frontend | All specified read-only workflows and typed production APIs, including pipeline health and hierarchy reconciliation, are implemented; controlled mutation acceptance and optional specialist deep links remain |
-| [Open-source product readiness](open_source_product_readiness.md) | In progress | 90% | Platform roadmap → P3 open source | Governance, credential-free quickstart, roadmap, compatibility, extension guidance, and community templates are implemented; multi-project modularization remains |
-| [General-purpose demand forecasting platform](platform_generalization.md) | Proposed | 0% | Separate platform-generalization workstream | Add canonical datasets, configurable periods, resource parameterization, and typed extension interfaces; multi-implementation validation is deferred |
+| [Open-source forecasting platform UI](open_source_frontend_ui.md) | In progress | 99% | Platform roadmap → P2/P3 frontend | All read-only workflows and typed production APIs are live accepted; configurable dbt, Prefect, MLflow, and runbook deep links are implemented; controlled mutation acceptance remains |
+| [Open-source product readiness](open_source_product_readiness.md) | In progress | 92% | Platform roadmap → P3 open source | Governance, credential-free quickstart, roadmap, compatibility, extension guidance, community templates, and explicit multi-project Terraform dataset inputs are implemented; broader runtime modularization remains |
+| [General-purpose demand forecasting platform](platform_generalization.md) | In progress | 10% | Separate platform-generalization workstream | Typed deployment/resource catalog, validation command, CI coverage, Terraform input cleanup, and architecture boundary are implemented; canonical datasets, period abstraction, runtime migration, and extension APIs remain |
 
 ---
 

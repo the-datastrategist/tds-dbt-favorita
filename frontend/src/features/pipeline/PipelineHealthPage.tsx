@@ -112,9 +112,13 @@ export const PipelineHealthPage = () => {
         <article className="metric-card">
           <span>Cardinality</span>
           <strong>
-            {run.outputCount}/{run.eligibleCount}
+            {run.outputCount}/{run.eligibleCount ?? "—"}
           </strong>
-          <small>{run.candidateCount} candidates</small>
+          <small>
+            {run.candidateCount === null
+              ? "Candidate count unavailable"
+              : `${run.candidateCount} candidates`}
+          </small>
         </article>
         <article className="metric-card">
           <span>Blocking gates</span>

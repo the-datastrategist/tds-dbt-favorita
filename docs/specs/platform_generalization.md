@@ -145,6 +145,11 @@ dataset:
 
 ## Work package 2: deployment and identifier parameterization
 
+**Implementation status (2026-08-20):** the first slice is complete. A typed deployment manifest,
+validated resource catalog, `make validate-deployment`, CI coverage, and mandatory Terraform
+dataset inputs establish the boundary. Migrating every runtime consumer and generated DDL path to
+the catalog remains.
+
 Create one typed deployment manifest as the source of truth for environment-specific resources:
 
 ```yaml

@@ -295,8 +295,8 @@ class PipelineRunResponse(BaseModel):
     healthStatus: str
     startedAt: datetime
     finishedAt: datetime | None = None
-    candidateCount: int = Field(ge=0)
-    eligibleCount: int = Field(ge=0)
+    candidateCount: int | None = Field(default=None, ge=0)
+    eligibleCount: int | None = Field(default=None, ge=0)
     outputCount: int = Field(ge=0)
     horizonCount: int = Field(ge=0)
     missingQuantileCount: int = Field(ge=0)
