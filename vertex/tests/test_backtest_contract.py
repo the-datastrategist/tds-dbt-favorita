@@ -59,10 +59,11 @@ class TestBacktestContract:
         assert contract.horizons == [7]
         assert contract.train_window_days > 0
         assert contract.segment_columns == []
-        assert contract.entity_columns == ["store_nbr"]
-        assert contract.date_column == "date"
-        assert contract.actual_column == "sales_store"
-        assert contract.history_table.endswith("int_sales_store_daily")
+        assert contract.entity_columns == ["series_key"]
+        assert contract.entity_key_json_column == "entity_key_json"
+        assert contract.date_column == "period_start"
+        assert contract.actual_column == "target_value"
+        assert contract.history_table.endswith("forecast_features_store")
         assert contract.moving_average_window == 7
         assert contract.max_entities is None
         assert contract.forecast_contract.name == "store_daily_demand"

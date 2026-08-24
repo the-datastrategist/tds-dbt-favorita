@@ -42,3 +42,21 @@ models:
         data_tests: [not_null]
       - name: data_cutoff
         data_tests: [not_null]
+
+  - name: forecast_features_store
+    description: Favorita store-grain adapter implementing the canonical feature contract.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [series_key, period_start]
+    columns:
+      - name: series_key
+        data_tests: [not_null]
+      - name: entity_key_json
+        data_tests: [not_null]
+      - name: period_start
+        data_tests: [not_null]
+      - name: target_value
+        data_tests: [not_null]
+      - name: data_cutoff
+        data_tests: [not_null]

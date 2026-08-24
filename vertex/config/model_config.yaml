@@ -115,23 +115,33 @@ configs:
     inputs:
       train_sql_query: |
         select *
-        from `tds-favorita.favorita.int_sales_store_daily`
+        from `tds-favorita.favorita.forecast_features_store`
         where data_split_source = "train"
       predict_sql_query: |
         select *
-        from `tds-favorita.favorita.int_sales_store_daily`
+        from `tds-favorita.favorita.forecast_features_store`
         where data_split_source = "test"
       backtest_sql_query: |
         select *
-        from `tds-favorita.favorita.int_sales_store_daily`
-      target_column: sales_store_n7d
+        from `tds-favorita.favorita.forecast_features_store`
+      target_column: target_horizon_7
       prediction_horizons: [7]
       validation_purge_days: 7
-      date_column: date
-      entity_column: store_nbr
+      date_column: period_start
+      entity_column: series_key
       id_columns:
-        - store_nbr
+        - series_key
+        - entity_key_json
       excluded_columns:
+        - series_key
+        - entity_key_json
+        - period_start
+        - target_value
+        - target_observed
+        - is_eligible
+        - eligibility_reason
+        - data_cutoff
+        - target_horizon_7
         - store_nbr
         - date
         - sales_store_n1d

@@ -97,6 +97,11 @@ class BacktestContract:
         return list(self.spec["entity_columns"])
 
     @property
+    def entity_key_json_column(self) -> str | None:
+        value = self.spec.get("entity_key_json_column")
+        return str(value) if value else None
+
+    @property
     def date_column(self) -> str:
         return str(self.spec["date_column"])
 
@@ -272,6 +277,11 @@ def validate_backtest_contract(raw: dict[str, Any]) -> BacktestContract:
     for field in ("date_column", "actual_column", "history_table"):
         if not isinstance(spec.get(field), str) or not spec[field]:
             raise ValueError(f"backtest.{field} must be a non-empty string")
+    entity_key_json_column = spec.get("entity_key_json_column")
+    if entity_key_json_column is not None and (
+        not isinstance(entity_key_json_column, str) or not entity_key_json_column
+    ):
+        raise ValueError("backtest.entity_key_json_column must be a non-empty string when provided")
     validate_bq_table_id(str(spec["history_table"]))
     if int(spec.get("moving_average_window", 7)) < 1:
         raise ValueError("backtest.moving_average_window must be positive")

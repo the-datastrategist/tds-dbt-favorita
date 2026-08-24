@@ -104,6 +104,18 @@ def _json_scalar(value: Any) -> Any:
     return value
 
 
+def _canonical_entity_key(entity_row: pd.Series, contract: BacktestContract) -> str:
+    """Return adapter-owned entity JSON, falling back to legacy column-derived identity."""
+    column = contract.entity_key_json_column
+    if column and column in entity_row.index and pd.notna(entity_row[column]):
+        value = entity_row[column]
+        parsed = json.loads(value) if isinstance(value, str) else value
+        if not isinstance(parsed, dict):
+            raise ValueError(f"Canonical entity key column {column!r} must contain JSON objects")
+        return json.dumps(parsed, sort_keys=True, separators=(",", ":"))
+    return _json_key({column: entity_row[column] for column in contract.entity_columns})
+
+
 def _validate_input_frame(frame: pd.DataFrame, contract: BacktestContract) -> pd.DataFrame:
     required = {
         contract.date_column,
@@ -111,6 +123,8 @@ def _validate_input_frame(frame: pd.DataFrame, contract: BacktestContract) -> pd
         *contract.entity_columns,
         *contract.segment_columns,
     }
+    if contract.entity_key_json_column:
+        required.add(contract.entity_key_json_column)
     missing = sorted(required.difference(frame.columns))
     if missing:
         raise ValueError(f"Backtest input is missing required columns: {missing}")
@@ -333,9 +347,7 @@ def _build_scale_lookup(
                     origin - timedelta(days=contract.train_window_days)
                 )
             ].dropna(subset=[contract.actual_column])
-            entity_key = _json_key(
-                {column: entity_row[column] for column in contract.entity_columns}
-            )
+            entity_key = _canonical_entity_key(entity_row, contract)
             values = observed.sort_values(contract.date_column)[contract.actual_column].astype(
                 float
             )
@@ -438,9 +450,7 @@ def score_baselines(
                     entity_row=entity_row,
                     lookup_date=target_date,
                 )
-                entity_key = _json_key(
-                    {column: entity_row[column] for column in contract.entity_columns}
-                )
+                entity_key = _canonical_entity_key(entity_row, contract)
                 segment_key = _json_key(
                     {column: entity_row[column] for column in contract.segment_columns}
                 )
@@ -610,9 +620,7 @@ def score_model_and_baselines(
         target_date = origin + timedelta(days=horizon)
 
         for row_index, entity_row in predict_rows.iterrows():
-            entity_key = _json_key(
-                {column: entity_row[column] for column in contract.entity_columns}
-            )
+            entity_key = _canonical_entity_key(entity_row, contract)
             segment_key = _json_key(
                 {column: entity_row[column] for column in contract.segment_columns}
             )

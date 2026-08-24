@@ -81,13 +81,17 @@ discovery may be added later if extensions are distributed independently.
 This package is implemented first because resource, temporal, and extension contracts depend on
 a stable domain model.
 
-**Implementation status (2026-08-23):** the first adapter slice is implemented. Canonical dbt
+**Implementation status (2026-08-24):** the first adapter and rolling-origin migration slices are
+implemented. Canonical dbt
 relations now expose series, observations, features, and eligibility through opaque series keys,
 structured entity identity, explicit period roles, target availability, eligibility, and data
 cutoffs. The existing versioned hierarchy node and edge tables complete the six-relation physical
 contract. The configured company-day BQML path now trains and scores through `forecast_features`,
-while the Favorita relations remain compatibility sources. Migrating all Python, backtesting,
-publication, and reconciliation consumers to one series identity remains.
+while the configured store-grain XGBoost rolling-origin path now loads
+`forecast_features_store`, groups by `series_key`, and preserves the adapter-owned
+`entity_key_json` in prediction and metric evidence. Favorita payload columns remain compatibility
+features. Migrating the remaining training/prediction families, publication, and reconciliation
+consumers to one series identity remains.
 
 ### Canonical relations
 
