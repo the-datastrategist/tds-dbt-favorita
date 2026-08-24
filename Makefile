@@ -22,7 +22,7 @@ export GOOGLE_APPLICATION_CREDENTIALS_CONTAINER
 endif
 endif
 
-.PHONY: help install requirements-lock format lint test clean quickstart-local quickstart-clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring selector-forecast-monitoring forecast-alerts-evaluate forecast-cost-record forecast-fva-build forecast-api-local forecast-api-test forecastlab-readonly-plan-check forecastlab-readonly-live-check source-ingestion-record load-favorita-gcs load-favorita-bigquery \
+.PHONY: help install requirements-lock format lint test clean quickstart-local quickstart-clean selector-daily-refresh selector-daily-refresh-test selector-accuracy-monitoring selector-forecast-monitoring canonical-contract-build forecast-alerts-evaluate forecast-cost-record forecast-fva-build forecast-api-local forecast-api-test forecastlab-readonly-plan-check forecastlab-readonly-live-check source-ingestion-record load-favorita-gcs load-favorita-bigquery \
 	dbt-deps dbt-debug dbt-seed dbt-run dbt-run-full-refresh dbt-run-model dbt-run-operation dbt-create-table \
 	dbt-train dbt-predict dbt-build dbt-test dbt-compile dbt-list dbt-snapshot dbt-source-freshness dbt-clean \
 	docs-serve dbt-ui dbt-docs dbt-docs-generate dbt-docs-serve \
@@ -170,6 +170,9 @@ selector-accuracy-monitoring: ## Build the prediction-accuracy rolling mart + ru
 
 selector-forecast-monitoring: ## Build and test source + forecast pipeline health marts
 	docker compose run --rm ml-pipeline dbt build --project-dir dbt --target $(DBT_TARGET) --selector forecast_monitoring $(ARGS)
+
+canonical-contract-build: ## Build and test canonical dataset adapters
+	docker compose run --rm ml-pipeline dbt build --project-dir dbt --target $(DBT_TARGET) --select tag:canonical $(ARGS)
 
 forecast-alerts-evaluate: ## Query monitoring views and route configured alerts (DRY_RUN=true to print only)
 	$(DOCKER_RUN) python scripts/evaluate_monitoring_alerts.py $(if $(filter true,$(DRY_RUN)),--dry-run) $(ARGS)

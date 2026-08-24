@@ -29,12 +29,21 @@ models:
           arguments:
             combination_of_columns: [entity_key_json, date]
     columns:
+      - name: series_key
+        data_tests: [not_null]
       - name: entity_key_json
         data_tests: [not_null]
       - name: date
         data_tests: [not_null]
+      - name: period_start
+        data_tests: [not_null]
+      - name: target_observed
+        data_tests: [not_null]
+      - name: data_cutoff
+        data_tests: [not_null]
       - name: is_eligible
         data_tests: [not_null]
+      - name: eligibility_reason
       - name: demand_policy
         data_tests: [not_null]
 

@@ -1,7 +1,7 @@
 {{
   config(
     materialized='view',
-    tags=['demand', 'eligibility', 'data_quality']
+    tags=['canonical', 'demand', 'eligibility', 'data_quality']
   )
 }}
 
@@ -36,11 +36,17 @@ with history as (
     from history
 )
 select
+    to_hex(sha256(to_json_string(struct(cast(store_nbr as string) as store_id)))) as series_key,
     to_json_string(struct(cast(store_nbr as string) as store_id)) as entity_key_json,
     date,
+    date as period_start,
     store_nbr,
     ineligibility_reason is null as is_eligible,
     ineligibility_reason,
+    ineligibility_reason as eligibility_reason,
+    unconstrained_demand_units as target_value,
+    observed_sales_units is not null as target_observed,
+    date as data_cutoff,
     assortment_active,
     store_open,
     product_active,

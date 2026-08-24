@@ -103,6 +103,28 @@ sources:
       - name: forecast_series_classifications
         description: Append-only series profiles and routing-policy lineage
 
+      - name: forecast_hierarchy_nodes
+        description: Canonical versioned hierarchy nodes consumed by reconciliation.
+        columns:
+          - name: hierarchy_name
+            data_tests: [not_null]
+          - name: hierarchy_version
+            data_tests: [not_null]
+          - name: node_id
+            data_tests: [not_null]
+
+      - name: forecast_hierarchy_edges
+        description: Canonical versioned parent-child relationships consumed by reconciliation.
+        columns:
+          - name: hierarchy_name
+            data_tests: [not_null]
+          - name: hierarchy_version
+            data_tests: [not_null]
+          - name: parent_node_id
+            data_tests: [not_null]
+          - name: child_node_id
+            data_tests: [not_null]
+
       - name: model_candidates
         description: Immutable model candidate registrations and reproducibility evidence
 
