@@ -95,8 +95,10 @@ and operations-FVA paths now carry `series_key`, `entity_key_json`, and canonica
 `target_timestamp`; `target_date` and retail payload fields remain compatibility fields. All seven
 shipped model configurations now train and score through `forecast_features_store` using
 `period_start`, `series_key`, and `entity_key_json`. Shared XGBoost, random-forest, Prophet,
-ARIMA, SARIMA, and direct multi-horizon defaults use the same canonical roles. Live retraining of
-the newly migrated families and hierarchy configuration/materialization migration remain.
+ARIMA, SARIMA, and direct multi-horizon defaults use the same canonical roles. Hierarchy
+materialization now reads configured levels from canonical `entity_key_json` rather than a
+Favorita table or column. Live retraining of the newly migrated families and live acceptance of
+the configured hierarchy adapter remain.
 
 ### Canonical relations
 
@@ -151,8 +153,8 @@ dataset:
 2. Add uniqueness, nullability, type, point-in-time, eligibility, and hierarchy tests.
 3. Migrate training, prediction, backtesting, publication, and reconciliation consumers.
    Backtesting, scheduled publication, output persistence, reconciliation evidence, retrieval,
-   realized monitoring, and model-family configuration are complete; live family retraining and
-   hierarchy adapter configuration remain.
+   realized monitoring, model-family configuration, and hierarchy adapter configuration are
+   complete; live family retraining and hierarchy-adapter acceptance remain.
 
 The DDL, canonical adapter/staging suite, publication/calibration/FVA marts, strengthened
 canonical publication acceptance, and complete monitoring selector passed in the live
@@ -258,6 +260,12 @@ Add one temporal configuration/service responsible for:
 All runtime paths must use this service rather than `timedelta(days=...)`, `unit="D"`, or
 `freq="D"`. Initial support covers daily, weekly, and monthly periods. Business calendars and
 irregular frequencies may follow later.
+
+**Implementation status (2026-08-24):** the shared period service and day/week/month contract
+validation are implemented. Canonical output construction, scheduled eligibility identity, and
+rolling-origin target/training-boundary calculations use calendar-aware contract periods. Model
+future-frame generation, seasonal lookup policies, backfill increments, period-based training
+window naming, and full weekly/monthly live acceptance remain.
 
 ### Persistence and SQL
 

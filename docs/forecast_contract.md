@@ -30,7 +30,7 @@ forecast:
 | `name` | Stable contract name used in forecast output rows. |
 | `target` / `target_unit` | Business metric being forecasted and its unit. |
 | `dimensions` | Entity keys that define one forecasted item at the contract grain. |
-| `frequency` | Time grain, currently `day`. |
+| `frequency` | Forecast period grain: `day`, `week`, or `month`. Horizons count these periods. |
 | `timezone` | Business timezone for forecast origins and publication SLAs. |
 | `issue_schedule` | Cron expression for expected forecast issue time. |
 | `horizons` | Required forecast horizons. Outputs and metrics must be horizon-aware. |
