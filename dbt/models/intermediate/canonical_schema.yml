@@ -1,0 +1,62 @@
+version: 2
+
+models:
+  - name: forecast_series
+    description: Favorita adapter implementing the canonical forecast-series contract.
+    columns:
+      - name: series_key
+        data_tests: [not_null, unique]
+      - name: entity_key_json
+        data_tests: [not_null]
+      - name: is_active
+        data_tests: [not_null]
+      - name: hierarchy_version
+        data_tests: [not_null]
+
+  - name: forecast_observations
+    description: Domain-neutral historical target values at one row per series and period.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [series_key, period_start]
+    columns:
+      - name: series_key
+        data_tests: [not_null]
+      - name: period_start
+        data_tests: [not_null]
+      - name: target_observed
+        data_tests: [not_null]
+      - name: data_cutoff
+        data_tests: [not_null]
+
+  - name: forecast_features
+    description: Canonical feature adapter used by the configured company-day BQML path.
+    columns:
+      - name: series_key
+        data_tests: [not_null]
+      - name: period_start
+        data_tests: [not_null, unique]
+      - name: target_observed
+        data_tests: [not_null]
+      - name: is_eligible
+        data_tests: [not_null]
+      - name: data_cutoff
+        data_tests: [not_null]
+
+  - name: forecast_features_store
+    description: Favorita store-grain adapter implementing the canonical feature contract.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [series_key, period_start]
+    columns:
+      - name: series_key
+        data_tests: [not_null]
+      - name: entity_key_json
+        data_tests: [not_null]
+      - name: period_start
+        data_tests: [not_null]
+      - name: target_value
+        data_tests: [not_null]
+      - name: data_cutoff
+        data_tests: [not_null]

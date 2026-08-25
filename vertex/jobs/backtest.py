@@ -39,6 +39,7 @@ def build_bigquery_history_query(contract: BacktestContract) -> str:
         dict.fromkeys(
             [
                 *contract.entity_columns,
+                *([contract.entity_key_json_column] if contract.entity_key_json_column else []),
                 *contract.segment_columns,
                 contract.date_column,
                 contract.actual_column,

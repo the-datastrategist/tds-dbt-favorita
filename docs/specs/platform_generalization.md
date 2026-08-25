@@ -2,7 +2,7 @@
 
 # SPEC: General-purpose demand forecasting platform
 
-**Status:** Proposed
+**Status:** In progress
 **Roadmap reference:** [Specs overview](README.md) — separate platform-generalization workstream
 
 ---
@@ -81,6 +81,21 @@ discovery may be added later if extensions are distributed independently.
 This package is implemented first because resource, temporal, and extension contracts depend on
 a stable domain model.
 
+**Implementation status (2026-08-24):** the first adapter and rolling-origin migration slices are
+implemented. Canonical dbt
+relations now expose series, observations, features, and eligibility through opaque series keys,
+structured entity identity, explicit period roles, target availability, eligibility, and data
+cutoffs. The existing versioned hierarchy node and edge tables complete the six-relation physical
+contract. The configured company-day BQML path now trains and scores through `forecast_features`,
+while the configured store-grain XGBoost rolling-origin path now loads
+`forecast_features_store`, groups by `series_key`, and preserves the adapter-owned
+`entity_key_json` in prediction and metric evidence. The standard prediction, scheduled
+publication, canonical forecast-output, reconciliation-evidence, retrieval, realized-calibration,
+and operations-FVA paths now carry `series_key`, `entity_key_json`, and canonical
+`target_timestamp`; `target_date` and retail payload fields remain compatibility fields. Migrating
+the remaining training/prediction families and hierarchy configuration/materialization paths to
+the same identity remains.
+
 ### Canonical relations
 
 Define dbt contracts for these logical relations:
@@ -133,8 +148,23 @@ dataset:
 1. Add canonical views over the current Favorita intermediate models.
 2. Add uniqueness, nullability, type, point-in-time, eligibility, and hierarchy tests.
 3. Migrate training, prediction, backtesting, publication, and reconciliation consumers.
+   Backtesting, scheduled publication, output persistence, reconciliation evidence, retrieval,
+   and realized monitoring are complete; the remaining model families and hierarchy adapter
+   configuration remain.
 4. Move Favorita-specific output columns into downstream consumption views.
 5. Retain compatibility aliases until the migration policy permits their removal.
+
+Deploy the completed publication and monitoring slice in dependency order:
+
+1. Apply `vertex/ddl/vertex_bq_tables.sql` so existing prediction, forecast,
+   and reconciliation tables receive the canonical identity and timestamp columns.
+2. Build `stg_forecast_outputs` and the canonical observation models.
+3. Build the publication, calibration, and FVA marts and run their tests.
+4. Execute a forecast publication and verify reconciliation and monitoring
+   against the persisted canonical fields.
+
+The dbt staging migration intentionally follows the DDL migration because an
+existing BigQuery table cannot expose the new columns before they are added.
 
 ### Acceptance criteria
 

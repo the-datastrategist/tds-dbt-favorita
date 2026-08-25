@@ -8,10 +8,11 @@ backtest:
     interval_days: 7
   horizons: [7]
   train_window_days: 180
-  entity_columns: [store_nbr]
-  date_column: date
-  actual_column: sales_store
-  history_table: tds-favorita.favorita.int_sales_store_daily
+  entity_columns: [series_key]
+  entity_key_json_column: entity_key_json
+  date_column: period_start
+  actual_column: target_value
+  history_table: tds-favorita.favorita.forecast_features_store
   segment_columns: []
   moving_average_window: 7
   max_entities:

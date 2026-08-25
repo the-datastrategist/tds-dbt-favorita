@@ -7,7 +7,7 @@ from (
         row_number() over (
             partition by
                 forecast_contract_name,
-                entity_key_json,
+                coalesce(series_key, to_hex(sha256(entity_key_json))),
                 target_date,
                 horizon,
                 destination

@@ -20,6 +20,8 @@ STANDARD_PREDICTION_COLUMNS = [
     "run_at",
     "run_date",
     "target_column",
+    "series_key",
+    "entity_key_json",
     "entity_id",
     "store_id",
     "product_id",
@@ -105,6 +107,9 @@ def build_standard_prediction_rows(
 
     for col in entity_cols:
         rows[col] = _optional_series(df, col, index)
+    for col in ("series_key", "entity_key_json"):
+        if col not in rows:
+            rows[col] = _optional_series(df, col, index)
     for col in ("entity_id", "store_id", "product_id"):
         if col not in rows:
             rows[col] = _optional_series(df, col, index)

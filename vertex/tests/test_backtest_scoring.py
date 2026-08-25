@@ -42,6 +42,10 @@ def _history() -> pd.DataFrame:
     ):
         rows.extend(
             {
+                "series_key": f"series-{store_nbr}",
+                "entity_key_json": f'{{"store_id":"{store_nbr}"}}',
+                "period_start": day,
+                "target_value": value,
                 "store_nbr": store_nbr,
                 "store_segment": segment,
                 "date": day,
@@ -59,7 +63,7 @@ class TestBaselineScoring:
 
         assert list(result.predictions.columns) == PREDICTION_COLUMNS
         assert len(result.predictions) == 8
-        store_one = result.predictions[result.predictions["entity_key_json"] == '{"store_nbr":1}']
+        store_one = result.predictions[result.predictions["entity_key_json"] == '{"store_id":"1"}']
         predictions = dict(zip(store_one["baseline_name"], store_one["prediction"]))
         assert predictions == {
             "zero_demand": 0.0,
@@ -92,6 +96,10 @@ class TestBaselineScoring:
                 pd.DataFrame(
                     [
                         {
+                            "series_key": "series-3",
+                            "entity_key_json": '{"store_id":"3"}',
+                            "period_start": "2016-08-08",
+                            "target_value": 5,
                             "store_nbr": 3,
                             "store_segment": "small",
                             "date": "2016-08-08",
@@ -127,8 +135,9 @@ class TestBaselineScoring:
     def test_missing_actual_is_not_eligible(self):
         history = _history()
         history.loc[
-            (history["store_nbr"] == 2) & (history["date"] == pd.Timestamp("2016-08-08")),
-            "sales_store",
+            (history["series_key"] == "series-2")
+            & (history["period_start"] == pd.Timestamp("2016-08-08")),
+            "target_value",
         ] = None
         result = score_baselines(
             history, _contract(baselines=["zero_demand"]), backtest_run_id="run-1"
@@ -153,6 +162,10 @@ class TestBaselineScoring:
                 pd.DataFrame(
                     [
                         {
+                            "series_key": "series-1",
+                            "entity_key_json": '{"store_id":"1"}',
+                            "period_start": "2015-08-08",
+                            "target_value": 42,
                             "store_nbr": 1,
                             "store_segment": "large",
                             "date": "2015-08-08",
@@ -170,7 +183,7 @@ class TestBaselineScoring:
             backtest_run_id="run-1",
         )
 
-        store_one = result.predictions[result.predictions["entity_key_json"] == '{"store_nbr":1}']
+        store_one = result.predictions[result.predictions["entity_key_json"] == '{"store_id":"1"}']
         assert store_one.iloc[0]["prediction"] == 42
 
     def test_intermittent_demand_baselines_are_deterministic(self):
@@ -181,12 +194,12 @@ class TestBaselineScoring:
         pd.testing.assert_series_equal(
             first.predictions["prediction"], second.predictions["prediction"]
         )
-        store_two = first.predictions[first.predictions["entity_key_json"] == '{"store_nbr":2}']
+        store_two = first.predictions[first.predictions["entity_key_json"] == '{"store_id":"2"}']
         assert store_two["prediction"].tolist() == [0.0, 0.0, 0.0]
 
     def test_scores_configured_model_on_same_origin_and_run(self):
         history = _history()
-        history["sales_store_n7d"] = history["sales_store"].shift(-7)
+        history["target_horizon_7"] = history["target_value"].shift(-7)
         history["sales_store_l1d"] = range(len(history))
         seen: dict[str, pd.DataFrame] = {}
 
@@ -207,8 +220,8 @@ class TestBaselineScoring:
         ]
         assert len(model_rows) == 2
         assert model_rows["prediction"].tolist() == [14.0, 14.0]
-        assert seen["train"]["date"].max() == date(2016, 7, 25)
-        assert seen["predict"]["date"].unique().tolist() == [date(2016, 8, 1)]
+        assert seen["train"]["period_start"].max() == date(2016, 7, 25)
+        assert seen["predict"]["period_start"].unique().tolist() == [date(2016, 8, 1)]
         assert set(result.predictions["backtest_run_id"]) == {"run-1"}
         assert result.predictions["data_cutoff"].notna().all()
         assert result.predictions["source_cutoff_json"].notna().all()
@@ -216,7 +229,7 @@ class TestBaselineScoring:
 
     def test_rejects_model_feature_snapshot_created_after_origin(self):
         history = _history()
-        history["sales_store_n7d"] = history["sales_store"].shift(-7)
+        history["target_horizon_7"] = history["target_value"].shift(-7)
         history["promotion"] = 1
         history["promotion_plan_updated_at"] = pd.Timestamp("2016-08-02")
 
@@ -240,7 +253,7 @@ class TestBaselineScoring:
 
     def test_changed_actuals_generate_a_new_run_id(self):
         changed = _history()
-        changed.loc[0, "sales_store"] = 999
+        changed.loc[0, "target_value"] = 999
 
         original = score_baselines(_history(), _contract(baselines=["zero_demand"]))
         updated = score_baselines(changed, _contract(baselines=["zero_demand"]))
@@ -249,7 +262,7 @@ class TestBaselineScoring:
 
     def test_all_zero_actuals_have_null_wape(self):
         history = _history()
-        history["sales_store"] = 0
+        history["target_value"] = 0
         result = score_baselines(
             history, _contract(baselines=["zero_demand"]), backtest_run_id="run-1"
         )

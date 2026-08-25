@@ -17,7 +17,8 @@ This spec introduces `docs/forecast_contract.md`, a validated YAML contract, and
 
 - Define one forecast contract shape for target, grain, schedule, horizons, quantiles, eligibility, covariate availability, hierarchy, and reconciliation.
 - Validate forecast contracts before training, scoring, backtesting, or publishing.
-- Add a canonical output schema keyed by `forecast_run_id`, `forecast_origin`, entity keys, `target_date`, and `horizon`.
+- Add a canonical output schema keyed by `forecast_run_id`, `forecast_origin`, `series_key`,
+  `target_timestamp`, and `horizon`.
 - Persist provenance on every forecast row: model version, feature version, code SHA, data cutoff, config hash, and status.
 - Support separate values for statistical forecast, planner override, approved forecast, and published forecast.
 
@@ -83,7 +84,7 @@ Minimum tables:
 |-------|---------|
 | `forecast_contracts` | Registered contract versions and config hashes |
 | `forecast_runs` | One row per scoring/backtest/publication run |
-| `forecast_outputs` | One row per entity, origin, target date, horizon, and forecast version |
+| `forecast_outputs` | One row per series, origin, target timestamp, horizon, and forecast version |
 | `forecast_status_history` | Audit trail for draft, approved, published, superseded, failed |
 
 Minimum `forecast_outputs` columns:
@@ -93,10 +94,12 @@ forecast_run_id
 forecast_contract_name
 forecast_contract_hash
 forecast_origin
+series_key
+entity_key_json
+target_timestamp
 target_date
 horizon
 grain
-entity_key_json
 prediction_p10
 prediction_p50
 prediction_p90
@@ -148,9 +151,10 @@ Add dbt source declarations and staging models:
 
 Add tests:
 
-- `not_null` on run IDs, origin, target date, horizon, status.
+- `not_null` on run IDs, origin, series key, target timestamp, horizon, status.
 - accepted values for status.
-- uniqueness on `(forecast_run_id, entity_key_json, target_date, horizon)` for draft output rows.
+- uniqueness on `(forecast_run_id, series_key, target_timestamp, horizon)` for draft output rows.
+- one-to-one consistency between `series_key` and `entity_key_json` within a dataset contract.
 - no negative horizons.
 
 ### 5. Compatibility with existing Vertex predictions
@@ -160,7 +164,10 @@ Initial implementation can adapt the existing model prediction fact table into `
 | Existing | Canonical |
 |----------|-----------|
 | `predict_run_id` | `forecast_run_id` |
-| `forecast_date` / `date` | `target_date` |
+| `target_timestamp` | `target_timestamp` |
+| `forecast_date` / `date` | compatibility `target_date`, converted to `target_timestamp` when canonical time is absent |
+| `series_key` | `series_key` |
+| dimension columns | compatibility input used to derive `series_key` and `entity_key_json` when canonical identity is absent |
 | model prediction | `statistical_forecast`, `prediction_p50` |
 | `actual` | retained in evaluation tables, not canonical output |
 | `model_run_id`, `model_id` | same |
@@ -189,6 +196,12 @@ dbt staging, and validation tests are implemented. New canonical rows carry
 `contract_enforced = false`, which provides an explicit migration boundary without rewriting
 history.
 
+The portability migration now carries `series_key`, `entity_key_json`, and `target_timestamp`
+through scoring, publication, reconciliation, retrieval, realized calibration, and FVA. Daily
+`target_date` and retail dimension fields remain compatibility projections. Existing deployments
+must apply the idempotent BigQuery DDL before rebuilding the updated dbt staging and monitoring
+models.
+
 Live GCP acceptance passed on 2026-07-18 using 51 real horizon-7 XGBoost predictions. The run
 persisted 51 canonical outputs, automatically approved and published all 51, and reported zero
 horizon, quantile-order, provenance, or delivery-status violations. The complete forecast staging
@@ -198,7 +211,7 @@ suite subsequently passed 107 data tests. See
 ## Acceptance criteria
 
 - A named forecast contract can be validated from YAML.
-- A multi-horizon forecast run records one canonical output row per entity/date/horizon.
+- A multi-horizon forecast run records one canonical output row per series/target timestamp/horizon.
 - Every canonical forecast row has provenance and lifecycle status.
 - Every published row has routing, calibration, reconciliation, orchestration, and publication
   version lineage applicable to its contract.

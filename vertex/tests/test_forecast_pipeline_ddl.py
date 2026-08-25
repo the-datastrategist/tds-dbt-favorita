@@ -18,3 +18,5 @@ def test_scheduled_pipeline_tables_and_run_pins_are_declared() -> None:
     assert "stage_run_id STRING NOT NULL" in DDL
     assert "validation_check_id STRING NOT NULL" in DDL
     assert "eligibility_decision_id STRING NOT NULL" in DDL
+    assert "target_timestamp TIMESTAMP NOT NULL" in DDL
+    assert "series_key STRING NOT NULL" in DDL

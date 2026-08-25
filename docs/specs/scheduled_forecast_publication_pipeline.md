@@ -119,10 +119,15 @@ Every stage receives and returns rows with the canonical business key:
 forecast_run_id
 forecast_contract_hash
 forecast_origin
-entity_key_json
-target_date
+series_key
+target_timestamp
 horizon
 ```
+
+Every stage also preserves `entity_key_json` as the structured, inspectable representation of
+`series_key`.
+`target_date` may be emitted by daily adapters as a compatibility projection of
+`target_timestamp`, but it is not part of the portable business key.
 
 Quantiles may remain wide (`prediction_p10`, `prediction_p50`, `prediction_p90`) in the canonical
 output. A normalized internal stage representation adds `quantile` to that business key; a stage
@@ -141,7 +146,7 @@ Acceptance criteria:
 ### P0.3 Eligibility, routing, and fallback
 
 Eligibility is frozen before scoring. Strategy selection applies once per
-entity/origin/target-date/horizon and all quantiles inherit that strategy. Only contract-declared
+series/origin/target-timestamp/horizon and all quantiles inherit that strategy. Only contract-declared
 fallbacks are allowed. Missing eligibility inputs or exhausted fallbacks create exceptions.
 
 Acceptance criteria:

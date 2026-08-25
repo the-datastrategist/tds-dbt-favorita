@@ -121,7 +121,9 @@ load contract and champion
 ```
 
 The stages exchange canonical forecast rows keyed by `forecast_run_id`,
-`forecast_contract_hash`, `forecast_origin`, `entity_key_json`, `target_date`, and `horizon`.
+`forecast_contract_hash`, `forecast_origin`, `series_key`, `target_timestamp`, and `horizon`.
+They also preserve `entity_key_json` as the structured representation of the series identity.
+Daily implementations may expose `target_date` as a compatibility projection.
 Every row entering publication must also carry:
 
 ```text

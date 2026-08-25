@@ -36,12 +36,15 @@ def _source_predictions(run_id: str, table_prefix: str, project_id: str):
           run_at,
           date,
           forecast_date,
+          target_timestamp,
           forecast_horizon,
           prediction,
           COALESCE(prediction_lower, prediction) AS prediction_lower,
           COALESCE(prediction_upper, prediction) AS prediction_upper,
           model_artifact_uri,
           store_id,
+          series_key,
+          entity_key_json,
           'entity_model' AS forecast_strategy,
           'high' AS confidence_flag,
           'acceptance_passthrough' AS calibration_method,
@@ -62,12 +65,18 @@ def _acceptance_summary(run_id: str, table_prefix: str, project_id: str) -> dict
             f"""
         SELECT
           COUNT(*) AS output_count,
-          COUNT(DISTINCT entity_key_json) AS entity_count,
-          COUNTIF(horizon != 7 OR DATE_DIFF(target_date, DATE(forecast_origin), DAY) != 7)
+          COUNT(DISTINCT series_key) AS series_count,
+          COUNT(DISTINCT TO_JSON_STRING(STRUCT(series_key, target_timestamp, horizon)))
+            AS canonical_key_count,
+          COUNTIF(
+            horizon != 7
+            OR DATE_DIFF(DATE(target_timestamp), DATE(forecast_origin), DAY) != 7
+          )
             AS invalid_horizon_count,
           COUNTIF(
             contract_enforced IS NOT TRUE
-            OR forecast_origin IS NULL OR target_date IS NULL OR model_run_id IS NULL
+            OR forecast_origin IS NULL OR target_timestamp IS NULL OR series_key IS NULL
+            OR entity_key_json IS NULL OR model_run_id IS NULL
             OR model_id IS NULL OR feature_version IS NULL OR code_sha IS NULL
             OR data_cutoff IS NULL OR forecast_contract_hash IS NULL
             OR forecast_status IS NULL OR forecast_strategy IS NULL
@@ -78,6 +87,23 @@ def _acceptance_summary(run_id: str, table_prefix: str, project_id: str) -> dict
             AS invalid_quantile_count
         FROM `{table_prefix}.forecast_outputs`
         WHERE forecast_run_id = '{run_id}'
+        """,
+            project_id=project_id,
+        )
+        .iloc[0]
+        .to_dict()
+    )
+    identity = (
+        run_query(
+            f"""
+        SELECT COUNT(*) AS inconsistent_identity_count
+        FROM (
+          SELECT series_key
+          FROM `{table_prefix}.forecast_outputs`
+          WHERE forecast_run_id = '{run_id}'
+          GROUP BY series_key
+          HAVING COUNT(DISTINCT entity_key_json) != 1
+        )
         """,
             project_id=project_id,
         )
@@ -101,7 +127,7 @@ def _acceptance_summary(run_id: str, table_prefix: str, project_id: str) -> dict
         .iloc[0]
         .to_dict()
     )
-    return {**rows, **lifecycle}
+    return {**rows, **identity, **lifecycle}
 
 
 def run_acceptance(
@@ -114,7 +140,7 @@ def run_acceptance(
         raise RuntimeError("source predictions contain null store_id values")
 
     acceptance_run_id = get_hash(
-        {"acceptance": "canonical-contract-h7-v2", "source_prediction_run_id": source_run_id}
+        {"acceptance": "canonical-contract-h7-v3", "source_prediction_run_id": source_run_id}
     )
     predictions["predict_run_id"] = acceptance_run_id
     predictions["calibration_run_id"] = f"acceptance-{acceptance_run_id}"
@@ -154,22 +180,25 @@ def run_acceptance(
         "invalid_horizon_count",
         "missing_lineage_count",
         "invalid_quantile_count",
+        "inconsistent_identity_count",
         "missing_delivery_status_count",
     )
-    if int(summary["output_count"]) != expected or int(summary["entity_count"]) != expected:
+    cardinality_fields = ("output_count", "series_count", "canonical_key_count")
+    if any(int(summary[field]) != expected for field in cardinality_fields):
         raise RuntimeError(f"canonical cardinality mismatch: expected {expected}, got {summary}")
     if any(int(summary[field]) != 0 for field in required_zero):
         raise RuntimeError(f"canonical acceptance invariants failed: {summary}")
     if int(summary["approval_count"]) != expected or int(summary["publication_count"]) != expected:
         raise RuntimeError(f"publication cardinality mismatch: expected {expected}, got {summary}")
-    return {
+    result = {
         "source_prediction_run_id": source_run_id,
         "forecast_run_id": acceptance_run_id,
         "source_prediction_count": expected,
         "canonical_rows_written": written,
         "publication": publication,
-        **{key: int(value) for key, value in summary.items()},
     }
+    result.update({key: int(value) for key, value in summary.items()})
+    return result
 
 
 def main() -> None:

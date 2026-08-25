@@ -437,7 +437,10 @@ def execute_forecast_pipeline(
     if hierarchy_config is not None and hierarchy_nodes is not None:
         reconciliation_work = reconciled.copy()
         reconciliation_work["forecast_origin"] = canonical["forecast_origin"].to_numpy()
+        reconciliation_work["target_timestamp"] = canonical["target_timestamp"].to_numpy()
         reconciliation_work["target_date"] = canonical["target_date"].to_numpy()
+        reconciliation_work["series_key"] = canonical["series_key"].to_numpy()
+        reconciliation_work["entity_key_json"] = canonical["entity_key_json"].to_numpy()
         reconciliation_work["horizon"] = canonical["horizon"].to_numpy()
         level_by_node = hierarchy_nodes.set_index("node_id")["level_name"].astype(str)
         reconciliation_work["level_name"] = (

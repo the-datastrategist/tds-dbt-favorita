@@ -318,7 +318,8 @@ make forecast-alerts-evaluate DRY_RUN=true  # inspect live alert events without 
 make forecast-alerts-evaluate               # route through configured destinations
 ```
 
-`forecast_realized_calibration` evaluates matured store-level forecasts by contract and horizon.
+`forecast_realized_calibration` evaluates matured canonical series by contract and horizon,
+joining forecasts to observations with `series_key` and `target_timestamp`.
 It reports realized P10-P90 coverage, median bias, interval width, and actual availability. New
 contracts remain non-alerting until `realized_calibration_minimum_actuals` outcomes have landed;
 after that threshold, under-coverage or material normalized median bias routes a ticket.

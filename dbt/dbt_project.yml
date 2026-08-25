@@ -161,8 +161,8 @@ vars:
       lifecycle: prod
       metric: sales_company
       interval: day
-      train_ref: int_sales_daily
-      predict_ref: int_sales_daily
+      train_ref: forecast_features
+      predict_ref: forecast_features
       include_in_run: true
       include_in_forecast: true
       model_type: BOOSTED_TREE_REGRESSOR
