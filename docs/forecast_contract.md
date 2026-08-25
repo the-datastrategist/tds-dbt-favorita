@@ -52,14 +52,20 @@ Canonical rows include:
 - `forecast_contract_name`
 - `forecast_contract_hash`
 - `forecast_origin`
-- `target_date`
+- `target_timestamp`
+- `series_key`
+- `entity_key_json`
 - `horizon`
-- entity keys and `entity_key_json`
 - `prediction_p10`, `prediction_p50`, `prediction_p90`
 - `statistical_forecast`
 - `planner_override`, `approved_forecast`, `published_forecast`
 - `forecast_status`
 - model, feature, code, artifact, and data-cutoff provenance
+
+`series_key` is the stable opaque series identity, `entity_key_json` is its structured dimension
+representation, and `target_timestamp` is the canonical target-period boundary. The reference
+daily implementation also exposes `target_date` and retail dimension fields as compatibility
+projections; portable consumers must not use them as the authoritative identity.
 
 Initial prediction jobs write `forecast_status = 'draft'`. Approval, publication, supersession, and rollback are handled by the forecast operations layer.
 

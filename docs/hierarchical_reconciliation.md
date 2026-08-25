@@ -13,6 +13,10 @@ value: `forecast_reconciled_outputs` stores both value sets and links them to th
 `forecast_outputs` row. `forecast_reconciliation_runs` records the hierarchy version, method,
 input fingerprint, and execution result.
 
+Both output tables preserve `series_key`, `entity_key_json`, and `target_timestamp`, so
+reconciliation evidence uses the same series and temporal identity as scoring and publication.
+The daily `target_date` field remains available as a compatibility projection.
+
 ## Configuration
 
 The reference graph is pinned by `vertex/config/hierarchy.yaml`; the scheduled contract is

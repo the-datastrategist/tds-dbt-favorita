@@ -69,9 +69,11 @@ make selector-forecast-monitoring
   prevents draft-only and retired contracts from generating false stale-publication alerts.
 - `ml_prediction_accuracy_rolling` remains the existing model-accuracy and drift signal and is run
   with `make selector-accuracy-monitoring`.
-- `forecast_realized_calibration` joins matured store-level forecast intervals to canonical
+- `forecast_realized_calibration` joins matured series-level forecast intervals to canonical
   observed demand and reports P10-P90 coverage, median bias, normalized median bias, and mean
-  interval width by contract and horizon. `insufficient_actuals` is non-alerting; once the minimum
+  interval width by contract and horizon. Forecasts and observations join on `series_key` and
+  `target_timestamp`; retail identifiers and target dates are compatibility fields only.
+  `insufficient_actuals` is non-alerting; once the minimum
   sample is met, `under_coverage` and `material_bias` route tickets.
 - `forecast_data_drift` compares the latest configured target and feature windows with the
   immediately preceding windows. It emits `drifted` when standardized mean difference exceeds

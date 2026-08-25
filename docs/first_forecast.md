@@ -165,6 +165,8 @@ limit 10;
 ```sql
 select
   forecast_run_id,
+  series_key,
+  target_timestamp,
   target_date,
   horizon,
   entity_key_json,
@@ -180,8 +182,10 @@ order by created_at desc
 limit 100;
 ```
 
-Check that horizons match the contract, `data_cutoff` does not exceed the forecast origin, model
-and code provenance are populated, and initial outputs have `forecast_status = 'draft'`.
+Check that every `series_key` maps to exactly one `entity_key_json`, horizons match the contract,
+`target_timestamp` matches the intended target period, `data_cutoff` does not exceed the forecast
+origin, model and code provenance are populated, and initial outputs have
+`forecast_status = 'draft'`.
 
 ## 8. Evaluate before operational publication
 
