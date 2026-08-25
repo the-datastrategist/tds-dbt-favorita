@@ -44,8 +44,9 @@ def test_build_forecast_output_rows_from_standard_predictions():
     contract = _contract()
     source = pd.DataFrame(
         {
-            "store_nbr": [1, 2],
-            "date": pd.to_datetime(["2024-01-01", "2024-01-02"]),
+            "series_key": ["series-1", "series-2"],
+            "entity_key_json": ['{"store_id":"1"}', '{"store_id":"2"}'],
+            "period_start": pd.to_datetime(["2024-01-01", "2024-01-02"]),
             "sales": [10.0, 20.0],
         }
     )
@@ -60,7 +61,6 @@ def test_build_forecast_output_rows_from_standard_predictions():
         model_type="xgboost",
         target_column="sales",
         run_at=datetime(2024, 2, 1, 6, 0, 0),
-        id_columns=["store_nbr"],
         forecast_horizon=7,
         model_artifact_uri="gs://models/model.joblib",
     )
@@ -137,7 +137,12 @@ def test_build_forecast_output_rows_accepts_every_configured_horizon():
     frames = []
     for horizon in (1, 7, 14):
         source = pd.DataFrame(
-            {"store_nbr": [1], "date": pd.to_datetime(["2024-01-01"]), "sales": [10.0]}
+            {
+                "series_key": ["series-1"],
+                "entity_key_json": ['{"store_id":"1"}'],
+                "period_start": pd.to_datetime(["2024-01-01"]),
+                "sales": [10.0],
+            }
         )
         frames.append(
             build_standard_prediction_rows(
@@ -175,7 +180,12 @@ def test_build_forecast_output_rows_accepts_every_configured_horizon():
 @pytest.mark.unit
 def test_build_forecast_output_rows_persists_fallback_strategy_metadata():
     source = pd.DataFrame(
-        {"store_nbr": [1], "date": pd.to_datetime(["2024-01-01"]), "sales": [0.0]}
+        {
+            "series_key": ["series-1"],
+            "entity_key_json": ['{"store_id":"1"}'],
+            "period_start": pd.to_datetime(["2024-01-01"]),
+            "sales": [0.0],
+        }
     )
     predictions = build_standard_prediction_rows(
         source,
@@ -211,7 +221,12 @@ def test_build_forecast_output_rows_persists_fallback_strategy_metadata():
 @pytest.mark.unit
 def test_build_forecast_output_rows_rejects_uncontracted_horizon_and_missing_provenance():
     source = pd.DataFrame(
-        {"store_nbr": [1], "date": pd.to_datetime(["2024-01-01"]), "sales": [10.0]}
+        {
+            "series_key": ["series-1"],
+            "entity_key_json": ['{"store_id":"1"}'],
+            "period_start": pd.to_datetime(["2024-01-01"]),
+            "sales": [10.0],
+        }
     )
     predictions = build_standard_prediction_rows(
         source,

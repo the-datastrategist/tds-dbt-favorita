@@ -119,7 +119,7 @@ def run_train_xgboost(
 
     target_column = inputs["target_column"]
     test_size = float(inputs.get("test_size", 0.2))
-    date_column = inputs.get("date_column", "date")
+    date_column = inputs.get("date_column", "period_start")
     excluded_columns = list(inputs.get("excluded_columns", []))
     categorical_columns = list(inputs.get("categorical_columns", []))
     params, params_provenance = resolve_model_parameters(config, DEFAULT_MODEL_PARAMETERS)

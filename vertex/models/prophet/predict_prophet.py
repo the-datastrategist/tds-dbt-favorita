@@ -39,13 +39,13 @@ def run_predict_prophet(config: dict[str, Any]) -> dict[str, Any]:
     config_name = spec["config_name"]
     model_family = spec.get("model_family")
 
-    target_column = inputs.get("target_column") or "sales"
-    date_column = inputs.get("date_column", "date")
-    entity_column = inputs.get("entity_column", "store_nbr")
+    target_column = inputs.get("target_column") or "target_value"
+    date_column = inputs.get("date_column", "period_start")
+    entity_column = inputs.get("entity_column", "series_key")
     test_size = float(inputs.get("test_size", 0.2))
     predict_scope = inputs.get("predict_scope", "holdout")
     forecast_horizon = int(inputs.get("forecast_horizon", 7))
-    id_columns = list(inputs.get("id_columns", ["store_nbr"]))
+    id_columns = list(inputs.get("id_columns", ["series_key"]))
 
     gcs_model_path = inputs.get("gcs_model_path")
     artifact_config_name = inputs.get("artifact_config_name") or config_name

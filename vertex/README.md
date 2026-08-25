@@ -75,10 +75,12 @@ vertex/
    - `ml_model_optimize` — hyperparameter trials
    - `ml_model_predictions` — unified prediction fact table
 
-3. **Feature data** — training SQL in config usually points at dbt marts (e.g. `int_sales_store_daily`). Build features with dbt before training:
+3. **Feature data** — checked-in training configs read the canonical
+   `forecast_features_store` adapter. Build the adapter and its upstream project-specific
+   features before training:
 
    ```bash
-   make dbt-run-model MODEL=int_sales_store_daily
+   make dbt-run-model MODEL=forecast_features_store
    ```
 
 4. **Docker image** (local Docker or Vertex container)
@@ -106,15 +108,16 @@ Example train block (abbreviated):
     model_type: xgboost
   inputs:
     train_sql_query: |
-      SELECT * FROM `project.dataset.int_sales_store_daily`
+      SELECT * FROM `project.dataset.forecast_features_store`
       WHERE data_split_source = 'train'
     predict_sql_query: |
-      SELECT * FROM `project.dataset.int_sales_store_daily`
+      SELECT * FROM `project.dataset.forecast_features_store`
       WHERE data_split_source = 'test'
-    target_column: sales_store
-    entity_column: store_nbr
-    id_columns: [store_nbr]
-    excluded_columns: [store_nbr, date, sales_store_l1d]
+    target_column: target_value
+    date_column: period_start
+    entity_column: series_key
+    id_columns: [series_key, entity_key_json]
+    excluded_columns: [series_key, entity_key_json, period_start, target_value]
     gcs_model_path: gs://your-bucket/models/
   outputs: {}   # inherits metadata_table, etc. from defaults
 ```

@@ -55,11 +55,11 @@ configs:
     inputs:
       train_sql_query: |
         select *
-        from `tds-favorita.favorita.int_sales_store_daily`
+        from `tds-favorita.favorita.forecast_features_store`
         where data_split_source = "train"
       predict_sql_query: |
         select *
-        from `tds-favorita.favorita.int_sales_store_daily`
+        from `tds-favorita.favorita.forecast_features_store`
         where data_split_source = "test"
       target_column: sales_store_n1d
       target_columns_by_horizon:
@@ -73,10 +73,18 @@ configs:
       prediction_horizons: [1, 2, 3, 4, 5, 6, 7]
       require_complete_horizon_batch: true
       validation_purge_days: 7
-      date_column: date
-      entity_column: store_nbr
-      id_columns: [store_nbr]
+      date_column: period_start
+      entity_column: series_key
+      id_columns: [series_key, entity_key_json]
       excluded_columns:
+        - series_key
+        - entity_key_json
+        - period_start
+        - target_value
+        - target_observed
+        - is_eligible
+        - eligibility_reason
+        - data_cutoff
         - store_nbr
         - date
         - sales_store_n1d
@@ -214,18 +222,27 @@ configs:
     inputs:
       train_sql_query: |
         select *
-        from `tds-favorita.favorita.int_sales_store_daily`
-        qualify ntile(5) over (order by date desc) = 1
+        from `tds-favorita.favorita.forecast_features_store`
+        qualify ntile(5) over (order by period_start desc) = 1
       predict_sql_query: |
         select *
-        from `tds-favorita.favorita.int_sales_store_daily`
-        qualify ntile(5) over (order by date desc) = 1
+        from `tds-favorita.favorita.forecast_features_store`
+        qualify ntile(5) over (order by period_start desc) = 1
       target_column: sales_store_n1d
-      date_column: date
-      entity_column: store_nbr
+      date_column: period_start
+      entity_column: series_key
       id_columns:
-        - store_nbr
+        - series_key
+        - entity_key_json
       excluded_columns:
+        - series_key
+        - entity_key_json
+        - period_start
+        - target_value
+        - target_observed
+        - is_eligible
+        - eligibility_reason
+        - data_cutoff
         - store_nbr
         - date
         - sales_store_n1d
@@ -298,18 +315,27 @@ configs:
     inputs:
       train_sql_query: |
         select *
-        from `tds-favorita.favorita.int_sales_store_daily`
-        qualify ntile(5) over (order by date desc) > 1
+        from `tds-favorita.favorita.forecast_features_store`
+        qualify ntile(5) over (order by period_start desc) > 1
       predict_sql_query: |
         select *
-        from `tds-favorita.favorita.int_sales_store_daily`
-        qualify ntile(5) over (order by date desc) = 1
+        from `tds-favorita.favorita.forecast_features_store`
+        qualify ntile(5) over (order by period_start desc) = 1
       target_column: sales_store_n1d
-      date_column: date
-      entity_column: store_nbr
+      date_column: period_start
+      entity_column: series_key
       id_columns:
-        - store_nbr
+        - series_key
+        - entity_key_json
       excluded_columns:
+        - series_key
+        - entity_key_json
+        - period_start
+        - target_value
+        - target_observed
+        - is_eligible
+        - eligibility_reason
+        - data_cutoff
         - sales_company_n1d
         - sales_company_n7d
         - sales_company_n14d
@@ -364,20 +390,29 @@ configs:
     inputs:
       train_sql_query: |
         select *
-        from `tds-favorita.favorita.int_sales_store_daily`
-        qualify ntile(5) over (order by date desc) > 1
+        from `tds-favorita.favorita.forecast_features_store`
+        qualify ntile(5) over (order by period_start desc) > 1
 
       predict_sql_query: |
         select *
-        from `tds-favorita.favorita.int_sales_store_daily`
-        qualify ntile(5) over (order by date desc) = 1
+        from `tds-favorita.favorita.forecast_features_store`
+        qualify ntile(5) over (order by period_start desc) = 1
 
       target_column: sales_store_n1d
-      date_column: date
-      entity_column: store_nbr
+      date_column: period_start
+      entity_column: series_key
       id_columns:
-        - store_nbr
+        - series_key
+        - entity_key_json
       excluded_columns:
+        - series_key
+        - entity_key_json
+        - period_start
+        - target_value
+        - target_observed
+        - is_eligible
+        - eligibility_reason
+        - data_cutoff
         - sales_company_n1d
         - sales_company_n7d
         - sales_company_n14d
@@ -428,17 +463,18 @@ configs:
     inputs:
       train_sql_query: |
         select *
-        from `tds-favorita.favorita.int_sales_store_daily`
-        qualify ntile(5) over (order by date desc) > 1
+        from `tds-favorita.favorita.forecast_features_store`
+        qualify ntile(5) over (order by period_start desc) > 1
       predict_sql_query: |
         select *
-        from `tds-favorita.favorita.int_sales_store_daily`
-        qualify ntile(5) over (order by date desc) = 1
+        from `tds-favorita.favorita.forecast_features_store`
+        qualify ntile(5) over (order by period_start desc) = 1
       target_column: sales_store_n1d
-      date_column: date
-      entity_column: store_nbr
+      date_column: period_start
+      entity_column: series_key
       id_columns:
-        - store_nbr
+        - series_key
+        - entity_key_json
       training_mode: per_entity
       gcs_model_path: gs://favorita-vertex-models/
       forecast_horizon: 7
@@ -472,18 +508,27 @@ configs:
     inputs:
       train_sql_query: |
         select *
-        from `tds-favorita.favorita.int_sales_store_daily`
-        qualify ntile(5) over (order by date desc) > 1
+        from `tds-favorita.favorita.forecast_features_store`
+        qualify ntile(5) over (order by period_start desc) > 1
       predict_sql_query: |
         select *
-        from `tds-favorita.favorita.int_sales_store_daily`
-        qualify ntile(5) over (order by date desc) = 1
+        from `tds-favorita.favorita.forecast_features_store`
+        qualify ntile(5) over (order by period_start desc) = 1
       target_column: sales_store_n1d
-      date_column: date
-      entity_column: store_nbr
+      date_column: period_start
+      entity_column: series_key
       id_columns:
-        - store_nbr
+        - series_key
+        - entity_key_json
       excluded_columns:
+        - series_key
+        - entity_key_json
+        - period_start
+        - target_value
+        - target_observed
+        - is_eligible
+        - eligibility_reason
+        - data_cutoff
         - sales_company_n1d
         - sales_company_n7d
         - sales_company_n14d
