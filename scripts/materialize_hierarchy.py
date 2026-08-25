@@ -80,7 +80,10 @@ def build_materialization_sql(config: HierarchyConfig, *, table_prefix: str) -> 
     {identity_rows};
 
     MERGE `{prefix}.forecast_hierarchy_nodes` AS target
-    USING ({' UNION DISTINCT '.join(node_selects)}) AS source
+    USING (
+      SELECT * FROM ({' UNION ALL '.join(node_selects)})
+      QUALIFY ROW_NUMBER() OVER (PARTITION BY node_id ORDER BY level_position) = 1
+    ) AS source
     ON target.hierarchy_name = source.hierarchy_name
        AND target.hierarchy_version = source.hierarchy_version
        AND target.node_id = source.node_id
@@ -94,7 +97,10 @@ def build_materialization_sql(config: HierarchyConfig, *, table_prefix: str) -> 
     );
 
     MERGE `{prefix}.forecast_hierarchy_edges` AS target
-    USING ({' UNION DISTINCT '.join(edge_selects)}) AS source
+    USING (
+      SELECT * FROM ({' UNION ALL '.join(edge_selects)})
+      QUALIFY ROW_NUMBER() OVER (PARTITION BY parent_node_id, child_node_id) = 1
+    ) AS source
     ON target.hierarchy_name = source.hierarchy_name
        AND target.hierarchy_version = source.hierarchy_version
        AND target.parent_node_id = source.parent_node_id
