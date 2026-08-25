@@ -81,8 +81,8 @@ discovery may be added later if extensions are distributed independently.
 This package is implemented first because resource, temporal, and extension contracts depend on
 a stable domain model.
 
-**Implementation status (2026-08-24):** the first adapter and rolling-origin migration slices are
-implemented. Canonical dbt
+**Implementation status (2026-08-24):** the first adapter, rolling-origin, publication, and
+monitoring migration slices are implemented and live accepted. Canonical dbt
 relations now expose series, observations, features, and eligibility through opaque series keys,
 structured entity identity, explicit period roles, target availability, eligibility, and data
 cutoffs. The existing versioned hierarchy node and edge tables complete the six-relation physical
@@ -150,7 +150,12 @@ dataset:
 3. Migrate training, prediction, backtesting, publication, and reconciliation consumers.
    Backtesting, scheduled publication, output persistence, reconciliation evidence, retrieval,
    and realized monitoring are complete; the remaining model families and hierarchy adapter
-   configuration remain.
+configuration remain.
+
+The DDL, canonical adapter/staging suite, publication/calibration/FVA marts, strengthened
+canonical publication acceptance, and complete monitoring selector passed in the live
+`tds-favorita.favorita` environment. See
+[canonical identity migration acceptance](../acceptance/canonical_identity_migration_2026-08-24.md).
 4. Move Favorita-specific output columns into downstream consumption views.
 5. Retain compatibility aliases until the migration policy permits their removal.
 
