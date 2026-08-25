@@ -36,7 +36,6 @@ def _source_predictions(run_id: str, table_prefix: str, project_id: str):
           run_at,
           date,
           forecast_date,
-          target_timestamp,
           forecast_horizon,
           prediction,
           COALESCE(prediction_lower, prediction) AS prediction_lower,

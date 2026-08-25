@@ -783,6 +783,7 @@ models:
           - not_null
       - name: target_timestamp
         description: Canonical timestamp identifying the forecast target period.
+        data_tests: [not_null]
       - name: target_date
         description: Business date being forecasted.
         data_tests:
@@ -798,6 +799,7 @@ models:
         description: Comma-delimited contract dimensions for the forecast grain.
       - name: series_key
         description: Stable opaque identifier for the forecast series.
+        data_tests: [not_null]
       - name: entity_key_json
         description: JSON object of entity key values at the forecast grain.
         data_tests:
