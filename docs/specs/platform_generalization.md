@@ -92,9 +92,11 @@ while the configured store-grain XGBoost rolling-origin path now loads
 `entity_key_json` in prediction and metric evidence. The standard prediction, scheduled
 publication, canonical forecast-output, reconciliation-evidence, retrieval, realized-calibration,
 and operations-FVA paths now carry `series_key`, `entity_key_json`, and canonical
-`target_timestamp`; `target_date` and retail payload fields remain compatibility fields. Migrating
-the remaining training/prediction families and hierarchy configuration/materialization paths to
-the same identity remains.
+`target_timestamp`; `target_date` and retail payload fields remain compatibility fields. All seven
+shipped model configurations now train and score through `forecast_features_store` using
+`period_start`, `series_key`, and `entity_key_json`. Shared XGBoost, random-forest, Prophet,
+ARIMA, SARIMA, and direct multi-horizon defaults use the same canonical roles. Live retraining of
+the newly migrated families and hierarchy configuration/materialization migration remain.
 
 ### Canonical relations
 
@@ -149,8 +151,8 @@ dataset:
 2. Add uniqueness, nullability, type, point-in-time, eligibility, and hierarchy tests.
 3. Migrate training, prediction, backtesting, publication, and reconciliation consumers.
    Backtesting, scheduled publication, output persistence, reconciliation evidence, retrieval,
-   and realized monitoring are complete; the remaining model families and hierarchy adapter
-configuration remain.
+   realized monitoring, and model-family configuration are complete; live family retraining and
+   hierarchy adapter configuration remain.
 
 The DDL, canonical adapter/staging suite, publication/calibration/FVA marts, strengthened
 canonical publication acceptance, and complete monitoring selector passed in the live

@@ -43,7 +43,7 @@ class TestBackfillDates:
 
 @pytest.mark.unit
 class TestBackfillSql:
-    TABLE = "tds-favorita.favorita.int_sales_store_daily"
+    TABLE = "tds-favorita.favorita.forecast_features_store"
     AS_OF = date(2016, 8, 16)
 
     def test_train_sql_ends_day_before_as_of(self):

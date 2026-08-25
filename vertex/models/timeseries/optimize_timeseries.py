@@ -67,8 +67,8 @@ def run_optimize_timeseries(config: dict[str, Any]) -> dict[str, Any]:
     model_family = spec.get("model_family")
 
     target_column = inputs["target_column"]
-    date_column = inputs.get("date_column", "date")
-    entity_column = inputs.get("entity_column", "store_nbr")
+    date_column = inputs.get("date_column", "period_start")
+    entity_column = inputs.get("entity_column", "series_key")
     test_size = float(inputs.get("test_size", 0.2))
     trial_count = int(inputs.get("trial_count", 10))
     objective_metric = inputs.get("objective_metric", "mae")

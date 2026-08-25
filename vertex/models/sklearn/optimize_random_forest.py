@@ -64,7 +64,7 @@ def run_optimize_random_forest(config: dict[str, Any]) -> dict[str, Any]:
 
     target_column = inputs["target_column"]
     test_size = float(inputs.get("test_size", 0.2))
-    date_column = inputs.get("date_column", "date")
+    date_column = inputs.get("date_column", "period_start")
     trial_count = int(inputs.get("trial_count", 10))
     objective_metric = inputs.get("objective_metric", "mae")
     excluded_columns = list(inputs.get("excluded_columns", []))

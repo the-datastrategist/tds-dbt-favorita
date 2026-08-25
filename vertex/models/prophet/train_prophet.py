@@ -39,8 +39,8 @@ def run_train_prophet(config: dict[str, Any]) -> dict[str, Any]:
     model_family = spec.get("model_family")
 
     target_column = inputs["target_column"]
-    date_column = inputs.get("date_column", "date")
-    entity_column = inputs.get("entity_column", "store_nbr")
+    date_column = inputs.get("date_column", "period_start")
+    entity_column = inputs.get("entity_column", "series_key")
     test_size = float(inputs.get("test_size", 0.2))
     min_train_obs = int(inputs.get("min_train_obs", 30))
     max_entities = inputs.get("max_entities")

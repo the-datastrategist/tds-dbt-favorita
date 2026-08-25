@@ -46,12 +46,13 @@ class TestPredictionRows:
         assert rows["prediction"].tolist() == [9.5, 19.0]
         assert rows["entity_id"].tolist() == ["e1", "e2"]
 
-    def test_store_nbr_maps_to_bq_entity_columns(self):
+    def test_canonical_identity_is_preserved_without_domain_mapping(self):
         df = pd.DataFrame(
             {
-                "store_nbr": [10, 20],
-                "date": pd.to_datetime(["2024-01-01", "2024-01-02"]),
-                "sales_store": [100.0, 200.0],
+                "series_key": ["series-10", "series-20"],
+                "entity_key_json": ['{"location":"10"}', '{"location":"20"}'],
+                "period_start": pd.to_datetime(["2024-01-01", "2024-01-02"]),
+                "target_value": [100.0, 200.0],
             }
         )
         predictions = pd.Series([95.0, 195.0], index=df.index)
@@ -65,9 +66,12 @@ class TestPredictionRows:
             config_name="favorita_store_n1d_xgboost",
             model_family="favorita_store_daily",
             model_type="xgboost_sklearn",
-            target_column="sales_store",
+            target_column="target_value",
             run_at=run_at,
-            id_columns=["store_nbr"],
         )
-        assert rows["store_id"].tolist() == [10, 20]
-        assert rows["entity_id"].tolist() == ["10", "20"]
+        assert rows["series_key"].tolist() == ["series-10", "series-20"]
+        assert rows["entity_key_json"].tolist() == [
+            '{"location":"10"}',
+            '{"location":"20"}',
+        ]
+        assert rows["store_id"].isna().all()

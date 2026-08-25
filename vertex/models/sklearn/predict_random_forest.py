@@ -69,11 +69,11 @@ def run_predict_random_forest(config: dict[str, Any]) -> dict[str, Any]:
     config_name = spec["config_name"]
     model_family = spec.get("model_family")
 
-    target_column = inputs.get("target_column") or "sales"
-    date_column = inputs.get("date_column", "date")
+    target_column = inputs.get("target_column") or "target_value"
+    date_column = inputs.get("date_column", "period_start")
     excluded_columns = list(inputs.get("excluded_columns", []))
     categorical_columns = list(inputs.get("categorical_columns", []))
-    id_columns = list(inputs.get("id_columns", ["store_nbr"]))
+    id_columns = list(inputs.get("id_columns", ["series_key"]))
     gcs_model_path = inputs.get("gcs_model_path")
     artifact_config_name = inputs.get("artifact_config_name") or config_name
     model_run_id = inputs.get("model_run_id")

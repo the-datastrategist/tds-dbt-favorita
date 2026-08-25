@@ -8,6 +8,7 @@ from vertex.config.load_config import (
     explain_top_k_features,
     get_job_spec,
     list_run_config_names,
+    load_all_configs,
     load_model_config,
     validate_config_all_steps,
     validate_config_for_step,
@@ -30,6 +31,15 @@ class TestLoadConfig:
         assert arima["model_type"] == "arima"
         sarima = load_model_config("favorita_store_n1d_sarima")
         assert sarima["model_type"] == "sarima"
+
+    def test_all_model_families_use_canonical_dataset_roles(self):
+        for config in load_all_configs():
+            inputs = config["inputs"]
+            assert "forecast_features_store" in inputs["train_sql_query"]
+            assert "forecast_features_store" in inputs["predict_sql_query"]
+            assert inputs["date_column"] == "period_start"
+            assert inputs["entity_column"] == "series_key"
+            assert inputs["id_columns"] == ["series_key", "entity_key_json"]
 
     def test_apply_job_step(self):
         config = apply_job_step(load_model_config("favorita_store_n1d_xgboost"), "predict")

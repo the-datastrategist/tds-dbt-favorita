@@ -74,7 +74,7 @@ def run_train_direct_xgboost(config: dict[str, Any]) -> dict[str, Any]:
             target_column=target,
             excluded_columns=excluded,
             categorical_columns=list(inputs.get("categorical_columns", [])),
-            date_column=inputs.get("date_column", "date"),
+            date_column=inputs.get("date_column", "period_start"),
         )
         if common_features is None:
             common_features = features
@@ -85,7 +85,7 @@ def run_train_direct_xgboost(config: dict[str, Any]) -> dict[str, Any]:
             features,
             target,
             test_size=float(inputs.get("test_size", 0.2)),
-            date_column=inputs.get("date_column", "date"),
+            date_column=inputs.get("date_column", "period_start"),
             purge_days=int(inputs.get("validation_purge_days", 0)),
         )
         models[horizon] = train_sklearn_xgboost(X_train, y_train, parameters)
@@ -152,7 +152,7 @@ def run_predict_direct_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         target_column=first_target,
         excluded_columns=list(inputs.get("excluded_columns", [])) + list(targets.values()),
         categorical_columns=list(inputs.get("categorical_columns", [])),
-        date_column=inputs.get("date_column", "date"),
+        date_column=inputs.get("date_column", "period_start"),
     )
     model_input = prepare_model_input(features)
     validate_model_features_from_config(
@@ -168,7 +168,7 @@ def run_predict_direct_xgboost(config: dict[str, Any]) -> dict[str, Any]:
         artifact_uri=artifact_uri,
     )
     batches: list[pd.DataFrame] = []
-    id_columns = list(inputs.get("id_columns", ["store_nbr"]))
+    id_columns = list(inputs.get("id_columns", ["series_key"]))
     for horizon in sorted(targets):
         batch = build_standard_prediction_rows(
             frame.loc[model_input.index],
@@ -182,7 +182,7 @@ def run_predict_direct_xgboost(config: dict[str, Any]) -> dict[str, Any]:
             target_column=targets[horizon],
             run_at=run_at,
             id_columns=id_columns,
-            date_column=inputs.get("date_column", "date"),
+            date_column=inputs.get("date_column", "period_start"),
             forecast_horizon=horizon,
             model_artifact_uri=artifact_uri,
             actual_column=targets[horizon] if targets[horizon] in frame.columns else None,
@@ -194,7 +194,7 @@ def run_predict_direct_xgboost(config: dict[str, Any]) -> dict[str, Any]:
     validate_complete_horizon_batch(
         rows,
         horizons=sorted(targets),
-        entity_columns=[*id_columns, inputs.get("date_column", "date")],
+        entity_columns=[*id_columns, inputs.get("date_column", "period_start")],
     )
     project_id = inputs.get("project_id") or os.getenv("GOOGLE_PROJECT_ID")
     load_to_bigquery(rows, outputs["prediction_table"], project_id=project_id, if_exists="append")
