@@ -1,6 +1,10 @@
 hierarchy:
   name: favorita_demand
   version: v1
+  source:
+    relation: forecast_features_store
+    entity_key_json_column: entity_key_json
+    effective_from: '2013-01-01'
   levels:
     - name: company
       keys: []

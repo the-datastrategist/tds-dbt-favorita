@@ -24,6 +24,11 @@ The reference graph is pinned by `vertex/config/hierarchy.yaml`; the scheduled c
 and reconciliation method must exactly match the hierarchy file. Nodes and edges are versioned in
 BigQuery so a historical run always retains its original graph semantics.
 
+The hierarchy file also declares a canonical source relation, its `entity_key_json` column, and
+an effective date. `make vertex-hierarchy-materialize` derives every configured level and edge
+from those opaque canonical identities; project-specific source columns do not enter the
+reconciliation runtime. Use `HIERARCHY_CONFIG_PATH=<path>` to select a different hierarchy file.
+
 Supported methods are:
 
 - `bottom_up`: retain leaf forecasts and aggregate them upward. This is the reference default.
@@ -42,9 +47,10 @@ Apply the DDL and hierarchy graph, then execute the scheduled hierarchy-aware co
 
 ```bash
 make vertex-bq-ddl
-make vertex-hierarchy-load
+make vertex-hierarchy-materialize
 make prefect-flow-scheduled-forecast \
-  FORECAST_CONTRACT=vertex/config/forecast_contract_hierarchical_publication.yaml
+  CONTRACT_PATH=vertex/config/forecast_contract_hierarchical_publication.yaml \
+  HIERARCHY_CONFIG_PATH=vertex/config/hierarchy.yaml
 ```
 
 Verify an immutable live run with:

@@ -10,6 +10,7 @@ import pandas as pd
 
 from vertex.config.feature_availability import feature_cutoff_metadata_from_frame
 from vertex.config.forecast_contract import ForecastContract, load_forecast_contract
+from vertex.domain.periods import shift_periods
 from vertex.utils.bigquery_utils import insert_rows_idempotent, merge_row_to_bigquery
 from vertex.utils.data_utils import get_hash
 from vertex.utils.forecast_lifecycle import build_status_events, validate_forecast_status
@@ -131,9 +132,12 @@ def build_forecast_output_rows(
         explicit_target = pd.to_datetime(work["forecast_date"], errors="coerce")
     else:
         explicit_target = pd.Series(pd.NaT, index=work.index)
-    calculated_target = source_date + pd.to_timedelta(horizon.astype(int), unit="D")
+    calculated_target = shift_periods(source_date, horizon, contract.frequency)
+    mismatched_target = explicit_target.notna() & (explicit_target != calculated_target)
+    if mismatched_target.any():
+        raise ValueError("explicit target timestamps must match contract frequency and horizon")
     target_date = explicit_target.where(explicit_target.notna(), calculated_target)
-    forecast_origin = target_date - pd.to_timedelta(horizon.astype(int), unit="D")
+    forecast_origin = source_date
     if target_date.isna().any() or forecast_origin.isna().any():
         raise ValueError("every canonical forecast row must have a valid origin and target date")
 

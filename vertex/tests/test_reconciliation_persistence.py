@@ -19,6 +19,11 @@ def test_builds_deterministic_append_only_records():
             "hierarchy": {
                 "name": "retail",
                 "version": "v1",
+                "source": {
+                    "relation": "forecast_features_store",
+                    "entity_key_json_column": "entity_key_json",
+                    "effective_from": "2026-01-01",
+                },
                 "levels": [
                     {"name": "company", "keys": []},
                     {"name": "store", "keys": ["store_id"]},

@@ -11,6 +11,7 @@ import pandas as pd
 
 from vertex.config.forecast_contract import ForecastContract
 from vertex.config.hierarchy import HierarchyConfig
+from vertex.domain.periods import shift_periods
 from vertex.evaluation.calibration import fit_horizon_calibrator
 from vertex.evaluation.reconciliation import coherence_violations, reconcile_forecasts
 from vertex.evaluation.reconciliation_persistence import build_reconciliation_records
@@ -79,7 +80,7 @@ def eligibility_snapshot_id(
         raise ValueError(f"prediction rows cannot form eligibility snapshot: {missing}")
     work = prediction_rows.copy()
     origin = pd.to_datetime(work["date"], errors="raise")
-    target = origin + pd.to_timedelta(work["forecast_horizon"].astype(int), unit="D")
+    target = shift_periods(origin, work["forecast_horizon"], contract.frequency)
     keys = []
     for index, row in work.iterrows():
         entity = {
@@ -103,7 +104,7 @@ def _eligibility_keys(rows: pd.DataFrame, contract: ForecastContract) -> list[st
     if missing := sorted(required.difference(rows.columns)):
         raise ValueError(f"eligibility rows are missing required columns: {missing}")
     origins = pd.to_datetime(rows["date"], errors="raise")
-    targets = origins + pd.to_timedelta(rows["forecast_horizon"].astype(int), unit="D")
+    targets = shift_periods(origins, rows["forecast_horizon"], contract.frequency)
     keys: list[str] = []
     for index, row in rows.iterrows():
         entity = {

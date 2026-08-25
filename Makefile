@@ -618,8 +618,8 @@ prefect-flow-model-lifecycle: ## Run governed model lifecycle flow once in Docke
 prefect-flow-scheduled-forecast: ## Score champion and create a validated draft in Docker
 	$(DOCKER_RUN) python -c "from orchestration.flows.scheduled_forecast_pipeline import prefect_scheduled_forecast_pipeline_flow; prefect_scheduled_forecast_pipeline_flow($(if $(CONTRACT_PATH),contract_path='$(CONTRACT_PATH)',) $(if $(HIERARCHY_CONFIG_PATH),hierarchy_config_path='$(HIERARCHY_CONFIG_PATH)',))"
 
-vertex-hierarchy-materialize: ## Materialize the pinned Favorita company-to-store hierarchy in BigQuery
-	$(DOCKER_RUN) python scripts/materialize_favorita_hierarchy.py $(ARGS)
+vertex-hierarchy-materialize: ## Materialize a configured hierarchy from canonical entity keys
+	$(DOCKER_RUN) python scripts/materialize_hierarchy.py $(if $(HIERARCHY_CONFIG_PATH),--config "$(HIERARCHY_CONFIG_PATH)",) $(ARGS)
 
 vertex-hierarchy-accept: ## Validate a live hierarchy-enabled draft (FORECAST_RUN_ID=...)
 	@test -n "$(FORECAST_RUN_ID)" || (echo "Set FORECAST_RUN_ID to the hierarchy-enabled draft" && exit 1)

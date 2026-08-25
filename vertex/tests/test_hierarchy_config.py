@@ -11,6 +11,11 @@ def _config(method: str = "bottom_up") -> dict:
     return {
         "hierarchy": {
             "name": "retail",
+            "source": {
+                "relation": "forecast_features_store",
+                "entity_key_json_column": "entity_key_json",
+                "effective_from": "2026-01-01",
+            },
             "levels": [
                 {"name": "company", "keys": []},
                 {"name": "store", "keys": ["store_id"]},
@@ -41,6 +46,15 @@ def test_rejects_level_that_drops_parent_keys():
 def test_middle_out_requires_middle_level():
     with pytest.raises(ValueError, match="middle_level"):
         validate_hierarchy_config(_config("middle_out"))
+
+
+@pytest.mark.unit
+def test_rejects_hierarchy_without_canonical_source():
+    raw = _config()
+    del raw["hierarchy"]["source"]
+
+    with pytest.raises(ValueError, match="hierarchy.source"):
+        validate_hierarchy_config(raw)
 
 
 @pytest.mark.unit

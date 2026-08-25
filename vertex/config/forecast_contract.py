@@ -8,11 +8,12 @@ from typing import Any, cast
 
 import yaml
 
+from vertex.domain.periods import SUPPORTED_FREQUENCIES
 from vertex.utils.data_utils import get_hash
 
 DEFAULT_FORECAST_CONTRACT_PATH = Path(__file__).resolve().parent / "forecast_contract.yaml"
 
-VALID_FREQUENCIES = frozenset({"day"})
+VALID_FREQUENCIES = SUPPORTED_FREQUENCIES
 VALID_RECONCILIATION_POLICIES = frozenset({"none", "bottom_up", "top_down", "middle_out", "mint"})
 VALID_DEMAND_POLICIES = frozenset(
     {

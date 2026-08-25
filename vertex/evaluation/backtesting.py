@@ -16,6 +16,7 @@ from vertex.config.feature_availability import (
     load_feature_availability_registry,
     registry_path_from_config,
 )
+from vertex.domain.periods import shift_period
 from vertex.evaluation.calibration import probabilistic_metrics
 from vertex.utils.data_utils import get_hash
 
@@ -440,7 +441,7 @@ def score_baselines(
         entity_rows = entity_rows.head(contract.max_entities)
     for origin in contract.origins:
         for horizon in contract.horizons:
-            target_date = origin + timedelta(days=horizon)
+            target_date = shift_period(origin, horizon, contract.forecast_contract.frequency)
             for _, entity_row in entity_rows.iterrows():
                 actual = _lookup_actual(
                     data,
@@ -584,8 +585,8 @@ def score_model_and_baselines(
     registry = load_feature_availability_registry(registry_path_from_config(model_config))
 
     for origin in contract.origins:
-        train_start = origin - timedelta(days=contract.train_window_days + horizon)
-        train_end = origin - timedelta(days=horizon)
+        train_end = shift_period(origin, -horizon, contract.forecast_contract.frequency)
+        train_start = train_end - timedelta(days=contract.train_window_days)
         train_rows = data[
             data[contract.date_column].gt(train_start)
             & data[contract.date_column].le(train_end)
@@ -617,7 +618,7 @@ def score_model_and_baselines(
             context=f"rolling-origin training features at {origin.isoformat()}",
         )
         predictions = predict_fn(train_rows, predict_rows, model_config)
-        target_date = origin + timedelta(days=horizon)
+        target_date = shift_period(origin, horizon, contract.forecast_contract.frequency)
 
         for row_index, entity_row in predict_rows.iterrows():
             entity_key = _canonical_entity_key(entity_row, contract)

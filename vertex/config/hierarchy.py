@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
@@ -11,6 +12,7 @@ import yaml
 from vertex.utils.data_utils import get_hash
 
 VALID_METHODS = frozenset({"bottom_up", "top_down", "middle_out", "mint"})
+SAFE_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,10 @@ class HierarchyConfig:
     @property
     def levels(self) -> list[dict[str, Any]]:
         return list(self.spec["levels"])
+
+    @property
+    def source(self) -> dict[str, str]:
+        return cast(dict[str, str], self.spec["source"])
 
     @property
     def method(self) -> str:
@@ -77,6 +83,17 @@ def validate_hierarchy_config(raw: dict[str, Any]) -> HierarchyConfig:
         previous_keys = set(keys)
     if len(set(names)) != len(names):
         raise ValueError("hierarchy level names must be unique")
+
+    source = spec.get("source")
+    if not isinstance(source, dict):
+        raise ValueError("hierarchy.source is required")
+    for field in ("relation", "entity_key_json_column", "effective_from"):
+        if not isinstance(source.get(field), str) or not source[field]:
+            raise ValueError(f"hierarchy.source.{field} is required")
+    if not SAFE_IDENTIFIER.fullmatch(source["relation"]):
+        raise ValueError("hierarchy.source.relation must be an unqualified relation name")
+    if not SAFE_IDENTIFIER.fullmatch(source["entity_key_json_column"]):
+        raise ValueError("hierarchy.source.entity_key_json_column must be a safe identifier")
 
     reconciliation = spec.get("reconciliation")
     if not isinstance(reconciliation, dict):

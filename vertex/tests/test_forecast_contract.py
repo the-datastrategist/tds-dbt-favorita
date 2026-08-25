@@ -52,3 +52,10 @@ class TestForecastContract:
 
         with pytest.raises(ValueError, match="quantiles"):
             validate_forecast_contract(raw)
+
+    @pytest.mark.parametrize("frequency", ["day", "week", "month"])
+    def test_accepts_supported_period_frequencies(self, frequency):
+        raw = _valid_contract()
+        raw["forecast"]["frequency"] = frequency
+
+        assert validate_forecast_contract(raw).frequency == frequency
