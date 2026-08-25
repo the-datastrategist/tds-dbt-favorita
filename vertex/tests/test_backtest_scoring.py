@@ -63,9 +63,7 @@ class TestBaselineScoring:
 
         assert list(result.predictions.columns) == PREDICTION_COLUMNS
         assert len(result.predictions) == 8
-        store_one = result.predictions[
-            result.predictions["entity_key_json"] == '{"store_id":"1"}'
-        ]
+        store_one = result.predictions[result.predictions["entity_key_json"] == '{"store_id":"1"}']
         predictions = dict(zip(store_one["baseline_name"], store_one["prediction"]))
         assert predictions == {
             "zero_demand": 0.0,
@@ -185,9 +183,7 @@ class TestBaselineScoring:
             backtest_run_id="run-1",
         )
 
-        store_one = result.predictions[
-            result.predictions["entity_key_json"] == '{"store_id":"1"}'
-        ]
+        store_one = result.predictions[result.predictions["entity_key_json"] == '{"store_id":"1"}']
         assert store_one.iloc[0]["prediction"] == 42
 
     def test_intermittent_demand_baselines_are_deterministic(self):
@@ -198,9 +194,7 @@ class TestBaselineScoring:
         pd.testing.assert_series_equal(
             first.predictions["prediction"], second.predictions["prediction"]
         )
-        store_two = first.predictions[
-            first.predictions["entity_key_json"] == '{"store_id":"2"}'
-        ]
+        store_two = first.predictions[first.predictions["entity_key_json"] == '{"store_id":"2"}']
         assert store_two["prediction"].tolist() == [0.0, 0.0, 0.0]
 
     def test_scores_configured_model_on_same_origin_and_run(self):

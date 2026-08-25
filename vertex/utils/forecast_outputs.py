@@ -153,7 +153,9 @@ def build_forecast_output_rows(
     if "entity_key_json" not in work.columns:
         missing_dimensions = sorted(set(contract.dimensions) - set(dimensions))
         if missing_dimensions:
-            raise ValueError(f"prediction rows are missing contract dimensions: {missing_dimensions}")
+            raise ValueError(
+                f"prediction rows are missing contract dimensions: {missing_dimensions}"
+            )
         if work[dimensions].isna().any(axis=None):
             raise ValueError("contract dimension values cannot be null")
 

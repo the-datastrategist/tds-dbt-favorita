@@ -74,8 +74,7 @@ def test_bigquery_query_selects_only_required_deduplicated_columns():
 
     selected = query.split(" FROM ", maxsplit=1)[0]
     assert selected == (
-        "SELECT `series_key`, `entity_key_json`, `store_segment`, "
-        "`period_start`, `target_value`"
+        "SELECT `series_key`, `entity_key_json`, `store_segment`, " "`period_start`, `target_value`"
     )
 
 
