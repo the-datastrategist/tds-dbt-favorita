@@ -35,5 +35,8 @@ def test_materialization_uses_canonical_identity_and_configured_levels() -> None
     assert "JSON_VALUE(entity_key_json, '$.store_id')" in sql
     assert "JSON_QUERY(entity_key_json, '$.store_id')" in sql
     assert "'company:all'" in sql
+    assert "PARTITION BY node_id" in sql
+    assert "PARTITION BY parent_node_id, child_node_id" in sql
+    assert "UNION DISTINCT" not in sql
     assert "int_sales_store_daily" not in sql
     assert "store_nbr" not in sql
