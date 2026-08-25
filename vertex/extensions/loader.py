@@ -7,6 +7,7 @@ from typing import Any
 
 from vertex.extensions.contracts import EXTENSION_API_VERSION, ExtensionMetadata
 
+
 class ExtensionLoadError(ValueError):
     """An extension cannot be imported or does not satisfy its declared contract."""
 
