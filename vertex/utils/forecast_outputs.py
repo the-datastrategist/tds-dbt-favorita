@@ -23,9 +23,11 @@ FORECAST_OUTPUT_COLUMNS = [
     "forecast_contract_hash",
     "contract_enforced",
     "forecast_origin",
+    "target_timestamp",
     "target_date",
     "horizon",
     "grain",
+    "series_key",
     "entity_key_json",
     "target",
     "target_unit",
@@ -70,6 +72,25 @@ def _json_safe_entity(row: pd.Series, dimensions: list[str]) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
+def _canonical_identity(row: pd.Series, dimensions: list[str]) -> tuple[str, str]:
+    """Resolve authoritative adapter identity with a compatibility fallback."""
+    raw_entity = row.get("entity_key_json")
+    if raw_entity is not None and not pd.isna(raw_entity):
+        entity = json.loads(raw_entity) if isinstance(raw_entity, str) else raw_entity
+        if not isinstance(entity, dict):
+            raise ValueError("entity_key_json must contain a JSON object")
+        entity_key_json = json.dumps(entity, sort_keys=True, separators=(",", ":"))
+    else:
+        entity_key_json = _json_safe_entity(row, dimensions)
+    raw_series = row.get("series_key")
+    series_key = (
+        str(raw_series)
+        if raw_series is not None and not pd.isna(raw_series) and str(raw_series)
+        else get_hash({"entity_key_json": entity_key_json})
+    )
+    return series_key, entity_key_json
+
+
 def build_forecast_output_rows(
     prediction_rows: pd.DataFrame,
     *,
@@ -102,8 +123,11 @@ def build_forecast_output_rows(
     if horizon.isna().any():
         raise ValueError("every canonical forecast row must include a horizon")
 
-    source_date = pd.to_datetime(work["date"], errors="coerce")
-    if "forecast_date" in work.columns:
+    source_column = "period_start" if "period_start" in work.columns else "date"
+    source_date = pd.to_datetime(work[source_column], errors="coerce")
+    if "target_timestamp" in work.columns:
+        explicit_target = pd.to_datetime(work["target_timestamp"], errors="coerce")
+    elif "forecast_date" in work.columns:
         explicit_target = pd.to_datetime(work["forecast_date"], errors="coerce")
     else:
         explicit_target = pd.Series(pd.NaT, index=work.index)
@@ -126,13 +150,19 @@ def build_forecast_output_rows(
         raise ValueError(f"canonical forecast provenance is incomplete: {', '.join(missing)}")
 
     dimensions = [col for col in contract.dimensions if col in work.columns]
-    missing_dimensions = sorted(set(contract.dimensions) - set(dimensions))
-    if missing_dimensions:
-        raise ValueError(f"prediction rows are missing contract dimensions: {missing_dimensions}")
-    if work[dimensions].isna().any(axis=None):
-        raise ValueError("contract dimension values cannot be null")
+    if "entity_key_json" not in work.columns:
+        missing_dimensions = sorted(set(contract.dimensions) - set(dimensions))
+        if missing_dimensions:
+            raise ValueError(f"prediction rows are missing contract dimensions: {missing_dimensions}")
+        if work[dimensions].isna().any(axis=None):
+            raise ValueError("contract dimension values cannot be null")
 
-    entity_keys = work.apply(lambda row: _json_safe_entity(row, dimensions), axis=1)
+    identities = work.apply(lambda row: _canonical_identity(row, dimensions), axis=1)
+    series_keys = identities.map(lambda value: value[0])
+    entity_keys = identities.map(lambda value: value[1])
+    identity_pairs = pd.DataFrame({"series_key": series_keys, "entity_key_json": entity_keys})
+    if identity_pairs.groupby("series_key")["entity_key_json"].nunique().gt(1).any():
+        raise ValueError("series_key must map to exactly one entity_key_json")
     forecast_run_ids = work["predict_run_id"]
     if forecast_run_ids.nunique(dropna=False) != 1 or forecast_run_ids.isna().any():
         raise ValueError("a canonical persistence batch must contain exactly one forecast_run_id")
@@ -170,9 +200,11 @@ def build_forecast_output_rows(
             "forecast_contract_hash": contract.hash,
             "contract_enforced": True,
             "forecast_origin": forecast_origin,
+            "target_timestamp": target_date,
             "target_date": target_date.dt.date,
             "horizon": horizon,
             "grain": ",".join(contract.dimensions),
+            "series_key": series_keys,
             "entity_key_json": entity_keys,
             "target": contract.target,
             "target_unit": contract.target_unit,

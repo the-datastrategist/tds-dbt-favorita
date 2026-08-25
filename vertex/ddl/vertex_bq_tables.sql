@@ -154,6 +154,8 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.ml_model_predictions` (
   run_at TIMESTAMP NOT NULL,
   run_date DATE NOT NULL,
   target_column STRING,
+  series_key STRING,
+  entity_key_json STRING,
   entity_id STRING,
   store_id INT64,
   product_id INT64,
@@ -168,6 +170,12 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.ml_model_predictions` (
 )
 PARTITION BY run_date
 CLUSTER BY model_family, model_type, config_name;
+
+ALTER TABLE `tds-favorita.favorita.ml_model_predictions`
+ADD COLUMN IF NOT EXISTS series_key STRING;
+
+ALTER TABLE `tds-favorita.favorita.ml_model_predictions`
+ADD COLUMN IF NOT EXISTS entity_key_json STRING;
 
 -- One immutable record per logical rolling-origin execution. Re-running the
 -- same contract and input fingerprint produces the same backtest_run_id.
@@ -584,9 +592,11 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_outputs` (
   forecast_contract_name STRING NOT NULL,
   forecast_contract_hash STRING NOT NULL,
   forecast_origin TIMESTAMP NOT NULL,
+  target_timestamp TIMESTAMP NOT NULL,
   target_date DATE NOT NULL,
   horizon INT64 NOT NULL,
   grain STRING NOT NULL,
+  series_key STRING NOT NULL,
   entity_key_json STRING NOT NULL,
   target STRING NOT NULL,
   target_unit STRING,
@@ -647,6 +657,12 @@ ADD COLUMN IF NOT EXISTS reconciliation_method STRING;
 ALTER TABLE `tds-favorita.favorita.forecast_outputs`
 ADD COLUMN IF NOT EXISTS reconciliation_run_id STRING;
 
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS target_timestamp TIMESTAMP;
+
+ALTER TABLE `tds-favorita.favorita.forecast_outputs`
+ADD COLUMN IF NOT EXISTS series_key STRING;
+
 -- Versioned hierarchy nodes used by reconciliation runs.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_hierarchy_nodes` (
   hierarchy_name STRING NOT NULL,
@@ -705,7 +721,10 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_reconciled_outputs` (
   node_id STRING NOT NULL,
   level_name STRING NOT NULL,
   forecast_origin TIMESTAMP NOT NULL,
+  target_timestamp TIMESTAMP NOT NULL,
   target_date DATE NOT NULL,
+  series_key STRING NOT NULL,
+  entity_key_json STRING NOT NULL,
   horizon INT64 NOT NULL,
   base_prediction_p10 FLOAT64,
   base_prediction_p50 FLOAT64,
@@ -718,6 +737,15 @@ CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_reconciled_outputs` (
 )
 PARTITION BY DATE(forecast_origin)
 CLUSTER BY hierarchy_name, level_name, reconciliation_method;
+
+ALTER TABLE `tds-favorita.favorita.forecast_reconciled_outputs`
+ADD COLUMN IF NOT EXISTS target_timestamp TIMESTAMP;
+
+ALTER TABLE `tds-favorita.favorita.forecast_reconciled_outputs`
+ADD COLUMN IF NOT EXISTS series_key STRING;
+
+ALTER TABLE `tds-favorita.favorita.forecast_reconciled_outputs`
+ADD COLUMN IF NOT EXISTS entity_key_json STRING;
 
 -- Backtest comparison of base and reconciled accuracy by hierarchy level.
 CREATE TABLE IF NOT EXISTS `tds-favorita.favorita.forecast_reconciliation_metrics` (

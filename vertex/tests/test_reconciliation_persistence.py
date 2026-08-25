@@ -32,7 +32,10 @@ def test_builds_deterministic_append_only_records():
             "node_id": ["company"],
             "level_name": ["company"],
             "forecast_origin": ["2026-01-01"],
+            "target_timestamp": ["2026-01-02T00:00:00Z"],
             "target_date": ["2026-01-02"],
+            "series_key": ["company"],
+            "entity_key_json": ['{"scope":"company"}'],
             "horizon": [1],
             "base_prediction_p10": [8.0],
             "base_prediction_p50": [10.0],
@@ -59,6 +62,8 @@ def test_builds_deterministic_append_only_records():
     )
     assert first_outputs.loc[0, "base_prediction_p50"] == 10.0
     assert first_outputs.loc[0, "prediction_p50"] == 11.0
+    assert first_outputs.loc[0, "series_key"] == "company"
+    assert first_outputs.loc[0, "entity_key_json"] == '{"scope":"company"}'
 
 
 @pytest.mark.unit

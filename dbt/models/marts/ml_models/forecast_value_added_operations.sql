@@ -8,11 +8,12 @@ with published as (
         publications.publication_version,
         publications.destination,
         outputs.grain,
+        coalesce(outputs.series_key, to_hex(sha256(outputs.entity_key_json))) as series_key,
+        coalesce(outputs.target_timestamp, timestamp(outputs.target_date)) as target_timestamp,
         outputs.horizon,
         approvals.decided_by as planner,
         coalesce(overrides.reason_code, 'no_override') as reason_code,
         outputs.target_date,
-        safe_cast(json_value(outputs.entity_key_json, '$.store_nbr') as int64) as store_nbr,
         outputs.prediction_p50 as statistical_forecast,
         coalesce(overrides.override_value, outputs.prediction_p50) as planner_adjusted_forecast,
         publications.published_value as published_forecast
@@ -26,12 +27,12 @@ with published as (
 ), scored as (
     select
         published.*,
-        actuals.unconstrained_demand_units as actual,
-        actuals.unconstrained_demand_units is not null as has_actual
+        actuals.target_value as actual,
+        actuals.target_value is not null as has_actual
     from published
-    left join {{ ref('int_demand_store_daily') }} as actuals
-        on published.target_date = actuals.date
-        and published.store_nbr = actuals.store_nbr
+    left join {{ ref('forecast_observations') }} as actuals
+        on published.series_key = actuals.series_key
+        and date(published.target_timestamp) = actuals.period_start
 ), aggregate_errors as (
     select
         forecast_run_id,

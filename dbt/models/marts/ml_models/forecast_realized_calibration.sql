@@ -11,26 +11,26 @@ with matured_forecasts as (
         forecast_output_id,
         forecast_run_id,
         forecast_contract_name,
+        coalesce(series_key, to_hex(sha256(entity_key_json))) as series_key,
+        coalesce(target_timestamp, timestamp(target_date)) as target_timestamp,
         target_date,
         horizon,
-        safe_cast(json_value(entity_key_json, '$.store_id') as int64) as store_nbr,
         prediction_p10,
         prediction_p50,
         prediction_p90
     from {{ ref('stg_forecast_outputs') }}
     where target_date between date_sub(date({{ dbt.string_literal(evaluated_at) }}), interval {{ window_days - 1 }} day)
         and date({{ dbt.string_literal(evaluated_at) }})
-        and safe_cast(json_value(entity_key_json, '$.store_id') as int64) is not null
 ), realized as (
     select
         f.*,
-        d.observed_sales_units as actual,
-        f.prediction_p50 - d.observed_sales_units as median_error,
-        d.observed_sales_units between f.prediction_p10 and f.prediction_p90 as interval_contains_actual
+        d.target_value as actual,
+        f.prediction_p50 - d.target_value as median_error,
+        d.target_value between f.prediction_p10 and f.prediction_p90 as interval_contains_actual
     from matured_forecasts f
-    left join {{ ref('int_demand_store_daily') }} d
-        on f.target_date = d.date
-        and f.store_nbr = d.store_nbr
+    left join {{ ref('forecast_observations') }} d
+        on f.series_key = d.series_key
+        and date(f.target_timestamp) = d.period_start
 ), aggregated as (
     select
         forecast_contract_name,

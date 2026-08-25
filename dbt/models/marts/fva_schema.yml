@@ -68,8 +68,8 @@ unit_tests:
           - {publication_id: p2, forecast_output_id: o2, forecast_run_id: r1, approval_id: a2, publication_version: 1, destination: d1, published_value: 19}
       - input: ref('stg_forecast_outputs')
         rows:
-          - {forecast_output_id: o1, forecast_run_id: r1, forecast_contract_name: c1, forecast_contract_hash: h1, grain: store-day, horizon: 7, target_date: '2026-01-08', entity_key_json: '{"store_nbr":1}', prediction_p50: 12}
-          - {forecast_output_id: o2, forecast_run_id: r1, forecast_contract_name: c1, forecast_contract_hash: h1, grain: store-day, horizon: 7, target_date: '2026-01-08', entity_key_json: '{"store_nbr":2}', prediction_p50: 18}
+          - {forecast_output_id: o1, forecast_run_id: r1, forecast_contract_name: c1, forecast_contract_hash: h1, grain: store-day, horizon: 7, series_key: s1, target_timestamp: '2026-01-08 00:00:00+00', target_date: '2026-01-08', entity_key_json: '{"store_nbr":1}', prediction_p50: 12}
+          - {forecast_output_id: o2, forecast_run_id: r1, forecast_contract_name: c1, forecast_contract_hash: h1, grain: store-day, horizon: 7, series_key: s2, target_timestamp: '2026-01-08 00:00:00+00', target_date: '2026-01-08', entity_key_json: '{"store_nbr":2}', prediction_p50: 18}
       - input: ref('stg_forecast_approvals')
         rows:
           - {approval_id: a1, forecast_output_id: o1, forecast_run_id: r1, override_id: v1, decided_by: planner}
@@ -77,9 +77,9 @@ unit_tests:
       - input: ref('stg_forecast_overrides')
         rows:
           - {override_id: v1, forecast_output_id: o1, forecast_run_id: r1, override_value: 11, reason_code: promotion}
-      - input: ref('int_demand_store_daily')
+      - input: ref('forecast_observations')
         rows:
-          - {date: '2026-01-08', store_nbr: 1, unconstrained_demand_units: 10}
+          - {period_start: '2026-01-08', series_key: s1, target_value: 10}
     expect:
       rows:
         - {reason_code: promotion, forecast_count: 1, actual_count: 1, comparison_status: comparable, planner_wape_fva_points: 0.1, total_wape_fva_points: 0.1}

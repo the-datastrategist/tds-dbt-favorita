@@ -39,6 +39,8 @@ class TestPredictionRows:
             run_at=run_at,
         )
         assert len(rows) == 2
+        assert "series_key" in rows.columns
+        assert "entity_key_json" in rows.columns
         assert rows["model_id"].tolist() == ["mid", "mid"]
         assert rows["model_run_id"].tolist() == ["mrid", "mrid"]
         assert rows["prediction"].tolist() == [9.5, 19.0]

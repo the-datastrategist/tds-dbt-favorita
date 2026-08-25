@@ -76,6 +76,8 @@ def test_build_forecast_output_rows_from_standard_predictions():
     assert rows["forecast_contract_name"].tolist() == ["store_daily_demand"] * 2
     assert rows["forecast_run_id"].tolist() == ["predict-run"] * 2
     assert rows["horizon"].tolist() == [7, 7]
+    assert rows["series_key"].notna().all()
+    assert rows["target_timestamp"].dt.date.tolist() == rows["target_date"].tolist()
     assert rows["prediction_p50"].tolist() == [11.0, 21.0]
     assert rows["forecast_strategy"].tolist() == ["entity_model", "entity_model"]
     assert rows["fallback_reason"].isna().all()
@@ -92,6 +94,42 @@ def test_build_forecast_output_rows_from_standard_predictions():
         datetime(2024, 1, 8).date(),
         datetime(2024, 1, 9).date(),
     ]
+
+
+@pytest.mark.unit
+def test_canonical_identity_and_target_timestamp_are_authoritative():
+    predictions = pd.DataFrame(
+        {
+            "prediction_id": ["prediction-1"],
+            "predict_run_id": ["predict-run"],
+            "model_run_id": ["model-run"],
+            "model_id": ["model"],
+            "config_name": ["config"],
+            "model_family": ["family"],
+            "model_type": ["xgboost"],
+            "model_artifact_uri": ["gs://models/model.joblib"],
+            "series_key": ["opaque-series-1"],
+            "entity_key_json": ['{"location":"north"}'],
+            "period_start": pd.to_datetime(["2024-01-01T06:00:00Z"]),
+            "target_timestamp": pd.to_datetime(["2024-01-08T06:00:00Z"]),
+            "forecast_horizon": [7],
+            "prediction": [11.0],
+            "run_at": pd.to_datetime(["2024-01-02T06:00:00Z"]),
+        }
+    )
+
+    rows = build_forecast_output_rows(
+        predictions,
+        contract=_contract(),
+        feature_version="features-v1",
+        code_sha="abc123",
+        data_cutoff=datetime(2023, 12, 31),
+    )
+
+    assert rows.loc[0, "series_key"] == "opaque-series-1"
+    assert rows.loc[0, "entity_key_json"] == '{"location":"north"}'
+    assert rows.loc[0, "target_timestamp"] == pd.Timestamp("2024-01-08T06:00:00Z")
+    assert rows.loc[0, "target_date"] == datetime(2024, 1, 8).date()
 
 
 @pytest.mark.unit
