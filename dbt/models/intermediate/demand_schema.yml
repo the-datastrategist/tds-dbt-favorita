@@ -3,8 +3,9 @@ version: 2
 models:
   - name: int_demand_store_daily
     description: >
-      Canonical store-day demand interface. The reference data has no inventory feed, so observed
-      sales are explicitly used as the demand proxy and availability remains unknown.
+      Canonical store-day demand interface. Optional-source adapters can provide inventory,
+      assortment, lifecycle, price, promotion, closure, and external unconstrained-demand
+      evidence; the reference deployment leaves them disabled and uses observed sales as a proxy.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -18,9 +19,44 @@ models:
         data_tests:
           - accepted_values:
               arguments:
-                values: [observed_sales_only]
+                values: [observed_sales_only, exclude_stockout_days, impute_lost_demand_simple, external_unconstrained_demand]
       - name: availability_status
         data_tests: [not_null]
+
+  - name: int_demand_inventory_daily
+    description: Opt-in standardized inventory and stockout evidence at one row per store-day.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [store_nbr, date]
+
+  - name: int_demand_price_daily
+    description: Opt-in standardized price evidence at one row per store-day.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [store_nbr, date]
+
+  - name: int_demand_promotion_daily
+    description: Opt-in standardized promotion evidence at one row per store-day.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [store_nbr, date]
+
+  - name: int_demand_closure_daily
+    description: Opt-in standardized store-closure evidence at one row per store-day.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [store_nbr, date]
+
+  - name: int_demand_external_unconstrained_daily
+    description: Opt-in source-owned unconstrained-demand measure at one row per store-day.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [store_nbr, date]
 
   - name: forecast_eligibility
     description: One explicit eligibility decision and exclusion reason per store and forecast date.

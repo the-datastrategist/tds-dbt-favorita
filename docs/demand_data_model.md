@@ -65,10 +65,39 @@ and excluded counts and flags missing snapshot IDs or missing summary evidence.
 
 ## Adapter requirements
 
-When adding inventory, assortment, lifecycle, price, promotion, or closure sources:
+The optional adapters are already present and disabled by default. Enable only the relations a
+deployment owns, in its target-specific dbt vars. Each configured relation must expose the
+standardized column names in the interface table above; an unset relation compiles to a typed,
+zero-row relation and therefore cannot silently invent availability evidence.
+
+```yaml
+vars:
+  demand_policy: exclude_stockout_days
+  demand_optional_sources:
+    inventory: {relation: "`client_raw.inventory_daily`"}
+    assortment: {relation: "`client_raw.store_assortment`"}
+    lifecycle: {relation: null}
+    price: {relation: "`client_raw.store_price_daily`"}
+    promotion: {relation: "`client_raw.promotion_plan_daily`"}
+    closure: {relation: "`client_raw.store_closures_daily`"}
+    external_unconstrained_demand: {relation: null}
+```
+
+The standardized views are `int_demand_inventory_daily`, `int_demand_assortment`,
+`int_demand_lifecycle`, `int_demand_price_daily`, `int_demand_promotion_daily`,
+`int_demand_closure_daily`, and `int_demand_external_unconstrained_daily`. Daily adapters are
+tested for one row per store/date. Effective-dated assortment and lifecycle feeds must not have
+overlapping active intervals for the same store.
+
+When adding or changing an optional source:
 
 1. Preserve source-effective timestamps and ingestion/cutoff evidence.
 2. Never forward-fill a planned feature across a revision boundary without its plan version.
 3. Keep unknown availability as unknown; do not translate it to in-stock.
-4. Add unit fixtures for closure, retirement, assortment, and stockout behavior.
+4. Validate the configured adapter with `dbt build --selector demand_data`; retain an adapter
+   fixture for closure, lifecycle, assortment, and stockout behavior.
 5. Compare eligible, forecasted, and excluded counts before allowing publication.
+6. Change `demand_policy` only when the requisite evidence is configured: confirmed inventory for
+   `exclude_stockout_days` or `impute_lost_demand_simple`, and a versioned external measure for
+   `external_unconstrained_demand`. Compilation fails if those policy/source dependencies are
+   not configured, or if the simple-imputation uplift is negative.
