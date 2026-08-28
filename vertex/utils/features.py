@@ -32,7 +32,15 @@ def prepare_feature_matrix(
     if cat_cols:
         work = pd.get_dummies(work, columns=cat_cols, dtype=int)
 
-    drop_cols = set(excluded_columns) | {target_column}
+    # Canonical adapters may carry several supervised labels (for example,
+    # ``target_horizon_7`` beside the configured one-step target). Labels must
+    # never become model inputs: that would leak future information and violate
+    # feature-availability validation. Apply the rule centrally so every
+    # tabular provider behaves consistently.
+    horizon_target_columns = {
+        column for column in work.columns if column.startswith("target_horizon_")
+    }
+    drop_cols = set(excluded_columns) | {target_column} | horizon_target_columns
     if date_column and date_column in work.columns:
         dates = pd.to_datetime(work[date_column], errors="coerce")
         drop_cols.discard(date_column)
