@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Optional
 
 import numpy as np
@@ -40,7 +41,19 @@ def prepare_feature_matrix(
     horizon_target_columns = {
         column for column in work.columns if column.startswith("target_horizon_")
     }
-    drop_cols = set(excluded_columns) | {target_column} | horizon_target_columns
+    # ``sales_*_n<period>d`` fields are realized future-demand aggregates in
+    # the canonical adapter. They are supervised labels for alternate horizons,
+    # not forecast-time covariates. The availability registry independently
+    # rejects them; excluding them here makes that invariant structural and
+    # prevents every model config from needing to enumerate every horizon.
+    realized_demand_columns = {
+        column
+        for column in work.columns
+        if re.match(r"^sales_(company|store|store_product|store_family)_n\d+d(?:_cum)?$", column)
+    }
+    drop_cols = (
+        set(excluded_columns) | {target_column} | horizon_target_columns | realized_demand_columns
+    )
     if date_column and date_column in work.columns:
         dates = pd.to_datetime(work[date_column], errors="coerce")
         drop_cols.discard(date_column)
