@@ -19,7 +19,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-FROM node:24-slim@sha256:3638d9a6fe4030bd716be989438248074489337ba3275657f93595428be4fc03 AS frontend-builder
+FROM node:25-slim@sha256:81db02c4b671288a03915da9534dbd54f96d0e7c24d80ccc54f5b36b2e684370 AS frontend-builder
 
 WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json ./
