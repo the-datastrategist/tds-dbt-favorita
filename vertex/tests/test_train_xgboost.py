@@ -59,6 +59,23 @@ class TestPrepareFeatureMatrix:
         assert "sales" in matrix.columns
         assert matrix["sales"].notna().all()
 
+    def test_excludes_all_horizon_target_labels(self):
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2024-01-01", periods=3, freq="D"),
+                "sales": [1.0, 2.0, 3.0],
+                "target_horizon_7": [8.0, 9.0, 10.0],
+                "feature_a": [0.1, 0.2, 0.3],
+            }
+        )
+        _matrix, features, _dates = prepare_feature_matrix(
+            df,
+            target_column="sales",
+            date_column="date",
+        )
+        assert "target_horizon_7" not in features
+        assert features == ["feature_a"]
+
 
 @pytest.mark.unit
 class TestTrainSklearnXgboost:
