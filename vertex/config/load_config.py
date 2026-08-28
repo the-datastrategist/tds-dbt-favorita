@@ -78,7 +78,7 @@ def load_all_configs(config_path: str | Path | None = None) -> list[dict[str, An
     configs = raw.get("configs") or []
     if not configs:
         raise ValueError(f"No configs found in {path}")
-    return [_merge_config_defaults(defaults, cfg) for cfg in configs]
+    return [_normalize_temporal_inputs(_merge_config_defaults(defaults, cfg)) for cfg in configs]
 
 
 def _merge_config_defaults(
@@ -171,6 +171,30 @@ def load_model_config(
     raise ValueError(f"Config with name {config_name!r} not found")
 
 
+def _forecast_contract_path(config: dict[str, Any]) -> str | Path | None:
+    inputs = config.get("inputs") or {}
+    outputs = config.get("outputs") or {}
+    return (
+        outputs.get("forecast_contract_path")
+        or config.get("forecast_contract_path")
+        or inputs.get("forecast_contract_path")
+    )
+
+
+def _normalize_temporal_inputs(config: dict[str, Any]) -> dict[str, Any]:
+    """Fill model runtime period settings from its forecast contract when available."""
+    out = copy.deepcopy(config)
+    inputs = out.setdefault("inputs", {})
+    contract_path = _forecast_contract_path(out)
+    if contract_path:
+        contract = load_forecast_contract(contract_path)
+        inputs.setdefault("forecast_frequency", contract.frequency)
+        inputs.setdefault("training_window_periods", contract.training_window_periods)
+    else:
+        inputs.setdefault("forecast_frequency", "day")
+    return out
+
+
 def get_job_spec(config: dict[str, Any]) -> dict[str, Any]:
     """
     Return normalized job routing fields: step, model_type, model_family.
@@ -259,14 +283,16 @@ def _validate_forecast_feature_contract(config: dict[str, Any]) -> None:
     """Validate forecast contract feature declarations when forecast outputs are configured."""
     outputs = config.get("outputs") or {}
     inputs = config.get("inputs") or {}
-    contract_path = (
-        outputs.get("forecast_contract_path")
-        or config.get("forecast_contract_path")
-        or inputs.get("forecast_contract_path")
-    )
+    contract_path = _forecast_contract_path(config)
     if not contract_path and not outputs.get("forecast_output_table"):
         return
     contract = load_forecast_contract(contract_path)
+    configured_frequency = str(inputs.get("forecast_frequency", contract.frequency))
+    if configured_frequency != contract.frequency:
+        raise ValueError(
+            f"{config.get('name')}: forecast_frequency must match forecast contract "
+            f"({configured_frequency!r} != {contract.frequency!r})"
+        )
     registry_path = (
         inputs.get("feature_availability_path")
         or outputs.get("feature_availability_path")
@@ -279,6 +305,9 @@ def _validate_forecast_feature_contract(config: dict[str, Any]) -> None:
 def _validate_prediction_horizons(config: dict[str, Any]) -> None:
     """Ensure a configured prediction batch is compatible with its forecast contract."""
     inputs = config.get("inputs") or {}
+    frequency = str(inputs.get("forecast_frequency", "day"))
+    if frequency not in {"day", "week", "month"}:
+        raise ValueError(f"{config.get('name')}: unsupported forecast_frequency {frequency!r}")
     raw_horizons = inputs.get("prediction_horizons")
     if raw_horizons is None:
         return
@@ -289,13 +318,13 @@ def _validate_prediction_horizons(config: dict[str, Any]) -> None:
         raise ValueError(
             f"{config.get('name')}: inputs.prediction_horizons must be unique positive integers"
         )
-    outputs = config.get("outputs") or {}
-    contract_path = (
-        outputs.get("forecast_contract_path")
-        or config.get("forecast_contract_path")
-        or inputs.get("forecast_contract_path")
-    )
+    contract_path = _forecast_contract_path(config)
     contract = load_forecast_contract(contract_path)
+    if frequency != contract.frequency:
+        raise ValueError(
+            f"{config.get('name')}: forecast_frequency must match forecast contract "
+            f"({frequency!r} != {contract.frequency!r})"
+        )
     if not set(horizons).issubset(set(contract.horizons)):
         raise ValueError(
             f"{config.get('name')}: prediction horizons must be declared by the forecast contract"

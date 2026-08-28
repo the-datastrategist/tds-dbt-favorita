@@ -47,6 +47,11 @@ class XGBoostProvider(RegistryModelProvider):
     model_type = "xgboost"
 
 
+class XGBoostDirectProvider(RegistryModelProvider):
+    model_type = "xgboost_direct"
+    supported_steps = frozenset({"train", "predict"})
+
+
 class RandomForestProvider(RegistryModelProvider):
     model_type = "random_forest"
 
@@ -61,3 +66,14 @@ class SarimaProvider(RegistryModelProvider):
 
 class ProphetProvider(RegistryModelProvider):
     model_type = "prophet"
+
+
+BUILTIN_MODEL_PROVIDERS = {
+    "xgboost": XGBoostProvider,
+    "xgboost_sklearn": XGBoostProvider,
+    "xgboost_direct": XGBoostDirectProvider,
+    "random_forest": RandomForestProvider,
+    "arima": ArimaProvider,
+    "sarima": SarimaProvider,
+    "prophet": ProphetProvider,
+}

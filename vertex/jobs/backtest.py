@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-from datetime import timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -15,6 +14,7 @@ from vertex.config.backtest_contract import (
     BacktestContract,
     load_backtest_contract,
 )
+from vertex.domain.periods import shift_period
 from vertex.evaluation.backtesting import (
     BaselineBacktestResult,
     score_baselines,
@@ -51,11 +51,22 @@ def build_bigquery_history_query(contract: BacktestContract) -> str:
     ]
     selected = ", ".join(f"`{column}`" for column in validated_columns)
     date_column = validate_bq_identifier(contract.date_column, label="history date column")
-    history_days = contract.train_window_days
+    history_periods = contract.train_window_periods
     if "same_period_last_year" in contract.baselines:
-        history_days = max(history_days, 366)
-    history_start = min(contract.origins) - timedelta(days=history_days)
-    history_end = max(contract.origins) + timedelta(days=max(contract.horizons))
+        history_periods = max(
+            history_periods,
+            (
+                53
+                if contract.forecast_contract.frequency == "week"
+                else 12 if contract.forecast_contract.frequency == "month" else 366
+            ),
+        )
+    history_start = shift_period(
+        min(contract.origins), -history_periods, contract.forecast_contract.frequency
+    )
+    history_end = shift_period(
+        max(contract.origins), max(contract.horizons), contract.forecast_contract.frequency
+    )
     bounded_history = (
         f"SELECT {selected} FROM `{contract.history_table}` "
         f"WHERE `{date_column}` BETWEEN DATE '{history_start.isoformat()}' "
@@ -90,11 +101,22 @@ def build_bigquery_model_history_query(contract: BacktestContract) -> str:
     """Build a bounded query over the configured model's complete feature input."""
     model_query = resolve_backtest_sql(contract.model_config).rstrip(";\n ")
     date_column = validate_bq_identifier(contract.date_column, label="history date column")
-    history_days = contract.train_window_days + max(contract.horizons)
+    history_periods = contract.train_window_periods + max(contract.horizons)
     if "same_period_last_year" in contract.baselines:
-        history_days = max(history_days, 366)
-    history_start = min(contract.origins) - timedelta(days=history_days)
-    history_end = max(contract.origins) + timedelta(days=max(contract.horizons))
+        history_periods = max(
+            history_periods,
+            (
+                53
+                if contract.forecast_contract.frequency == "week"
+                else 12 if contract.forecast_contract.frequency == "month" else 366
+            ),
+        )
+    history_start = shift_period(
+        min(contract.origins), -history_periods, contract.forecast_contract.frequency
+    )
+    history_end = shift_period(
+        max(contract.origins), max(contract.horizons), contract.forecast_contract.frequency
+    )
     bounded_history = (
         "SELECT model_history.* "
         f"FROM ({model_query}) AS model_history "

@@ -16,6 +16,7 @@ from vertex.config.pipelines import (
     load_pipeline_definitions,
     resolve_pipeline_step_configs,
 )
+from vertex.extensions.loader import load_model_provider, load_optional_providers
 
 
 def validate_all_configs(config_path: Path | None = None) -> list[str]:
@@ -25,6 +26,17 @@ def validate_all_configs(config_path: Path | None = None) -> list[str]:
 
     for config in load_all_configs(path):
         validate_config_all_steps(config)
+        load_optional_providers(config)
+        model_type = config.get("model_type") or (config.get("inputs") or {}).get("model_type")
+        if model_type:
+            for step in ("train", "predict", "optimize"):
+                try:
+                    load_model_provider(config, model_type=str(model_type), step=step)
+                except ValueError as exc:
+                    # A provider may deliberately expose fewer steps (for example,
+                    # direct multi-horizon XGBoost has no optimize implementation).
+                    if "does not support" not in str(exc):
+                        raise
         validated.append(config["name"])
 
     raw = load_raw_config(path)

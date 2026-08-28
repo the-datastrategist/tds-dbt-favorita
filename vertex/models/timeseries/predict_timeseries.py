@@ -88,6 +88,7 @@ def run_predict_timeseries(config: dict[str, Any]) -> dict[str, Any]:
             target_column=target_column,
             forecast_horizon=forecast_horizon,
             id_columns=id_columns,
+            frequency=str(inputs.get("forecast_frequency", "day")),
         )
     else:
         scored = predict_holdout_rows(

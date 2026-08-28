@@ -8,7 +8,7 @@ Import-path loading never scans the environment or mutates the central model reg
 ```yaml
 extensions:
   models:
-    - type: lightgbm
+    - model_type: lightgbm
       provider: client_forecasting.models:LightGBMProvider
       required_capabilities: [model.train, model.predict]
 ```
@@ -35,6 +35,11 @@ provider = load_extension(
 Extension failures use `ExtensionLoadError` for malformed paths, import/constructor errors,
 interface mismatches, incompatible API versions, and missing capabilities. Provider execution
 errors remain provider-specific and must not be silently converted into successful results.
+
+`vertex.jobs.run` and the Prefect Vertex training flow resolve this configuration for every
+train, predict, and optimize request. A scoped `model_type` selects the custom provider; absent a
+matching extension, the versioned built-in compatibility provider is used. The provider name and
+extension API version are included in the completed job result for run lineage.
 
 External packages can reuse `assert_provider_contract` from `vertex.extensions.testing` in their
 own test suite. The built-in XGBoost, random-forest, ARIMA, SARIMA, and Prophet compatibility

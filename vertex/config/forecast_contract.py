@@ -88,7 +88,14 @@ class ForecastContract:
 
     @property
     def training_window_days(self) -> int:
-        return int(self.spec["training_window_days"])
+        """Legacy alias for contracts that predate period-count training windows."""
+        value = self.spec.get("training_window_days")
+        return int(value if value is not None else self.spec["training_window_periods"])
+
+    @property
+    def training_window_periods(self) -> int:
+        value = self.spec.get("training_window_periods")
+        return int(value if value is not None else self.training_window_days)
 
     @property
     def reconciliation_policy(self) -> str:
@@ -137,13 +144,17 @@ def validate_forecast_contract(raw: dict[str, Any]) -> ForecastContract:
         "frequency",
         "timezone",
         "issue_schedule",
-        "training_window_days",
         "reconciliation_policy",
         "demand_policy",
     ]
     for field in required_scalars:
         if spec.get(field) in (None, ""):
             raise ValueError(f"forecast.{field} is required")
+    if spec.get("training_window_days") in (None, "") and spec.get("training_window_periods") in (
+        None,
+        "",
+    ):
+        raise ValueError("forecast.training_window_periods is required")
 
     dimensions = _require_list(spec, "dimensions")
     if not all(isinstance(item, str) and item for item in dimensions):
@@ -176,8 +187,10 @@ def validate_forecast_contract(raw: dict[str, Any]) -> ForecastContract:
         )
     if spec["demand_policy"] not in VALID_DEMAND_POLICIES:
         raise ValueError(f"forecast.demand_policy must be one of {sorted(VALID_DEMAND_POLICIES)}")
-    if int(spec["training_window_days"]) <= 0:
+    if "training_window_days" in spec and int(spec["training_window_days"]) <= 0:
         raise ValueError("forecast.training_window_days must be positive")
+    if "training_window_periods" in spec and int(spec["training_window_periods"]) <= 0:
+        raise ValueError("forecast.training_window_periods must be positive")
 
     hierarchy = spec.get("hierarchy") or []
     if spec["reconciliation_policy"] != "none" and not hierarchy:

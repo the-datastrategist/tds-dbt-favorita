@@ -14,6 +14,7 @@ import optuna
 import pandas as pd
 
 from vertex.config.load_config import DEFAULT_CONFIG_PATH, get_job_spec, load_model_config
+from vertex.domain.periods import seasonal_period
 from vertex.models.timeseries.ts_common import (
     bundle_model_id,
     default_model_params,
@@ -30,7 +31,9 @@ logger = logging.getLogger(__name__)
 SUPPORTED_TYPES = frozenset({"arima", "sarima"})
 
 
-def suggest_orders(trial: optuna.Trial, model_type: str) -> dict[str, Any]:
+def suggest_orders(
+    trial: optuna.Trial, model_type: str, *, frequency: str = "day"
+) -> dict[str, Any]:
     order = [
         trial.suggest_int("p", 0, 3),
         trial.suggest_int("d", 0, 2),
@@ -46,7 +49,7 @@ def suggest_orders(trial: optuna.Trial, model_type: str) -> dict[str, Any]:
             trial.suggest_int("P", 0, 2),
             trial.suggest_int("D", 0, 1),
             trial.suggest_int("Q", 0, 2),
-            trial.suggest_int("s", 7, 7),
+            trial.suggest_int("s", seasonal_period(frequency), seasonal_period(frequency)),
         ]
     else:
         params["seasonal_order"] = [0, 0, 0, 0]
@@ -74,6 +77,7 @@ def run_optimize_timeseries(config: dict[str, Any]) -> dict[str, Any]:
     objective_metric = inputs.get("objective_metric", "mae")
     min_train_obs = int(inputs.get("min_train_obs", 30))
     max_entities = inputs.get("max_entities")
+    frequency = str(inputs.get("forecast_frequency", "day"))
     if max_entities is not None:
         max_entities = int(max_entities)
 
@@ -96,8 +100,8 @@ def run_optimize_timeseries(config: dict[str, Any]) -> dict[str, Any]:
     trial_rows: list[dict[str, Any]] = []
 
     def objective(trial: optuna.Trial) -> float:
-        params = suggest_orders(trial, model_type)
-        base = default_model_params(model_type)
+        params = suggest_orders(trial, model_type, frequency=frequency)
+        base = default_model_params(model_type, frequency=frequency)
         base.update(params)
 
         try:

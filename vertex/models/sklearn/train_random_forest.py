@@ -123,6 +123,9 @@ def run_train_random_forest(
         target_column,
         test_size=test_size,
         date_column=sort_column,
+        purge_days=inputs.get("validation_purge_days"),
+        purge_periods=inputs.get("validation_purge_periods"),
+        frequency=str(inputs.get("forecast_frequency", "day")),
     )
 
     model = train_random_forest(X_train, y_train, model_parameters=params)

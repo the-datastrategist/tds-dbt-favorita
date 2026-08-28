@@ -5,8 +5,9 @@ from datetime import datetime, timezone
 import pandas as pd
 import pytest
 
-from vertex.config.forecast_contract import load_forecast_contract
+from vertex.config.forecast_contract import load_forecast_contract, validate_forecast_contract
 from vertex.config.hierarchy import load_hierarchy_config
+from vertex.domain.periods import shift_period
 from vertex.evaluation.forecast_pipeline import (
     ForecastRunPins,
     build_forecast_run_id,
@@ -60,14 +61,16 @@ def _calibration() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _pins(predictions: pd.DataFrame) -> ForecastRunPins:
-    contract = load_forecast_contract("vertex/config/forecast_contract_publication.yaml")
+def _pins(predictions: pd.DataFrame, contract=None, data_cutoff=ORIGIN) -> ForecastRunPins:
+    contract = contract or load_forecast_contract(
+        "vertex/config/forecast_contract_publication.yaml"
+    )
     return ForecastRunPins(
         champion_candidate_id="candidate-1",
         model_run_id="model-run-1",
         feature_version="features-1",
         feature_availability_hash="availability-1",
-        data_cutoff=ORIGIN,
+        data_cutoff=data_cutoff,
         source_cutoff_json={"sales": "2026-07-18"},
         eligibility_snapshot_id=eligibility_snapshot_id(predictions, contract),
         code_sha="abc123",
@@ -110,6 +113,36 @@ def test_pipeline_is_deterministic_and_produces_validated_draft() -> None:
     assert first.rows["calibration_run_id"].notna().all()
     assert first.rows["reconciliation_method"].eq("none").all()
     assert all(check["passed"] for check in first.validation_checks)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("frequency", "origin"),
+    [("week", pd.Timestamp("2026-07-13")), ("month", pd.Timestamp("2026-07-01"))],
+)
+def test_pipeline_accepts_weekly_and_monthly_contracts(
+    frequency: str, origin: pd.Timestamp
+) -> None:
+    raw = load_forecast_contract("vertex/config/forecast_contract_publication.yaml").raw
+    raw["forecast"].update({"frequency": frequency, "horizons": [2], "training_window_periods": 12})
+    raw["forecast"].pop("training_window_days", None)
+    contract = validate_forecast_contract(raw)
+    predictions = _predictions()
+    predictions["date"] = origin
+    predictions["forecast_horizon"] = 2
+    predictions["forecast_date"] = shift_period(origin, 2, frequency)
+    calibration = _calibration()
+    calibration["horizon"] = 2
+
+    result = execute_forecast_pipeline(
+        predictions,
+        calibration,
+        contract=contract,
+        pins=_pins(predictions, contract, data_cutoff=origin),
+    )
+
+    assert result.rows["target_timestamp"].eq(shift_period(origin, 2, frequency)).all()
+    assert all(check["passed"] for check in result.validation_checks)
 
 
 @pytest.mark.unit

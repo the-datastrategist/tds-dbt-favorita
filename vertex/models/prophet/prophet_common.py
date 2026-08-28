@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 from prophet import Prophet
 
+from vertex.domain.periods import future_period_starts, validate_frequency
 from vertex.models.timeseries.ts_common import TimeSeriesBundle, split_entity_frame
 from vertex.utils.metadata import get_performance_metrics
 
@@ -217,12 +218,13 @@ def predict_forward_rows(
     target_column: str,
     forecast_horizon: int,
     id_columns: list[str],
+    frequency: str = "day",
 ) -> pd.DataFrame:
     """Forecast `forecast_horizon` steps beyond each entity's last observed date, with
     Prophet's native yhat_lower/yhat_upper uncertainty interval."""
     records: list[dict[str, Any]] = []
     entity_models = bundle["entity_models"]
-    freq = pd.infer_freq(panel.sort_values(date_column)[date_column].iloc[:10])
+    validate_frequency(frequency)
 
     for entity, entity_df in panel.groupby(entity_column):
         entity_key = str(entity)
@@ -231,18 +233,7 @@ def predict_forward_rows(
             continue
         entity_df = entity_df.sort_values(date_column)
         last_date = entity_df[date_column].max()
-        if freq:
-            future_dates = pd.date_range(
-                start=last_date,
-                periods=forecast_horizon + 1,
-                freq=freq,
-            )[1:]
-        else:
-            future_dates = pd.date_range(
-                start=last_date + pd.Timedelta(days=1),
-                periods=forecast_horizon,
-                freq="D",
-            )
+        future_dates = future_period_starts(last_date, forecast_horizon, frequency)
         forecast = fitted.predict(pd.DataFrame({"ds": future_dates})).set_index("ds")
         base_row = entity_df.iloc[-1].to_dict()
         for step, pred_date in enumerate(future_dates, start=1):

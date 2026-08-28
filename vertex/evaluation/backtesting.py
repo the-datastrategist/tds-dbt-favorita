@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date
 from typing import Any
 
 import numpy as np
@@ -16,7 +16,7 @@ from vertex.config.feature_availability import (
     load_feature_availability_registry,
     registry_path_from_config,
 )
-from vertex.domain.periods import shift_period
+from vertex.domain.periods import seasonal_period, shift_period
 from vertex.evaluation.calibration import probabilistic_metrics
 from vertex.utils.data_utils import get_hash
 
@@ -177,13 +177,21 @@ def _baseline_prediction(
     entity_history = history[
         _entity_mask(history, contract.entity_columns, entity_row)
         & history[contract.date_column].le(origin)
-        & history[contract.date_column].gt(origin - timedelta(days=contract.train_window_days))
+        & history[contract.date_column].gt(
+            shift_period(
+                origin, -contract.train_window_periods, contract.forecast_contract.frequency
+            )
+        )
     ]
     observed = entity_history.dropna(subset=[contract.actual_column])
     if baseline == "last_observation":
         return None if observed.empty else float(observed.iloc[-1][contract.actual_column])
     if baseline == "seasonal_naive_7d":
-        lookup_date = target_date - timedelta(days=7)
+        lookup_date = shift_period(
+            target_date,
+            -seasonal_period(contract.forecast_contract.frequency),
+            contract.forecast_contract.frequency,
+        )
         if lookup_date > origin:
             return None
         return _lookup_actual(
@@ -345,7 +353,9 @@ def _build_scale_lookup(
                 _entity_mask(history, contract.entity_columns, entity_row)
                 & history[contract.date_column].le(origin)
                 & history[contract.date_column].gt(
-                    origin - timedelta(days=contract.train_window_days)
+                    shift_period(
+                        origin, -contract.train_window_periods, contract.forecast_contract.frequency
+                    )
                 )
             ].dropna(subset=[contract.actual_column])
             entity_key = _canonical_entity_key(entity_row, contract)
@@ -586,7 +596,9 @@ def score_model_and_baselines(
 
     for origin in contract.origins:
         train_end = shift_period(origin, -horizon, contract.forecast_contract.frequency)
-        train_start = train_end - timedelta(days=contract.train_window_days)
+        train_start = shift_period(
+            train_end, -contract.train_window_periods, contract.forecast_contract.frequency
+        )
         train_rows = data[
             data[contract.date_column].gt(train_start)
             & data[contract.date_column].le(train_end)

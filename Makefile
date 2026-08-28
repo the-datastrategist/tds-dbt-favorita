@@ -498,9 +498,12 @@ START_DATE ?=
 END_DATE ?=
 INTERVAL_DAYS ?= 1
 TRAIN_DAYS ?=
+INTERVAL_PERIODS ?=
+TRAIN_PERIODS ?=
+FORECAST_FREQUENCY ?=
 VERTEX_BACKFILL_ARGS ?=
 
-vertex-backfill: ## Backfill train+predict (START_DATE, END_DATE, INTERVAL_DAYS=1, VERTEX_BACKFILL_CONFIG)
+vertex-backfill: ## Backfill train+predict (START_DATE, END_DATE, INTERVAL_PERIODS=1, FORECAST_FREQUENCY=day)
 	@test -n "$(START_DATE)" || (echo "Set START_DATE=YYYY-MM-DD" && exit 1)
 	@test -n "$(END_DATE)" || (echo "Set END_DATE=YYYY-MM-DD" && exit 1)
 	$(DOCKER_RUN) python -m $(VERTEX_DIR).jobs.backfill \
@@ -508,8 +511,10 @@ vertex-backfill: ## Backfill train+predict (START_DATE, END_DATE, INTERVAL_DAYS=
 		--config-name $(VERTEX_BACKFILL_CONFIG) \
 		--start-date $(START_DATE) \
 		--end-date $(END_DATE) \
-		--interval-days $(INTERVAL_DAYS) \
+		$(if $(INTERVAL_PERIODS),--interval-periods $(INTERVAL_PERIODS),--interval-days $(INTERVAL_DAYS)) \
 		$(if $(TRAIN_DAYS),--train-days $(TRAIN_DAYS),) \
+		$(if $(TRAIN_PERIODS),--train-periods $(TRAIN_PERIODS),) \
+		$(if $(FORECAST_FREQUENCY),--frequency $(FORECAST_FREQUENCY),) \
 		$(if $(filter 1 true yes,$(DRY_RUN)),--dry-run,) \
 		$(if $(MAX_ITERATIONS),--max-iterations $(MAX_ITERATIONS),) \
 		$(if $(filter 1 true yes,$(CONTINUE_ON_ERROR)),--continue-on-error,) \
@@ -523,8 +528,11 @@ from orchestration.flows.backfill import prefect_vertex_backfill_flow; \
 prefect_vertex_backfill_flow(\
 config_name='$(VERTEX_BACKFILL_CONFIG)', \
 start_date='$(START_DATE)', end_date='$(END_DATE)', \
-interval_days=int('$(INTERVAL_DAYS)'), \
+interval_days=$(if $(INTERVAL_PERIODS),None,int('$(INTERVAL_DAYS)')), \
+interval_periods=$(if $(INTERVAL_PERIODS),$(INTERVAL_PERIODS),None), \
 train_days=$(if $(TRAIN_DAYS),$(TRAIN_DAYS),None), \
+train_periods=$(if $(TRAIN_PERIODS),$(TRAIN_PERIODS),None), \
+frequency=$(if $(FORECAST_FREQUENCY),'$(FORECAST_FREQUENCY)',None), \
 dry_run=$(if $(filter 1 true yes,$(DRY_RUN)),True,False), \
 max_iterations=$(if $(MAX_ITERATIONS),$(MAX_ITERATIONS),None), \
 stop_on_error=$(if $(filter 1 true yes,$(CONTINUE_ON_ERROR)),False,True))"
