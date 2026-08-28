@@ -143,11 +143,11 @@ dbt-common==1.38.0
     #   dbt-adapters
     #   dbt-bigquery
     #   dbt-core
-dbt-core==1.12.0
+dbt-core==1.12.3
     # via
     #   -r requirements.in
     #   dbt-bigquery
-dbt-core-experimental-parser==2.0.0a4
+dbt-core-experimental-parser==2.0.0b2
     # via dbt-core
 dbt-extractor==0.6.0
     # via dbt-core
@@ -227,11 +227,11 @@ google-auth-oauthlib==1.4.0
     # via
     #   pandas-gbq
     #   pydata-google-auth
-google-cloud-aiplatform==1.163.0
+google-cloud-aiplatform==1.165.1
     # via
     #   -r requirements.in
     #   dbt-bigquery
-google-cloud-bigquery==3.42.3
+google-cloud-bigquery==3.43.0
     # via
     #   -r requirements.in
     #   dbt-bigquery
@@ -341,8 +341,6 @@ importlib-metadata==9.0.0
     # via
     #   metricflow
     #   mlflow-skinny
-importlib-resources==7.1.0
-    # via prophet
 inflate64==1.0.4
     # via py7zr
 isodate==0.7.2
@@ -478,6 +476,7 @@ oauthlib==3.3.1
     #   requests-oauthlib
 opentelemetry-api==1.44.0
     # via
+    #   dbt-core
     #   mlflow-skinny
     #   mlflow-tracing
     #   opentelemetry-sdk
@@ -547,7 +546,7 @@ platformdirs==4.10.0
     # via jupyter-core
 pluggy==1.6.0
     # via prefect
-prefect==3.8.1
+prefect==3.8.4
     # via -r requirements.in
 prettytable==3.18.0
     # via skops
@@ -559,7 +558,7 @@ propcache==0.5.2
     # via
     #   aiohttp
     #   yarl
-prophet==1.3.0
+prophet==1.4.0
     # via -r requirements.in
 proto-plus==1.28.1
     # via
