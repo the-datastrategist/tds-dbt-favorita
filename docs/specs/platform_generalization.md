@@ -261,11 +261,12 @@ All runtime paths must use this service rather than `timedelta(days=...)`, `unit
 `freq="D"`. Initial support covers daily, weekly, and monthly periods. Business calendars and
 irregular frequencies may follow later.
 
-**Implementation status (2026-08-24):** the shared period service and day/week/month contract
-validation are implemented. Canonical output construction, scheduled eligibility identity, and
-rolling-origin target/training-boundary calculations use calendar-aware contract periods. Model
-future-frame generation, seasonal lookup policies, backfill increments, period-based training
-window naming, and full weekly/monthly live acceptance remain.
+**Implementation status (2026-08-28):** the shared period service now governs model future frames,
+seasonal lookup defaults, validation purges, backfill increments and SQL, and rolling-origin
+training windows. Day-named configuration remains a compatibility alias; new contracts use
+period-count settings. Automated day/week/month calendar suites cover month ends and weekly
+boundaries. Live weekly/monthly retraining and production acceptance are the remaining deployment
+evidence.
 
 ### Persistence and SQL
 
@@ -349,11 +350,13 @@ Each interface must provide:
 - A toy model provider loads outside `vertex/models` without changing the central registry.
 - A custom metric, routing strategy, and publisher load through configuration.
 
-**Implementation status (2026-08-24):** API version 1 request/result contracts, runtime provider
+**Implementation status (2026-08-28):** API version 1 request/result contracts, runtime provider
 protocols, explicit `module:Class` loading, capability validation, shared conformance assertions,
-and built-in model-family compatibility providers are implemented. Contract tests load external
-dataset, metric, routing, and publisher examples without registry changes. Wiring selected
-providers into every production orchestration path and adding built-in non-model adapters remain.
+and built-in model-family compatibility providers are implemented. The production job dispatcher
+and Prefect training orchestration now resolve a configured scoped provider for every model step,
+falling back to the compatible built-in provider and recording provider lineage in job results.
+Contract tests load external dataset, metric, routing, and publisher examples without registry
+changes. Built-in non-model adapters and production use of those optional categories remain.
 - Invalid or incompatible extensions fail startup validation.
 - Built-in and external implementations run against the same contract tests.
 - Extension API version and capabilities are persisted with forecast-run lineage.

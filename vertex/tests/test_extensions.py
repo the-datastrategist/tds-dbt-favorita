@@ -13,13 +13,21 @@ from vertex.extensions.contracts import (
     MetricRequest,
     MetricResult,
     ModelProvider,
+    ModelRequest,
+    ProviderResult,
     PublicationReceipt,
     PublicationRequest,
     RoutingDecision,
     RoutingRequest,
     RoutingStrategy,
 )
-from vertex.extensions.loader import ExtensionLoadError, load_extension, load_extension_config
+from vertex.extensions.loader import (
+    ExtensionLoadError,
+    load_extension,
+    load_extension_config,
+    load_model_provider,
+    load_optional_providers,
+)
 from vertex.extensions.testing import assert_provider_contract
 
 
@@ -51,6 +59,23 @@ class ToyPublisher:
 
     def publish(self, request: PublicationRequest) -> PublicationReceipt:
         return PublicationReceipt("memory", request.idempotency_key, len(request.rows))
+
+
+class ToyModelProvider:
+    metadata = ExtensionMetadata("toy-model", capabilities=frozenset({"model.train"}))
+    supported_steps = frozenset({"train"})
+
+    def validate(self, config):
+        return None
+
+    def train(self, request: ModelRequest) -> ProviderResult:
+        return ProviderResult({"provider": "toy"})
+
+    def predict(self, request: ModelRequest) -> ProviderResult:
+        raise NotImplementedError
+
+    def optimize(self, request: ModelRequest) -> ProviderResult:
+        raise NotImplementedError
 
 
 @pytest.mark.unit
@@ -93,6 +118,40 @@ def test_builtin_model_provider_satisfies_public_contract() -> None:
 
     assert isinstance(provider, XGBoostProvider)
     assert_provider_contract(provider, capabilities=frozenset({"model.optimize"}))
+
+
+@pytest.mark.unit
+def test_production_model_provider_resolution_is_explicit_and_uses_builtin_fallback() -> None:
+    provider = load_model_provider(
+        {
+            "extensions": {
+                "models": [
+                    {
+                        "model_type": "toy",
+                        "provider": "vertex.tests.test_extensions:ToyModelProvider",
+                    }
+                ]
+            }
+        },
+        model_type="toy",
+        step="train",
+    )
+    assert provider.metadata.name == "toy-model"
+    assert load_model_provider({}, model_type="xgboost", step="predict").metadata.name == "xgboost"
+
+
+@pytest.mark.unit
+def test_production_startup_loads_configured_optional_providers() -> None:
+    providers = load_optional_providers(
+        {
+            "extensions": {
+                "datasets": [{"provider": "vertex.tests.test_extensions:ToyDatasetAdapter"}],
+                "publishers": [{"provider": "vertex.tests.test_extensions:ToyPublisher"}],
+            }
+        }
+    )
+    assert [item.metadata.name for item in providers["datasets"]] == ["toy-dataset"]
+    assert [item.metadata.name for item in providers["publishers"]] == ["toy-publisher"]
 
 
 @pytest.mark.unit

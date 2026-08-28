@@ -166,10 +166,13 @@ make vertex-train VERTEX_CONFIG=my_custom_train
 
 ### Walk-forward backfill
 
-Point-in-time **train → predict** for each anchor date (targets such as `sales_store_n1d` — next-day sales from features at `date`). Logic lives in `config/backfill.py` and `jobs/backfill.py`; the same `run_backfill()` function is used by the Prefect flow in `orchestration/flows/backfill.py`.
+Point-in-time **train → predict** for each anchor period. Logic lives in `config/backfill.py` and
+`jobs/backfill.py`; the same `run_backfill()` function is used by the Prefect flow in
+`orchestration/flows/backfill.py`. New configurations use `INTERVAL_PERIODS`, `TRAIN_PERIODS`, and
+`forecast_frequency` (`day`, `week`, or `month`); day-named arguments remain compatible aliases.
 
-| Train SQL | `date` in `(as_of - train_days, as_of - 1]` (labels observed) |
-| Predict SQL | `date = as_of` |
+| Train SQL | canonical time role in `(as_of - training periods, as_of - 1 period]` |
+| Predict SQL | canonical time role equals `as_of` |
 
 ```bash
 # Inspect generated SQL

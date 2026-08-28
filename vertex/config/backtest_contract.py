@@ -86,7 +86,15 @@ class BacktestContract:
 
     @property
     def train_window_days(self) -> int:
-        return int(self.spec["train_window_days"])
+        """Legacy day-named alias retained for existing contracts."""
+        value = self.spec.get("train_window_days")
+        return int(value if value is not None else self.spec["train_window_periods"])
+
+    @property
+    def train_window_periods(self) -> int:
+        """Training lookback expressed in configured forecast periods."""
+        value = self.spec.get("train_window_periods")
+        return int(value if value is not None else self.train_window_days)
 
     @property
     def segment_columns(self) -> list[str]:
@@ -164,7 +172,8 @@ class BacktestContract:
                         "model_config_name": self.model_config_name,
                         "origin_date": origin.isoformat(),
                         "horizon": horizon,
-                        "train_window_days": self.train_window_days,
+                        "train_window_periods": self.train_window_periods,
+                        "frequency": self.forecast_contract.frequency,
                     }
                 )
         return rows
@@ -205,8 +214,17 @@ def _resolve_origins(spec: dict[str, Any]) -> tuple[date, ...]:
         raise ValueError("backtest.origin_policy start_date and end_date are required")
     start = parse_backfill_date(start_value)
     end = parse_backfill_date(end_value)
-    interval_days = int(origin_policy.get("interval_days", 1))
-    origins = tuple(iter_backfill_dates(start, end, interval_days=interval_days))
+    interval_days = origin_policy.get("interval_days")
+    interval_periods = origin_policy.get("interval_periods")
+    origins = tuple(
+        iter_backfill_dates(
+            start,
+            end,
+            interval_days=int(interval_days) if interval_days is not None else None,
+            interval_periods=int(interval_periods) if interval_periods is not None else None,
+            frequency=load_forecast_contract(spec["forecast_contract_path"]).frequency,
+        )
+    )
     if not origins:
         raise ValueError("backtest.origin_policy produced no origins")
     return origins
@@ -222,11 +240,15 @@ def validate_backtest_contract(raw: dict[str, Any]) -> BacktestContract:
         "name",
         "forecast_contract_path",
         "model_config_name",
-        "train_window_days",
     ]
     for field in required_scalars:
         if spec.get(field) in (None, ""):
             raise ValueError(f"backtest.{field} is required")
+    if spec.get("train_window_days") in (None, "") and spec.get("train_window_periods") in (
+        None,
+        "",
+    ):
+        raise ValueError("backtest.train_window_periods is required")
 
     forecast_contract = load_forecast_contract(spec["forecast_contract_path"])
     model_config = load_model_config(str(spec["model_config_name"]))
@@ -260,8 +282,10 @@ def validate_backtest_contract(raw: dict[str, Any]) -> BacktestContract:
             f"model={normalized_model_horizons}"
         )
 
-    if int(spec["train_window_days"]) <= 0:
+    if "train_window_days" in spec and int(spec["train_window_days"]) <= 0:
         raise ValueError("backtest.train_window_days must be positive")
+    if "train_window_periods" in spec and int(spec["train_window_periods"]) <= 0:
+        raise ValueError("backtest.train_window_periods must be positive")
 
     segment_columns = spec.get("segment_columns") or []
     if not isinstance(segment_columns, list):

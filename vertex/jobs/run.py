@@ -23,7 +23,8 @@ from vertex.config.load_config import (
     validate_config_for_step,
 )
 from vertex.evaluation.model_lifecycle_persistence import resolve_champion_config_name
-from vertex.models.registry import ensure_registered, run_registered
+from vertex.extensions.contracts import ModelRequest
+from vertex.extensions.loader import load_model_provider, load_optional_providers
 from vertex.utils.experiment_tracking import ExperimentRunContext
 from vertex.utils.tracking import finish_job_run, start_job_run
 
@@ -40,7 +41,6 @@ def run_job_config(config: dict[str, Any]) -> dict[str, Any]:
     if not (config.get("job") or {}).get("step"):
         config = apply_job_step(config, "train")
     validate_config_for_step(config)
-    ensure_registered()
 
     spec = get_job_spec(config)
     logger.info(
@@ -54,9 +54,19 @@ def run_job_config(config: dict[str, Any]) -> dict[str, Any]:
     job_run_id, started_at = start_job_run(config)
     with ExperimentRunContext(config, job_run_id=job_run_id) as experiment:
         try:
-            result = run_registered(config)
-            if not isinstance(result, dict):
-                raise TypeError(f"Expected dict result from runner, got {type(result).__name__}")
+            optional_providers = load_optional_providers(config)
+            provider = load_model_provider(
+                config, model_type=str(spec["model_type"]), step=str(spec["step"])
+            )
+            execute = getattr(provider, str(spec["step"]))
+            provider_result = execute(ModelRequest(config=config))
+            result = dict(provider_result.values)
+            result["extension_provider_name"] = provider.metadata.name
+            result["extension_api_version"] = provider.metadata.api_version
+            result["configured_extension_providers"] = {
+                category: [item.metadata.name for item in providers]
+                for category, providers in optional_providers.items()
+            }
             experiment.log_success(result)
             finish_job_run(
                 config,

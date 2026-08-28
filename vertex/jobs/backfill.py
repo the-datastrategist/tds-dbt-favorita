@@ -51,19 +51,28 @@ def run_backfill_iteration(
     *,
     config_path: str | Path | None = None,
     train_days: int | None = None,
+    train_periods: int | None = None,
+    frequency: str | None = None,
     feature_table: str | None = None,
 ) -> BackfillIterationResult:
     """Train on history through as_of_date - 1 day, then predict at as_of_date."""
     base = load_model_config(config_name, config_path)
-    resolved_train_days = int(
-        train_days if train_days is not None else base.get("inputs", {}).get("train_days", 180)
+    inputs = base.get("inputs", {})
+    resolved_frequency = str(frequency or inputs.get("forecast_frequency", "day"))
+    resolved_train_periods = (
+        train_periods if train_periods is not None else inputs.get("training_window_periods")
     )
+    resolved_train_days = train_days if train_days is not None else inputs.get("train_days")
+    if resolved_train_periods is None and resolved_train_days is None:
+        resolved_train_periods = 180
     table = feature_table or resolve_feature_table(base)
 
     train_config = apply_backfill_overrides(
         base,
         as_of_date=as_of_date,
         train_days=resolved_train_days,
+        train_periods=resolved_train_periods,
+        frequency=resolved_frequency,
         feature_table=table,
     )
     train_config = apply_job_step(train_config, "train")
@@ -78,6 +87,8 @@ def run_backfill_iteration(
         base,
         as_of_date=as_of_date,
         train_days=resolved_train_days,
+        train_periods=resolved_train_periods,
+        frequency=resolved_frequency,
         feature_table=table,
     )
     predict_config = apply_job_step(predict_config, "predict")
@@ -104,8 +115,11 @@ def run_backfill(
     end_date: str | date,
     *,
     config_path: str | Path | None = None,
-    interval_days: int = 1,
+    interval_days: int | None = None,
+    interval_periods: int | None = None,
     train_days: int | None = None,
+    train_periods: int | None = None,
+    frequency: str | None = None,
     feature_table: str | None = None,
     dry_run: bool = False,
     max_iterations: int | None = None,
@@ -118,21 +132,36 @@ def run_backfill(
     """
     start = parse_backfill_date(start_date)
     end = parse_backfill_date(end_date)
-    dates = list(iter_backfill_dates(start, end, interval_days=interval_days))
+    base = load_model_config(config_name, config_path)
+    resolved_frequency = str(frequency or base.get("inputs", {}).get("forecast_frequency", "day"))
+    dates = list(
+        iter_backfill_dates(
+            start,
+            end,
+            interval_days=interval_days,
+            interval_periods=interval_periods,
+            frequency=resolved_frequency,
+        )
+    )
     if max_iterations is not None:
         dates = dates[:max_iterations]
 
     if dry_run:
-        base = load_model_config(config_name, config_path)
         table = feature_table or resolve_feature_table(base)
-        resolved_train_days = int(
-            train_days if train_days is not None else base.get("inputs", {}).get("train_days", 180)
+        inputs = base.get("inputs", {})
+        resolved_train_periods = (
+            train_periods if train_periods is not None else inputs.get("training_window_periods")
         )
+        resolved_train_days = train_days if train_days is not None else inputs.get("train_days")
+        if resolved_train_periods is None and resolved_train_days is None:
+            resolved_train_periods = 180
         for as_of in dates:
             cfg = apply_backfill_overrides(
                 base,
                 as_of_date=as_of,
                 train_days=resolved_train_days,
+                train_periods=resolved_train_periods,
+                frequency=resolved_frequency,
                 feature_table=table,
             )
             logger.info(
@@ -158,6 +187,8 @@ def run_backfill(
                 as_of,
                 config_path=config_path,
                 train_days=train_days,
+                train_periods=train_periods,
+                frequency=resolved_frequency,
                 feature_table=feature_table,
             )
             results.append(result)
@@ -187,13 +218,20 @@ def main() -> None:
     parser.add_argument("--config-name", "-c", required=True)
     parser.add_argument("--start-date", required=True, help="First anchor date (YYYY-MM-DD)")
     parser.add_argument("--end-date", required=True, help="Last anchor date (YYYY-MM-DD)")
-    parser.add_argument("--interval-days", type=int, default=1, help="Days between anchors")
+    parser.add_argument("--interval-days", type=int, default=None, help="Legacy day interval")
+    parser.add_argument(
+        "--interval-periods", type=int, default=None, help="Contract periods between anchors"
+    )
     parser.add_argument(
         "--train-days",
         type=int,
         default=None,
         help="Training lookback window (default: inputs.train_days from config)",
     )
+    parser.add_argument(
+        "--train-periods", type=int, default=None, help="Training lookback in contract periods"
+    )
+    parser.add_argument("--frequency", choices=["day", "week", "month"], default=None)
     parser.add_argument(
         "--feature-table",
         default=None,
@@ -215,7 +253,10 @@ def main() -> None:
             args.end_date,
             config_path=args.config_path,
             interval_days=args.interval_days,
+            interval_periods=args.interval_periods,
             train_days=args.train_days,
+            train_periods=args.train_periods,
+            frequency=args.frequency,
             feature_table=args.feature_table,
             dry_run=args.dry_run,
             max_iterations=args.max_iterations,
@@ -234,6 +275,8 @@ def main() -> None:
                         parse_backfill_date(args.start_date),
                         parse_backfill_date(args.end_date),
                         interval_days=args.interval_days,
+                        interval_periods=args.interval_periods,
+                        frequency=args.frequency or "day",
                     )
                 )
             ),

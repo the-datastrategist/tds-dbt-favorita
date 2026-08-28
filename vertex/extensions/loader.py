@@ -68,3 +68,67 @@ def load_extension_config(
                 )
             )
     return result
+
+
+def load_model_provider(config: dict[str, Any], *, model_type: str, step: str) -> Any:
+    """Resolve a configured model provider, or the compatible built-in provider.
+
+    A model extension spec may set ``model_type`` to scope it to one configured model
+    type. More than one matching provider is rejected so production dispatch is explicit.
+    """
+    from vertex.extensions.builtins import BUILTIN_MODEL_PROVIDERS
+    from vertex.extensions.contracts import ModelProvider
+
+    matches: list[Any] = []
+    for spec in (config.get("extensions") or {}).get("models", []):
+        if not isinstance(spec, dict):
+            raise ExtensionLoadError("model extension entries must be mappings")
+        scoped_type = spec.get("model_type")
+        if scoped_type is not None and scoped_type != model_type:
+            continue
+        provider = load_extension(
+            str(spec.get("provider", "")),
+            ModelProvider,
+            required_capabilities=frozenset({f"model.{step}"}),
+        )
+        matches.append(provider)
+    if len(matches) > 1:
+        raise ExtensionLoadError(f"multiple model providers match model_type {model_type!r}")
+    if matches:
+        return matches[0]
+    provider_type = BUILTIN_MODEL_PROVIDERS.get(model_type)
+    if provider_type is None:
+        raise ExtensionLoadError(f"no built-in provider for model_type {model_type!r}")
+    provider = provider_type()
+    if f"model.{step}" not in provider.metadata.capabilities:
+        raise ExtensionLoadError(f"provider {provider.metadata.name!r} does not support {step!r}")
+    return provider
+
+
+def load_optional_providers(config: dict[str, Any]) -> dict[str, list[Any]]:
+    """Load configured non-model providers before a production job mutates state.
+
+    Model providers are selected per step by :func:`load_model_provider`; these
+    optional categories are loaded at job startup so a bad import, API version, or
+    declared capability fails before training or scoring begins.  The returned
+    instances are also available to orchestration callers that own the relevant
+    dataset, metric, routing, or publication operation.
+    """
+    from vertex.extensions.contracts import (
+        DatasetAdapter,
+        ForecastPublisher,
+        MetricProvider,
+        RoutingStrategy,
+    )
+
+    extensions = dict(config.get("extensions") or {})
+    extensions.pop("models", None)
+    return load_extension_config(
+        {"extensions": extensions},
+        {
+            "datasets": DatasetAdapter,
+            "metrics": MetricProvider,
+            "routing": RoutingStrategy,
+            "publishers": ForecastPublisher,
+        },
+    )

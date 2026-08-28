@@ -45,6 +45,8 @@ def prefect_vertex_train_model_flow(
     mode = (vertex_mode or _default_vertex_mode()).lower()
     names = resolve_train_config_names(config_name, train_all=train_all)
 
+    # The task invokes vertex.jobs.run, which resolves configured model providers
+    # (or a versioned built-in compatibility provider) before every train request.
     run_vertex_train_batch(names, vertex_mode=mode, sync=sync)
 
     return names

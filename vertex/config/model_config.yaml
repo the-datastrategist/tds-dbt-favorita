@@ -1,6 +1,11 @@
 defaults:
   project_id: tds-favorita
   region: us-central1
+  inputs:
+    # All shipped Favorita feature relations use canonical period starts. Client adapters may
+    # override this for an equivalent configured time role.
+    forecast_frequency: day
+    backfill_time_column: period_start
   mlflow:
     enabled: true
     experiment_name: favorita-vertex

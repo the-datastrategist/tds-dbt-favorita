@@ -51,7 +51,10 @@ def run_train_timeseries(config: dict[str, Any]) -> dict[str, Any]:
     if max_entities is not None:
         max_entities = int(max_entities)
 
-    params, params_provenance = resolve_model_parameters(config, default_model_params(model_type))
+    frequency = str(inputs.get("forecast_frequency", "day"))
+    params, params_provenance = resolve_model_parameters(
+        config, default_model_params(model_type, frequency=frequency)
+    )
 
     gcs_model_path = inputs.get("gcs_model_path")
     if not gcs_model_path:
@@ -98,6 +101,7 @@ def run_train_timeseries(config: dict[str, Any]) -> dict[str, Any]:
         "test_size": test_size,
         "min_train_obs": min_train_obs,
         "training_mode": inputs.get("training_mode", "per_entity"),
+        "forecast_frequency": frequency,
     }
 
     joblib_uri, manifest_uri = save_joblib_artifacts(

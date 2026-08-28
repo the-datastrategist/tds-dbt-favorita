@@ -36,6 +36,13 @@ class TestBackfillDates:
             date(2016, 8, 15),
         ]
 
+    def test_iter_backfill_dates_monthly_uses_calendar_months(self):
+        assert list(
+            iter_backfill_dates(
+                date(2024, 1, 31), date(2024, 4, 30), interval_periods=1, frequency="month"
+            )
+        ) == [date(2024, 1, 31), date(2024, 2, 29), date(2024, 3, 29), date(2024, 4, 29)]
+
     def test_iter_rejects_invalid_range(self):
         with pytest.raises(ValueError, match="start date"):
             list(iter_backfill_dates(date(2016, 8, 5), date(2016, 8, 1)))
@@ -52,6 +59,18 @@ class TestBackfillSql:
         assert "INTERVAL 180 DAY" in sql
         assert "INTERVAL 1 DAY" in sql
         assert f"FROM `{self.TABLE}`" in sql
+
+    def test_train_sql_uses_week_periods(self):
+        sql = build_backfill_train_sql(
+            self.TABLE,
+            self.AS_OF,
+            train_periods=52,
+            frequency="week",
+            time_column="period_start",
+        )
+        assert "INTERVAL 52 WEEK" in sql
+        assert "INTERVAL 1 WEEK" in sql
+        assert "period_start" in sql
 
     def test_predict_sql_single_anchor_day(self):
         sql = build_backfill_predict_sql(self.TABLE, self.AS_OF)
@@ -74,4 +93,4 @@ class TestBackfillSql:
         assert inputs["test_size"] == BACKFILL_TRAIN_TEST_SIZE
         assert "model_run_id" not in inputs
         assert "DATE_SUB(DATE '2016-08-16', INTERVAL 1 DAY)" in inputs["train_sql_query"]
-        assert "date = DATE '2016-08-16'" in inputs["predict_sql_query"]
+        assert "period_start = DATE '2016-08-16'" in inputs["predict_sql_query"]

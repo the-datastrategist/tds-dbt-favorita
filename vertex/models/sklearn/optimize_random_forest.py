@@ -103,6 +103,9 @@ def run_optimize_random_forest(config: dict[str, Any]) -> dict[str, Any]:
         target_column,
         test_size=test_size,
         date_column=sort_column,
+        purge_days=inputs.get("validation_purge_days"),
+        purge_periods=inputs.get("validation_purge_periods"),
+        frequency=str(inputs.get("forecast_frequency", "day")),
     )
 
     run_at = dt.utcnow()
