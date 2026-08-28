@@ -348,6 +348,12 @@ Each interface must provide:
 
 - A toy model provider loads outside `vertex/models` without changing the central registry.
 - A custom metric, routing strategy, and publisher load through configuration.
+
+**Implementation status (2026-08-24):** API version 1 request/result contracts, runtime provider
+protocols, explicit `module:Class` loading, capability validation, shared conformance assertions,
+and built-in model-family compatibility providers are implemented. Contract tests load external
+dataset, metric, routing, and publisher examples without registry changes. Wiring selected
+providers into every production orchestration path and adding built-in non-model adapters remain.
 - Invalid or incompatible extensions fail startup validation.
 - Built-in and external implementations run against the same contract tests.
 - Extension API version and capabilities are persisted with forecast-run lineage.
