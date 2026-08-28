@@ -65,6 +65,7 @@ class TestPrepareFeatureMatrix:
                 "date": pd.date_range("2024-01-01", periods=3, freq="D"),
                 "sales": [1.0, 2.0, 3.0],
                 "target_horizon_7": [8.0, 9.0, 10.0],
+                "sales_store_n2d": [2.0, 3.0, 4.0],
                 "feature_a": [0.1, 0.2, 0.3],
             }
         )
@@ -74,6 +75,7 @@ class TestPrepareFeatureMatrix:
             date_column="date",
         )
         assert "target_horizon_7" not in features
+        assert "sales_store_n2d" not in features
         assert features == ["feature_a"]
 
 
