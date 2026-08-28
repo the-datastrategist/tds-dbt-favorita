@@ -11,12 +11,24 @@
 select
     to_hex(sha256(to_json_string(struct(cast(store_nbr as string) as store_id)))) as series_key,
     to_json_string(struct(cast(store_nbr as string) as store_id)) as entity_key_json,
-    date as period_start,
-    sales_store as target_value,
-    sales_store is not null as target_observed,
-    true as is_eligible,
-    cast(null as string) as eligibility_reason,
-    date as data_cutoff,
+    sales.date as period_start,
+    sales.store_nbr,
+    eligibility.target_value,
+    eligibility.target_observed,
+    eligibility.is_eligible,
+    eligibility.eligibility_reason,
+    eligibility.data_cutoff,
+    eligibility.demand_policy,
+    eligibility.has_inventory_data,
+    eligibility.is_stockout,
+    eligibility.assortment_active,
+    eligibility.store_open,
+    eligibility.product_active,
+    eligibility.unit_price,
+    eligibility.promotion_planned,
     sales_store_n7d as target_horizon_7,
-    *
-from {{ ref('int_sales_store_daily') }}
+    sales.* except (date, store_nbr)
+from {{ ref('int_sales_store_daily') }} as sales
+left join {{ ref('forecast_eligibility') }} as eligibility
+    on sales.store_nbr = eligibility.store_nbr
+   and sales.date = eligibility.date

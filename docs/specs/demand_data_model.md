@@ -92,8 +92,9 @@ The feature availability registry should mark inventory and actual sales as obse
 ## Implementation plan
 
 1. **Complete:** add `docs/demand_data_model.md` and canonical interface definitions.
-2. **Partial:** add the reference store-day canonical adapter; client-specific optional inventory,
-   assortment, lifecycle, price, and closure adapters remain.
+2. **Complete:** add opt-in, standardized adapters for inventory, assortment, lifecycle, price,
+   promotion, closure, and external unconstrained demand. Client deployments configure only their
+   owned source relations and validate their source-specific mappings before activation.
 3. **Complete:** add eligibility and summary dbt models with schema and fixture tests.
 4. **Complete:** eligibility snapshot IDs are pinned on forecast runs; append-only row-level
    decisions, exclusion reasons, count gates, and monitoring reconciliation are implemented and
@@ -124,9 +125,12 @@ for the local and live validation record.
 ## Current implementation status
 
 The reference adapter explicitly models observed sales, promotion status, missing inventory,
-unknown censoring, and demand-policy semantics. Eligibility decisions, daily reason summaries,
-and immutable run-level exclusion evidence are implemented and live accepted. Remaining scope is
-client-specific live adapters for inventory, assortment, lifecycle, price, and closure sources.
+unknown censoring, and demand-policy semantics. Opt-in standardized dbt adapters now cover
+inventory, assortment, lifecycle, price, promotion, closure, and externally supplied
+unconstrained demand; disabled adapters compile as typed empty relations. Eligibility decisions,
+daily reason summaries, and immutable run-level exclusion evidence are implemented and live
+accepted. The remaining deployment work is client-specific source mapping and live acceptance of
+any enabled demand policy.
 
 ## Related documents
 

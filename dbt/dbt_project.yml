@@ -99,6 +99,17 @@ vars:
   # Reference deployment has no inventory feed, so sales remain an explicit demand proxy.
   demand_policy: observed_sales_only
   demand_minimum_history_days: 28
+  demand_stockout_uplift_factor: 0.0
+  # Each opt-in relation uses the standardized columns documented in demand_data_model.md.
+  # Leave every relation null for observed-sales-only deployments such as Favorita.
+  demand_optional_sources:
+    inventory: {relation: null}
+    assortment: {relation: null}
+    lifecycle: {relation: null}
+    price: {relation: null}
+    promotion: {relation: null}
+    closure: {relation: null}
+    external_unconstrained_demand: {relation: null}
 
   # Realized P10-P90 reliability and median-bias guardrails. A new series remains non-alerting
   # until enough target-date actuals have landed for a meaningful comparison.
