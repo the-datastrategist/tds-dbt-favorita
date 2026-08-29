@@ -46,7 +46,7 @@ representative residual covariance.
 Apply the DDL and hierarchy graph, then execute the scheduled hierarchy-aware contract:
 
 ```bash
-make vertex-bq-ddl
+make vertex-bq-ddl DEPLOYMENT_CONFIG=vertex/config/deployment.example.yaml
 make vertex-hierarchy-materialize
 make prefect-flow-scheduled-forecast \
   CONTRACT_PATH=vertex/config/forecast_contract_hierarchical_publication.yaml \

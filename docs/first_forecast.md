@@ -87,12 +87,13 @@ platform contracts. See [Forecast contract](forecast_contract.md) and
 Apply the idempotent BigQuery DDL before the first Vertex run:
 
 ```bash
-make vertex-bq-ddl
+make vertex-bq-ddl DEPLOYMENT_CONFIG=vertex/config/deployment.example.yaml
 ```
 
 This creates the model metadata tables and the canonical `forecast_runs` and `forecast_outputs`
-contracts, including the append-only `source_ingestion_runs` table. Re-running the command is safe;
-schema evolution uses `IF NOT EXISTS` operations.
+contracts, including the append-only `source_ingestion_runs` table. The manifest determines the
+target project and platform dataset; re-running the command is safe because schema evolution uses
+`IF NOT EXISTS` operations.
 
 Record the completed Favorita snapshot load after the table exists:
 

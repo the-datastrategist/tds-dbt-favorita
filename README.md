@@ -247,7 +247,7 @@ make dbt-deps
 make load-favorita-bigquery
 
 # 4. (Once) Create Vertex, forecast, and ingestion-evidence tables in BigQuery
-make vertex-bq-ddl
+make vertex-bq-ddl DEPLOYMENT_CONFIG=vertex/config/deployment.example.yaml
 
 # 5. Record the immutable demo snapshot's load evidence
 make source-ingestion-record SOURCE=favorita_sales STATUS=succeeded \

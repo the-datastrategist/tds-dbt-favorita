@@ -169,7 +169,7 @@ gs://CLIENT-mlflow/            # optional MLFLOW_TRACKING_URI backend
 Apply Vertex tables once per environment:
 
 ```bash
-make vertex-bq-ddl
+make vertex-bq-ddl DEPLOYMENT_CONFIG=vertex/config/deployment.example.yaml
 ```
 
 Tables: `ml_vertex_job_runs`, `ml_model_metadata`, `ml_model_performance`, `ml_model_optimize`, `ml_model_predictions`.
