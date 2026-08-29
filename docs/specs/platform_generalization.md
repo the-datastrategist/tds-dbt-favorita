@@ -97,8 +97,8 @@ shipped model configurations now train and score through `forecast_features_stor
 `period_start`, `series_key`, and `entity_key_json`. Shared XGBoost, random-forest, Prophet,
 ARIMA, SARIMA, and direct multi-horizon defaults use the same canonical roles. Hierarchy
 materialization now reads configured levels from canonical `entity_key_json` rather than a
-Favorita table or column. Live retraining of the newly migrated families and live acceptance of
-the configured hierarchy adapter remain.
+Favorita table or column. All six distinct migrated model-provider families now have successful
+live Vertex retraining evidence; see [temporal and extension acceptance](../acceptance/temporal_extensions_live_models_2026-08-28.md).
 
 ### Canonical relations
 
@@ -265,8 +265,10 @@ irregular frequencies may follow later.
 seasonal lookup defaults, validation purges, backfill increments and SQL, and rolling-origin
 training windows. Day-named configuration remains a compatibility alias; new contracts use
 period-count settings. Automated day/week/month calendar suites cover month ends and weekly
-boundaries. Live weekly/monthly retraining and production acceptance are the remaining deployment
-evidence.
+boundaries. Full weekly/monthly forecast-pipeline acceptance is automated; the Favorita demo
+source is daily, so live weekly/monthly source deployment remains a future portability exercise
+rather than an untested core runtime path. See
+[temporal and extension acceptance](../acceptance/temporal_extensions_live_models_2026-08-28.md).
 
 ### Persistence and SQL
 
@@ -356,7 +358,9 @@ and built-in model-family compatibility providers are implemented. The productio
 and Prefect training orchestration now resolve a configured scoped provider for every model step,
 falling back to the compatible built-in provider and recording provider lineage in job results.
 Contract tests load external dataset, metric, routing, and publisher examples without registry
-changes. Built-in non-model adapters and production use of those optional categories remain.
+changes. The production dispatcher resolves model providers and validates configured optional
+provider categories at startup; invoking project-specific dataset, metric, routing, and publisher
+implementations in a live source deployment remains a future portability exercise.
 - Invalid or incompatible extensions fail startup validation.
 - Built-in and external implementations run against the same contract tests.
 - Extension API version and capabilities are persisted with forecast-run lineage.
