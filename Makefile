@@ -39,7 +39,8 @@ endif
 	vertex-lifecycle-plan vertex-lifecycle-evaluate vertex-lifecycle-promote vertex-lifecycle-rollback \
 	forecast-override forecast-approve-publish forecast-revise forecast-rollback forecast-export \
 	forecast-delivery-start forecast-delivery-confirm forecast-delivery-fail forecast-delivery-retry forecast-delivery-abandon \
-	docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check
+	docker-build docker-bash vertex-gcp-setup vertex-gcp-setup-sa vertex-docker-push vertex-gcp-check \
+	dbt-deployment-compile terraform-deployment-vars
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -440,6 +441,14 @@ DEPLOYMENT_CONFIG ?= $(VERTEX_DIR)/config/deployment.example.yaml
 
 validate-deployment: ## Validate portable GCP, BigQuery, and GCS resource configuration
 	$(DOCKER_RUN) $(PYTHON) -m $(VERTEX_DIR).config.deployment --config "$(DEPLOYMENT_CONFIG)"
+
+dbt-deployment-compile: ## Compile dbt using datasets resolved from DEPLOYMENT_CONFIG
+	@test -n "$(DEPLOYMENT_CONFIG)" || (echo "Set DEPLOYMENT_CONFIG to a deployment manifest" && exit 1)
+	$(DOCKER_RUN) python scripts/run_dbt_with_deployment.py --deployment-config "$(DEPLOYMENT_CONFIG)" -- compile --project-dir dbt --profiles-dir dbt/profiles --target $(DBT_TARGET)
+
+terraform-deployment-vars: ## Print manifest-owned Terraform values as JSON
+	@test -n "$(DEPLOYMENT_CONFIG)" || (echo "Set DEPLOYMENT_CONFIG to a deployment manifest" && exit 1)
+	$(DOCKER_RUN) $(PYTHON) -m $(VERTEX_DIR).config.deployment --config "$(DEPLOYMENT_CONFIG)" --format terraform-json
 
 VERTEX_BACKTEST_CONTRACT ?= $(VERTEX_DIR)/config/backtest_contract.yaml
 VERTEX_BACKTEST_INPUT ?=

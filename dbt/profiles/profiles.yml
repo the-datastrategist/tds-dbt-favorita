@@ -5,21 +5,21 @@ tds_favorita:
       type: bigquery
       method: service-account
       project: "{{ env_var('GOOGLE_PROJECT_ID') }}"
-      dataset: "{{ env_var('DBT_DATASET', 'favorita') }}"
+      dataset: "{{ env_var('DBT_DATASET') }}"
       threads: 4
-      location: "{{ env_var('BQ_LOCATION', 'US') }}"
+      location: "{{ env_var('BQ_LOCATION') }}"
       keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
     wif:
       type: bigquery
       method: oauth
       project: "{{ env_var('GOOGLE_PROJECT_ID') }}"
-      dataset: "{{ env_var('DBT_DATASET', 'favorita') }}"
+      dataset: "{{ env_var('DBT_DATASET') }}"
       threads: 4
-      location: "{{ env_var('BQ_LOCATION', 'US') }}"
+      location: "{{ env_var('BQ_LOCATION') }}"
     prod:
       type: bigquery
       method: oauth
       project: "{{ env_var('GOOGLE_PROJECT_ID') }}"
-      dataset: "{{ env_var('DBT_DATASET', 'favorita') }}"
+      dataset: "{{ env_var('DBT_DATASET') }}"
       threads: 4
-      location: "{{ env_var('BQ_LOCATION', 'US') }}"
+      location: "{{ env_var('BQ_LOCATION') }}"

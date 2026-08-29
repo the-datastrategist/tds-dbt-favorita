@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -57,6 +58,25 @@ class ResourceCatalog:
     platform_dataset: str
     model_bucket: str
     pipeline_bucket: str
+
+    def dbt_environment(self) -> dict[str, str]:
+        """Environment variables consumed by the dbt profile and project vars."""
+        return {
+            "GOOGLE_PROJECT_ID": self.project_id,
+            "DBT_DATASET": self.platform_dataset,
+            "BQ_RAW_DATASET": self.raw_dataset,
+            "BQ_LOCATION": self.bq_location,
+        }
+
+    def terraform_variables(self) -> dict[str, str]:
+        """Manifest-owned Terraform variables, suitable for a generated var-file."""
+        return {
+            "project_id": self.project_id,
+            "region": self.region,
+            "environment": self.environment,
+            "dbt_dataset": self.platform_dataset,
+            "raw_dataset": self.raw_dataset,
+        }
 
     def table(self, relation: str, *, raw: bool = False) -> str:
         if not IDENTIFIER_PATTERN.fullmatch(relation):
@@ -119,16 +139,22 @@ def load_deployment(path: str | Path) -> ResourceCatalog:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument("--format", choices=("summary", "dbt-env", "terraform-json"), default="summary")
     args = parser.parse_args()
     try:
         catalog = load_deployment(args.config)
     except (OSError, ValueError, yaml.YAMLError) as exc:
         print(f"Deployment validation failed: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
-    print(
-        "Validated deployment "
-        f"{catalog.platform_name}/{catalog.environment} in {catalog.project_id}."
-    )
+    if args.format == "dbt-env":
+        print(json.dumps(catalog.dbt_environment(), sort_keys=True))
+    elif args.format == "terraform-json":
+        print(json.dumps(catalog.terraform_variables(), sort_keys=True))
+    else:
+        print(
+            "Validated deployment "
+            f"{catalog.platform_name}/{catalog.environment} in {catalog.project_id}."
+        )
 
 
 if __name__ == "__main__":
