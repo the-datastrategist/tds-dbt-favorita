@@ -98,6 +98,7 @@ click-option-group==0.5.7
     # via kfp
 cloudpickle==3.1.2
     # via
+    #   joblib
     #   mlflow-skinny
     #   prefect
     #   pydocket
@@ -150,11 +151,11 @@ dbt-common==1.38.0
     #   dbt-adapters
     #   dbt-bigquery
     #   dbt-core
-dbt-core==1.12.0
+dbt-core==1.12.3
     # via
     #   -r requirements.in
     #   dbt-bigquery
-dbt-core-experimental-parser==2.0.0a4
+dbt-core-experimental-parser==2.0.0rc1
     # via dbt-core
 dbt-extractor==0.6.0
     # via dbt-core
@@ -194,6 +195,8 @@ flask-cors==6.0.5
     # via mlflow
 fonttools==4.63.0
     # via matplotlib
+formulaic==1.2.2
+    # via statsmodels
 frozenlist==1.8.0
     # via
     #   aiohttp
@@ -236,11 +239,11 @@ google-auth-oauthlib==1.4.0
     # via
     #   pandas-gbq
     #   pydata-google-auth
-google-cloud-aiplatform==1.163.0
+google-cloud-aiplatform==2.0.1
     # via
     #   -r requirements.in
     #   dbt-bigquery
-google-cloud-bigquery==3.42.3
+google-cloud-bigquery==3.44.0
     # via
     #   -r requirements.in
     #   dbt-bigquery
@@ -350,17 +353,17 @@ importlib-metadata==9.0.0
     # via
     #   metricflow
     #   mlflow-skinny
-importlib-resources==7.1.0
-    # via prophet
 inflate64==1.0.4
     # via py7zr
 iniconfig==2.3.0
     # via pytest
+interface-meta==2.0.1
+    # via formulaic
 isodate==0.7.2
     # via
     #   agate
     #   dbt-common
-isort==8.0.1
+isort==9.0.1
     # via -r requirements-dev.in
 itsdangerous==2.2.0
     # via flask
@@ -374,7 +377,7 @@ jinja2==3.1.6
     #   prefect
 jinja2-humanize-extension==0.4.0
     # via prefect
-joblib==1.5.3
+joblib==1.6.0
     # via
     #   -r requirements.in
     #   scikit-learn
@@ -442,11 +445,11 @@ mdurl==0.1.2
     # via markdown-it-py
 metricflow==0.211.0
     # via dbt-core
-mlflow==3.15.1
+mlflow==3.15.2
     # via -r requirements.in
-mlflow-skinny==3.15.1
+mlflow-skinny==3.15.2
     # via mlflow
-mlflow-tracing==3.15.1
+mlflow-tracing==3.15.2
     # via mlflow
 more-itertools==10.8.0
     # via metricflow
@@ -458,14 +461,17 @@ multidict==6.7.1
     #   yarl
 multivolumefile==0.2.3
     # via py7zr
-mypy==2.3.0
+mypy==2.3.1
     # via -r requirements-dev.in
 mypy-extensions==1.1.0
     # via
     #   black
+    #   isort
     #   mypy
 narwhals==2.24.0
-    # via scikit-learn
+    # via
+    #   formulaic
+    #   scikit-learn
 nbformat==5.10.4
     # via dbt-bigquery
 networkx==3.6.1
@@ -478,6 +484,7 @@ numpy==2.4.6
     #   cmdstanpy
     #   contourpy
     #   db-dtypes
+    #   formulaic
     #   matplotlib
     #   mlflow
     #   numba
@@ -501,6 +508,7 @@ oauthlib==3.3.1
     #   requests-oauthlib
 opentelemetry-api==1.44.0
     # via
+    #   dbt-core
     #   mlflow-skinny
     #   mlflow-tracing
     #   opentelemetry-sdk
@@ -547,6 +555,7 @@ pandas==2.3.3
     #   -r requirements.in
     #   cmdstanpy
     #   db-dtypes
+    #   formulaic
     #   google-cloud-bigquery
     #   mlflow
     #   pandas-gbq
@@ -579,7 +588,7 @@ pluggy==1.6.0
     #   prefect
     #   pytest
     #   pytest-cov
-prefect==3.8.1
+prefect==3.8.4
     # via -r requirements.in
 prettytable==3.18.0
     # via skops
@@ -591,7 +600,7 @@ propcache==0.5.2
     # via
     #   aiohttp
     #   yarl
-prophet==1.3.0
+prophet==1.4.0
     # via -r requirements.in
 proto-plus==1.28.1
     # via
@@ -808,6 +817,7 @@ scikit-learn==1.9.0
     #   skops
 scipy==1.17.1
     # via
+    #   formulaic
     #   mlflow
     #   scikit-learn
     #   shap
@@ -858,7 +868,7 @@ starlette==1.3.1
     #   fastapi
     #   mlflow-skinny
     #   prefect
-statsmodels==0.14.6
+statsmodels==0.15.0
     # via -r requirements.in
 tabulate==0.10.0
     # via
@@ -887,7 +897,7 @@ traitlets==5.15.1
     #   nbformat
 typer==0.27.0
     # via pydocket
-types-pyyaml==6.0.12.20260724
+types-pyyaml==6.0.12.20260815
     # via -r requirements-dev.in
 typing-extensions==4.16.0
     # via
@@ -900,6 +910,7 @@ typing-extensions==4.16.0
     #   dbt-core
     #   exceptiongroup
     #   fastapi
+    #   formulaic
     #   google-cloud-aiplatform
     #   google-genai
     #   graphene
@@ -960,6 +971,8 @@ werkzeug==3.1.8
     # via
     #   flask
     #   flask-cors
+wrapt==2.4.0
+    # via formulaic
 xgboost==3.2.0
     # via -r requirements.in
 yarl==1.24.2
