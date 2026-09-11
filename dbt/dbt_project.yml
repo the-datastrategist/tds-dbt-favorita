@@ -62,8 +62,8 @@ models:
 
 vars:
   project_id: "{{ env_var('GOOGLE_PROJECT_ID') }}"
-  dataset: "{{ env_var('DBT_DATASET', 'favorita') }}"
-  bq_raw_dataset: "{{ env_var('BQ_RAW_DATASET', 'raw_favorita') }}"
+  dataset: "{{ env_var('DBT_DATASET') }}"
+  bq_raw_dataset: "{{ env_var('BQ_RAW_DATASET') }}"
   bqml_explain_top_k_features: 20
 
   # Primary metric used to select ml_model_champion per grain. Override per client

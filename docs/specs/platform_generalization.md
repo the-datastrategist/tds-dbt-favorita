@@ -184,10 +184,12 @@ existing BigQuery table cannot expose the new columns before they are added.
 
 ## Work package 2: deployment and identifier parameterization
 
-**Implementation status (2026-08-20):** the first slice is complete. A typed deployment manifest,
-validated resource catalog, `make validate-deployment`, CI coverage, and mandatory Terraform
-dataset inputs establish the boundary. Migrating every runtime consumer and generated DDL path to
-the catalog remains.
+**Implementation status (2026-08-28):** a typed deployment manifest, validated resource catalog,
+`make validate-deployment`, CI coverage, and mandatory Terraform dataset inputs establish the
+boundary. Vertex DDL now renders its platform namespace from the manifest; selected model-runtime,
+operational, acceptance, and Prefect entry points resolve project, table-prefix, and storage paths
+through that catalog and fail closed when no deployment scope is supplied. Migrating remaining dbt
+profiles/vars, Terraform consumers, smoke scripts, and non-Vertex runtime paths remains.
 
 Create one typed deployment manifest as the source of truth for environment-specific resources:
 

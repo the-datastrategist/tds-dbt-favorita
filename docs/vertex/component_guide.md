@@ -101,7 +101,7 @@ make vertex-optimize
 make vertex-train VERTEX_MODE=vertex # Custom Job submit
 make vertex-pipeline-compile
 make vertex-pipeline-submit SYNC=1
-make vertex-bq-ddl
+make vertex-bq-ddl DEPLOYMENT_CONFIG=vertex/config/deployment.example.yaml
 make vertex-validate-configs
 ```
 

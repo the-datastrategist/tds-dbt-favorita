@@ -117,7 +117,9 @@ Review the target table IDs in:
 - `vertex/ddl/vertex_bq_tables.sql`;
 - the selected Terraform environment.
 
-The checked-in Vertex DDL currently uses fully qualified reference-implementation table IDs. Those IDs are correct for the included Favorita environment, but a generalized deployment must parameterize or update them before running `make vertex-bq-ddl`. Do not apply the DDL until every target points to the intended derived dataset.
+The DDL applicator renders the checked-in reference namespace from `DEPLOYMENT_CONFIG`; it does not
+apply the reference implementation's table IDs directly. Validate the manifest and do not apply the
+DDL until its project and `platform_dataset` point to the intended derived dataset.
 
 ## 4. Delete the derived dataset
 
@@ -152,7 +154,7 @@ Afterward, verify the derived dataset's location, labels, access grants, and exp
 Apply the idempotent Vertex and forecast-output DDL after the derived dataset exists:
 
 ```bash
-make vertex-bq-ddl
+make vertex-bq-ddl DEPLOYMENT_CONFIG=vertex/config/deployment.example.yaml
 ```
 
 Confirm that the expected ingestion-run, job-run, model metadata, performance, optimization,

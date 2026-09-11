@@ -97,6 +97,20 @@ make validate-deployment DEPLOYMENT_CONFIG=vertex/config/deployment.example.yaml
 The manifest resolves environment placeholders and rejects invalid or incomplete GCP, BigQuery,
 and GCS identifiers before a job or infrastructure mutation begins.
 
+Use the same manifest for local dbt compilation, so dbt profiles receive its project, platform
+dataset, raw dataset, and BigQuery location rather than implicit Favorita defaults:
+
+```bash
+make dbt-deployment-compile DEPLOYMENT_CONFIG=vertex/config/deployment.example.yaml
+```
+
+To inspect the matching Terraform-owned values before combining them with environment-specific
+settings such as IAM members and image digests, run:
+
+```bash
+make terraform-deployment-vars DEPLOYMENT_CONFIG=vertex/config/deployment.example.yaml
+```
+
 Prefer **bucket-level** GCS IAM over project-wide storage admin.
 
 Set in `.env`:
@@ -169,7 +183,7 @@ gs://CLIENT-mlflow/            # optional MLFLOW_TRACKING_URI backend
 Apply Vertex tables once per environment:
 
 ```bash
-make vertex-bq-ddl
+make vertex-bq-ddl DEPLOYMENT_CONFIG=vertex/config/deployment.example.yaml
 ```
 
 Tables: `ml_vertex_job_runs`, `ml_model_metadata`, `ml_model_performance`, `ml_model_optimize`, `ml_model_predictions`.

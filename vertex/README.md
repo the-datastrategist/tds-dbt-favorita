@@ -64,10 +64,12 @@ vertex/
 2. **BigQuery tables** (run once; re-run after DDL changes)
 
    ```bash
-   make vertex-bq-ddl
+   make vertex-bq-ddl DEPLOYMENT_CONFIG=vertex/config/deployment.example.yaml
    ```
 
-   This applies [`ddl/vertex_bq_tables.sql`](ddl/vertex_bq_tables.sql) (`CREATE TABLE` + idempotent `ALTER TABLE` migrations). Tables:
+   `DEPLOYMENT_CONFIG` is required and supplies the target project, platform dataset, and dataset
+   location. This applies [`ddl/vertex_bq_tables.sql`](ddl/vertex_bq_tables.sql) (`CREATE TABLE`
+   + idempotent `ALTER TABLE` migrations). Tables:
 
    - `ml_vertex_job_runs` — orchestration audit
    - `ml_model_metadata` — training lineage

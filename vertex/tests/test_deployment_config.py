@@ -61,3 +61,22 @@ def test_resource_catalog_rejects_invalid_relation():
 
     with pytest.raises(ValueError, match="invalid BigQuery relation"):
         catalog.table("other-project.dataset.table")
+
+
+@pytest.mark.unit
+def test_catalog_exports_matching_dbt_and_terraform_values():
+    catalog = load_deployment("vertex/config/deployment.example.yaml")
+
+    assert catalog.dbt_environment() == {
+        "GOOGLE_PROJECT_ID": "example-forecast-dev",
+        "DBT_DATASET": "forecast_platform",
+        "BQ_RAW_DATASET": "forecast_raw",
+        "BQ_LOCATION": "US",
+    }
+    assert catalog.terraform_variables() == {
+        "project_id": "example-forecast-dev",
+        "region": "us-central1",
+        "environment": "dev",
+        "dbt_dataset": "forecast_platform",
+        "raw_dataset": "forecast_raw",
+    }
