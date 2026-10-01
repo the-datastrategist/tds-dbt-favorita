@@ -495,7 +495,7 @@ numpy==2.4.6
     #   xgboost
 nvidia-nccl-cu12==2.30.7
     # via xgboost
-oauthlib==3.3.1
+oauthlib==4.0.0
     # via
     #   kubernetes
     #   requests-oauthlib
