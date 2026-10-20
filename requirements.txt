@@ -11,7 +11,7 @@ agate==1.9.1
     #   dbt-core
 aiohappyeyeballs==2.7.1
     # via aiohttp
-aiohttp==3.14.3
+aiohttp==3.14.4
     # via mlflow
 aiosignal==1.4.0
     # via aiohttp
@@ -911,7 +911,7 @@ werkzeug==3.1.8
     #   flask-cors
 xgboost==3.2.0
     # via -r requirements.in
-yarl==1.24.2
+yarl==1.25.1
     # via aiohttp
 zipp==4.1.0
     # via importlib-metadata
